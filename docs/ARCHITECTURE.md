@@ -41,9 +41,13 @@
 - **`organization_memberships`** — connects a `profiles` row to an `organizations` row. Each membership has its own **status**: `invited`, `active`, `suspended`, or `removed`. A person can hold at most one membership row per organization, and any number of memberships across different organizations.
 - **`membership_roles`** — a membership can carry **more than one role** (see [§6](#6-authorization-model)); this is a separate table, not a single `role` column, specifically so a person can be e.g. both Supervisor and Inspector within the same organization.
 
-This directly replaces the earlier single-org, single-role design (`profiles.organization_id` + `profiles.role`) that an earlier version of this document proposed. See [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables) for the exact table shapes.
+This directly replaces the earlier single-org, single-role design (`profiles.organization_id` + `profiles.role`) that an earlier version of this document proposed. See [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables) for the exact table shapes. **All four tables/relationships above are implemented** (`profiles`, `organizations`, `organization_memberships`, `membership_roles` — the last as a `role_id` FK into a `roles` table rather than a raw `role` column; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status)).
 
 #### Active organization selection
+
+**Not implemented.** Everything in this subsection — the Custom Access Token Auth Hook, the `org_id` JWT claim, `current_org_id()`, `switchActiveOrganization()` — is the originally-proposed design, preserved here as a future direction, not what exists today. `profiles.active_organization_id` **is** implemented, but only as an inert UX-preference column (per its own description below) with no code yet reading or writing it.
+
+What's implemented instead: every authorization check takes an explicit organization id rather than resolving one "active" organization implicitly. `lib/auth/session.ts` exposes `requireOrganizationMembership(organizationId)` and `requireRole(organizationId, roleName)`, both delegating to SQL functions (`is_organization_member`, `has_organization_role` — see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)) that check membership/role **per call, per organization** — there is no single cached "current org" anywhere server-side. This fully satisfies §3.3's isolation guarantees without needing the Auth Hook; what the hook would add on top is ergonomics (not passing an org id through every call), not security.
 
 A user's UI and every server-side authorization decision is scoped to one **active organization** at a time, even if they belong to several. Selecting/switching is explicit, not inferred per-request:
 
@@ -57,8 +61,8 @@ This means: setting up the multi-org switcher is not purely an application-code 
 
 ### 3.3 How isolation is enforced (defense in depth)
 
-1. **RLS policies** on every tenant-owned table restrict `SELECT`/`INSERT`/`UPDATE`/`DELETE` to rows whose `organization_id` matches the caller's **validated active organization** (`current_org_id()`, per [§3.2](#32-organization-membership-model)) — never a client-supplied value.
-2. **Server-side authorization** in Server Functions / Route Handlers re-derives the active org and the caller's role(s) from the authenticated session — never trusts an `organization_id` or `role` passed from the client.
+1. **RLS policies** on every tenant-owned table restrict `SELECT`/`INSERT`/`UPDATE`/`DELETE` to rows whose `organization_id` the caller has a validated membership in — as implemented, via `is_organization_member(organization_id)`/`has_organization_role(organization_id, role_name)` checked per row (see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)); the originally-proposed single active-organization claim (`current_org_id()`, [§3.2](#32-organization-membership-model)) is a documented future enhancement, not what's built. Never a client-supplied value either way.
+2. **Server-side authorization** in Server Functions / Route Handlers re-derives the caller's organization membership and role(s) from the authenticated session for whichever organization the operation targets — never trusts an `organization_id` or `role` passed from the client.
 3. **No service-role key on the client, ever.** The Supabase service role (which bypasses RLS) is only used in trusted server-only contexts (e.g., a platform admin operation, or a scheduled job) and is never sent to the browser. See [Secrets and environment variables](#7-secrets-and-environment-variables).
 
 ### 3.4 Cross-Reference Validation Rule
@@ -78,6 +82,11 @@ This is one rule applied in several places, not a special case per table — see
 Proposed top-level layout as the app grows beyond the current scaffold (`app/layout.tsx`, `app/page.tsx`):
 
 ```
+supabase/                       # built — Supabase CLI project (supabase init), not linked to any remote project
+  config.toml
+  migrations/                   # built — 10 SQL files, ordered; see the database-foundation milestone's implementation report
+  seed.sql                      # built — dev-only: seeds the role catalogue + one example organization
+
 proxy.ts                        # project root, sibling of app/ — NOT inside app/. This is a Next.js file-
                                  # convention requirement, unlike everything else in this tree, which is just
                                  # this project's own organization. Formerly "middleware.ts".
@@ -92,10 +101,10 @@ app/
     admin/
       organizations/           # PSA-only: create/suspend organizations, provision first Company Admin
   (app)/                       # authenticated, tenant-scoped app shell
-    layout.tsx                 # built — calls requireUser(); full org/role-aware shell deferred to M2/M5
-    select-organization/       # organization switcher, shown when a user has >1 membership or none active — deferred, needs M2 schema
+    layout.tsx                 # built — calls requireUser(); full org/role-aware shell (nav, org name in header) deferred
+    select-organization/       # organization switcher, shown when a user has >1 membership or none active — deferred, needs the Auth Hook (§3.2)
     dashboard/
-      page.tsx                 # built — the one protected page in the M1/M3 foundation milestone
+      page.tsx                 # built — lists the signed-in user's active organization memberships; empty state if none
     projects/
       [projectId]/
         locations/
@@ -137,20 +146,20 @@ modules/                        # feature/domain logic, framework-agnostic where
     corrective-actions/
     event-categories/          # configurable incident/observation classification
     ...
-  organizations/
-    memberships.ts              # organization_memberships + membership_roles logic, active-org switching
+  organizations/                # built — types.ts (Organization/Profile/.../RoleName aliases), queries.ts (listActiveOrganizationsForUser)
+    memberships.ts              # not built — invite/suspend/remove + active-org switching logic (needs the (app)/settings/users UI and, for switching, the Auth Hook)
   employees/
   notifications/
   audit-log/
 
 lib/
   supabase/
-    server.ts                  # built — server-side Supabase client (reads cookies)
-    client.ts                  # built — browser Supabase client (publishable key only)
+    server.ts                  # built — server-side Supabase client (reads cookies), typed against types/database.ts
+    client.ts                  # built — browser Supabase client (publishable key only), typed against types/database.ts
     middleware.ts              # built — updateSession(), called from proxy.ts
     admin.ts                   # secret-key client — server-only, added when first needed (not built yet)
   auth/
-    session.ts                 # built (partial) — requireUser(), getCurrentUser(); requireRole() and active-org/role resolution deferred to M2/M5
+    session.ts                 # built — requireUser(), getCurrentUser(), requireOrganizationMembership(organizationId), requireRole(organizationId, roleName)
   action-result.ts             # built — shared ActionResult<T>/ActionErrorCode types (docs/API_CONVENTIONS.md §4)
   validation/                  # shared zod schemas used by forms + Server Functions (auth's schema currently lives in modules/auth/validation.ts instead — see note below)
 
@@ -159,7 +168,9 @@ components/
   shared/                      # cross-module composed components (data table, page header, org switcher, etc.)
 
 types/
-  database.ts                  # generated Supabase types (supabase gen types typescript)
+  database.ts                  # built, but HAND-WRITTEN, not generated — no Supabase project is linked yet to run
+                                # `supabase gen types typescript` against. Mirrors the real generated shape closely
+                                # enough to be a drop-in replacement once one is. See that file's own header comment.
 ```
 
 Rationale:
@@ -167,7 +178,7 @@ Rationale:
 - Route folders under `app/(app)/*` stay thin: they call into `modules/*` and render.
 - This structure scales by adding a new module folder + route segment, without needing a framework change, satisfying "scalable module-based folder structure" without introducing an unnecessary layered architecture (no repository/service/controller ceremony beyond what's listed above).
 
-**Build status (as of the M1/M3 auth foundation milestone)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly). Everything else in this tree — every business module, `select-organization/`, the `(platform)/` admin area, `lib/supabase/admin.ts`, `requireRole()`, and active-organization/role resolution inside `requireUser()` — is still just this proposed layout, not yet implemented. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; revisit once a second module needs a `zod` schema.
+**Build status (as of the database-foundation milestone)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly, the dashboard reads real `organization_memberships`/`organizations` rows through RLS). Everything else in this tree — every business module, `select-organization/`, the `(platform)/` admin area, `lib/supabase/admin.ts`, `modules/organizations/memberships.ts`, and active-organization JWT-claim resolution anywhere — is still just this proposed layout, not yet implemented; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status) for the database side of the same picture. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; revisit once a second module needs a `zod` schema.
 
 ## 5. Authentication & Session Handling
 
@@ -184,8 +195,8 @@ Rationale:
 - **A user may hold multiple roles within the same organization.** Roles are assigned per membership via `membership_roles` (see [§3.2](#32-organization-membership-model) and [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md)) — not a single `role` column.
 - **Permissions are the union of the membership's assigned roles.** If any role the user holds in their active organization grants a capability, they have it. There is no "most restrictive role wins" behavior — holding an additional narrow role never takes away something a broader role already grants.
 - **Explicit restrictions take precedence over the union.** A small set of system-level rules are hard denies regardless of role — no one edits or deletes an audit log row or a completed digital signature; no one accesses another organization's data; a handful of module-specific carve-outs noted in the permission matrix (e.g., a Supervisor's corrective-action management still requires HSEQ Manager sign-off to fully close certain items). These are implemented as checks that run *before*, and can override, the role-union check — see [ROLES_AND_PERMISSIONS.md §6](./ROLES_AND_PERMISSIONS.md#6-notes-on-enforcement).
-- Permission checks are centralized per module in `modules/<domain>/permissions.ts` (e.g., `canApproveTimesheet(roles, record)`, taking the caller's full role set) rather than scattered `if (role === 'x')` checks, so a permission rule has one place to change.
-- The permission matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md) is the source of truth these functions implement; server-side authorization and RLS should both be traceable back to it. RLS policies implement the role-union check via a `&&` (array overlap) test against `current_role_ids()` (see [DATABASE_SCHEMA.md §8](./DATABASE_SCHEMA.md#8-row-level-security-approach)), plus the same explicit-restriction overrides where applicable.
+- Permission checks are centralized per module in `modules/<domain>/permissions.ts` (e.g., `canApproveTimesheet(roles, record)`, taking the caller's full role set) rather than scattered `if (role === 'x')` checks, so a permission rule has one place to change. **Not implemented yet** — no business module (and therefore no `permissions.ts`) exists. What *is* implemented, in `lib/auth/session.ts`: `requireRole(organizationId, roleName)`, which checks for one named role at a time (matching `has_organization_role()`'s signature — see below), not yet a resolved "full role set" a caller can union over. A future `permissions.ts` layer composes calls like this (or a new `getRoles(organizationId)` helper returning the full set) into the real union logic described above.
+- The permission matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md) is the source of truth these functions implement; server-side authorization and RLS should both be traceable back to it. **As implemented**, both `requireRole()` and the RLS policies that need a role check call `has_organization_role(organization_id, role_name)` directly (see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)) — the originally-proposed `current_role_ids() && ARRAY[...]` array-overlap pattern is part of the not-yet-built active-organization design ([DATABASE_SCHEMA.md §8.2](./DATABASE_SCHEMA.md#82-original-design-future-enhancement-not-yet-built)).
 
 ## 7. Secrets and Environment Variables
 
@@ -203,12 +214,12 @@ Rules:
 
 ## 8. Audit Logging
 
-- A single `audit_logs` table (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_logs--tenant-append-only)) captures: `organization_id`, `actor_user_id`, `action` (e.g., `create`, `update`, `delete`, `approve`, `sign`, `amend`), `entity_type`, `entity_id`, a `changes` JSON diff where practical, and `created_at`.
-- Audit logging is written from the server-side mutation path (Server Function / Route Handler), not inferred later from Postgres triggers — this keeps the "who" (application-level actor, already authenticated and authorized) explicit and avoids trigger-level complexity for a first version. This can be revisited if we find mutation paths bypassing the shared helper.
+- A single `audit_events` table (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_events--tenant-append-only--implemented) — **implemented**, named `audit_logs` in an earlier revision of that document) captures: `organization_id`, `actor_user_id`, `action` (e.g., `create`, `update`, `delete`, `approve`, `sign`, `amend`), `entity_type`, `entity_id`, a `changes` JSON diff where practical, and `created_at`.
+- Audit logging is written from the server-side mutation path (Server Function / Route Handler), not inferred later from Postgres triggers — this keeps the "who" (application-level actor, already authenticated and authorized) explicit and avoids trigger-level complexity for a first version. This can be revisited if we find mutation paths bypassing the shared helper. (This is about *writing* audit rows. A *separate*, already-implemented trigger *blocks* `UPDATE`/`DELETE` on existing `audit_events` rows — see the next bullet — which is not in tension with this one.)
 - HSEQ modules and any approval/sign-off action (timesheet approval, hour discrepancy resolution, corrective action closure, digital signature capture) always write an audit entry. Simple read-only views do not.
-- **`audit_logs` is append-only and immutable**: no `UPDATE`/`DELETE` RLS policy is granted to any application role, including Company Admin, for any reason.
-- **Digital signature records are immutable in the same way** — once written, a `digital_signatures` row is never updated or deleted (see [§10](#10-file-storage-attachments-photos-signatures)).
-- **Corrections to finalized evidence are new records, not edits.** Once an HSEQ record has been finalized (e.g., an incident closed, an inspection submitted, a signature captured), a substantive correction is modeled as a new linked record — an amendment, a follow-up entry, or (for `audit_logs`/`digital_signatures` specifically) simply a new row referencing the original — rather than mutating the original's core facts. This preserves the original evidence exactly as it was captured, while `audit_logs` still records the full history of what changed and when for records that *are* mutable pre-finalization (e.g., a draft incident report being edited before submission is ordinary editing, fully audit-logged, and not subject to this rule).
+- **`audit_events` is append-only and immutable**: no `UPDATE`/`DELETE` RLS policy is granted to any application role, including Company Admin, for any reason — enforced twice over, as implemented: RLS grants no such policy, **and** a hard database trigger unconditionally rejects both operations for every role, including ones (`service_role`, `postgres`) that bypass RLS entirely.
+- **Digital signature records are immutable in the same way** — once written, a `digital_signatures` row is never updated or deleted (see [§10](#10-file-storage-attachments-photos-signatures)). Not yet implemented (that table doesn't exist yet — see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) for what's built so far).
+- **Corrections to finalized evidence are new records, not edits.** Once an HSEQ record has been finalized (e.g., an incident closed, an inspection submitted, a signature captured), a substantive correction is modeled as a new linked record — an amendment, a follow-up entry, or (for `audit_events`/`digital_signatures` specifically) simply a new row referencing the original — rather than mutating the original's core facts. This preserves the original evidence exactly as it was captured, while `audit_events` still records the full history of what changed and when for records that *are* mutable pre-finalization (e.g., a draft incident report being edited before submission is ordinary editing, fully audit-logged, and not subject to this rule).
 
 ## 9. Soft Deletion
 

@@ -1,6 +1,20 @@
-# Database Schema (Proposed)
+# Database Schema
 
-This document proposes the initial PostgreSQL schema for Supabase. It is a design proposal to guide implementation milestones in [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) — exact column lists may be refined in migration review, but the entities, relationships, and tenancy rules below should not change without updating this document first.
+This document specifies the PostgreSQL schema for Supabase. Most of it is still a design proposal to guide implementation milestones in [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) — exact column lists may be refined in migration review, but the entities, relationships, and tenancy rules below should not change without updating this document first.
+
+## Implementation Status
+
+**Six tables are implemented and migrated** (as SQL files, not yet applied to any remote project — see below): `organizations`, `profiles`, `organization_memberships`, `roles`, `membership_roles`, `audit_events`. They are the database-foundation milestone — auth, multi-org tenancy, multi-role authorization, and immutable audit evidence — with every other table in this document still proposed, not built. The migrations live in `supabase/migrations/`, in the order listed in that milestone's implementation report; `supabase/seed.sql` seeds the role catalogue and one example organization for local development.
+
+Three deliberate deviations from the design as originally written here, applied consistently everywhere below:
+
+1. **`roles` is a table, not an enum.** The original design used a `user_role` Postgres enum. It's now a proper reference table (`id`, `name`, `description`, `is_system`) that `membership_roles.role_id` foreign-keys into, so the catalogue can carry a description and be queried/joined normally. See [`roles`](#roles--tenant--implemented) below. Still a fixed, non-organization-configurable catalogue for v1 — the *mechanism* changed, not the product decision in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md).
+2. **`audit_logs` is named `audit_events`.** Purely a naming change; the design is otherwise unchanged. Every cross-reference in this document has been updated to match.
+3. **RLS does not depend on an "active organization" JWT claim.** The original design (§8, preserved below as a documented future enhancement) resolves a single active organization from a Custom Access Token Auth Hook. That hook must be configured at the Supabase project/dashboard level — out of reach from a migration file, and still unconfigured (see the implementation report). Instead, the implemented helper functions (`is_organization_member(target_org_id)`, `has_organization_role(target_org_id, role_name)`) take an explicit organization id and check membership **per row**, for whichever organization that row belongs to. Tenant isolation is fully enforced either way; what the JWT-claim approach adds on top is convenience (not needing to pass an org id around) once that hook exists.
+
+`platform_super_admins` (below) is **not implemented** in this milestone — there is no self-service or in-app organization creation yet (see [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)), so nothing yet needs to check for platform-super-admin status. Organizations are created directly via `supabase/seed.sql` (development) or an equivalent manual/service-role operation (staging/production), matching "manual organization onboarding for v1."
+
+**Nothing in this milestone has been applied to a remote Supabase project.** No Supabase CLI project link exists in this environment; applying these migrations (`supabase db push`, after `supabase link`) is a manual step for whoever holds the project's credentials. See the implementation report for exactly what remains to be run.
 
 Conventions used throughout:
 - All primary keys are `uuid default gen_random_uuid()`.
@@ -12,26 +26,25 @@ Conventions used throughout:
 
 ## 1. Tenant Isolation Rule
 
-> Every table below is tagged **[tenant]** (has `organization_id`, governed by RLS scoped to the caller's active organization) or **[global]** (not tenant-owned; identity or platform-level).
+> Every table below is tagged **[tenant]** (has `organization_id`, governed by RLS scoped to the caller's membership) or **[global]** (not tenant-owned; identity or platform-level).
 
-The rule enforced by RLS on every **[tenant]** table:
+The rule enforced by RLS on every **[tenant]** table, **as actually implemented** (see [§8.1](#81-as-implemented-this-milestone)):
 
 ```sql
 -- read
-using (organization_id = current_org_id())
+using (public.is_organization_member(organization_id))
 -- write
-with check (organization_id = current_org_id())
+with check (public.is_organization_member(organization_id))
 ```
 
-where `current_org_id()` resolves and live-validates the caller's active organization — see [§8](#8-row-level-security-approach). This replaces an earlier design that read `organization_id` directly off a `profiles` row; `profiles` no longer carries one (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)).
+checked per row against whichever `organization_id` that row belongs to — there is no single cached "current organization" involved. The originally-proposed alternative — a single active organization resolved once from a JWT claim (`organization_id = current_org_id()`) — is preserved as a documented future enhancement in [§8.2](#82-original-design-future-enhancement-not-yet-built); it is not what's implemented. Either way, `organization_id` is never read off a `profiles` row — `profiles` doesn't carry one (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)).
 
 ## 2. Enums
 
 | Enum | Values |
 |---|---|
-| `user_role` | `platform_super_admin`, `company_admin`, `operations_manager`, `hseq_manager`, `project_manager`, `supervisor`, `inspector`, `planner`, `payroll_admin`, `employee` — fixed catalogue for v1; a person can hold more than one via `membership_roles` (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)). |
-| `membership_status` | `invited`, `active`, `suspended`, `removed` — status of an `organization_memberships` row. Replaces the earlier `user_status` (which lived on `profiles`; membership status is now per-organization, not global). |
-| `organization_status` | `trial`, `active`, `suspended` |
+| `membership_status` | `invited`, `active`, `suspended`, `removed` — status of an `organization_memberships` row. Replaces the earlier `user_status` (which lived on `profiles`; membership status is now per-organization, not global). **Implemented.** |
+| `organization_status` | `trial`, `active`, `suspended`. **Implemented.** |
 | `employment_type` | `full_time`, `part_time`, `contractor`, `temporary` |
 | `employee_status` | `active`, `on_leave`, `terminated` |
 | `project_status` | `planned`, `active`, `on_hold`, `closed` |
@@ -55,13 +68,13 @@ where `current_org_id()` resolves and live-validates the caller's active organiz
 | `corrective_action_priority` | `low`, `medium`, `high`, `critical` |
 | `hseq_source_type` | `scaffold_inspection`, `safety_walk`, `incident_report`, `near_miss_report`, `safety_observation`, `manual` |
 | `attachment_entity_type` | one value per attachable entity (`incident_report`, `near_miss_report`, `safety_observation`, `scaffold_inspection`, `safety_walk`, `corrective_action`, `lmra_assessment`, `toolbox_talk`, `employee_document`) |
-| `audit_action` | `create`, `update`, `delete`, `restore`, `approve`, `reject`, `sign`, `close`, `amend` |
+| `audit_action` | `create`, `update`, `delete`, `restore`, `approve`, `reject`, `sign`, `close`, `amend`. **Implemented** — used by `audit_events` (renamed from `audit_logs`; see [Implementation Status](#implementation-status)). |
 
-> **Removed from the earlier version of this document**: `user_status` (superseded by `membership_status`), `incident_type` (superseded by the configurable [`event_categories`](#event_categories--tenant--global-system-rows) table).
+> **Removed from the earlier version of this document**: `user_status` (superseded by `membership_status`), `incident_type` (superseded by the configurable [`event_categories`](#event_categories--tenant--global-system-rows) table), and the `user_role` enum (superseded by the [`roles`](#roles--tenant--implemented) table — see [Implementation Status](#implementation-status)).
 
 ## 3. Core Tables
 
-### `organizations` — **[global]**, tenant root
+### `organizations` — **[global]**, tenant root — **Implemented**
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
@@ -71,15 +84,19 @@ where `current_org_id()` resolves and live-validates the caller's active organiz
 | `created_at` / `updated_at` | timestamptz | |
 | `deleted_at` | timestamptz null | Only a Platform Super Admin action sets this (org offboarding); org data is retained, not purged, on deactivation. |
 
-No `organization_id` column (it *is* the tenant root). **Created only by a Platform Super Admin in v1** — see [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release). RLS: `INSERT`, and changes to `status`/`deleted_at`, are PSA-only; a `UPDATE` of ordinary settings columns (`name`, future config columns) is additionally allowed for a Company Admin of that org; `SELECT` is allowed for anyone with **any** `organization_memberships` row (any status) referencing this org, so an organization switcher can show its name even for a not-currently-active membership. See [§8](#8-row-level-security-approach).
+No `organization_id` column (it *is* the tenant root). **Created only by a Platform Super Admin in v1** — see [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release). Target RLS design: `INSERT`, and changes to `status`/`deleted_at`, are PSA-only; a `UPDATE` of ordinary settings columns (`name`, future config columns) is additionally allowed for a Company Admin of that org; `SELECT` is allowed for anyone with **any** `organization_memberships` row (any status) referencing this org, so an organization switcher can show its name even for a not-currently-active membership. See [§8](#8-row-level-security-approach).
 
-### `platform_super_admins` — **[global]**
+**As implemented this milestone** (no `platform_super_admins` table yet — see below): `SELECT` is granted to any authenticated user with an **active** membership (`is_organization_member(id)`); there is no `INSERT`/`UPDATE`/`DELETE` policy for the `authenticated` role at all — organization creation and settings changes are a service-role/manual operation only (`supabase/seed.sql` for development). The "any status, not just active" nuance above and Company-Admin self-service settings updates are deferred along with `platform_super_admins`.
+
+### `platform_super_admins` — **[global]** — Not implemented this milestone
 | Column | Type | Notes |
 |---|---|---|
 | `user_id` | uuid PK, references `auth.users(id)` | Allow-list of platform operators. Deliberately independent of `organization_memberships` — see [ARCHITECTURE.md §3.1](./ARCHITECTURE.md#31-tenant-boundary): Platform Super Admin access must not depend on ordinary tenant membership. |
 | `created_at` | timestamptz | |
 
-### `profiles` — **[global]**, identity only
+Deferred: there is no in-app or self-service organization creation yet for this table to gate (see [Implementation Status](#implementation-status)); building it is the natural next step once an actual Platform Super Admin onboarding flow is needed.
+
+### `profiles` — **[global]**, identity only — **Implemented**
 1:1 with `auth.users`. Holds **identity information only** — no organization, no role, no per-org status. Those live in `organization_memberships` / `membership_roles` below.
 
 | Column | Type | Notes |
@@ -92,9 +109,9 @@ No `organization_id` column (it *is* the tenant root). **Created only by a Platf
 
 No `deleted_at` — a person's identity isn't "deleted" when they leave an organization; that's expressed by their `organization_memberships.status` becoming `removed`. No `created_by`/`updated_by` — "who invited this person" is tracked on the relevant `organization_memberships.created_by` instead, which is the meaningful attribution (an identity can be created by self-signup completing an invite, not by another user acting on the `profiles` row itself).
 
-**Indexes**: none beyond the primary key needed at this table's expected size; add `(active_organization_id)` only if the switcher's default-org lookup shows up as a hot path.
+**Indexes**: `(active_organization_id)` — added preemptively in the actual migration rather than waiting for it to show up as a hot path; cheap on a table this shape, and the switcher's default-org lookup is a near-certain future query.
 
-### `organization_memberships` — **[tenant]**
+### `organization_memberships` — **[tenant]** — **Implemented**
 Connects a `profiles` row to an `organizations` row. A person may hold memberships in more than one organization; at most one membership row per `(organization_id, user_id)` pair.
 
 | Column | Type | Notes |
@@ -107,9 +124,22 @@ Connects a `profiles` row to an `organizations` row. A person may hold membershi
 | `joined_at` | timestamptz null | Set when status first becomes `active`. |
 | `created_at` / `updated_at` / `created_by` / `updated_by` | | `created_by` is the admin (or Platform Super Admin, for an org's first Company Admin) who created the invite. |
 
-**Constraints**: `unique (organization_id, user_id)`. **Indexes**: `(organization_id, status)`, `(user_id)` — the latter specifically to support "list every organization I belong to" without an organization filter, per [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model).
+**Constraints**: `unique (organization_id, user_id)`. **Indexes**: `(organization_id, status)`, `(user_id)` — the latter specifically to support "list every organization I belong to" without an organization filter, per [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model). Also indexed on `(created_at)` in the actual migration, for future admin/audit views ordered by recency.
 
-### `membership_roles` — **[tenant]**
+### `roles` — **[tenant]** — **Implemented**
+The fixed v1 role catalogue, implemented as a reference table rather than the `user_role` enum originally specified here — see [Implementation Status](#implementation-status) for why. All v1 rows are system-defined; not organization-configurable (matches [ROLES_AND_PERMISSIONS.md §1](./ROLES_AND_PERMISSIONS.md#1-role-definitions) exactly — the *mechanism* changed, not which roles exist or what they mean).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `name` | text not null | **unique** — the slug (`platform_super_admin`, `company_admin`, `operations_manager`, `hseq_manager`, `project_manager`, `supervisor`, `inspector`, `planner`, `payroll_admin`, `employee`), seeded by `supabase/seed.sql`. |
+| `description` | text null | |
+| `is_system` | boolean not null default `true` | Every v1 row is system-defined; the column exists so a future org-custom-role feature (not in scope) has somewhere to record the distinction without a schema change. |
+| `created_at` | timestamptz not null default now() | |
+
+**Deletion behavior**: none through the application — not application-writable at all (no `INSERT`/`UPDATE`/`DELETE` RLS policy for `authenticated`); the catalogue is seed data. **Indexes**: `unique(name)` (also serves as the lookup index).
+
+### `membership_roles` — **[tenant]** — **Implemented**
 A membership can carry more than one role — a separate row per role, not a single column.
 
 | Column | Type | Notes |
@@ -117,10 +147,10 @@ A membership can carry more than one role — a separate row per role, not a sin
 | `id` | uuid PK | |
 | `organization_id` | uuid not null, FK `organizations(id)` | Denormalized from the parent membership for RLS simplicity/performance, same pattern used by other join tables in this schema (e.g., `lmra_participants`). |
 | `membership_id` | uuid not null, FK `organization_memberships(id)` | |
-| `role` | `user_role` not null | |
+| `role_id` | uuid not null, FK `roles(id)` on delete restrict | **Implemented as a foreign key to `roles`**, not an enum column (see [`roles`](#roles--tenant--implemented) above) — `ON DELETE RESTRICT` so a role in active use can't be removed from the catalogue out from under existing assignments. |
 | `created_at` / `created_by` | | No `updated_at`/soft delete — a role grant is either present or removed (hard-deleted); there is nothing on this row to "edit." Removing a role is deleting the row, always audit-logged from the calling Server Function. |
 
-**Constraints**: `unique (membership_id, role)`. **Indexes**: `(membership_id)`, `(organization_id, role)` — the latter supports "everyone holding role X in this org" (e.g., resolving HSEQ Manager notification recipients).
+**Constraints**: `unique (membership_id, role_id)`. **Indexes**: `(membership_id)`, `(organization_id)`, `(role_id)` — the latter two support "everyone holding role X in this org" (e.g., resolving HSEQ Manager notification recipients) and general role-catalogue joins.
 
 ## 4. Core Tables (continued)
 
@@ -190,7 +220,7 @@ Self-referencing to allow an optional hierarchy (Project → Zone → Work Area)
 | `employee_id` | uuid not null, FK `employee_profiles(id)` | |
 | `scheduled_date` | date not null | |
 | `shift_start` / `shift_end` | time null | |
-| `role_on_site` | text null | Free text (e.g., "Rigger") — not the platform `user_role`. |
+| `role_on_site` | text null | Free text (e.g., "Rigger") — not a row from the `roles` catalogue. |
 | `status` | `schedule_status` not null default `scheduled` | |
 | `created_at` / `updated_at` / `created_by` / `updated_by` | | |
 | `deleted_at` | timestamptz null | |
@@ -558,12 +588,13 @@ Immutable **authenticated electronic attestation** record (not a certified/quali
 
 **Deletion behavior**: none. No `deleted_at`, no `UPDATE`/`DELETE` RLS policy granted to any role — a signature is permanent evidence, per [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging). A mistaken signature is addressed by a new record (e.g., re-attesting, or a corrective note referencing this signature's `id`), never by editing this row. **Indexes**: `(organization_id, entity_type, entity_id)`, `(signer_id)`.
 
-### `audit_logs` — **[tenant]** (append-only)
+### `audit_events` — **[tenant]** (append-only) — **Implemented**
+Renamed from `audit_logs` in the original proposal — see [Implementation Status](#implementation-status).
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
-| `organization_id` | uuid null, FK | Null only for platform-level actions (e.g., Platform Super Admin suspending an org). |
-| `actor_user_id` | uuid null, FK `profiles(id)` | Null for system/scheduled-job actions. |
+| `organization_id` | uuid null, FK, `on delete set null` | Null only for platform-level actions (e.g., Platform Super Admin suspending an org). `SET NULL` rather than `CASCADE` — a hard delete elsewhere should never silently delete audit evidence. |
+| `actor_user_id` | uuid null, FK `profiles(id)`, `on delete set null` | Null for system/scheduled-job actions. |
 | `action` | `audit_action` not null | |
 | `entity_type` | text not null | |
 | `entity_id` | uuid not null | |
@@ -571,7 +602,7 @@ Immutable **authenticated electronic attestation** record (not a certified/quali
 | `ip_address` | inet null | |
 | `created_at` | timestamptz not null default now() | |
 
-**Deletion behavior**: none — no `UPDATE`/`DELETE` policy for any role, including Company Admin, per [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging). **Indexes**: `(organization_id, entity_type, entity_id)`, `(organization_id, created_at desc)`, `(actor_user_id)`.
+**Deletion behavior**: none — no `UPDATE`/`DELETE` RLS policy for any role, including Company Admin, per [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging) — **and, as implemented, backed by a second, independent layer**: a hard `BEFORE UPDATE`/`BEFORE DELETE` trigger unconditionally rejects both operations regardless of role, so even `service_role`/`postgres` (which bypass RLS entirely) cannot alter history through normal DML. **Indexes**: `(organization_id, created_at desc)`, `(entity_type, entity_id)`, `(actor_user_id)`, `(created_at)`.
 
 ## 7. Deletion Behavior Summary
 
@@ -580,6 +611,7 @@ Immutable **authenticated electronic attestation** record (not a certified/quali
 | `organizations` | Soft delete, Platform Super Admin only | Tenant offboarding retains data for compliance/export. |
 | `profiles` | **No deletion** (identity persists) | A person's identity isn't tied to any one organization; membership end is expressed via `organization_memberships.status = 'removed'`, not a `profiles` deletion. |
 | `organization_memberships` | **Status-based** (`status = 'removed'`), no separate `deleted_at` | The status enum already models "no longer a member" as a state — see [ARCHITECTURE.md §9](./ARCHITECTURE.md#9-soft-deletion). |
+| `roles` | **No delete** — not application-writable | Fixed system catalogue, seeded once. |
 | `membership_roles` | Hard delete | A role grant is present or absent; removing one is deleting the row, audit-logged by the caller. |
 | `employee_profiles` | Soft delete | Employment history, linked timesheets/HSEQ records. |
 | `projects` | Soft delete | Closed projects remain queryable for reporting/compliance. |
@@ -594,15 +626,45 @@ Immutable **authenticated electronic attestation** record (not a certified/quali
 | `lmra_assessments`, `toolbox_talks`, `scaffold_inspections`, `safety_walks`, `incident_reports`, `near_miss_reports`, `safety_observations`, `corrective_actions` | Soft delete | HSEQ evidence — never hard-deleted; correction of a *finalized* record is a new linked record/amendment, not an edit, per [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging). |
 | `attachments` | Soft delete | Evidence. |
 | `digital_signatures` | **No deletion at all** | Immutable attestation. |
-| `audit_logs` | **No deletion at all** | Immutable system record. |
+| `audit_events` | **No deletion at all** — enforced by RLS *and* a hard trigger | Immutable system record. |
 | Join/line-item tables (`lmra_participants`, `toolbox_talk_attendees`, `scaffold_inspection_items`, `safety_walk_findings`, `incident_involved_persons`) | Hard delete tied to parent lifecycle | Not independently meaningful without the parent; parent soft-delete is what matters for retention. |
 
 ## 8. Row Level Security Approach
 
+### 8.1 As implemented (this milestone)
+
+Two RLS helper functions exist, both `SECURITY DEFINER`, `STABLE`, and with `search_path` pinned to `public, pg_temp` (blocks search_path-hijacking against a definer-privileged function — the classic escalation vector for this pattern):
+
+- **`is_organization_member(target_org_id uuid) returns boolean`** → true if the caller has an **active** `organization_memberships` row for `target_org_id`.
+- **`has_organization_role(target_org_id uuid, role_name text) returns boolean`** → true if the caller has an active membership in `target_org_id` **and** holds `role_name` there (via `membership_roles` → `roles`).
+
+Both are `SECURITY DEFINER` for the same reason: they are called *from within* RLS policies on `organization_memberships`/`membership_roles`, and a `SECURITY INVOKER` version's own internal query against those same tables would re-trigger the calling policy — "infinite recursion detected in policy." Running as the function owner (which has `BYPASSRLS` under standard Supabase project setup) breaks that cycle. Neither function is granted to `PUBLIC`; both are revoked from `PUBLIC` and re-granted to `authenticated` only, and neither is meant to be called as a public RPC endpoint — they're internal building blocks for policies.
+
+Unlike the original design below, **neither function resolves a single "current active organization" from a JWT claim.** Both take an explicit `target_org_id` and check membership/role **per row**, for whichever organization that specific row belongs to. This sidesteps needing the Custom Access Token Auth Hook (§8.2) — which requires Supabase project/dashboard configuration this milestone doesn't have access to — without weakening tenant isolation: every policy below still resolves, for every row, to a real, live database check against `organization_memberships`.
+
+Implemented policies, per table (all `to authenticated`; nothing is ever granted to `anon`; no policy uses `USING (true)` — see the migration file's own header comment for the one table, `roles`, where fully open *read* access is a deliberate, justified exception, not an oversight):
+
+| Table | `select` | `insert` | `update` | `delete` |
+|---|---|---|---|---|
+| `organizations` | `is_organization_member(id)` | — (deferred) | — (deferred) | — (deferred) |
+| `profiles` | `id = auth.uid()` | — (trigger-only, see §4.2) | `id = auth.uid()` | — (identity persists) |
+| `organization_memberships` | `user_id = auth.uid() OR is_organization_member(organization_id)` | — (deferred) | — (deferred) | — (deferred) |
+| `roles` | any authenticated user | — (seed-only) | — (seed-only) | — (seed-only) |
+| `membership_roles` | own membership's rows, or any row in an org you're an active member of | — (deferred) | — (deferred) | — (deferred) |
+| `audit_events` | `has_organization_role(organization_id, 'company_admin') OR has_organization_role(organization_id, 'hseq_manager')` | `actor_user_id = auth.uid() AND is_organization_member(organization_id)` | **never** (no policy + hard trigger) | **never** (no policy + hard trigger) |
+
+"— (deferred)" cells have no `authenticated`-role policy *and* no `GRANT` for that operation — invite/settings/role-management flows aren't built yet (out of scope for this milestone; see the implementation report). A GRANT is required in addition to a policy for any of these tables to be reachable via the Data API at all — current Supabase projects don't auto-expose newly created tables (see `auto_expose_new_tables` in `supabase/config.toml`); every implemented `select`/`insert` above has a matching `GRANT` in the migration.
+
+RLS is **enabled and forced** (`enable row level security` + `force row level security`) on every one of these six tables.
+
+### 8.2 Original design (future enhancement, not yet built)
+
+The rest of this section is preserved as-written from the original proposal — a single "active organization" resolved from a JWT claim, refreshed via a Custom Access Token Auth Hook. It remains a reasonable direction if/when that hook is configured (it would mostly add ergonomics — not passing an org id around — on top of what §8.1 already enforces), but nothing below is implemented:
+
 RLS helper functions, all `SECURITY DEFINER` and `STABLE`, owned by a role that can read the underlying tables without recursive policy evaluation:
 
 - **`current_org_id()`** → reads the `org_id` claim from `auth.jwt()` (set by the Custom Access Token Auth Hook — see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)) and **re-validates it live**: returns the org id only if `organization_memberships` has an `active` row for `(auth.uid(), org_id)`; otherwise returns `null`. This means a stale or forged claim — e.g., a token minted before a membership was suspended — can never grant access, since every tenant policy's `organization_id = current_org_id()` check fails cleanly against `null`.
-- **`current_role_ids()`** → returns the caller's `user_role[]` from `membership_roles` joined to the **currently active** membership (`organization_memberships` row matching `current_org_id()`). Resolved live on every call, not baked into the JWT, so a role change takes effect on the very next request without needing a token refresh — unlike `current_org_id()`, which is a coarser, user-initiated switch.
+- **`current_role_ids()`** → returns the caller's role names (from `roles.name`, via `membership_roles`) for the **currently active** membership (`organization_memberships` row matching `current_org_id()`). Resolved live on every call, not baked into the JWT, so a role change takes effect on the very next request without needing a token refresh — unlike `current_org_id()`, which is a coarser, user-initiated switch.
 - **`is_platform_super_admin()`** → checks `platform_super_admins` for `auth.uid()`. Deliberately independent of `current_org_id()`/`organization_memberships` — see [ARCHITECTURE.md §3.1](./ARCHITECTURE.md#31-tenant-boundary).
 
 Every **[tenant]** table gets, at minimum:
@@ -613,7 +675,7 @@ create policy tenant_isolation_select on <table>
 create policy tenant_isolation_write on <table>
   for insert with check (organization_id = current_org_id());
 ```
-plus table-specific `update`/`delete` policies layered on top that also check `current_role_ids() && ARRAY[...]::user_role[]` (array overlap — "holds any of these roles") or a per-row ownership condition (e.g., "an Employee may only update their own draft timesheet") per the matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md), plus any explicit-restriction override (e.g., no policy ever grants `UPDATE`/`DELETE` on `audit_logs` or `digital_signatures`, regardless of role).
+plus table-specific `update`/`delete` policies layered on top that also check `current_role_ids() && ARRAY[...]::text[]` (array overlap — "holds any of these roles") or a per-row ownership condition (e.g., "an Employee may only update their own draft timesheet") per the matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md), plus any explicit-restriction override (e.g., no policy ever grants `UPDATE`/`DELETE` on `audit_events` or `digital_signatures`, regardless of role).
 
 Tables with non-standard policies, layered on top of or instead of the generic pattern above:
 - **`profiles`**: `select` allowed for the caller's own row, or any row belonging to a person who shares an **active** membership with the caller in at least one common organization (needed so the UI can show "Assigned to: Jane Doe" for a colleague). `update` allowed only for the caller's own row.

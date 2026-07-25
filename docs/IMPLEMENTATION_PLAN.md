@@ -19,6 +19,8 @@ Set up the scaffolding this plan depends on, without touching application featur
 
 ## M1 — Supabase Project & Local Dev Workflow
 
+**Status: partially done.** `supabase init` has been run (`supabase/config.toml` exists) and `supabase/migrations/` holds real migration files (see M2). Not done: no `dev`/`staging` Supabase project has been provisioned or linked (`supabase link`) — this environment has no CLI-level project credentials — so nothing has been pushed anywhere, and the `types/database.ts` generation script below doesn't exist yet (the file is hand-written for now; see its own header comment and [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status)).
+
 - Provision Supabase projects for `dev` and `staging` (production created later, closer to launch).
 - Initialize Supabase CLI in the repo; establish `supabase/migrations/` as the only path by which schema changes reach a shared environment (no dashboard-only edits on `staging`/`production`).
 - Wire `types/database.ts` generation (`supabase gen types typescript`) into a documented `npm run` script.
@@ -29,24 +31,26 @@ Set up the scaffolding this plan depends on, without touching application featur
 
 ## M2 — Core Schema & Tenant Isolation (RLS Foundation)
 
-Implement, via migration: `organizations`, `platform_super_admins`, `profiles`, `organization_memberships`, `membership_roles`, the `user_role`/`membership_status`/`organization_status` enums, the `current_org_id()`/`current_role_ids()`/`is_platform_super_admin()` helper functions, and baseline RLS policies — per [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables) and [§8](./DATABASE_SCHEMA.md#8-row-level-security-approach).
+**Status: schema, RLS, and helper functions are written and migrated; not yet applied to any remote project; built via a different mechanism than originally specified here — see below.**
 
-**This milestone also requires Supabase project configuration, not just migrations**: the **Custom Access Token Auth Hook** that embeds the validated active-organization claim in the session JWT (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)) must be written as a Postgres function and enabled in the Supabase Auth settings for each environment (`dev`, `staging`, later `production`). Document this as an explicit, repeatable setup step (not just "it works on my local project") since it's easy to forget when standing up a new environment.
+Implemented, via migration (`supabase/migrations/`, 10 files — see the database-foundation milestone's implementation report for the exact list and order): `organizations`, `profiles`, `organization_memberships`, `membership_roles`, `audit_events` (named `audit_logs` in the version of this milestone originally written here — see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status) for this and the two other naming/mechanism deviations), plus `roles` (a table, not the `user_role` enum this milestone originally specified), the `membership_status`/`organization_status`/`audit_action` enums, `updated_at` and `handle_new_user` (auto-creates a `profiles` row on signup) triggers, an immutability trigger on `audit_events`, and the `is_organization_member()`/`has_organization_role()` helper functions — per [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables) and [§8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone).
 
-**Acceptance criteria**
-- RLS is enabled and **forced** on `organizations`, `profiles`, `organization_memberships`, and `membership_roles`.
-- A test user with **two** active memberships (Org A and Org B) can switch their active organization and, after the switch, `current_org_id()` resolves to the newly-selected org — verified by actually exercising the Auth Hook + `switchActiveOrganization()` flow, not by manually setting a claim in a test harness.
-- An automated test proves: a user active in Org A querying any tenant table never receives a row belonging to Org B, including when attempting to pass a foreign org's id explicitly in a filter, and including for a user who *also* has a membership in Org B (their Org A queries still only return Org A data while Org A is active).
-- Suspending a user's membership in their currently-active org (status → `suspended`) causes `current_org_id()` to return `null` on their **next** request, without requiring them to sign out — proving the live re-validation in `current_org_id()`, not just the JWT claim, is what RLS relies on.
-- Attempting an `insert`/`update` that sets `organization_id` to a different org than the caller's active one is rejected by the database (not just the application).
-- `is_platform_super_admin()` returns true for a platform operator with **zero** `organization_memberships` rows in any organization, and that operator can create a new `organizations` row and its first `organization_memberships`/`membership_roles` rows despite having no membership themselves.
+**Not implemented**: `platform_super_admins` (nothing yet needs it — no in-app org creation exists to gate) and the **Custom Access Token Auth Hook** that would embed a validated active-organization claim in the session JWT (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)) — that requires Supabase project/dashboard configuration this milestone had no credentials for. Tenant isolation does not depend on either: `is_organization_member()`/`has_organization_role()` check membership **per row, per explicit organization id**, with no "active organization" concept involved in the enforcement itself. If/when the Auth Hook is built, `is_platform_super_admin()`, `current_org_id()`, and `current_role_ids()` (all designed but not implemented — see [DATABASE_SCHEMA.md §8.2](./DATABASE_SCHEMA.md#82-original-design-future-enhancement-not-yet-built)) are the natural next layer on top, not a replacement for what's here.
+
+**Acceptance criteria (as implemented — see the note above for how these differ from the milestone as originally written)**
+- RLS is enabled and **forced** on `organizations`, `profiles`, `organization_memberships`, `roles`, `membership_roles`, and `audit_events`.
+- An automated test proves: a user with an active membership in Org A only, querying any of the six tables, never receives a row belonging to Org B — including when attempting to pass Org B's id explicitly in a filter, and including for a user who has memberships in *both* orgs (each query result is correctly scoped to the org(s) that specific user actually belongs to, per row, not to one globally "current" org). **Not yet run against a real database** — no linked project exists in this environment (see the implementation report); this is written as the acceptance bar for whoever applies the migrations next, not as something already verified end-to-end.
+- Suspending a user's membership in an org (status → `suspended`) causes `is_organization_member(that_org_id)` to return `false` for that user on their **very next** call — trivially true given the function queries `organization_memberships` live on every invocation, but still worth an explicit test given how much tenant isolation depends on it.
+- Attempting an `insert`/`update` that sets `organization_id` to an org the caller has no active membership in is rejected by the database (not just the application).
+- `audit_events` cannot be updated or deleted through the API by any role — verified against RLS (no policy grants it) **and** against the hard trigger directly (attempt the operation as a role that bypasses RLS, e.g. via the Supabase SQL editor as `postgres`, and confirm the trigger still rejects it).
 - This is verified **before** any other table is added — it is the pattern every later table copies.
+- Deferred to when `platform_super_admins`/the Auth Hook are actually built: a PSA-provisioning test, and an active-organization-switch test.
 
 ## M3 — Authentication
 
 - Supabase Auth (email/password at minimum) wired via `@supabase/ssr`.
 - `proxy.ts` (Next.js 16's `middleware.ts` successor) refreshes the session cookie and redirects unauthenticated users out of `(app)`/`(platform)` route groups.
-- `app/unauthorized.tsx` and `app/forbidden.tsx` implemented per [ARCHITECTURE.md §5](./ARCHITECTURE.md#5-authentication--session-handling); `lib/auth/session.ts` exposes `requireUser()` (resolving the validated active org + role set, per M2).
+- `app/unauthorized.tsx` and `app/forbidden.tsx` implemented per [ARCHITECTURE.md §5](./ARCHITECTURE.md#5-authentication--session-handling); `lib/auth/session.ts` exposes `requireUser()`. (Resolving a validated active org + role set automatically inside `requireUser()` itself depends on the Auth Hook from M2, which isn't built — see M2's status note. `requireOrganizationMembership(organizationId)`/`requireRole(organizationId, roleName)`, added once the M2 schema existed, take an explicit org id instead.)
 - Login, `accept-invite` (completes an invited membership — not public self-registration, see [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)), logout, and (if in scope for v1) password reset flows.
 - `select-organization` route: shown when a user has no valid active organization (no memberships, or more than one and none chosen yet).
 
@@ -79,12 +83,14 @@ Implement, via migration: `organizations`, `platform_super_admins`, `profiles`, 
 
 ## M6 — Audit Logging Foundation
 
-- `audit_logs` table (append-only, per [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_logs--tenant-append-only)) and a shared `writeAuditLog()` server-side helper.
+**Status: the table itself is already built, ahead of this milestone** — `audit_events` (append-only, per [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_events--tenant-append-only--implemented); named `audit_logs` when this milestone was originally written) exists as of M2, along with RLS and a hard immutability trigger. What's left for M6 specifically: a shared `writeAuditLog()` server-side helper, wired into a real module's mutations.
+
+- Shared `writeAuditLog()` server-side helper, wrapping an insert into `audit_events`.
 - Wire it into the Employee Profiles module's mutations (create/update/soft-delete) as the reference implementation.
 
 **Acceptance criteria**
-- Every mutation to `employee_profiles` produces exactly one corresponding `audit_logs` row with correct actor, action, and diff.
-- No role, including Company Admin, can update or delete an `audit_logs` row (verified at the RLS level).
+- Every mutation to `employee_profiles` produces exactly one corresponding `audit_events` row with correct actor, action, and diff.
+- No role, including Company Admin, can update or delete an `audit_events` row — already true as of M2 (RLS grants no such policy, and a hard trigger rejects both operations unconditionally, for every role); re-verify here in the context of a real mutation path, not just directly against the table.
 
 ## M7 — Cross-Reference Validation Helper
 

@@ -1,5 +1,7 @@
 # Roles and Permissions
 
+**Implementation note**: the ten roles below exist as real seeded rows in the `roles` table (`supabase/seed.sql`), one per role, matching this table's names exactly (the vendor-operator/tenant-facing distinction in the "Scope" column is product framing here — at the schema level, `platform_super_admin` is a row in `roles` like any other; actual platform-super-admin *access* comes from a separate `platform_super_admins` table, not yet built, per [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status)). The permission matrices below (§4, §5) remain the target design — most of what they describe (which module each role can touch) isn't built yet; only the roles themselves, and the membership/role-assignment machinery, are.
+
 ## 1. Role Definitions
 
 | Role | Scope | Summary |
@@ -24,7 +26,7 @@
 - **Permissions are the union of the active membership's assigned roles.** If *any* held role grants a capability for a module, the user has it — holding an additional, narrower role never takes something away that a broader role already grants.
 - **Explicit restrictions take precedence over the union.** A short list of system-level rules is a hard deny regardless of how many or which roles a user holds:
   - No one can read or write another organization's data, no matter their role in their own organization.
-  - No one can update or delete an `audit_logs` row or a completed `digital_signatures` row (see [DATABASE_SCHEMA.md §6](./DATABASE_SCHEMA.md#6-hseq-tables-continued) / [§8](./ARCHITECTURE.md#8-audit-logging)) — this is not a role grant, it is the absence of any policy that would allow it.
+  - No one can update or delete an `audit_events` row (**implemented** — see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)) or a completed `digital_signatures` row (not yet implemented; see [DATABASE_SCHEMA.md §6](./DATABASE_SCHEMA.md#6-hseq-tables-continued) / [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging)) — this is not a role grant, it is the absence of any policy that would allow it.
   - A handful of narrower, module-specific carve-outs noted in the footnotes below (e.g., a Supervisor's corrective-action management still requires HSEQ Manager sign-off on certain closures) — these are deliberate exceptions to an otherwise-permissive role grant, not general rules.
   These checks run *before*, and can override, the ordinary role-union evaluation. See [§6](#6-notes-on-enforcement).
 - "Assigned project(s)" scope (PM, SV, IN, PL) means the role only grants access to projects the user is explicitly linked to (via `schedule_entries`, a project assignment, or being `project_manager_id`) — this project-level scoping is layered on top of the org-level RLS boundary and enforced in the module's `permissions.ts` + supporting RLS policy, not by role alone, and is independent of the multi-role union described above (a user's project assignment doesn't change just because they hold an extra role).
@@ -60,7 +62,7 @@
 | Reports & Dashboards | V¹ | F | F | F | V⁴ | V⁴ | V⁴ | V | M⁷ | — |
 
 ¹ PSA sees platform-level health/usage metrics only, not tenant business data, per [ARCHITECTURE.md §3.1](./ARCHITECTURE.md#31-tenant-boundary).
-² Company Admin's "Full" on org settings covers ordinary configuration (name, settings columns); changing an organization's `status` or offboarding it (`deleted_at`) is PSA-only regardless — see [DATABASE_SCHEMA.md — `organizations`](./DATABASE_SCHEMA.md#organizations--global-tenant-root).
+² Company Admin's "Full" on org settings covers ordinary configuration (name, settings columns); changing an organization's `status` or offboarding it (`deleted_at`) is PSA-only regardless — see [DATABASE_SCHEMA.md — `organizations`](./DATABASE_SCHEMA.md#organizations--global-tenant-root--implemented).
 ³ Platform Super Admin's access to Organization Memberships & Roles is specifically for provisioning an organization's **first** Company Admin at onboarding (v1 organizations are created manually by PSA, per [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)) — it does not extend to ongoing membership management of an org's other users, which is Company Admin's job day-to-day.
 ⁴ Limited to the project(s) the PM/SV/IN/PL/EM is assigned to.
 ⁵ Employee: full CRUD on their own draft timesheet before submission; read-only once submitted/approved; can create (but not approve) a discrepancy request against their own timesheet.

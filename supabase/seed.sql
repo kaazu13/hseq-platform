@@ -1,0 +1,99 @@
+-- Development-only seed/bootstrap data.
+--
+-- Run automatically by `supabase db reset` / `supabase start` (see
+-- supabase/config.toml → [db.seed]). Safe to re-run — every statement is
+-- idempotent (on conflict do nothing/update). Contains no real emails,
+-- passwords, or secrets — only fixed placeholder UUIDs and generic labels.
+--
+-- NEVER run this against a production project. It is meant for a local
+-- (`supabase start`) or disposable dev Supabase project only.
+
+-- ── 1) Standard role catalogue ───────────────────────────────────────
+-- The fixed ten roles from docs/ROLES_AND_PERMISSIONS.md §1. Every
+-- environment (dev, staging, production) needs this exact seed — it is
+-- not development-only data, but is included here so a fresh local
+-- database is immediately usable. If a staging/production environment is
+-- bootstrapped without running this whole file, apply just this block.
+
+insert into public.roles (name, description, is_system) values
+  ('platform_super_admin', 'Vendor operator. Onboards/suspends organizations; independent of organization_memberships.', true),
+  ('company_admin', 'Owns the tenant. Manages memberships/roles, org settings; full visibility across the org.', true),
+  ('operations_manager', 'Oversees projects, scheduling, and workforce operations across the org.', true),
+  ('hseq_manager', 'Owns all HSEQ modules org-wide: inspections, incidents, corrective actions, compliance reporting.', true),
+  ('project_manager', 'Manages a specific project: schedule, budget-adjacent data, HSEQ status for that project.', true),
+  ('supervisor', 'Day-to-day site lead. Runs toolbox talks/LMRA, approves crew hours, logs observations.', true),
+  ('inspector', 'Conducts formal inspections (scaffold, safety walks) and raises corrective actions.', true),
+  ('planner', 'Builds and maintains the daily workforce schedule.', true),
+  ('payroll_admin', 'Back-office: reconciles timesheets, manages employee documents, exports payroll data.', true),
+  ('employee', 'Field worker. Views own schedule/documents, submits own timesheet, completes assigned HSEQ forms.', true)
+on conflict (name) do update set
+  description = excluded.description,
+  is_system = excluded.is_system;
+
+-- ── 2) One example organization ──────────────────────────────────────
+-- Fixed, well-known UUID (not a secret — just a stable id so the
+-- instructions below can reference it directly without a lookup step).
+
+insert into public.organizations (id, name, slug, status)
+values (
+  '00000000-0000-0000-0000-000000000001',
+  'Example Construction Co',
+  'example-construction-co',
+  'trial'
+)
+on conflict (id) do update set
+  name = excluded.name,
+  slug = excluded.slug;
+
+-- ── 3) Attaching a real auth user to the example organization ───────
+-- This part is intentionally NOT auto-executed: it needs a real
+-- auth.users.id, which only exists after someone actually signs up (the
+-- public.profiles row is then created automatically by the
+-- handle_new_user() trigger — see
+-- supabase/migrations/20260725090700_functions_and_triggers.sql).
+--
+-- Steps:
+--
+--   1. Create a user, either:
+--      a) through the app's own /login flow's sign-up path once one
+--         exists, or
+--      b) locally: `supabase start`, then open Studio (the URL it
+--         prints) → Authentication → Users → Add user, or
+--         `supabase auth users create <email> --password <password>`
+--         (use a throw-away local address/password — never a real one).
+--
+--   2. Copy that user's UUID from Studio (or the CLI output) and
+--      substitute it for <AUTH_USER_UUID> below, then run this block
+--      (e.g. `supabase db execute -f -` or paste into Studio's SQL editor).
+--      It is written to be safely re-run.
+--
+-- begin;
+--
+--   insert into public.organization_memberships
+--       (organization_id, user_id, status, joined_at)
+--   values (
+--     '00000000-0000-0000-0000-000000000001',
+--     '<AUTH_USER_UUID>',
+--     'active',
+--     now()
+--   )
+--   on conflict (organization_id, user_id) do update set
+--     status = 'active',
+--     joined_at = coalesce(public.organization_memberships.joined_at, now());
+--
+--   insert into public.membership_roles (organization_id, membership_id, role_id)
+--   select
+--     '00000000-0000-0000-0000-000000000001',
+--     m.id,
+--     r.id
+--   from public.organization_memberships m
+--   join public.roles r on r.name = 'company_admin'
+--   where m.organization_id = '00000000-0000-0000-0000-000000000001'
+--     and m.user_id = '<AUTH_USER_UUID>'
+--   on conflict (membership_id, role_id) do nothing;
+--
+--   update public.profiles
+--   set active_organization_id = '00000000-0000-0000-0000-000000000001'
+--   where id = '<AUTH_USER_UUID>';
+--
+-- commit;
