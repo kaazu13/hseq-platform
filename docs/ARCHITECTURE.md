@@ -1,0 +1,232 @@
+# Architecture
+
+## 1. Technology Stack
+
+| Layer | Choice | Notes |
+|---|---|---|
+| Framework | Next.js (App Router) | Currently on Next.js 16.x. **Next.js 16 renamed `middleware.ts` to `proxy.ts`** and introduced the `forbidden()` / `unauthorized()` navigation helpers — this document uses the current names throughout. Do not follow older Next.js tutorials that reference `middleware.ts` or "Server Actions" without checking against `node_modules/next/dist/docs` first. |
+| Language | TypeScript, `strict: true` | No `any` in new code; shared types live in `/types` or colocated `*.types.ts` files. |
+| Styling | Tailwind CSS v4 (CSS-first `@theme`, already configured in `app/globals.css`) | No `tailwind.config.js` — theme tokens are defined via CSS `@theme`. |
+| UI components | shadcn/ui | Copied into the repo (not an npm dependency in the traditional sense) — see [UI_GUIDELINES.md](./UI_GUIDELINES.md). Not yet installed as of this document. |
+| Database | Supabase PostgreSQL | Single Postgres instance, tenant isolation via `organization_id` + Row Level Security, not separate databases/schemas per tenant. |
+| Auth | Supabase Authentication | Email/password + magic link at minimum; SSO is a future option. Supabase issues the session; Next.js reads it server-side. A **Custom Access Token Auth Hook** is required for the multi-organization model — see [§3.2](#32-organization-membership-model). |
+| Data access control | Supabase Row Level Security (RLS) | The database — not application code — is the last line of defense for tenant isolation. |
+| Hosting | Vercel | Next.js app. Supabase is hosted separately (Supabase Cloud). |
+
+## 2. Guiding Principles
+
+1. **The database enforces tenancy, not just the application.** RLS policies must make it structurally impossible for a query to return another organization's rows, even if application code has a bug.
+2. **Authorization is decided on the server.** Client-side role checks are UX only (hide a button); every mutation and every sensitive read is re-checked server-side (RLS + server action authorization). See [API_CONVENTIONS.md](./API_CONVENTIONS.md#6-server-side-authorization).
+3. **Everything is attributable.** Tenant-owned records carry `created_by` / `updated_by`, and mutations to HSEQ-relevant data additionally emit an audit log entry.
+4. **HSEQ records are evidence.** They are not hard-deleted; correcting a mistake is a new, linked record or a fully audit-logged update, never a silent overwrite or a `DELETE`. Audit log entries and completed digital signatures go further — they are never edited or deleted by anyone, at the database level, once written. See [§8](#8-audit-logging) and [§10](#10-file-storage-attachments-photos-signatures).
+5. **Mobile is the primary surface for field roles.** Supervisor/Inspector/Employee flows are designed at phone width first; desktop is an enhancement, not the baseline.
+6. **A reference to another record is only as trustworthy as its validation.** Any column that points at another row — a real foreign key to `profiles`, or a polymorphic `entity_type`/`entity_id` pair — must be validated server-side at write time: does the referenced row exist, does its effective organization match this record's organization (or is it a legitimate cross-org/global reference, like a system category), and is the acting user actually permitted to reference it. This matters more than it used to now that `profiles` is a global table (see [§3.2](#32-organization-membership-model)) — a foreign key to `profiles(id)` no longer implies "this person is in my organization" by itself. See [§3.4](#34-cross-reference-validation-rule) and [API_CONVENTIONS.md §6](./API_CONVENTIONS.md#6-server-side-authorization).
+7. **Avoid unnecessary complexity.** No microservices, no separate per-tenant databases, no client-side global state library unless a concrete need appears — App Router server components plus a thin client layer is sufficient for this product's shape.
+
+## 3. Multi-Tenancy Model
+
+### 3.1 Tenant boundary
+
+- `organizations` is the tenant root table.
+- Every tenant-owned table carries a non-nullable `organization_id uuid references organizations(id)`.
+- A small number of tables are intentionally **not** tenant-owned: `profiles` (global user identity, see [§3.2](#32-organization-membership-model)), the `platform_super_admins` allow-list, and any future platform-level configuration.
+- **Platform Super Admin access does not depend on ordinary tenant membership.** A Platform Super Admin is identified solely by a row in `platform_super_admins` keyed on their `auth.users` id — they do not need (and by default do not have) an `organization_memberships` row in any tenant to perform platform-level operations like creating a new organization or its first Company Admin. This is enforced by a dedicated `is_platform_super_admin()` RLS helper that never consults `organization_memberships`, kept structurally separate from the `current_org_id()` / `current_role_ids()` helpers used for ordinary tenant access. See [DATABASE_SCHEMA.md §8](./DATABASE_SCHEMA.md#8-row-level-security-approach).
+
+### 3.2 Organization Membership Model
+
+**v1 uses a multi-organization-capable model from the start.** A person's identity is separate from their relationship to any given organization:
+
+- **`profiles`** — one row per Supabase Auth user, **identity information only**: name, phone, and a `active_organization_id` preference (see [Active organization selection](#active-organization-selection) below). No `organization_id`, no `role`, no per-org status live here — `profiles` is a global table, not a tenant-owned one.
+- **`organizations`** — the tenant root, as before.
+- **`organization_memberships`** — connects a `profiles` row to an `organizations` row. Each membership has its own **status**: `invited`, `active`, `suspended`, or `removed`. A person can hold at most one membership row per organization, and any number of memberships across different organizations.
+- **`membership_roles`** — a membership can carry **more than one role** (see [§6](#6-authorization-model)); this is a separate table, not a single `role` column, specifically so a person can be e.g. both Supervisor and Inspector within the same organization.
+
+This directly replaces the earlier single-org, single-role design (`profiles.organization_id` + `profiles.role`) that an earlier version of this document proposed. See [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables) for the exact table shapes.
+
+#### Active organization selection
+
+A user's UI and every server-side authorization decision is scoped to one **active organization** at a time, even if they belong to several. Selecting/switching is explicit, not inferred per-request:
+
+1. `profiles.active_organization_id` stores the user's current preference — a plain pointer, **not itself a security decision**. It only exists so the app knows which organization to default into on login.
+2. A **Supabase Custom Access Token Auth Hook** (a Postgres function configured at the Supabase project level) runs whenever a session token is issued or refreshed. It reads `profiles.active_organization_id` for the signed-in user, checks it against an **active** row in `organization_memberships`, and embeds the result as an `org_id` claim in the JWT (falling back to the user's first active membership, or omitting the claim entirely if they have none).
+3. The RLS helper `current_org_id()` reads the `org_id` claim from `auth.jwt()` **and re-validates it live** against `organization_memberships` (status = `active`) before trusting it — so a stale token (e.g., issued before a membership was suspended) can never grant access it shouldn't. See [DATABASE_SCHEMA.md §8](./DATABASE_SCHEMA.md#8-row-level-security-approach) for the exact function.
+4. Switching organizations is a Server Function, `switchActiveOrganization(organizationId)`: it verifies the caller has an active membership in the target organization, updates `profiles.active_organization_id`, and triggers a client-side session refresh (`supabase.auth.refreshSession()`) so the hook re-runs and the JWT's `org_id` claim updates. The UI then reflects the new active organization on the next request.
+5. Listing "which organizations do I belong to" (to render an organization switcher) is necessarily a query that is **not** scoped to the current active organization — `organization_memberships` therefore carries an additional RLS policy letting a user read their **own** membership rows (any organization, any status) regardless of which organization is currently active, layered on top of the standard tenant-scoped policy that lets org admins see other members' rows within the active organization. Same treatment for reading basic `organizations` info (name, status) for any org the user has a membership in.
+
+This means: setting up the multi-org switcher is not purely an application-code task — it requires configuring the Custom Access Token Hook in the Supabase project (Dashboard or a migration-managed Postgres function + Auth config), which is called out explicitly as a setup step in [IMPLEMENTATION_PLAN.md — M2](./IMPLEMENTATION_PLAN.md#m2--core-schema--tenant-isolation-rls-foundation).
+
+### 3.3 How isolation is enforced (defense in depth)
+
+1. **RLS policies** on every tenant-owned table restrict `SELECT`/`INSERT`/`UPDATE`/`DELETE` to rows whose `organization_id` matches the caller's **validated active organization** (`current_org_id()`, per [§3.2](#32-organization-membership-model)) — never a client-supplied value.
+2. **Server-side authorization** in Server Functions / Route Handlers re-derives the active org and the caller's role(s) from the authenticated session — never trusts an `organization_id` or `role` passed from the client.
+3. **No service-role key on the client, ever.** The Supabase service role (which bypasses RLS) is only used in trusted server-only contexts (e.g., a platform admin operation, or a scheduled job) and is never sent to the browser. See [Secrets and environment variables](#7-secrets-and-environment-variables).
+
+### 3.4 Cross-Reference Validation Rule
+
+Because `profiles` is global (not scoped to one organization), a foreign key from a tenant table to `profiles(id)` — `assigned_to`, `approved_by`, `conducted_by`, `reported_by`, `signer_id`, `project_manager_id`, and similarly-shaped columns throughout [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) — only guarantees the referenced person exists, **not** that they are a member (let alone a member with an appropriate role) of the organization the record belongs to. The same is true, for a different reason, of the polymorphic `entity_type`/`entity_id` pairs used by `attachments`, `digital_signatures`, and `corrective_actions.source_type`/`source_id` (these have no database-level FK at all).
+
+Every Server Function that writes one of these references must therefore validate, server-side, before the write:
+
+1. **Existence** — the referenced row actually exists.
+2. **Organization match** — for a `profiles` reference, the referenced person has an **active** `organization_memberships` row for this record's `organization_id`; for a polymorphic reference, the referenced row's own `organization_id` equals this record's `organization_id` (or the reference is to a legitimate global/system row, such as a system-defined `event_categories` entry, which is exempt from the org-match check by design).
+3. **Permission** — the acting user is actually allowed to reference that row in this way (e.g., a Supervisor can only assign a corrective action to someone with an active membership in the same organization, not merely any valid `profiles.id` in the database).
+
+This is one rule applied in several places, not a special case per table — see [DATABASE_SCHEMA.md — Polymorphic references](./DATABASE_SCHEMA.md#polymorphic-references-corrective_actionssource_id-attachmentsentity_id-digital_signaturesentity_id) and [API_CONVENTIONS.md §6](./API_CONVENTIONS.md#6-server-side-authorization).
+
+## 4. Application Structure (module-based)
+
+Proposed top-level layout as the app grows beyond the current scaffold (`app/layout.tsx`, `app/page.tsx`):
+
+```
+app/
+  (marketing)/                 # public/unauthenticated routes
+    login/
+    accept-invite/             # completes an invited membership (sets password, joins the org) — not public self-registration
+  (platform)/                  # platform super-admin only, separate from tenant app shell
+    admin/
+      organizations/           # PSA-only: create/suspend organizations, provision first Company Admin
+  (app)/                       # authenticated, tenant-scoped app shell
+    layout.tsx                 # loads session + active org + role(s), renders nav shell
+    select-organization/       # organization switcher, shown when a user has >1 membership or none active
+    dashboard/
+    projects/
+      [projectId]/
+        locations/
+        schedule/
+    timesheets/
+    hour-discrepancies/
+    employees/
+      [employeeId]/
+        documents/
+    hseq/
+      lmra/
+      toolbox-talks/
+      scaffold-inspections/
+      safety-walks/
+      corrective-actions/
+      incidents/
+      near-misses/
+      observations/
+    reports/
+    settings/
+      organization/
+      users/                   # manage organization_memberships + membership_roles for the active org
+  unauthorized.tsx             # rendered when unauthorized() is called (401)
+  forbidden.tsx                 # rendered when forbidden() is called (403)
+  proxy.ts                      # formerly "middleware.ts" — session refresh + route gating
+
+modules/                        # feature/domain logic, framework-agnostic where possible
+  projects/
+    queries.ts                 # server-only data access for this domain
+    actions.ts                 # 'use server' Server Functions (mutations)
+    types.ts
+    permissions.ts             # who can do what, for this domain
+  timesheets/
+  hseq/
+    incidents/
+    inspections/
+    corrective-actions/
+    event-categories/          # configurable incident/observation classification
+    ...
+  organizations/
+    memberships.ts              # organization_memberships + membership_roles logic, active-org switching
+  employees/
+  notifications/
+  audit-log/
+
+lib/
+  supabase/
+    server.ts                  # server-side Supabase client (reads cookies)
+    client.ts                  # browser Supabase client (anon key only)
+    admin.ts                   # service-role client — server-only, used sparingly
+  auth/
+    session.ts                 # getSession(), requireUser(), requireRole(), current active org + roles
+  validation/                  # shared zod schemas used by forms + Server Functions
+
+components/
+  ui/                          # shadcn/ui primitives
+  shared/                      # cross-module composed components (data table, page header, org switcher, etc.)
+
+types/
+  database.ts                  # generated Supabase types (supabase gen types typescript)
+```
+
+Rationale:
+- `modules/*` holds domain logic (queries, mutations, permission rules, types) independent of routing, so a given domain's logic isn't scattered across every route that touches it.
+- Route folders under `app/(app)/*` stay thin: they call into `modules/*` and render.
+- This structure scales by adding a new module folder + route segment, without needing a framework change, satisfying "scalable module-based folder structure" without introducing an unnecessary layered architecture (no repository/service/controller ceremony beyond what's listed above).
+
+## 5. Authentication & Session Handling
+
+- Supabase Auth issues the session; the Next.js app reads/refreshes it via `@supabase/ssr` cookie-based helpers (server client in `lib/supabase/server.ts`, browser client in `lib/supabase/client.ts`).
+- `proxy.ts` (the Next.js 16 successor to `middleware.ts`) is responsible only for **refreshing the Supabase session cookie** on navigations and redirecting unauthenticated users away from `(app)` and `(platform)` routes. Per current Next.js guidance, Proxy is a coarse, last-resort gate — it must not be the *only* authorization check. Every Server Function and Route Handler re-verifies the session, active organization, and role(s) itself, since a Proxy matcher misconfiguration or a Server Function invoked directly must not silently skip authorization.
+- `requireUser()` (in `lib/auth/session.ts`) resolves the authenticated user **and** their validated active organization (`current_org_id()`, per [§3.2](#32-organization-membership-model)); if the user has no active organization (no memberships, or their active pick is no longer valid), it routes them to `select-organization` rather than into the app shell.
+- Fine-grained "is this user allowed to do X" checks happen in:
+  - RLS policies (data-level).
+  - `lib/auth/session.ts` helpers (`requireUser()`, `requireRole([...])` — checking the **union** of the user's roles for the active organization) called at the top of Server Functions/Route Handlers/Server Components (action-level).
+- Unauthorized/forbidden UX uses the Next.js file conventions: call `unauthorized()` from `next/navigation` for "not signed in" (renders `app/unauthorized.tsx`, HTTP 401) and `forbidden()` for "signed in but not permitted" (renders `app/forbidden.tsx`, HTTP 403), rather than ad hoc redirects, so the behavior is consistent and testable across the app.
+
+## 6. Authorization Model
+
+- **A user may hold multiple roles within the same organization.** Roles are assigned per membership via `membership_roles` (see [§3.2](#32-organization-membership-model) and [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md)) — not a single `role` column.
+- **Permissions are the union of the membership's assigned roles.** If any role the user holds in their active organization grants a capability, they have it. There is no "most restrictive role wins" behavior — holding an additional narrow role never takes away something a broader role already grants.
+- **Explicit restrictions take precedence over the union.** A small set of system-level rules are hard denies regardless of role — no one edits or deletes an audit log row or a completed digital signature; no one accesses another organization's data; a handful of module-specific carve-outs noted in the permission matrix (e.g., a Supervisor's corrective-action management still requires HSEQ Manager sign-off to fully close certain items). These are implemented as checks that run *before*, and can override, the role-union check — see [ROLES_AND_PERMISSIONS.md §6](./ROLES_AND_PERMISSIONS.md#6-notes-on-enforcement).
+- Permission checks are centralized per module in `modules/<domain>/permissions.ts` (e.g., `canApproveTimesheet(roles, record)`, taking the caller's full role set) rather than scattered `if (role === 'x')` checks, so a permission rule has one place to change.
+- The permission matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md) is the source of truth these functions implement; server-side authorization and RLS should both be traceable back to it. RLS policies implement the role-union check via a `&&` (array overlap) test against `current_role_ids()` (see [DATABASE_SCHEMA.md §8](./DATABASE_SCHEMA.md#8-row-level-security-approach)), plus the same explicit-restriction overrides where applicable.
+
+## 7. Secrets and Environment Variables
+
+| Variable | Exposed to client? | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Project URL, safe to expose. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Anon key, safe to expose — RLS is what actually protects data, not secrecy of this key. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **No** | Bypasses RLS. Server-only (Vercel server environment). Never imported into any file that can end up in a client bundle. Used only for narrowly-scoped trusted operations (e.g., platform admin provisioning, scheduled jobs). |
+| `SUPABASE_JWT_SECRET` (if needed) | **No** | Only if verifying JWTs outside Supabase's own SDK. |
+
+Rules:
+- Anything without the `NEXT_PUBLIC_` prefix must never be referenced from a Client Component or from code that a Client Component imports.
+- `lib/supabase/admin.ts` (service-role client) is only imported from server-only files (Route Handlers, Server Functions, scripts) — enforce this with the `server-only` package import guard once dependencies are installed.
+- No API keys, tokens, or secrets are ever committed to the repo; `.env.local` is git-ignored (already the case per the current `.gitignore`).
+
+## 8. Audit Logging
+
+- A single `audit_logs` table (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_logs--tenant-append-only)) captures: `organization_id`, `actor_user_id`, `action` (e.g., `create`, `update`, `delete`, `approve`, `sign`, `amend`), `entity_type`, `entity_id`, a `changes` JSON diff where practical, and `created_at`.
+- Audit logging is written from the server-side mutation path (Server Function / Route Handler), not inferred later from Postgres triggers — this keeps the "who" (application-level actor, already authenticated and authorized) explicit and avoids trigger-level complexity for a first version. This can be revisited if we find mutation paths bypassing the shared helper.
+- HSEQ modules and any approval/sign-off action (timesheet approval, hour discrepancy resolution, corrective action closure, digital signature capture) always write an audit entry. Simple read-only views do not.
+- **`audit_logs` is append-only and immutable**: no `UPDATE`/`DELETE` RLS policy is granted to any application role, including Company Admin, for any reason.
+- **Digital signature records are immutable in the same way** — once written, a `digital_signatures` row is never updated or deleted (see [§10](#10-file-storage-attachments-photos-signatures)).
+- **Corrections to finalized evidence are new records, not edits.** Once an HSEQ record has been finalized (e.g., an incident closed, an inspection submitted, a signature captured), a substantive correction is modeled as a new linked record — an amendment, a follow-up entry, or (for `audit_logs`/`digital_signatures` specifically) simply a new row referencing the original — rather than mutating the original's core facts. This preserves the original evidence exactly as it was captured, while `audit_logs` still records the full history of what changed and when for records that *are* mutable pre-finalization (e.g., a draft incident report being edited before submission is ordinary editing, fully audit-logged, and not subject to this rule).
+
+## 9. Soft Deletion
+
+- Applies to records with business/legal retention value: employees, projects, all HSEQ records, documents/certificates, timesheets. See per-table "Deletion behavior" in [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
+- Implemented via `deleted_at timestamptz null` on most tables. `organization_memberships` is the one exception among lifecycle-bearing tables: its own `status` enum (`invited`/`active`/`suspended`/`removed`) already models "no longer a member" as a state, so it does not need a separate `deleted_at` column.
+- Default queries filter `deleted_at is null` (or, for `organization_memberships`, `status <> 'removed'`); RLS policies restrict who may set these values (typically Company Admin or the module-owning manager role, never Employee).
+- Purely operational/low-stakes records (e.g., a draft not yet submitted, a role grant on `membership_roles`) may use hard deletion where retention has no compliance value — called out explicitly per table rather than assumed.
+- Soft-deleted rows are excluded from default reporting but remain visible in audit trails and to Company Admin/Platform Super Admin for compliance review.
+
+## 10. File Storage (Attachments, Photos, Signatures)
+
+- Supabase Storage, one bucket strategy: a private bucket (e.g., `attachments`) with object paths namespaced by `organization_id/entity_type/entity_id/filename`, and Storage RLS policies mirroring the database tenancy rule (a user may only read/write objects under their own active organization's prefix).
+- Signed URLs (short-lived) are used for read access from the client rather than making the bucket public, since photos/incident evidence are sensitive.
+- **Digital signature captures** are authenticated electronic attestations, not a certified/qualified e-signature product (see [PRODUCT_REQUIREMENTS.md §6.10](./PRODUCT_REQUIREMENTS.md#610-digital-signatures)). Each capture stores: the signer's user id, a **snapshot of the signer's name** at signing time (identity data can change later; the attestation must not), a timestamp, the attestation/statement text accepted, the **version of the document or form** being attested to, and — where legally appropriate for the org's jurisdiction — the signer's IP address and user-agent, alongside either a rendered signature image or vector stroke data in Storage. A `digital_signatures` row is immutable once written (see [§8](#8-audit-logging)). If a customer requires a certified e-signature product, that is a later, separate integration, not an extension of this table.
+
+## 11. API Surface
+
+- Primary mutation path: **Server Functions** (`'use server'`, formerly commonly called "Server Actions") colocated in `modules/<domain>/actions.ts`, invoked directly from forms/Server Components. This is preferred over hand-built Route Handlers for internal app mutations because it keeps request/response typing and CSRF handling inside the framework's own model.
+- **Route Handlers** (`app/api/**/route.ts`) are used only where a Server Function doesn't fit: webhooks (e.g., Supabase auth webhooks), file/export downloads (including the CSV/Excel-friendly timesheet exports for Payroll/Administration — see [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)), or endpoints intended for future external/API consumption.
+- See [API_CONVENTIONS.md](./API_CONVENTIONS.md) for validation, error shape, and naming conventions shared by both.
+
+## 12. Deployment
+
+- Vercel hosts the Next.js app; Supabase Cloud hosts Postgres/Auth/Storage.
+- Environments: `local` (Supabase local dev or a dedicated dev project), `preview` (Vercel preview deployments against a shared staging Supabase project), `production`.
+- Database schema changes are applied via versioned SQL migrations (Supabase CLI `migrations/` directory), never via ad hoc dashboard edits in shared environments — see [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for when this tooling is introduced. The Custom Access Token Auth Hook ([§3.2](#32-organization-membership-model)) is Supabase project **configuration**, not a migration file — it must be set up (and re-set-up per environment) alongside the migrations, which is called out explicitly in the implementation plan so it isn't missed when standing up a new environment.
+
+## 13. Explicitly Deferred (avoid premature complexity)
+
+- No client-side global state library (Redux/Zustand/etc.) — App Router server components + React state/URL state is sufficient until a concrete cross-cutting client state need appears.
+- No GraphQL layer — Server Functions + typed Supabase queries cover the app's own needs; a public API is out of scope for v1 per [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release).
+- No background job framework yet — scheduled work (e.g., certificate-expiry notification sweeps, per [DATABASE_SCHEMA.md — `document_expiry_notification_log`](./DATABASE_SCHEMA.md#document_expiry_notification_log--tenant)) uses Vercel Cron calling a Route Handler.
+- No multi-region/per-tenant database sharding — a single Postgres instance with RLS is sufficient at the scale this product is designed for initially.
+- No organization-level configuration UI for the certificate-expiry notification schedule or for payroll-provider integrations yet — v1 ships fixed defaults per [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md), designed so a configuration layer can be added later without a schema rewrite, but that layer itself is not built now.
