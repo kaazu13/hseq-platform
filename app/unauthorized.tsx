@@ -18,7 +18,7 @@ export default function UnauthorizedPage() {
           You need to sign in to access this page.
         </p>
       </div>
-      <Button size="sm" render={<Link href="/login" />}>
+      <Button size="sm" nativeButton={false} render={<Link href="/login" />}>
         Go to login
       </Button>
     </main>

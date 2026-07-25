@@ -27,7 +27,7 @@ export function ComingSoonPage({ title, description, icon }: ComingSoonPageProps
         title={`${title} isn't built yet`}
         description="This area of the platform is planned but not implemented. Check back once this module ships."
         action={
-          <Button variant="outline" size="sm" render={<Link href="/dashboard" />}>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/dashboard" />}>
             <ArrowLeft />
             Back to dashboard
           </Button>

@@ -21,7 +21,7 @@ export default function ForbiddenPage() {
           You&apos;re signed in, but you don&apos;t have permission to view this page.
         </p>
       </div>
-      <Button size="sm" variant="outline" render={<Link href="/dashboard" />}>
+      <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard" />}>
         Back to dashboard
       </Button>
     </main>

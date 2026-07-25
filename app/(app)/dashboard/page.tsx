@@ -74,11 +74,11 @@ export default async function DashboardPage() {
         description={`Here's what's happening at ${current.name}.`}
         actions={
           <>
-            <Button variant="outline" size="sm" render={<Link href="/employees" />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/employees" />}>
               <UserPlus />
               Add employee
             </Button>
-            <Button size="sm" render={<Link href="/incidents" />}>
+            <Button size="sm" nativeButton={false} render={<Link href="/incidents" />}>
               <Plus />
               Report incident
             </Button>
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
                 title="Not yet available"
                 description="Employee certificates approaching their expiry date will be listed here."
                 action={
-                  <Button variant="outline" size="sm" render={<Link href="/certificates" />}>
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/certificates" />}>
                     View certificates
                   </Button>
                 }
@@ -193,7 +193,7 @@ export default async function DashboardPage() {
                 title="Not yet available"
                 description="Remediation tasks raised from inspections and incidents will be tracked here."
                 action={
-                  <Button variant="outline" size="sm" render={<Link href="/corrective-actions" />}>
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/corrective-actions" />}>
                     View corrective actions
                   </Button>
                 }
@@ -214,7 +214,7 @@ export default async function DashboardPage() {
                 title="Not yet available"
                 description="Active projects, their locations, and current status will be summarized here."
                 action={
-                  <Button variant="outline" size="sm" render={<Link href="/projects" />}>
+                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/projects" />}>
                     View projects
                   </Button>
                 }
