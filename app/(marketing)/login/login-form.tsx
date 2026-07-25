@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { login } from "@/modules/auth/actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /**
  * Client Component — needs interactivity (pending state, inline field
@@ -37,62 +42,54 @@ export function LoginForm() {
   }
 
   return (
-    <form action={onSubmit} className="flex w-full max-w-sm flex-col gap-4" noValidate>
-      <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <input
+    <form action={onSubmit} className="flex w-full flex-col gap-5" noValidate>
+      {formError && (
+        <Alert variant="destructive" role="alert">
+          <AlertCircle />
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
-          className="rounded-md border border-current/20 bg-transparent px-3 py-2"
           aria-invalid={Boolean(fieldErrors.email)}
           aria-describedby={fieldErrors.email ? "email-error" : undefined}
         />
         {fieldErrors.email && (
-          <p id="email-error" className="text-sm text-red-600">
+          <p id="email-error" className="text-sm text-destructive">
             {fieldErrors.email}
           </p>
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="password" className="text-sm font-medium">
-          Password
-        </label>
-        <input
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="password">Password</Label>
+        <Input
           id="password"
           name="password"
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-md border border-current/20 bg-transparent px-3 py-2"
           aria-invalid={Boolean(fieldErrors.password)}
           aria-describedby={fieldErrors.password ? "password-error" : undefined}
         />
         {fieldErrors.password && (
-          <p id="password-error" className="text-sm text-red-600">
+          <p id="password-error" className="text-sm text-destructive">
             {fieldErrors.password}
           </p>
         )}
       </div>
 
-      {formError && (
-        <p role="alert" className="text-sm text-red-600">
-          {formError}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-md bg-foreground px-4 py-2 text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={isPending} className="mt-1 w-full">
+        {isPending ? <Loader2 className="animate-spin" /> : null}
         {isPending ? "Signing in…" : "Sign in"}
-      </button>
+      </Button>
     </form>
   );
 }

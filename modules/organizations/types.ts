@@ -7,6 +7,14 @@ import type { Database } from "@/types/database";
  * mutation logic).
  */
 export type Organization = Database["public"]["Tables"]["organizations"]["Row"];
+
+/**
+ * The subset of `Organization` columns actually selected/rendered by the
+ * app shell (org switcher, dashboard) — see modules/organizations/queries.ts.
+ * A narrower type than `Organization` so those queries don't need to
+ * over-select columns just to satisfy a prop type.
+ */
+export type OrganizationSummary = Pick<Organization, "id" | "name" | "slug" | "status">;
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type OrganizationMembership = Database["public"]["Tables"]["organization_memberships"]["Row"];
 export type Role = Database["public"]["Tables"]["roles"]["Row"];

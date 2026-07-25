@@ -1,23 +1,29 @@
 import Link from "next/link";
+import { ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * Rendered when `forbidden()` (next/navigation) is called anywhere in the
  * tree — "signed in but not permitted" (HTTP 403). See docs/ARCHITECTURE.md
- * §5. Not yet triggered by anything in this milestone (no role checks exist
- * until the M2 role schema lands) but required so the convention is in place
- * before the first Server Function calls forbidden().
+ * §5. Triggered today by `requireOrganizationMembership()`/`requireRole()`
+ * (lib/auth/session.ts) when a user isn't an active member of the
+ * organization a page/action targets.
  */
 export default function ForbiddenPage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-2xl font-semibold">403 — Access denied</h1>
-      <p className="max-w-md opacity-70">
-        You&apos;re signed in, but you don&apos;t have permission to view
-        this page.
-      </p>
-      <Link href="/dashboard" className="underline underline-offset-4">
+      <div className="flex size-11 items-center justify-center rounded-full bg-muted">
+        <ShieldAlert className="size-5 text-muted-foreground" aria-hidden="true" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-lg font-semibold">Access denied</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          You&apos;re signed in, but you don&apos;t have permission to view this page.
+        </p>
+      </div>
+      <Button size="sm" variant="outline" render={<Link href="/dashboard" />}>
         Back to dashboard
-      </Link>
+      </Button>
     </main>
   );
 }

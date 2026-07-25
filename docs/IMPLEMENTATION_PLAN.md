@@ -102,7 +102,29 @@ A small but foundational milestone: implement the shared server-side validation 
 
 ---
 
-With M1–M7 complete, the foundation — auth, multi-org tenancy, multi-role authorization, RLS, audit logging, and cross-reference validation — is proven. Every milestone below reuses it rather than re-implementing it.
+With M1–M7 complete, the foundation — auth, multi-org tenancy, multi-role authorization, RLS, audit logging, and cross-reference validation — is proven. M7.5 below builds the UI every module from M8 onward renders inside; every milestone from M8 on reuses both.
+
+## M7.5 — Application Shell & Design System
+
+**Status: implemented.** Numbered "M7.5" rather than inserted as a renumbered M8 (shifting every subsequent milestone) — this keeps every existing cross-reference to M8–M18 elsewhere in this document and others (e.g. [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md), [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md)) valid without a mechanical renumbering pass.
+
+Not originally planned as its own milestone — the original version of this document assumed UI ships bundled with each business module. In practice, building a professional, reusable shell and component set once, before the first business module, avoids every later milestone (M8 onward) re-deriving its own page chrome and paying an inconsistent-UI tax. Pure UI/presentation layer — no new tables, no new RLS, no new authorization logic; see [UI_GUIDELINES.md §10–11](./UI_GUIDELINES.md#10-application-shell--navigation) for the full design record.
+
+- shadcn/ui installed (Base UI-based — see [ARCHITECTURE.md §1](./ARCHITECTURE.md#1-technology-stack)) with a restrained neutral-plus-one-accent palette, media-query (not manual-toggle) dark mode.
+- Management app shell: collapsible desktop sidebar / mobile drawer, top bar, organization switcher, user menu, breadcrumbs — `components/app-shell/*`.
+- Reusable design-system pieces — `components/shared/*` — `PageHeader`, `SectionHeader`, `StatCard`, `EmptyState`, `StatusIndicator`, `ConfirmDialog`, `ComingSoonPage`.
+- All 14 primary nav items get a real route; 13 without a business module yet render the shared placeholder — no broken links.
+- Organization-aware dashboard rebuild: real membership/organization data where it exists, explicitly-marked placeholders (never a fabricated number) everywhere else.
+- Route-level `loading.tsx`/`error.tsx` for `(app)/*`, plus a root `error.tsx`.
+- Documented (not built) architecture for a future, separate mobile-first employee portal — [UI_GUIDELINES.md §11](./UI_GUIDELINES.md#11-future-employee-portal-prepared-not-implemented).
+
+**Acceptance criteria**
+- Every item in the primary nav resolves to a real route and renders something (a real page or the shared "coming soon" placeholder) — zero 404s from clicking anything in the sidebar.
+- The dashboard's only non-placeholder numeric value (team member count) matches a direct database count for a test organization; every other stat card visibly reads as "not yet available," never as a real zero.
+- A user with zero organization memberships sees a dedicated empty state, not an error, a blank page, or a degraded version of the normal dashboard.
+- A user with exactly one membership sees no organization-switcher UI at all; a user with two or more sees a working switcher that updates `profiles.active_organization_id` (verified via `requireOrganizationMembership()`, not client-trusted) and is reflected immediately after the resulting page refresh.
+- `npm run lint` and `npm run build` both pass with the shell in place.
+- Keyboard-only navigation reaches every interactive element in the shell (sidebar toggle, nav items, org switcher, user menu, sign-out confirmation) with visible focus states.
 
 ## M8 — Projects & Locations
 

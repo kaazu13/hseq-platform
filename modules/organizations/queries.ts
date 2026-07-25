@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Organization, OrganizationMembership } from "./types";
+import type { OrganizationMembership, OrganizationSummary, Profile } from "./types";
 
 /**
  * Server-only data access for the organizations/memberships domain — see
@@ -14,7 +14,7 @@ import type { Organization, OrganizationMembership } from "./types";
 
 export type OrganizationMembershipSummary = {
   membership: Pick<OrganizationMembership, "id" | "status" | "joined_at">;
-  organization: Pick<Organization, "id" | "name" | "slug" | "status">;
+  organization: OrganizationSummary;
 };
 
 /**
@@ -62,4 +62,50 @@ export async function listActiveOrganizationsForUser(
     }
     return summaries;
   }, []);
+}
+
+/**
+ * The signed-in user's own profile row (full_name, active_organization_id
+ * preference, etc.) — used by the app shell for the welcome header and to
+ * resolve which organization to show as "current." Every authenticated
+ * user has exactly one profile row, created automatically by the
+ * `handle_new_user` trigger on signup (see
+ * supabase/migrations/20260725090700_functions_and_triggers.sql), so this
+ * should never return null in practice; it's typed as nullable anyway
+ * because a database read is never truly guaranteed, and callers must
+ * handle it rather than assume.
+ */
+export async function getCurrentUserProfile(userId: string): Promise<Profile | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone, active_organization_id, created_at, updated_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Count of ACTIVE members in an organization — real, live data (unlike
+ * most of the dashboard's other stat cards, which are placeholders for
+ * modules that don't exist yet). Relies on the same
+ * `organization_memberships_select_own_or_active_member` RLS policy as
+ * `listActiveOrganizationsForUser`: only callable meaningfully for an
+ * organization the caller is themselves an active member of, which is the
+ * only case the dashboard ever calls it for.
+ */
+export async function countActiveMembers(organizationId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("organization_memberships")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .eq("status", "active");
+
+  if (error) throw error;
+  return count ?? 0;
 }

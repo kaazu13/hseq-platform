@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { HardHat } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth/session";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
 /**
@@ -15,12 +17,21 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 p-8">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-semibold">Sign in</h1>
-        <p className="opacity-70">HSEQ Platform</p>
+    <main className="flex flex-1 flex-col items-center justify-center gap-8 bg-muted/30 p-6">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <HardHat className="size-5 text-primary" aria-hidden="true" />
+        HSEQ Platform
       </div>
-      <LoginForm />
+
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-xl">Sign in</CardTitle>
+          <CardDescription>Enter your credentials to access your organization.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LoginForm />
+        </CardContent>
+      </Card>
     </main>
   );
 }

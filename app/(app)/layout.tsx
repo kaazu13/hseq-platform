@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth/session";
-import { logout } from "@/modules/auth/actions";
+import { listActiveOrganizationsForUser, getCurrentUserProfile } from "@/modules/organizations/queries";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-shell/app-sidebar";
+import { TopBar } from "@/components/app-shell/top-bar";
 
 /**
  * Shared shell for every authenticated ("tenant-scoped app shell") route —
@@ -9,28 +13,46 @@ import { logout } from "@/modules/auth/actions";
  * requests to /login before this ever renders, but this layout re-verifies
  * independently so a proxy matcher gap can't silently expose the route.
  *
- * Only a minimal top bar (per docs/UI_GUIDELINES.md §4 — "persistent top
- * bar") is included: the signed-in user's email and a logout button.
- * Active-organization context and role-aware navigation described in the
- * same section are deferred until the organization/role schema exists.
+ * "Current organization" resolution: `profile.active_organization_id` if
+ * it points at one of the user's active memberships, otherwise the first
+ * membership (by join date), otherwise null (zero-membership case — see
+ * app/(app)/dashboard/page.tsx for that empty state). This is purely a
+ * display/UX concern; no authorization decision anywhere reads it — see
+ * docs/ARCHITECTURE.md §3.2.
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireUser();
 
+  const [memberships, profile, cookieStore] = await Promise.all([
+    listActiveOrganizationsForUser(user.id),
+    getCurrentUserProfile(user.id),
+    cookies(),
+  ]);
+
+  const organizations = memberships.map((m) => m.organization);
+  const currentOrganizationId =
+    (profile?.active_organization_id &&
+      organizations.some((org) => org.id === profile.active_organization_id) &&
+      profile.active_organization_id) ||
+    organizations[0]?.id ||
+    null;
+
+  const sidebarOpenCookie = cookieStore.get("sidebar_state")?.value;
+  const defaultSidebarOpen = sidebarOpenCookie !== "false";
+
+  const displayName = profile?.full_name?.trim() || user.email?.split("@")[0] || "";
+
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-current/10 px-4 py-3">
-        <span className="font-medium">HSEQ Platform</span>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="opacity-70">{user.email}</span>
-          <form action={logout}>
-            <button type="submit" className="underline underline-offset-4">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-      <main className="flex flex-1 flex-col">{children}</main>
-    </div>
+    <SidebarProvider defaultOpen={defaultSidebarOpen}>
+      <AppSidebar
+        organizations={organizations}
+        currentOrganizationId={currentOrganizationId}
+        user={{ name: displayName, email: user.email ?? "" }}
+      />
+      <SidebarInset>
+        <TopBar />
+        <main className="flex flex-1 flex-col">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -7,7 +7,7 @@
 | Framework | Next.js (App Router) | Currently on Next.js 16.x. **Next.js 16 renamed `middleware.ts` to `proxy.ts`** and introduced the `forbidden()` / `unauthorized()` navigation helpers — this document uses the current names throughout. Do not follow older Next.js tutorials that reference `middleware.ts` or "Server Actions" without checking against `node_modules/next/dist/docs` first. |
 | Language | TypeScript, `strict: true` | No `any` in new code; shared types live in `/types` or colocated `*.types.ts` files. |
 | Styling | Tailwind CSS v4 (CSS-first `@theme`, already configured in `app/globals.css`) | No `tailwind.config.js` — theme tokens are defined via CSS `@theme`. |
-| UI components | shadcn/ui | Copied into the repo (not an npm dependency in the traditional sense) — see [UI_GUIDELINES.md](./UI_GUIDELINES.md). Not yet installed as of this document. |
+| UI components | shadcn/ui | Copied into the repo (not an npm dependency in the traditional sense) — see [UI_GUIDELINES.md](./UI_GUIDELINES.md). **Installed** (M7.5) — built on **Base UI** (`@base-ui/react`), not Radix; see [UI_GUIDELINES.md — Implementation Status](./UI_GUIDELINES.md#implementation-status) for what that changes in practice. |
 | Database | Supabase PostgreSQL | Single Postgres instance, tenant isolation via `organization_id` + Row Level Security, not separate databases/schemas per tenant. |
 | Auth | Supabase Authentication | Email/password + magic link at minimum; SSO is a future option. Supabase issues the session; Next.js reads it server-side. A **Custom Access Token Auth Hook** is required for the multi-organization model — see [§3.2](#32-organization-membership-model). |
 | Data access control | Supabase Row Level Security (RLS) | The database — not application code — is the last line of defense for tenant isolation. |
@@ -97,38 +97,26 @@ app/
       page.tsx                 # built — Server Component, redirects to /dashboard if already signed in
       login-form.tsx           # built — Client Component (needs pending/error state)
     accept-invite/             # completes an invited membership (sets password, joins the org) — not public self-registration
-  (platform)/                  # platform super-admin only, separate from tenant app shell
+  (platform)/                  # platform super-admin only, separate from tenant app shell — not built, see §3.1
     admin/
       organizations/           # PSA-only: create/suspend organizations, provision first Company Admin
-  (app)/                       # authenticated, tenant-scoped app shell
-    layout.tsx                 # built — calls requireUser(); full org/role-aware shell (nav, org name in header) deferred
-    select-organization/       # organization switcher, shown when a user has >1 membership or none active — deferred, needs the Auth Hook (§3.2)
+  (app)/                       # authenticated, tenant-scoped MANAGEMENT app shell — see docs/UI_GUIDELINES.md §10
+    layout.tsx                 # built — requireUser(), resolves org memberships + "current organization", renders AppSidebar/TopBar
+    loading.tsx                # built — skeleton shaped like the dashboard
+    error.tsx                  # built — route-level error boundary
     dashboard/
-      page.tsx                 # built — lists the signed-in user's active organization memberships; empty state if none
-    projects/
-      [projectId]/
-        locations/
-        schedule/
-    timesheets/
-    hour-discrepancies/
-    employees/
-      [employeeId]/
-        documents/
-    hseq/
-      lmra/
-      toolbox-talks/
-      scaffold-inspections/
-      safety-walks/
-      corrective-actions/
-      incidents/
-      near-misses/
-      observations/
-    reports/
+      page.tsx                 # built — organization-aware; real team-member count, placeholder KPIs elsewhere (never fabricated numbers)
+    employees/ … reports/       # built — 12 placeholder routes, each just <ComingSoonPage/> — see components/app-shell/nav-config.ts
     settings/
-      organization/
-      users/                   # manage organization_memberships + membership_roles for the active org
+      page.tsx                 # built — placeholder (org settings/membership management UI not built yet)
   unauthorized.tsx             # built — rendered when unauthorized() is called (401)
   forbidden.tsx                 # built — rendered when forbidden() is called (403)
+  error.tsx                     # built — root-level error boundary (routes outside (app)/, which has its own)
+  layout.tsx                    # built — fonts, TooltipProvider, <Toaster/> (sonner)
+
+(portal)/                       # NOT BUILT — future mobile-first employee portal, prepared not implemented,
+                                 # see docs/UI_GUIDELINES.md §11. Separate shell (bottom tab bar, not a sidebar),
+                                 # sibling to (app)/ and (marketing)/, sharing auth/data but not component trees.
 
 modules/                        # feature/domain logic, framework-agnostic where possible
   auth/                         # built — login()/logout() Server Functions + shared zod schema
@@ -146,8 +134,8 @@ modules/                        # feature/domain logic, framework-agnostic where
     corrective-actions/
     event-categories/          # configurable incident/observation classification
     ...
-  organizations/                # built — types.ts (Organization/Profile/.../RoleName aliases), queries.ts (listActiveOrganizationsForUser)
-    memberships.ts              # not built — invite/suspend/remove + active-org switching logic (needs the (app)/settings/users UI and, for switching, the Auth Hook)
+  organizations/                # built — types.ts, queries.ts (listActiveOrganizationsForUser, getCurrentUserProfile, countActiveMembers), actions.ts (setActiveOrganization)
+    memberships.ts              # not built — invite/suspend/remove logic (needs the settings/users UI)
   employees/
   notifications/
   audit-log/
@@ -161,11 +149,16 @@ lib/
   auth/
     session.ts                 # built — requireUser(), getCurrentUser(), requireOrganizationMembership(organizationId), requireRole(organizationId, roleName)
   action-result.ts             # built — shared ActionResult<T>/ActionErrorCode types (docs/API_CONVENTIONS.md §4)
+  utils.ts                     # built — shadcn's cn() class-merging helper (clsx + tailwind-merge)
   validation/                  # shared zod schemas used by forms + Server Functions (auth's schema currently lives in modules/auth/validation.ts instead — see note below)
 
 components/
-  ui/                          # shadcn/ui primitives
-  shared/                      # cross-module composed components (data table, page header, org switcher, etc.)
+  ui/                          # built — shadcn/ui primitives (Base UI-based); see docs/UI_GUIDELINES.md §10 for the full list
+  shared/                      # built — PageHeader, SectionHeader, StatCard, EmptyState, StatusIndicator, ConfirmDialog, ComingSoonPage
+  app-shell/                   # built — AppSidebar, TopBar, NavMain, OrgSwitcher, UserMenu, Breadcrumbs, nav-config.ts (the MANAGEMENT shell only — see docs/UI_GUIDELINES.md §11 for the separate future employee-portal shell)
+
+hooks/
+  use-mobile.ts                 # built — shadcn-generated, used internally by the Sidebar primitive
 
 types/
   database.ts                  # built, but HAND-WRITTEN, not generated — no Supabase project is linked yet to run
@@ -178,13 +171,13 @@ Rationale:
 - Route folders under `app/(app)/*` stay thin: they call into `modules/*` and render.
 - This structure scales by adding a new module folder + route segment, without needing a framework change, satisfying "scalable module-based folder structure" without introducing an unnecessary layered architecture (no repository/service/controller ceremony beyond what's listed above).
 
-**Build status (as of the database-foundation milestone)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly, the dashboard reads real `organization_memberships`/`organizations` rows through RLS). Everything else in this tree — every business module, `select-organization/`, the `(platform)/` admin area, `lib/supabase/admin.ts`, `modules/organizations/memberships.ts`, and active-organization JWT-claim resolution anywhere — is still just this proposed layout, not yet implemented; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status) for the database side of the same picture. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; revisit once a second module needs a `zod` schema.
+**Build status (as of the application-shell milestone, M7.5)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly, the dashboard reads real `organization_memberships`/`organizations` rows through RLS, and every nav item resolves to a real, non-broken route). Everything else in this tree — every business module, the `(platform)/` admin area, `(portal)/`, `lib/supabase/admin.ts`, `modules/organizations/memberships.ts`, and active-organization JWT-claim resolution anywhere — is still just this proposed layout, not yet implemented; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status) for the database side of the same picture and [UI_GUIDELINES.md §10–11](./UI_GUIDELINES.md#10-application-shell--navigation) for the UI side. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; revisit once a second module needs a `zod` schema.
 
 ## 5. Authentication & Session Handling
 
 - Supabase Auth issues the session; the Next.js app reads/refreshes it via `@supabase/ssr` cookie-based helpers (server client in `lib/supabase/server.ts`, browser client in `lib/supabase/client.ts`).
 - `proxy.ts` (the Next.js 16 successor to `middleware.ts`) is responsible only for **refreshing the Supabase session cookie** on navigations and redirecting unauthenticated users away from `(app)` and `(platform)` routes. Per current Next.js guidance, Proxy is a coarse, last-resort gate — it must not be the *only* authorization check. Every Server Function and Route Handler re-verifies the session, active organization, and role(s) itself, since a Proxy matcher misconfiguration or a Server Function invoked directly must not silently skip authorization.
-- `requireUser()` (in `lib/auth/session.ts`) resolves the authenticated user **and** their validated active organization (`current_org_id()`, per [§3.2](#32-organization-membership-model)); if the user has no active organization (no memberships, or their active pick is no longer valid), it routes them to `select-organization` rather than into the app shell.
+- `requireUser()` (in `lib/auth/session.ts`) resolves only the authenticated user — it does **not** resolve an active organization; see the correction in [§3.2](#32-organization-membership-model) ("Active organization selection"). `app/(app)/layout.tsx` separately resolves which organization to display (real membership data, no security decision) and renders its own empty state when a user has none — there is no `select-organization` route; that idea from an earlier revision of this document was superseded by resolving the current organization inline in the app shell instead. See [UI_GUIDELINES.md §10](./UI_GUIDELINES.md#10-application-shell--navigation).
 - Fine-grained "is this user allowed to do X" checks happen in:
   - RLS policies (data-level).
   - `lib/auth/session.ts` helpers (`requireUser()`, `requireRole([...])` — checking the **union** of the user's roles for the active organization) called at the top of Server Functions/Route Handlers/Server Components (action-level).

@@ -1,5 +1,13 @@
 # UI Guidelines
 
+## Implementation Status
+
+**shadcn/ui is installed** (it was "not yet installed" in an earlier revision of this document — see [ARCHITECTURE.md §1](./ARCHITECTURE.md#1-technology-stack)), along with the professional application shell described in [§10](#10-application-shell--navigation) below: a collapsible sidebar, top bar, organization switcher, user menu, breadcrumbs, and a reusable component set. This is the database-foundation milestone's UI layer landing on top of it — see [IMPLEMENTATION_PLAN.md — M7.5](./IMPLEMENTATION_PLAN.md#m75--application-shell--design-system).
+
+One correction to this document as originally written: the shadcn CLI generation this project ended up on (`components.json` → `"style": "base-nova"`) builds every primitive on **Base UI** (`@base-ui/react`), not Radix UI. Every mention of shadcn/ui elsewhere in this document (and in [ARCHITECTURE.md](./ARCHITECTURE.md)) still applies — "components are generated into `components/ui/` and owned directly," "don't hand-roll a primitive shadcn already provides" — only the underlying headless library changed. The practical difference that matters when writing new component usages: Base UI's composition prop is called `render` (accepting a `ReactElement`, e.g. `<Button render={<Link href="/x" />}>Text</Button>`), not Radix's `asChild`. See any existing `components/ui/*.tsx` file for the pattern in practice, or `node_modules/@base-ui/react/docs/react/utils/use-render.md` for the authoritative reference.
+
+No manual light/dark toggle exists yet — dark mode follows `prefers-color-scheme` automatically (no `next-themes` `ThemeProvider`, no `.dark` class anywhere), a deliberate scope decision for this milestone; see [§3](#3-design-tokens).
+
 ## 1. Principles
 
 1. **Mobile-first, not mobile-friendly.** Field roles (Employee, Supervisor, Inspector) will use this product on a phone, one-handed, sometimes with gloves on, often outdoors. Design the phone layout first; the desktop layout is progressive enhancement, not the default that gets squeezed down.
@@ -67,11 +75,12 @@ Every data-fetching view and every mutation needs an explicit design for each of
 
 | Category | Where it lives | Example |
 |---|---|---|
-| Unmodified/lightly modified shadcn primitives | `components/ui/` | `Button`, `Input`, `Dialog`, `Table` |
-| Cross-module composed components | `components/shared/` | Page header with breadcrumbs, data table with built-in filter/sort, status badge, file upload dropzone |
-| Domain-specific components | `modules/<domain>/components/` | Signature capture pad, scaffold tag selector, severity picker, checklist item row |
+| Unmodified/lightly modified shadcn primitives | `components/ui/` | `Button`, `Input`, `Dialog`, `Table` — see [§10](#10-application-shell--navigation) for the full installed list |
+| Cross-module composed components | `components/shared/` | `PageHeader`, `SectionHeader`, `StatCard`, `EmptyState`, `StatusIndicator`, `ConfirmDialog`, `ComingSoonPage` — all **implemented** |
+| Application shell (persistent chrome, not page content) | `components/app-shell/` | `AppSidebar`, `TopBar`, `NavMain`, `OrgSwitcher`, `UserMenu`, `Breadcrumbs`, `nav-config.ts` — all **implemented**, see [§10](#10-application-shell--navigation) |
+| Domain-specific components | `modules/<domain>/components/` | Signature capture pad, scaffold tag selector, severity picker, checklist item row — none exist yet, no business module has been built |
 
-Domain-specific components that turn out to be reused across modules (e.g., the signature pad used by both LMRA and toolbox talks) get promoted to `components/shared/` — don't promote speculatively before a second real usage exists.
+Domain-specific components that turn out to be reused across modules (e.g., the signature pad used by both LMRA and toolbox talks) get promoted to `components/shared/` — don't promote speculatively before a second real usage exists. `components/app-shell/` is a fourth category alongside the three above, specifically for the persistent chrome around every page (sidebar, top bar) — it isn't "cross-module" in the sense of being reused *inside* different pages' content the way `components/shared/` is; it's rendered once, by `app/(app)/layout.tsx`, and every page renders inside it.
 
 ## 9. What Not to Do
 
@@ -79,3 +88,57 @@ Domain-specific components that turn out to be reused across modules (e.g., the 
 - Don't hardcode role-based UI logic inline in a page component (`{roles.includes('hseq_manager') && ...}` scattered everywhere) — derive visibility from the same `permissions.ts` functions used for server-side authorization (see [ARCHITECTURE.md §6](./ARCHITECTURE.md#6-authorization-model)), which take the user's full role array for their active organization, so UI and server enforcement never silently diverge.
 - Don't build a desktop-first table view for a field-facing module and treat mobile as a follow-up pass.
 - Don't invent a new color for "this specific status" without checking whether it collides with the safety-critical color meanings in [§3](#3-design-tokens).
+
+## 10. Application Shell & Navigation
+
+**Implemented.** This is the desktop/tablet-oriented **management app shell** — Company Admin, Ops, HSEQ Manager, and similar office-facing roles. It is explicitly *not* the mobile-first employee portal described in [§11](#11-future-employee-portal-prepared-not-implemented); the two are architecturally separate surfaces, not one responsive layout trying to serve both.
+
+### Structure
+
+- **`app/(app)/layout.tsx`** — the route-group layout. Calls `requireUser()` (defense in depth, per [ARCHITECTURE.md §5](./ARCHITECTURE.md#5-authentication--session-handling)), resolves the user's organization memberships and "current organization" (see below), reads the `sidebar_state` cookie for the sidebar's initial collapsed/expanded state, and composes `SidebarProvider` → `AppSidebar` + `SidebarInset` (`TopBar` + page content).
+- **`components/app-shell/app-sidebar.tsx`** — built on shadcn's `Sidebar` primitive (`components/ui/sidebar.tsx`), which already provides: desktop icon-collapse (`collapsible="icon"`), a Sheet-based mobile drawer (automatic below the `md` breakpoint), a `Cmd/Ctrl+B` keyboard shortcut, and cookie-persisted collapsed state. Composes:
+  - **Header**: brand mark (link to `/dashboard`) + `OrgSwitcher`.
+  - **Content**: `NavMain` — the grouped nav menu (Overview / Workforce / Projects / HSEQ / Records), driven entirely by `components/app-shell/nav-config.ts`.
+  - **Footer**: `UserMenu` — avatar, name/email, Settings link, sign out (behind a confirmation prompt — see [§5](#5-forms--validation)).
+- **`components/app-shell/top-bar.tsx`** — sidebar toggle, breadcrumb trail, global search and notifications (both **UI placeholders only** — visibly present, `disabled`, not wired to anything, per this milestone's explicit scope).
+- **`components/app-shell/breadcrumbs.tsx`** — derives the trail from the current pathname against `nav-config.ts`, so individual pages don't pass breadcrumb props. Every route is one level deep today ("HSEQ Platform / Dashboard"); built to extend once a nested route (e.g. `/projects/[projectId]`) exists.
+- **`components/app-shell/nav-config.ts`** — the single source of truth for "what modules exist, what routes they live at, what icon/description they use." The sidebar, the breadcrumb trail, and every placeholder page all read from this one list.
+
+### Navigation structure (14 items)
+
+| Group | Items |
+|---|---|
+| Overview | Dashboard *(real)* |
+| Workforce | Employees, Timesheets |
+| Projects | Projects, Equipment |
+| HSEQ | LMRA, Toolbox Talks, Inspections, Incidents, Corrective Actions, Certificates |
+| Records | Documents, Reports |
+| *(sidebar footer, not a nav group)* | Settings |
+
+Every item has a real route under `app/(app)/`. Thirteen of them render the shared `ComingSoonPage` component (`components/shared/coming-soon.tsx`) instead of a business module — satisfies "routes must not produce broken links" without pretending a module exists before it does. **`Equipment` and `Documents` are new nav placeholders introduced by this milestone** — they weren't part of the original core module list in [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md); reconcile that document (or drop the nav items) once their scope is actually defined.
+
+### Organization context (real data, not a placeholder)
+
+Unlike the module placeholders above, organization/membership data is real and live — the schema exists (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)) and this milestone queries it directly:
+
+- **`OrgSwitcher`** (`components/app-shell/org-switcher.tsx`): renders nothing for zero memberships, plain static text for exactly one (per the "invisible for the common case" rule in [§4](#4-layout-patterns)), a full dropdown for two or more. Selecting an organization calls the `setActiveOrganization` Server Function (`modules/organizations/actions.ts`), which re-verifies membership server-side before writing `profiles.active_organization_id` — that column is a UX preference only, never a security boundary, per [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model).
+- **Zero-membership state**: handled once, in `app/(app)/dashboard/page.tsx`, as a distinct branch (not a degraded version of the normal dashboard) — a polished `EmptyState` explaining that organizations are set up manually for v1. The sidebar/org-switcher deliberately show nothing extra in this case rather than an empty or disabled dropdown.
+- **Dashboard KPIs**: exactly one (team member count) is a real query (`countActiveMembers`); every other stat card uses `StatCard`'s `"placeholder"` variant — an em dash and a "Not yet available" badge, never a fabricated or misleading zero. See `components/shared/stat-card.tsx`'s own header comment for why a true `0` would be misleading here (a claim about your data vs. a claim about the software).
+
+### Installed component inventory
+
+shadcn/ui primitives (`components/ui/`, Base UI-based — see [Implementation Status](#implementation-status)): `avatar`, `alert`, `alert-dialog`, `badge`, `breadcrumb`, `button`, `card`, `checkbox`, `dialog`, `dropdown-menu`, `input`, `label`, `pagination`, `select`, `separator`, `sheet`, `sidebar`, `skeleton`, `sonner` (toasts), `tabs`, `table`, `textarea`, `tooltip`.
+
+`table`/`pagination`/`tabs`/`select`/`checkbox`/`textarea`/`dialog` are installed and ready but have **no live usage yet** — no business module has real tabular/paginated/tabbed data to show. That's expected, not a gap: they're foundation for the modules in [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) M8 onward, not something this UI-only milestone should force a fake usage of.
+
+## 11. Future Employee Portal (Prepared, Not Implemented)
+
+The management app shell in [§10](#10-application-shell--navigation) is deliberately **not** what field employees will use day-to-day — it's a desktop/tablet-density office tool, the opposite of [§1](#1-principles)'s "mobile-first, not mobile-friendly" principle for field roles. A separate portal is planned for: viewing worked hours, viewing assignments, submitting LMRA, viewing certificates, signing toolbox talks, and receiving notifications — all Employee-role, phone-first interactions. **None of this is implemented in this milestone** — this section documents the intended architecture so the eventual work has a landing spot, per this milestone's explicit "prepare, don't build" scope.
+
+Planned shape:
+- **A separate route group**, e.g. `app/(portal)/`, sibling to `app/(app)/` and `app/(marketing)/` — not a responsive variant of the management shell, a genuinely different layout (`app/(portal)/layout.tsx`) with its own shell: a bottom tab bar (not a sidebar — see [§4](#4-layout-patterns)'s "mobile: navigation collapses to a bottom tab bar or slide-out drawer, not a desktop sidebar squeezed into a phone width"), large touch targets, single-column task-focused screens.
+- **Shared foundation, separate presentation**: both portals reuse the same auth (`lib/auth/session.ts`), the same Server Functions/queries where the underlying data is the same (e.g. a timesheet is a timesheet), and the same design tokens (`app/globals.css`) — but the *component trees* are separate. `components/app-shell/*` is management-shell-specific; a future `components/employee-shell/*` (or similar) would hold the portal's own chrome, not a variant of `AppSidebar`.
+- **Role-gated entry, not URL-guessing**: which portal a signed-in user lands in is a product decision to make when this is actually built (a role check, a separate subdomain, an explicit choice) — not decided here, since it depends on whether a single person is ever both an office-role and field-role user of the same organization (see the open questions in [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md)).
+- **Field-facing form patterns** (stepper flows, large pinned primary actions, offline-adjacent input preservation) described in [§4](#4-layout-patterns) and [§5](#5-forms--validation) apply to this portal specifically — the management shell built in this milestone has no forms of consequence yet (no business modules), so those patterns haven't been exercised anywhere yet either.
+
+Nothing under `app/(portal)/` exists yet — no folder, no route, no component. This section is the extent of "preparation" for this milestone.
