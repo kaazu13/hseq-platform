@@ -78,17 +78,24 @@ This is one rule applied in several places, not a special case per table — see
 Proposed top-level layout as the app grows beyond the current scaffold (`app/layout.tsx`, `app/page.tsx`):
 
 ```
+proxy.ts                        # project root, sibling of app/ — NOT inside app/. This is a Next.js file-
+                                 # convention requirement, unlike everything else in this tree, which is just
+                                 # this project's own organization. Formerly "middleware.ts".
+
 app/
   (marketing)/                 # public/unauthenticated routes
     login/
+      page.tsx                 # built — Server Component, redirects to /dashboard if already signed in
+      login-form.tsx           # built — Client Component (needs pending/error state)
     accept-invite/             # completes an invited membership (sets password, joins the org) — not public self-registration
   (platform)/                  # platform super-admin only, separate from tenant app shell
     admin/
       organizations/           # PSA-only: create/suspend organizations, provision first Company Admin
   (app)/                       # authenticated, tenant-scoped app shell
-    layout.tsx                 # loads session + active org + role(s), renders nav shell
-    select-organization/       # organization switcher, shown when a user has >1 membership or none active
+    layout.tsx                 # built — calls requireUser(); full org/role-aware shell deferred to M2/M5
+    select-organization/       # organization switcher, shown when a user has >1 membership or none active — deferred, needs M2 schema
     dashboard/
+      page.tsx                 # built — the one protected page in the M1/M3 foundation milestone
     projects/
       [projectId]/
         locations/
@@ -111,11 +118,13 @@ app/
     settings/
       organization/
       users/                   # manage organization_memberships + membership_roles for the active org
-  unauthorized.tsx             # rendered when unauthorized() is called (401)
-  forbidden.tsx                 # rendered when forbidden() is called (403)
-  proxy.ts                      # formerly "middleware.ts" — session refresh + route gating
+  unauthorized.tsx             # built — rendered when unauthorized() is called (401)
+  forbidden.tsx                 # built — rendered when forbidden() is called (403)
 
 modules/                        # feature/domain logic, framework-agnostic where possible
+  auth/                         # built — login()/logout() Server Functions + shared zod schema
+    actions.ts
+    validation.ts
   projects/
     queries.ts                 # server-only data access for this domain
     actions.ts                 # 'use server' Server Functions (mutations)
@@ -136,12 +145,14 @@ modules/                        # feature/domain logic, framework-agnostic where
 
 lib/
   supabase/
-    server.ts                  # server-side Supabase client (reads cookies)
-    client.ts                  # browser Supabase client (anon key only)
-    admin.ts                   # service-role client — server-only, used sparingly
+    server.ts                  # built — server-side Supabase client (reads cookies)
+    client.ts                  # built — browser Supabase client (publishable key only)
+    middleware.ts              # built — updateSession(), called from proxy.ts
+    admin.ts                   # secret-key client — server-only, added when first needed (not built yet)
   auth/
-    session.ts                 # getSession(), requireUser(), requireRole(), current active org + roles
-  validation/                  # shared zod schemas used by forms + Server Functions
+    session.ts                 # built (partial) — requireUser(), getCurrentUser(); requireRole() and active-org/role resolution deferred to M2/M5
+  action-result.ts             # built — shared ActionResult<T>/ActionErrorCode types (docs/API_CONVENTIONS.md §4)
+  validation/                  # shared zod schemas used by forms + Server Functions (auth's schema currently lives in modules/auth/validation.ts instead — see note below)
 
 components/
   ui/                          # shadcn/ui primitives
@@ -155,6 +166,8 @@ Rationale:
 - `modules/*` holds domain logic (queries, mutations, permission rules, types) independent of routing, so a given domain's logic isn't scattered across every route that touches it.
 - Route folders under `app/(app)/*` stay thin: they call into `modules/*` and render.
 - This structure scales by adding a new module folder + route segment, without needing a framework change, satisfying "scalable module-based folder structure" without introducing an unnecessary layered architecture (no repository/service/controller ceremony beyond what's listed above).
+
+**Build status (as of the M1/M3 auth foundation milestone)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly). Everything else in this tree — every business module, `select-organization/`, the `(platform)/` admin area, `lib/supabase/admin.ts`, `requireRole()`, and active-organization/role resolution inside `requireUser()` — is still just this proposed layout, not yet implemented. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; revisit once a second module needs a `zod` schema.
 
 ## 5. Authentication & Session Handling
 
@@ -178,14 +191,14 @@ Rationale:
 
 | Variable | Exposed to client? | Purpose |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Project URL, safe to expose. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Anon key, safe to expose — RLS is what actually protects data, not secrecy of this key. |
-| `SUPABASE_SERVICE_ROLE_KEY` | **No** | Bypasses RLS. Server-only (Vercel server environment). Never imported into any file that can end up in a client bundle. Used only for narrowly-scoped trusted operations (e.g., platform admin provisioning, scheduled jobs). |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Project URL, safe to expose. **No trailing path** (not `/rest/v1/`, `/auth/v1/`, etc.) — the client libraries append the correct path themselves; a URL with a path suffix breaks every request. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Supabase's current key naming (`sb_publishable_...`), superseding the legacy "anon key" terminology this document originally used. Safe to expose — RLS is what actually protects data, not secrecy of this key. If a project still issues a legacy anon JWT instead, the same variable name and treatment apply. |
+| `SUPABASE_SECRET_KEY` | **No** | Supabase's current name for the key that bypasses RLS (supersedes the legacy "service role key" terminology). Server-only (Vercel server environment). Never imported into any file that can end up in a client bundle. Used only for narrowly-scoped trusted operations (e.g., platform admin provisioning, scheduled jobs). Not required until such an operation exists — not used anywhere in the M1/M3 auth foundation. |
 | `SUPABASE_JWT_SECRET` (if needed) | **No** | Only if verifying JWTs outside Supabase's own SDK. |
 
 Rules:
 - Anything without the `NEXT_PUBLIC_` prefix must never be referenced from a Client Component or from code that a Client Component imports.
-- `lib/supabase/admin.ts` (service-role client) is only imported from server-only files (Route Handlers, Server Functions, scripts) — enforce this with the `server-only` package import guard once dependencies are installed.
+- `lib/supabase/admin.ts` (secret-key client, added when a trusted server-only operation first needs it) must only be imported from server-only files (Route Handlers, Server Functions, scripts) — enforced with the `server-only` package import guard (installed; already used by `lib/supabase/server.ts` and `lib/auth/session.ts`).
 - No API keys, tokens, or secrets are ever committed to the repo; `.env.local` is git-ignored (already the case per the current `.gitignore`).
 
 ## 8. Audit Logging
