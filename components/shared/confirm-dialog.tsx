@@ -31,8 +31,8 @@ type ConfirmDialogProps = {
    * Controlled mode: pass `open`/`onOpenChange` instead of `trigger` when
    * the thing that opens this dialog lives inside another overlay (e.g. a
    * DropdownMenuItem) — nesting an AlertDialogTrigger inside a menu item
-   * fights with the menu's own close-on-select behavior. The caller
-   * closes its own menu and flips `open` to true from an onSelect handler
+   * fights with the menu's own close-on-click behavior. The caller
+   * closes its own menu and flips `open` to true from an onClick handler
    * instead. See components/app-shell/user-menu.tsx for the pattern.
    */
   open?: boolean;

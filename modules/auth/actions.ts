@@ -54,9 +54,27 @@ export async function login(input: LoginInput): Promise<ActionResult<null>> {
   redirect("/dashboard");
 }
 
-export async function logout(): Promise<void> {
+/**
+ * Signs the current user out and redirects to /login. Returns `ActionResult`
+ * (rather than throwing) specifically so the caller can show a safe,
+ * generic error and let the user retry if `signOut()` itself fails (e.g. a
+ * transient network error talking to the auth server) — the real internal
+ * error is never forwarded to the client. On success this never actually
+ * returns: `redirect()` throws internally (the standard Next.js pattern
+ * used by every other Server Function in this codebase), which both ends
+ * the request and clears any protected page from being rendered further.
+ * `revalidatePath("/", "layout")` invalidates the whole cached layout tree
+ * so a subsequent navigation — including the client's own post-redirect
+ * render — can never serve a stale, still-"authenticated" shell.
+ */
+export async function logout(): Promise<ActionResult<null>> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't sign you out. Try again." } };
+  }
+
   revalidatePath("/", "layout");
   redirect("/login");
 }

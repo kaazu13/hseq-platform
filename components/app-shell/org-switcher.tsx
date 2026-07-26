@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -86,20 +87,27 @@ export function OrgSwitcher({ organizations, currentOrganizationId }: OrgSwitche
             <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Organizations
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {organizations.map((org) => (
-              <DropdownMenuItem
-                key={org.id}
-                onSelect={() => handleSelect(org.id, org.name)}
-                className="justify-between"
-              >
-                <span className="truncate">{org.name}</span>
-                {org.id === current.id ? <Check className="size-4" /> : null}
-              </DropdownMenuItem>
-            ))}
+            {/* Base UI requires Menu.GroupLabel (DropdownMenuLabel) to have a
+                Menu.Group (DropdownMenuGroup) ancestor — see
+                node_modules/@base-ui/react/docs/react/components/menu.md's
+                "Group labels" example, which nests the label and its
+                associated items inside the same group. */}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                Organizations
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {organizations.map((org) => (
+                <DropdownMenuItem
+                  key={org.id}
+                  onClick={() => handleSelect(org.id, org.name)}
+                  className="justify-between"
+                >
+                  <span className="truncate">{org.name}</span>
+                  {org.id === current.id ? <Check className="size-4" /> : null}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

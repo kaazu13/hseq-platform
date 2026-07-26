@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -37,18 +38,41 @@ function initialsFor(name: string, email: string) {
 
 /**
  * Sidebar-footer user menu: avatar, name/email, Settings link, sign out.
+ * The SAME component renders inside the mobile Sheet-based drawer too —
+ * shadcn's `Sidebar` primitive (components/ui/sidebar.tsx) reuses this
+ * exact tree for both desktop and mobile, so there is no separate
+ * "mobile user menu" to keep in sync.
  *
  * Sign out uses ConfirmDialog's *controlled* mode (open/onOpenChange)
  * rather than nesting an AlertDialogTrigger inside the DropdownMenuItem —
  * nesting one overlay's trigger inside another overlay's menu item is a
- * known-fragile pattern (the menu's own close-on-select behavior races
- * the dialog trying to open). Selecting the menu item just closes the
- * menu and flips local state instead.
+ * known-fragile pattern (the menu's own close-on-click behavior, Base
+ * UI's `Menu.Item` default `closeOnClick`, races the dialog trying to
+ * open). Clicking the menu item just closes the menu and flips local
+ * state instead — via `onClick`, the prop Base UI's `Menu.Item` actually
+ * dispatches (NOT `onSelect`, which is a native, text-selection-only DOM
+ * event that a click on a non-editable element never fires — see
+ * node_modules/@base-ui/react/docs/react/components/menu.md, which uses
+ * `onClick` in every example and documents no `onSelect` prop at all).
  */
 export function UserMenu({ name, email }: UserMenuProps) {
   const [confirmSignOutOpen, setConfirmSignOutOpen] = useState(false);
   const initials = initialsFor(name, email);
   const displayName = name.trim() || email;
+
+  // ConfirmDialog already wraps onConfirm in its own useTransition (shows
+  // "Please wait…" and disables the action button while pending) — see
+  // components/shared/confirm-dialog.tsx, same pattern as
+  // archive-employee-button.tsx/restore-employee-button.tsx. On success
+  // this never returns: logout() redirects server-side. It only resolves
+  // here to report a failure — the underlying Supabase error is never
+  // forwarded, only the generic message logout() itself returns.
+  async function handleSignOut() {
+    const result = await logout();
+    if (!result.ok) {
+      toast.error(result.error.message);
+    }
+  }
 
   return (
     <SidebarMenu>
@@ -67,12 +91,21 @@ export function UserMenu({ name, email }: UserMenuProps) {
             <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-64">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col">
-                <span className="truncate text-sm font-medium">{displayName}</span>
-                <span className="truncate text-xs text-muted-foreground">{email}</span>
-              </div>
-            </DropdownMenuLabel>
+            {/* Base UI requires Menu.GroupLabel (DropdownMenuLabel) to have a
+                Menu.Group (DropdownMenuGroup) ancestor — see
+                node_modules/@base-ui/react/docs/react/components/menu.md's
+                "Group labels" example. This label has no items of its own
+                (it's a standalone header), so it gets its own one-item
+                group rather than being folded into the Account/Settings
+                group below it. */}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col">
+                  <span className="truncate text-sm font-medium">{displayName}</span>
+                  <span className="truncate text-xs text-muted-foreground">{email}</span>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem render={<Link href="/settings" />}>
@@ -85,7 +118,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={() => setConfirmSignOutOpen(true)}>
+            <DropdownMenuItem variant="destructive" onClick={() => setConfirmSignOutOpen(true)}>
               <LogOut />
               Sign out
             </DropdownMenuItem>
@@ -100,9 +133,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
         description="You'll need to sign in again to access your organizations."
         confirmLabel="Sign out"
         variant="destructive"
-        onConfirm={async () => {
-          await logout();
-        }}
+        onConfirm={handleSignOut}
       />
     </SidebarMenu>
   );
