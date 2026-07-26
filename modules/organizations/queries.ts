@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { OrganizationMembership, OrganizationSummary, Profile } from "./types";
 
@@ -74,8 +75,14 @@ export async function listActiveOrganizationsForUser(
  * should never return null in practice; it's typed as nullable anyway
  * because a database read is never truly guaranteed, and callers must
  * handle it rather than assume.
+ *
+ * Wrapped in React's `cache()` (per-request memoization only — see
+ * `getCurrentUser()` in lib/auth/session.ts for the same pattern). Both the
+ * app shell layout and every page it wraps call this (via
+ * `resolveCurrentOrganization()` below) independently; without this, each
+ * authenticated page load re-ran this query twice.
  */
-export async function getCurrentUserProfile(userId: string): Promise<Profile | null> {
+export const getCurrentUserProfile = cache(async (userId: string): Promise<Profile | null> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -86,7 +93,7 @@ export async function getCurrentUserProfile(userId: string): Promise<Profile | n
 
   if (error) throw error;
   return data;
-}
+});
 
 export type CurrentOrganizationResolution = {
   organizations: OrganizationSummary[];
@@ -105,8 +112,14 @@ export type CurrentOrganizationResolution = {
  * date), otherwise `null` (the zero-membership case). Purely a display/UX
  * concern — no authorization decision anywhere reads this; see
  * docs/ARCHITECTURE.md §3.2.
+ *
+ * Wrapped in React's `cache()` (per-request memoization only). Both
+ * `app/(app)/layout.tsx` and every page it wraps call this independently —
+ * without this, each authenticated page load ran its 3-query chain
+ * (`listActiveOrganizationsForUser`'s 2 queries + `getCurrentUserProfile`'s
+ * 1) twice.
  */
-export async function resolveCurrentOrganization(userId: string): Promise<CurrentOrganizationResolution> {
+export const resolveCurrentOrganization = cache(async (userId: string): Promise<CurrentOrganizationResolution> => {
   const [memberships, profile] = await Promise.all([
     listActiveOrganizationsForUser(userId),
     getCurrentUserProfile(userId),
@@ -121,7 +134,7 @@ export async function resolveCurrentOrganization(userId: string): Promise<Curren
     null;
 
   return { organizations, currentOrganizationId };
-}
+});
 
 /**
  * Count of ACTIVE members in an organization — real, live data (unlike

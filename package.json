@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:test-org": "tsx scripts/seed-test-org.ts",
+    "cleanup:test-org": "tsx scripts/cleanup-test-org.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -35,6 +37,10 @@
     "eslint-config-next": "16.2.11",
     "supabase": "^2.109.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

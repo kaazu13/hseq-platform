@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalText, optionalDate } from "@/lib/validation";
 
 /**
  * Server Function validation for the projects domain — same shape/optional-
@@ -7,18 +8,6 @@ import { z } from "zod";
  * assigning people to a project is never part of the project-fields form,
  * mirroring how role assignment is separate from the employee edit form.
  */
-const optionalText = z
-  .string()
-  .trim()
-  .optional()
-  .transform((value) => (value === "" || value === undefined ? undefined : value));
-
-const optionalDate = optionalText.pipe(
-  z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date")
-    .optional(),
-);
 
 const PROJECT_STATUS_VALUES = ["planning", "active", "completed", "archived"] as const;
 

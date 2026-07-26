@@ -1,0 +1,25 @@
+-- Adds the one index project_assignments was missing relative to its own
+-- sibling tables — found during a full-platform engineering/hardening
+-- review.
+--
+-- validate_project_assignment_no_overlap() (20260728090000_projects_and_teams.sql
+-- §6) runs on every INSERT into project_assignments and needs every row —
+-- open AND closed — for the same (project_id, employee_id, assignment_role)
+-- triple:
+--
+--   select max(end_at) from project_assignments
+--   where project_id = new.project_id and employee_id = new.employee_id
+--     and assignment_role = new.assignment_role and id is distinct from new.id;
+--
+-- Every existing index on this table is partial (`where end_at is null`,
+-- see project_assignments_one_open_role_per_employee/_project_id_idx/
+-- _employee_id_idx in that same migration) — none of them can serve a query
+-- that needs closed rows too. The two sibling tables with the identical
+-- overlap-trigger pattern both already carry the non-partial index this
+-- query needs: team_assignments_project_employee_idx (project_id,
+-- employee_id) and employee_employment_periods_employee_id_idx (employee_id,
+-- start_date desc). project_assignments is the one table where this was
+-- missed. Purely additive — no data change, no behavior change to any
+-- query result, only the overlap trigger's own lookup plan.
+create index project_assignments_role_history_idx
+  on public.project_assignments (project_id, employee_id, assignment_role);

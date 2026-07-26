@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, forbidden } from "next/navigation";
-import { requireAnyRole } from "@/lib/auth/session";
+import { requireAnyRole, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
+import { flattenFieldErrors, isUniqueViolation, isRlsViolation } from "@/lib/supabase/errors";
 import type { RoleName } from "@/modules/organizations/types";
-import { EMPLOYEE_WRITE_ROLES } from "./permissions";
+import { EMPLOYEE_WRITE_ROLES, assignableRoleNamesFor } from "./permissions";
 import {
   createEmployeeFormSchema,
   employeeFormSchema,
@@ -28,22 +29,6 @@ import type { Employee } from "./types";
  * Auth Hook configured yet, so every one of these re-verifies membership
  * and role for the SPECIFIC organization passed in, live, every call.
  */
-
-function flattenFieldErrors(error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } }) {
-  const fieldErrors: Record<string, string> = {};
-  for (const [field, messages] of Object.entries(error.flatten().fieldErrors)) {
-    if (messages?.[0]) fieldErrors[field] = messages[0];
-  }
-  return fieldErrors;
-}
-
-function isUniqueViolation(error: { code?: string }): boolean {
-  return error.code === "23505";
-}
-
-function isRlsViolation(error: { code?: string }): boolean {
-  return error.code === "42501";
-}
 
 /**
  * Employee numbers are always generated in Postgres (`next_employee_number()`
@@ -516,9 +501,15 @@ export async function rehireEmployee(
  * Assigns an existing organization role to the membership backing a linked
  * employee. `roleId` must belong to the fixed v1 catalogue and its NAME
  * must be within `assignableRoleNamesFor()` for the caller (permissions.ts)
- * — that check is defense-in-depth alongside `membership_roles_insert_managers`,
+ * — checked explicitly below (not just relied on via the UI's `<Select>`
+ * filtering, which is convenience only and trivially bypassable by calling
+ * this function directly) alongside `membership_roles_insert_managers`,
  * which enforces the same rule at the database level and is the real
- * backstop (docs/API_CONVENTIONS.md §6).
+ * backstop (docs/API_CONVENTIONS.md §6, "RLS is the backstop, not the only
+ * check"). Both checks currently agree by construction (assignableRoleNamesFor
+ * mirrors the RLS policy's role list exactly) — the app-layer check exists
+ * so the two can never silently drift apart without a visible, immediate
+ * `forbidden()` here rather than depending solely on the RLS insert failing.
  */
 export async function assignEmployeeRole(
   organizationId: string,
@@ -551,6 +542,11 @@ export async function assignEmployeeRole(
   if (roleError) throw roleError;
   if (!role) {
     return { ok: false, error: { code: "not_found", message: "That role doesn't exist." } };
+  }
+
+  const actorRoleNames = await getUserRoleNames(organizationId);
+  if (!assignableRoleNamesFor(actorRoleNames, [role.name as RoleName]).includes(role.name as RoleName)) {
+    forbidden();
   }
 
   const { error: insertError } = await supabase.from("membership_roles").insert({
@@ -591,6 +587,14 @@ export async function assignEmployeeRole(
  * up here: a zero-row result means either an authorization failure or the
  * last-company_admin guard, so it's reported as a conflict rather than a
  * silent no-op.
+ *
+ * `membershipRoleId` is cross-checked against `employeeId`'s own membership
+ * (mirroring `assignEmployeeRole()`'s equivalent check above) — without
+ * this, any caller with EMPLOYEE_WRITE_ROLES could remove a role belonging
+ * to a DIFFERENT employee while the audit log (and revalidated page) still
+ * attributed the change to `employeeId`. Not a privilege escalation (the
+ * caller already has org-wide role-management authority either way), but a
+ * real audit-attribution gap — see engineering review finding F1.
  */
 export async function removeEmployeeRole(
   organizationId: string,
@@ -605,11 +609,25 @@ export async function removeEmployeeRole(
   }
 
   const supabase = await createClient();
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_memberships")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", employee.profile_id ?? "")
+    .maybeSingle();
+
+  if (membershipError) throw membershipError;
+  if (!membership) {
+    return { ok: false, error: { code: "not_found", message: "This employee has no matching organization membership." } };
+  }
+
   const { data: removed, error } = await supabase
     .from("membership_roles")
     .delete()
     .eq("id", membershipRoleId)
     .eq("organization_id", organizationId)
+    .eq("membership_id", membership.id)
     .select("id, role_id");
 
   if (error) {

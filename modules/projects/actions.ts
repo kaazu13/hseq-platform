@@ -5,6 +5,7 @@ import { redirect, forbidden } from "next/navigation";
 import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
+import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
 import { PROJECT_CREATE_ROLES, canManageProject } from "./permissions";
 import { assignProjectRoleSchema, projectFormSchema, type AssignProjectRoleInput, type ProjectFormInput } from "./validation";
 import { getProject, getMyProjectAssignmentRoles } from "./queries";
@@ -18,27 +19,6 @@ import { getProject, getMyProjectAssignmentRoles } from "./queries";
  * live — mirroring is_project_manager() (the migration's RLS backstop)
  * rather than trusting a client-supplied flag.
  */
-
-function flattenFieldErrors(error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } }) {
-  const fieldErrors: Record<string, string> = {};
-  for (const [field, messages] of Object.entries(error.flatten().fieldErrors)) {
-    if (messages?.[0]) fieldErrors[field] = messages[0];
-  }
-  return fieldErrors;
-}
-
-function isUniqueViolation(error: { code?: string }): boolean {
-  return error.code === "23505";
-}
-
-function isRlsViolation(error: { code?: string }): boolean {
-  return error.code === "42501";
-}
-
-/** Postgres error code for an unhandled `RAISE EXCEPTION` in a plpgsql function/trigger with no explicit SQLSTATE — e.g. validate_project_assignment_role_holder()'s "doesn't hold that organization role" check. */
-function isRaisedException(error: { code?: string }): boolean {
-  return error.code === "P0001";
-}
 
 /** Exported for reuse by modules/teams/actions.ts — team management shares the exact same "org-wide manager OR this project's assigned Project Manager" gate as project management (see modules/teams/permissions.ts's canManageTeams). */
 export async function requireProjectManageAccess(

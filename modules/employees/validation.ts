@@ -1,27 +1,11 @@
 import { z } from "zod";
+import { optionalText, optionalDate } from "@/lib/validation";
 
 /**
  * Shared schema for the employee create/edit Server Functions — used for
  * both client-side field validation and the server-side check inside each
  * Server Function. See docs/API_CONVENTIONS.md §5 (Validation).
- *
- * Every optional text field treats an empty string the same as "not
- * provided" (HTML form inputs always submit `""`, never `undefined`, when
- * left blank) — trimmed and transformed to `undefined` before any further
- * validation runs.
  */
-const optionalText = z
-  .string()
-  .trim()
-  .optional()
-  .transform((value) => (value === "" || value === undefined ? undefined : value));
-
-const optionalDate = optionalText.pipe(
-  z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date")
-    .optional(),
-);
 
 /**
  * Fields shared by both create and edit. `employmentStatus`/`startDate`

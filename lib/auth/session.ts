@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { forbidden, unauthorized } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
@@ -27,14 +28,23 @@ import type { RoleName } from "@/modules/organizations/types";
  * permissions.ts` is the first `permissions.ts` module built against it.
  */
 
-/** Returns the signed-in user, or null if there isn't one. Never redirects. */
-export async function getCurrentUser(): Promise<User | null> {
+/**
+ * Returns the signed-in user, or null if there isn't one. Never redirects.
+ *
+ * Wrapped in React's `cache()` — per-request memoization only (a fresh
+ * request always gets a fresh call; nothing survives across requests). This
+ * function is the base of a call chain several pages hit twice per request
+ * (once directly via `requireUser()`, again via `getUserRoleNames()`, which
+ * also calls `requireUser()` internally) — memoizing here collapses those
+ * into a single `supabase.auth.getUser()` round trip instead of two.
+ */
+export const getCurrentUser = cache(async (): Promise<User | null> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});
 
 /**
  * Returns the signed-in user, or calls `unauthorized()` (renders

@@ -1,10 +1,5 @@
 import { z } from "zod";
-
-const optionalText = z
-  .string()
-  .trim()
-  .optional()
-  .transform((value) => (value === "" || value === undefined ? undefined : value));
+import { optionalText } from "@/lib/validation";
 
 const TEAM_COLOR_VALUES = ["gray", "blue", "green", "yellow", "orange", "red", "purple", "cyan", "brown"] as const;
 const TEAM_STATUS_VALUES = ["active", "archived"] as const;

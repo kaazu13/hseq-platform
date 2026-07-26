@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
+import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
 import { requireProjectManageAccess } from "@/modules/projects/actions";
 import { setTeamAssignmentSchema, teamFormSchema, type SetTeamAssignmentInput, type TeamFormInput } from "./validation";
 
@@ -15,27 +16,6 @@ import { setTeamAssignmentSchema, teamFormSchema, type SetTeamAssignmentInput, t
  * management is gated identically to project management (see
  * modules/teams/permissions.ts).
  */
-
-function flattenFieldErrors(error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } }) {
-  const fieldErrors: Record<string, string> = {};
-  for (const [field, messages] of Object.entries(error.flatten().fieldErrors)) {
-    if (messages?.[0]) fieldErrors[field] = messages[0];
-  }
-  return fieldErrors;
-}
-
-function isUniqueViolation(error: { code?: string }): boolean {
-  return error.code === "23505";
-}
-
-function isRlsViolation(error: { code?: string }): boolean {
-  return error.code === "42501";
-}
-
-/** Postgres error code for an unhandled `RAISE EXCEPTION` with no explicit SQLSTATE — e.g. the archived-project/archived-team/ineligible-employee/overlap guards inside save_team_with_assignments()'s underlying inserts. */
-function isRaisedException(error: { code?: string }): boolean {
-  return error.code === "P0001";
-}
 
 export type TeamAssignmentChange = { employeeId: string; role: "member" | "foreman" | "none" };
 
