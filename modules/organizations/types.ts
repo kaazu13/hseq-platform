@@ -36,12 +36,13 @@ export const ROLE_NAMES = [
   "platform_super_admin",
   "company_admin",
   "operations_manager",
-  "hseq_manager",
   "project_manager",
-  "supervisor",
+  "hseq_manager",
+  "hse_officer",
+  "foreman",
   "inspector",
+  "recruiter",
   "planner",
-  "payroll_admin",
   "employee",
 ] as const;
 

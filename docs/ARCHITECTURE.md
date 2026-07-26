@@ -19,7 +19,7 @@
 2. **Authorization is decided on the server.** Client-side role checks are UX only (hide a button); every mutation and every sensitive read is re-checked server-side (RLS + server action authorization). See [API_CONVENTIONS.md](./API_CONVENTIONS.md#6-server-side-authorization).
 3. **Everything is attributable.** Tenant-owned records carry `created_by` / `updated_by`, and mutations to HSEQ-relevant data additionally emit an audit log entry.
 4. **HSEQ records are evidence.** They are not hard-deleted; correcting a mistake is a new, linked record or a fully audit-logged update, never a silent overwrite or a `DELETE`. Audit log entries and completed digital signatures go further — they are never edited or deleted by anyone, at the database level, once written. See [§8](#8-audit-logging) and [§10](#10-file-storage-attachments-photos-signatures).
-5. **Mobile is the primary surface for field roles.** Supervisor/Inspector/Employee flows are designed at phone width first; desktop is an enhancement, not the baseline.
+5. **Mobile is the primary surface for field roles.** Foreman/Inspector/Employee flows are designed at phone width first; desktop is an enhancement, not the baseline.
 6. **A reference to another record is only as trustworthy as its validation.** Any column that points at another row — a real foreign key to `profiles`, or a polymorphic `entity_type`/`entity_id` pair — must be validated server-side at write time: does the referenced row exist, does its effective organization match this record's organization (or is it a legitimate cross-org/global reference, like a system category), and is the acting user actually permitted to reference it. This matters more than it used to now that `profiles` is a global table (see [§3.2](#32-organization-membership-model)) — a foreign key to `profiles(id)` no longer implies "this person is in my organization" by itself. See [§3.4](#34-cross-reference-validation-rule) and [API_CONVENTIONS.md §6](./API_CONVENTIONS.md#6-server-side-authorization).
 7. **Avoid unnecessary complexity.** No microservices, no separate per-tenant databases, no client-side global state library unless a concrete need appears — App Router server components plus a thin client layer is sufficient for this product's shape.
 
@@ -39,7 +39,7 @@
 - **`profiles`** — one row per Supabase Auth user, **identity information only**: name, phone, and a `active_organization_id` preference (see [Active organization selection](#active-organization-selection) below). No `organization_id`, no `role`, no per-org status live here — `profiles` is a global table, not a tenant-owned one.
 - **`organizations`** — the tenant root, as before.
 - **`organization_memberships`** — connects a `profiles` row to an `organizations` row. Each membership has its own **status**: `invited`, `active`, `suspended`, or `removed`. A person can hold at most one membership row per organization, and any number of memberships across different organizations.
-- **`membership_roles`** — a membership can carry **more than one role** (see [§6](#6-authorization-model)); this is a separate table, not a single `role` column, specifically so a person can be e.g. both Supervisor and Inspector within the same organization.
+- **`membership_roles`** — a membership can carry **more than one role** (see [§6](#6-authorization-model)); this is a separate table, not a single `role` column, specifically so a person can be e.g. both Project Manager and Foreman, or both HSE Officer and Inspector, within the same organization.
 
 This directly replaces the earlier single-org, single-role design (`profiles.organization_id` + `profiles.role`) that an earlier version of this document proposed. See [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables) for the exact table shapes. **All four tables/relationships above are implemented** (`profiles`, `organizations`, `organization_memberships`, `membership_roles` — the last as a `role_id` FK into a `roles` table rather than a raw `role` column; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status)).
 
@@ -73,7 +73,7 @@ Every Server Function that writes one of these references must therefore validat
 
 1. **Existence** — the referenced row actually exists.
 2. **Organization match** — for a `profiles` reference, the referenced person has an **active** `organization_memberships` row for this record's `organization_id`; for a polymorphic reference, the referenced row's own `organization_id` equals this record's `organization_id` (or the reference is to a legitimate global/system row, such as a system-defined `event_categories` entry, which is exempt from the org-match check by design).
-3. **Permission** — the acting user is actually allowed to reference that row in this way (e.g., a Supervisor can only assign a corrective action to someone with an active membership in the same organization, not merely any valid `profiles.id` in the database).
+3. **Permission** — the acting user is actually allowed to reference that row in this way (e.g., a Foreman can only assign a corrective action to someone with an active membership in the same organization, not merely any valid `profiles.id` in the database).
 
 This is one rule applied in several places, not a special case per table — see [DATABASE_SCHEMA.md — Polymorphic references](./DATABASE_SCHEMA.md#polymorphic-references-corrective_actionssource_id-attachmentsentity_id-digital_signaturesentity_id) and [API_CONVENTIONS.md §6](./API_CONVENTIONS.md#6-server-side-authorization).
 
@@ -84,7 +84,7 @@ Proposed top-level layout as the app grows beyond the current scaffold (`app/lay
 ```
 supabase/                       # built — Supabase CLI project (supabase init), not linked to any remote project
   config.toml
-  migrations/                   # built — 10 SQL files, ordered; see the database-foundation milestone's implementation report
+  migrations/                   # built — 20 SQL files, ordered; see the database-foundation, Employee Management Foundation, Employee Management Polish, Platform User ID, Role Catalogue & Permissions, Employment Lifecycle, and Projects & Team Management milestones' implementation reports. The first 16 (through 20260726100100_employee_numbering.sql) are applied to the linked remote project; 20260726110000_profile_user_number.sql, 20260726120000_role_catalogue_update.sql, 20260727090000_employment_periods.sql, and 20260728090000_projects_and_teams.sql are not yet applied — see those reports for the exact pending steps.
   seed.sql                      # built — dev-only: seeds the role catalogue + one example organization
 
 proxy.ts                        # project root, sibling of app/ — NOT inside app/. This is a Next.js file-
@@ -106,7 +106,9 @@ app/
     error.tsx                  # built — route-level error boundary
     dashboard/
       page.tsx                 # built — organization-aware; real team-member count, placeholder KPIs elsewhere (never fabricated numbers)
-    employees/ … reports/       # built — 12 placeholder routes, each just <ComingSoonPage/> — see components/app-shell/nav-config.ts
+    employees/                  # built — list/new/[employeeNumber]/[employeeNumber]/edit, real data (no ComingSoonPage). Routed by the employee's immutable employee_number, not the internal UUID — see docs/DATABASE_SCHEMA.md's "Employee number generation".
+    projects/                   # built — list/new/[projectId]/[projectId]/edit, real data. Routed by the raw project id (not a human code — projects.code is optional, unlike employee_number) — Overview/Teams/Assignments tabs on the detail page; Teams renders modules/teams' Team Cards grid.
+    equipment/ … reports/        # built — 10 remaining placeholder routes, each just <ComingSoonPage/> — see components/app-shell/nav-config.ts
     settings/
       page.tsx                 # built — placeholder (org settings/membership management UI not built yet)
   unauthorized.tsx             # built — rendered when unauthorized() is called (401)
@@ -122,11 +124,20 @@ modules/                        # feature/domain logic, framework-agnostic where
   auth/                         # built — login()/logout() Server Functions + shared zod schema
     actions.ts
     validation.ts
-  projects/
-    queries.ts                 # server-only data access for this domain
-    actions.ts                 # 'use server' Server Functions (mutations)
-    types.ts
-    permissions.ts             # who can do what, for this domain
+  projects/                    # built — Projects & Team Management milestone
+    types.ts                   # Project/ProjectAssignment aliases, status/role enums+labels, ProjectAssignmentWithEmployee
+    validation.ts               # projectFormSchema, assignProjectRoleSchema
+    queries.ts                  # listProjects (unpaginated — see its comment for why), getProject, getMyProjectAssignmentRoles, listProjectAssignments, listProjectRosterEmployeeIds — no PostgREST embeds
+    actions.ts                   # createProject, updateProject, assignProjectRole, endProjectAssignment, requireProjectManageAccess (exported, reused by modules/teams/actions.ts)
+    permissions.ts                # canCreateProjects (org-wide-role-only), canManageProject(roleNames, myProjectAssignmentRoles) — the first permissions.ts whose write-access decision needs a live per-project fact, not just role names
+    components/                   # project-form, project-card, project-overview-tab, project-status-badge, project-assignments-tab
+  teams/                       # built — Projects & Team Management milestone; a project's Teams sub-domain, kept as its own module (not nested under projects/) since it has its own tables/queries/actions
+    types.ts                   # Team/TeamAssignment aliases, TEAM_COLORS (the fixed Google-Calendar-style palette) + Tailwind class maps, TeamWithAssignments, ProjectRosterCandidate
+    validation.ts               # teamFormSchema, setTeamAssignmentSchema
+    queries.ts                  # listTeamsWithAssignments (teams + current-only foreman/member lists, batched), listProjectRosterCandidates (feeds the Team dialog's assignment picker)
+    actions.ts                   # saveTeamWithAssignments (the Team dialog's sole write path — atomic create-or-update-team-plus-assignments via the save_team_with_assignments() RPC), reorderTeams (writes display_order — never alphabetical — via the reorder_teams() RPC), setTeamAssignment/removeTeamAssignment (call the move_employee_to_team()/end_team_assignment() RPCs directly, outside the dialog's bulk-save flow)
+    permissions.ts                # canManageTeams — re-exports modules/projects/permissions.ts's canManageProject under a team-specific name
+    components/                   # team-card (the colored-header Card, foreman/member lists, member-count footer), team-form-dialog (General + Assignments in one dialog), teams-grid (the page-level grid + reorder wiring)
   timesheets/
   hseq/
     incidents/
@@ -134,9 +145,15 @@ modules/                        # feature/domain logic, framework-agnostic where
     corrective-actions/
     event-categories/          # configurable incident/observation classification
     ...
-  organizations/                # built — types.ts, queries.ts (listActiveOrganizationsForUser, getCurrentUserProfile, countActiveMembers), actions.ts (setActiveOrganization)
+  organizations/                # built — types.ts, queries.ts (listActiveOrganizationsForUser, getCurrentUserProfile, countActiveMembers, resolveCurrentOrganization), actions.ts (setActiveOrganization)
     memberships.ts              # not built — invite/suspend/remove logic (needs the settings/users UI)
-  employees/
+  employees/                    # built
+    types.ts                    # Employee, status enums/labels, EmployeeRoleInfo
+    validation.ts                # employeeFormSchema (edit) / createEmployeeFormSchema (create) — no employeeNumber field in either; numbers are DB-generated, never user input
+    queries.ts                   # listEmployees + countEmployees (via the search_employees/count_employees RPCs, paginated, narrow EmployeeListItem columns), getEmployee, getEmployeeByNumber, getEmployeeRoleInfo(Bulk), listAllRoles — no PostgREST embeds, same rationale as modules/organizations/queries.ts
+    actions.ts                   # createEmployee (allocates a number via next_employee_number()), updateEmployee, archiveEmployee, restoreEmployee, assignEmployeeRole, removeEmployeeRole
+    permissions.ts                # canManageEmployees, canViewEmployeeDirectory, canManageEmployeeRoles, assignableRoleNamesFor — the first permissions.ts realizing §6's role-array model
+    components/                  # employee-form, employee-filters, employee-table, employee-overview-tab, employee-roles-tab, status-badges (shared EmploymentStatusBadge/AccountStatusBadge), archive-employee-button, restore-employee-button
   notifications/
   audit-log/
 
@@ -147,14 +164,15 @@ lib/
     middleware.ts              # built — updateSession(), called from proxy.ts
     admin.ts                   # secret-key client — server-only, added when first needed (not built yet)
   auth/
-    session.ts                 # built — requireUser(), getCurrentUser(), requireOrganizationMembership(organizationId), requireRole(organizationId, roleName)
+    session.ts                 # built — requireUser(), getCurrentUser(), requireOrganizationMembership(organizationId), requireRole(organizationId, roleName), requireAnyRole(organizationId, roleNames), getUserRoleNames(organizationId)
   action-result.ts             # built — shared ActionResult<T>/ActionErrorCode types (docs/API_CONVENTIONS.md §4)
+  pagination.ts                # built — PAGE_SIZE_OPTIONS/DEFAULT_PAGE_SIZE, parsePageParam/parsePageSizeParam (never trust the URL), clampPage, totalPagesFor. Domain-agnostic — pairs with components/shared/pagination-bar.tsx. First real caller: modules/employees/queries.ts; future recruiter/Talent Pool lists (docs/PRODUCT_REQUIREMENTS.md §11.6) should reuse this rather than reimplementing it.
   utils.ts                     # built — shadcn's cn() class-merging helper (clsx + tailwind-merge)
   validation/                  # shared zod schemas used by forms + Server Functions (auth's schema currently lives in modules/auth/validation.ts instead — see note below)
 
 components/
   ui/                          # built — shadcn/ui primitives (Base UI-based); see docs/UI_GUIDELINES.md §10 for the full list
-  shared/                      # built — PageHeader, SectionHeader, StatCard, EmptyState, StatusIndicator, ConfirmDialog, ComingSoonPage
+  shared/                      # built — PageHeader, SectionHeader, StatCard, EmptyState, StatusIndicator, ConfirmDialog, ComingSoonPage, PaginationBar (generic URL-driven pagination control, pairs with lib/pagination.ts)
   app-shell/                   # built — AppSidebar, TopBar, NavMain, OrgSwitcher, UserMenu, Breadcrumbs, nav-config.ts (the MANAGEMENT shell only — see docs/UI_GUIDELINES.md §11 for the separate future employee-portal shell)
 
 hooks/
@@ -171,7 +189,7 @@ Rationale:
 - Route folders under `app/(app)/*` stay thin: they call into `modules/*` and render.
 - This structure scales by adding a new module folder + route segment, without needing a framework change, satisfying "scalable module-based folder structure" without introducing an unnecessary layered architecture (no repository/service/controller ceremony beyond what's listed above).
 
-**Build status (as of the application-shell milestone, M7.5)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly, the dashboard reads real `organization_memberships`/`organizations` rows through RLS, and every nav item resolves to a real, non-broken route). Everything else in this tree — every business module, the `(platform)/` admin area, `(portal)/`, `lib/supabase/admin.ts`, `modules/organizations/memberships.ts`, and active-organization JWT-claim resolution anywhere — is still just this proposed layout, not yet implemented; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status) for the database side of the same picture and [UI_GUIDELINES.md §10–11](./UI_GUIDELINES.md#10-application-shell--navigation) for the UI side. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; revisit once a second module needs a `zod` schema.
+**Build status (as of the Employee Management Polish milestone)**: everything marked "built" above exists and is wired together end-to-end (build passes, routes are gated correctly, the dashboard reads real `organization_memberships`/`organizations` rows through RLS, and every nav item resolves to a real, non-broken route). `employees/` is the **first real business module** — the first `modules/<domain>/permissions.ts` to actually exist (§6 below previously described this pattern only as a future intention), and the first route under `app/(app)/` with real create/edit/list/detail pages instead of a `ComingSoonPage` placeholder. Everything else in this tree — every other business module, the `(platform)/` admin area, `(portal)/`, `lib/supabase/admin.ts`, `modules/organizations/memberships.ts`, account activation/invitations for an `employees` row, and active-organization JWT-claim resolution anywhere — is still just this proposed layout, not yet implemented; see [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status) for the database side of the same picture and [UI_GUIDELINES.md §10–11](./UI_GUIDELINES.md#10-application-shell--navigation) for the UI side. `modules/auth/validation.ts` was used instead of the shared `lib/validation/` folder shown above because, at the time it was written, auth was the only Server Function that existed and a shared folder for one file would have been premature; `modules/employees/validation.ts` follows the same per-module placement now that a second module needs one too — the shared folder remains unbuilt until a schema is genuinely reused across modules.
 
 ## 5. Authentication & Session Handling
 
@@ -182,14 +200,15 @@ Rationale:
   - RLS policies (data-level).
   - `lib/auth/session.ts` helpers (`requireUser()`, `requireRole([...])` — checking the **union** of the user's roles for the active organization) called at the top of Server Functions/Route Handlers/Server Components (action-level).
 - Unauthorized/forbidden UX uses the Next.js file conventions: call `unauthorized()` from `next/navigation` for "not signed in" (renders `app/unauthorized.tsx`, HTTP 401) and `forbidden()` for "signed in but not permitted" (renders `app/forbidden.tsx`, HTTP 403), rather than ad hoc redirects, so the behavior is consistent and testable across the app.
+- **Verified as part of the Employee Management Polish correction pass**: `proxy.ts` → `lib/supabase/middleware.ts`'s `updateSession()` redirects an unauthenticated request to `/login?redirectTo=<path>` for any path not in its `PUBLIC_PATHS` allow-list (`/login`, `/unauthorized`, `/forbidden`) — this covers `/employees` and every `/employees/[employeeNumber]` route, so an unauthenticated visit never reaches the page component at all, let alone renders any employee data. `requireUser()`'s `unauthorized()` call inside those page components is a defense-in-depth fallback for the narrow case of a session expiring between the proxy check and the page render, not the primary gate. A not-found or unauthorized employee lookup (wrong org, RLS-hidden, or genuinely nonexistent) always renders the same `notFound()` response — see `modules/employees/queries.ts`'s `getEmployee`/`getEmployeeByNumber` comments — so a guessed employee number cannot be used to distinguish "doesn't exist" from "exists but I can't see it."
 
 ## 6. Authorization Model
 
 - **A user may hold multiple roles within the same organization.** Roles are assigned per membership via `membership_roles` (see [§3.2](#32-organization-membership-model) and [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md)) — not a single `role` column.
 - **Permissions are the union of the membership's assigned roles.** If any role the user holds in their active organization grants a capability, they have it. There is no "most restrictive role wins" behavior — holding an additional narrow role never takes away something a broader role already grants.
-- **Explicit restrictions take precedence over the union.** A small set of system-level rules are hard denies regardless of role — no one edits or deletes an audit log row or a completed digital signature; no one accesses another organization's data; a handful of module-specific carve-outs noted in the permission matrix (e.g., a Supervisor's corrective-action management still requires HSEQ Manager sign-off to fully close certain items). These are implemented as checks that run *before*, and can override, the role-union check — see [ROLES_AND_PERMISSIONS.md §6](./ROLES_AND_PERMISSIONS.md#6-notes-on-enforcement).
-- Permission checks are centralized per module in `modules/<domain>/permissions.ts` (e.g., `canApproveTimesheet(roles, record)`, taking the caller's full role set) rather than scattered `if (role === 'x')` checks, so a permission rule has one place to change. **Not implemented yet** — no business module (and therefore no `permissions.ts`) exists. What *is* implemented, in `lib/auth/session.ts`: `requireRole(organizationId, roleName)`, which checks for one named role at a time (matching `has_organization_role()`'s signature — see below), not yet a resolved "full role set" a caller can union over. A future `permissions.ts` layer composes calls like this (or a new `getRoles(organizationId)` helper returning the full set) into the real union logic described above.
-- The permission matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md) is the source of truth these functions implement; server-side authorization and RLS should both be traceable back to it. **As implemented**, both `requireRole()` and the RLS policies that need a role check call `has_organization_role(organization_id, role_name)` directly (see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)) — the originally-proposed `current_role_ids() && ARRAY[...]` array-overlap pattern is part of the not-yet-built active-organization design ([DATABASE_SCHEMA.md §8.2](./DATABASE_SCHEMA.md#82-original-design-future-enhancement-not-yet-built)).
+- **Explicit restrictions take precedence over the union.** A small set of system-level rules are hard denies regardless of role — no one edits or deletes an audit log row or a completed digital signature; no one accesses another organization's data; Workforce Coordinator can never assign/remove an elevated or specialist-management role (**implemented**, Role Catalogue & Permissions milestone — `modules/employees/permissions.ts`'s `assignableRoleNamesFor`, and the matching RLS in `supabase/migrations/20260726120000_role_catalogue_update.sql`); no one can end their own employment through the employee profile UI (**implemented**, Employment Lifecycle milestone — `modules/employees/actions.ts`'s `endEmployment`, an application-layer check mirroring the same self-service restriction already applied to `archiveEmployee`); a handful of module-specific carve-outs noted in the permission matrix (e.g., a Foreman's corrective-action management still requires HSE Manager sign-off to fully close certain items). These are implemented as checks that run *before*, and can override, the role-union check — see [ROLES_AND_PERMISSIONS.md §6](./ROLES_AND_PERMISSIONS.md#6-notes-on-enforcement).
+- Permission checks are centralized per module in `modules/<domain>/permissions.ts` (e.g., `canApproveTimesheet(roles, record)`, taking the caller's full role set) rather than scattered `if (role === 'x')` checks, so a permission rule has one place to change. **First implemented in the Employee Management Foundation milestone**: `modules/employees/permissions.ts` (`canManageEmployees`, `canViewEmployeeDirectory`, `canManageEmployeeRoles`, `assignableRoleNamesFor`) is the first real module built against this pattern — every other module still doesn't exist yet. This became possible once `lib/auth/session.ts` grew two companions to the single-role `requireRole(organizationId, roleName)`: `requireAnyRole(organizationId, roleNames)` (server-side gate — "does the caller hold *any* of these roles," delegating to the new `has_any_organization_role()` SQL function so the app-side gate and the RLS backstop can't drift apart) and `getUserRoleNames(organizationId)` (a UI-only read returning the caller's **full role array** for rendering decisions, never itself an access-control check).
+- The permission matrix in [ROLES_AND_PERMISSIONS.md](./ROLES_AND_PERMISSIONS.md) is the source of truth these functions implement; server-side authorization and RLS should both be traceable back to it. **As implemented**, `requireRole()`/`requireAnyRole()` and the RLS policies that need a role check call `has_organization_role(organization_id, role_name)` / `has_any_organization_role(organization_id, role_names)` directly (see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)) — the originally-proposed `current_role_ids() && ARRAY[...]` array-overlap pattern is part of the not-yet-built active-organization design ([DATABASE_SCHEMA.md §8.2](./DATABASE_SCHEMA.md#82-original-design-future-enhancement-not-yet-built)).
 
 ## 7. Secrets and Environment Variables
 
@@ -207,7 +226,7 @@ Rules:
 
 ## 8. Audit Logging
 
-- A single `audit_events` table (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_events--tenant-append-only--implemented) — **implemented**, named `audit_logs` in an earlier revision of that document) captures: `organization_id`, `actor_user_id`, `action` (e.g., `create`, `update`, `delete`, `approve`, `sign`, `amend`), `entity_type`, `entity_id`, a `changes` JSON diff where practical, and `created_at`.
+- A single `audit_events` table (see [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md#audit_events--tenant-append-only--implemented) — **implemented**, named `audit_logs` in an earlier revision of that document) captures: `organization_id`, `actor_user_id`, `action` (e.g., `create`, `update`, `delete`, `approve`, `sign`, `amend`, `archive`), `entity_type`, `entity_id`, a `changes` JSON diff where practical, and `created_at`.
 - Audit logging is written from the server-side mutation path (Server Function / Route Handler), not inferred later from Postgres triggers — this keeps the "who" (application-level actor, already authenticated and authorized) explicit and avoids trigger-level complexity for a first version. This can be revisited if we find mutation paths bypassing the shared helper. (This is about *writing* audit rows. A *separate*, already-implemented trigger *blocks* `UPDATE`/`DELETE` on existing `audit_events` rows — see the next bullet — which is not in tension with this one.)
 - HSEQ modules and any approval/sign-off action (timesheet approval, hour discrepancy resolution, corrective action closure, digital signature capture) always write an audit entry. Simple read-only views do not.
 - **`audit_events` is append-only and immutable**: no `UPDATE`/`DELETE` RLS policy is granted to any application role, including Company Admin, for any reason — enforced twice over, as implemented: RLS grants no such policy, **and** a hard database trigger unconditionally rejects both operations for every role, including ones (`service_role`, `postgres`) that bypass RLS entirely.
@@ -217,7 +236,7 @@ Rules:
 ## 9. Soft Deletion
 
 - Applies to records with business/legal retention value: employees, projects, all HSEQ records, documents/certificates, timesheets. See per-table "Deletion behavior" in [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md).
-- Implemented via `deleted_at timestamptz null` on most tables. `organization_memberships` is the one exception among lifecycle-bearing tables: its own `status` enum (`invited`/`active`/`suspended`/`removed`) already models "no longer a member" as a state, so it does not need a separate `deleted_at` column.
+- Implemented via `deleted_at timestamptz null` on most tables. Two tables model "soft-deleted" as a status change instead of a dedicated column: `organization_memberships` (its `status` enum already includes `removed`) and, as implemented, `employees` (`account_status = 'archived'` plus an `archived_at` timestamp, rather than a separate `deleted_at`) — in both cases an existing status column already models "no longer active/visible by default" as a first-class state, so a second column would be redundant.
 - Default queries filter `deleted_at is null` (or, for `organization_memberships`, `status <> 'removed'`); RLS policies restrict who may set these values (typically Company Admin or the module-owning manager role, never Employee).
 - Purely operational/low-stakes records (e.g., a draft not yet submitted, a role grant on `membership_roles`) may use hard deletion where retention has no compliance value — called out explicitly per table rather than assumed.
 - Soft-deleted rows are excluded from default reporting but remain visible in audit trails and to Company Admin/Platform Super Admin for compliance review.
@@ -247,3 +266,4 @@ Rules:
 - No background job framework yet — scheduled work (e.g., certificate-expiry notification sweeps, per [DATABASE_SCHEMA.md — `document_expiry_notification_log`](./DATABASE_SCHEMA.md#document_expiry_notification_log--tenant)) uses Vercel Cron calling a Route Handler.
 - No multi-region/per-tenant database sharding — a single Postgres instance with RLS is sufficient at the scale this product is designed for initially.
 - No organization-level configuration UI for the certificate-expiry notification schedule or for payroll-provider integrations yet — v1 ships fixed defaults per [PRODUCT_REQUIREMENTS.md](./PRODUCT_REQUIREMENTS.md), designed so a configuration layer can be added later without a schema rewrite, but that layer itself is not built now.
+- No account activation/invitations, employment-history timeline, global position catalogue, Recruiter role/Talent Pool, or Platform Super Admin dashboard yet — the agreed future shape of all five is documented in [PRODUCT_REQUIREMENTS.md §11](./PRODUCT_REQUIREMENTS.md#11-future-identity-employment-history--talent-pool-architecture-documented-not-implemented) specifically so later work has one shared design to build toward instead of five independently-improvised ones.

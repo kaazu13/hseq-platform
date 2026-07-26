@@ -9,25 +9,32 @@
 -- (`supabase start`) or disposable dev Supabase project only.
 
 -- ── 1) Standard role catalogue ───────────────────────────────────────
--- The fixed ten roles from docs/ROLES_AND_PERMISSIONS.md §1. Every
--- environment (dev, staging, production) needs this exact seed — it is
--- not development-only data, but is included here so a fresh local
--- database is immediately usable. If a staging/production environment is
--- bootstrapped without running this whole file, apply just this block.
+-- The fixed eleven roles from docs/ROLES_AND_PERMISSIONS.md §1, finalized
+-- by the Role Catalogue & Permissions milestone
+-- (supabase/migrations/20260726120000_role_catalogue_update.sql) —
+-- `supervisor`/`payroll_admin` retired, `foreman`/`hse_officer`/
+-- `recruiter` added. Every environment (dev, staging, production) needs
+-- this exact seed — it is not development-only data, but is included
+-- here so a fresh local database is immediately usable. If a staging/
+-- production environment is bootstrapped without running this whole
+-- file, apply just this block. `name` is the stable machine key
+-- (authorization logic); `display_label` is the human-facing name only.
 
-insert into public.roles (name, description, is_system) values
-  ('platform_super_admin', 'Vendor operator. Onboards/suspends organizations; independent of organization_memberships.', true),
-  ('company_admin', 'Owns the tenant. Manages memberships/roles, org settings; full visibility across the org.', true),
-  ('operations_manager', 'Oversees projects, scheduling, and workforce operations across the org.', true),
-  ('hseq_manager', 'Owns all HSEQ modules org-wide: inspections, incidents, corrective actions, compliance reporting.', true),
-  ('project_manager', 'Manages a specific project: schedule, budget-adjacent data, HSEQ status for that project.', true),
-  ('supervisor', 'Day-to-day site lead. Runs toolbox talks/LMRA, approves crew hours, logs observations.', true),
-  ('inspector', 'Conducts formal inspections (scaffold, safety walks) and raises corrective actions.', true),
-  ('planner', 'Builds and maintains the daily workforce schedule.', true),
-  ('payroll_admin', 'Back-office: reconciles timesheets, manages employee documents, exports payroll data.', true),
-  ('employee', 'Field worker. Views own schedule/documents, submits own timesheet, completes assigned HSEQ forms.', true)
+insert into public.roles (name, description, display_label, is_system) values
+  ('platform_super_admin', 'Vendor operator. Onboards/suspends organizations; independent of organization_memberships.', 'Platform Super Admin', true),
+  ('company_admin', 'Highest authority inside their organization. Manages employees/memberships/roles, org settings; full visibility across the org.', 'Company Manager', true),
+  ('operations_manager', 'Manages normal employee administration and availability; coordinates project staffing. Never assigns or removes elevated organization roles.', 'Workforce Coordinator', true),
+  ('project_manager', 'Manages a specific project: schedule, budget-adjacent data, HSEQ status for that project. Project-scoped once the Projects module exists.', 'Project Manager', true),
+  ('hseq_manager', 'Owns HSEQ modules — organization-wide or assigned-project scope depending on configuration. No general organization role management unless separately assigned Company Manager.', 'HSE Manager', true),
+  ('hse_officer', 'Assigned-project operational HSEQ role, kept separate from Inspector. Only sees assigned projects unless explicitly granted broader HSE scope.', 'HSE Officer', true),
+  ('foreman', 'Assigned-project/team frontline operational leadership. Manages the specific teams they are assigned to within a project; cannot issue final company-level disciplinary actions independently.', 'Foreman', true),
+  ('inspector', 'Conducts formal inspections (scaffold, safety walks) and raises corrective actions.', 'Inspector', true),
+  ('recruiter', 'Future Talent Pool and recruitment access. May see open-to-work employees and qualification validity once built. Cannot manage organization roles and does not see private disciplinary details or full audit history.', 'Recruiter', true),
+  ('planner', 'Builds and maintains the daily workforce schedule.', 'Planner', true),
+  ('employee', 'Field worker. Views own schedule/documents, submits own timesheet, completes assigned HSEQ forms.', 'Employee', true)
 on conflict (name) do update set
   description = excluded.description,
+  display_label = excluded.display_label,
   is_system = excluded.is_system;
 
 -- ── 2) One example organization ──────────────────────────────────────

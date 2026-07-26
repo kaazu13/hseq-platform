@@ -1,35 +1,39 @@
 # Roles and Permissions
 
-**Implementation note**: the ten roles below exist as real seeded rows in the `roles` table (`supabase/seed.sql`), one per role, matching this table's names exactly (the vendor-operator/tenant-facing distinction in the "Scope" column is product framing here — at the schema level, `platform_super_admin` is a row in `roles` like any other; actual platform-super-admin *access* comes from a separate `platform_super_admins` table, not yet built, per [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status)). The permission matrices below (§4, §5) remain the target design — most of what they describe (which module each role can touch) isn't built yet; only the roles themselves, and the membership/role-assignment machinery, are.
+**Implementation note**: the eleven roles below exist as real seeded rows in the `roles` table (`supabase/seed.sql`, and — for the Role Catalogue & Permissions milestone's changes specifically — `supabase/migrations/20260726120000_role_catalogue_update.sql`), one per role. `name` is the stable machine key every authorization check (RLS, `permissions.ts`) is written against; `display_label` (also **implemented**) is the human-facing name shown in the UI and used below — the two are allowed to diverge (e.g. `operations_manager` / "Workforce Coordinator") without ever requiring a change to authorization logic. The vendor-operator/tenant-facing distinction in the "Scope" column is product framing here — at the schema level, `platform_super_admin` is a row in `roles` like any other; actual platform-super-admin *access* comes from a separate `platform_super_admins` table, not yet built, per [DATABASE_SCHEMA.md — Implementation Status](./DATABASE_SCHEMA.md#implementation-status). The permission matrices below (§4, §5) remain the target design for the modules not yet built; the **Employees** row (§4) and the **Projects**/**Teams** rows (§4, footnotes) are now real, enforced behavior — the rest of the matrix is still aspirational.
+
+**Retired**: `supervisor` and `payroll_admin` no longer exist as of the Role Catalogue & Permissions milestone. `supervisor`'s day-to-day site-leadership responsibilities are carried forward by the new `foreman` role (any existing `supervisor` assignment was migrated to `foreman` in the same migration); `payroll_admin` has no replacement — payroll functionality is not part of this product (see [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)), so its grants (including the "Payroll Export" row previously in §4) are simply removed, not reassigned.
 
 ## 1. Role Definitions
 
 | Role | Scope | Summary |
 |---|---|---|
-| **Platform Super Admin** (PSA) | Platform-wide, cross-tenant | Vendor operator. Onboards/suspends organizations, monitors platform health. Does **not** casually browse tenant business data, and holds this access **independently of any `organization_memberships` row** — see [ARCHITECTURE.md §3.1](./ARCHITECTURE.md#31-tenant-boundary). |
-| **Company Admin** (CA) | Organization-wide | Owns the tenant. Manages memberships/roles, org settings, and has full visibility across all projects and modules within their org. |
-| **Operations Manager** (OM) | Organization-wide | Oversees projects, scheduling, and workforce operations across the org. Not HSEQ-focused, but views HSEQ status for oversight. |
-| **HSEQ Manager** (HM) | Organization-wide | Owns all HSEQ modules org-wide: inspections, incidents, corrective actions, compliance reporting, and the org's custom incident/observation categories. |
-| **Project Manager** (PM) | Assigned project(s) | Manages a specific project: schedule, budget-adjacent data, and HSEQ status *for that project*. |
-| **Supervisor** (SV) | Assigned project(s)/crew | Day-to-day site lead. Runs toolbox talks/LMRA, approves crew hours, logs observations. |
-| **Inspector** (IN) | Assigned project(s) | Conducts formal inspections (scaffold, safety walks) and raises corrective actions. |
-| **Planner** (PL) | Organization-wide or assigned project(s) | Builds and maintains the daily workforce schedule. |
-| **Payroll / Administration** (PA) | Organization-wide | Back-office: reconciles timesheets, manages employee documents, exports payroll-relevant data (CSV/Excel-friendly). Not HSEQ-facing, but is a default recipient for certificate-expiry notifications alongside Company Admin — see [PRODUCT_REQUIREMENTS.md §7](./PRODUCT_REQUIREMENTS.md#7-certificate-expiry-notification-schedule). |
-| **Employee** (EM) | Self only | Field worker. Views own schedule/documents, submits own timesheet, completes assigned HSEQ forms (LMRA, toolbox talk attendance, observations), signs off. |
+| **Platform Super Admin** (PSA) | Platform-wide, cross-tenant | Vendor operator. Onboards/suspends organizations, monitors platform health. Does **not** casually browse tenant business data, and holds this access **independently of any `organization_memberships` row** — see [ARCHITECTURE.md §3.1](./ARCHITECTURE.md#31-tenant-boundary). Not a normal organization role and must never be used as a substitute for normal company management. |
+| **Company Manager** (CM) — key `company_admin` | Organization-wide | Highest authority inside their organization. Manages employees and memberships, assigns/removes organization roles (no restriction beyond never assigning `platform_super_admin`), ends employment and rehires, accesses archived employee records, and has full visibility across all projects and modules within their org. |
+| **Workforce Coordinator** (WC) — key `operations_manager` | Organization-wide | Manages normal employee administration and availability; coordinates project staffing and operational assignments once the Projects module exists. **Must never** assign or remove an elevated or specialist-management role (Company Manager, Project Manager, HSE Manager, HSE Officer, Foreman, or Recruiter) — see [§2](#2-multi-organization-multi-role-model) — and must never gain platform-wide access. |
+| **Project Manager** (PM) — key `project_manager` | Assigned project(s) only | Manages a specific project: core fields, Teams, and team assignments *for that project*. **Implemented**: visibility and write access are exclusively assignment-driven (`project_assignments`, `assignment_role = 'project_manager'`) — holding the role grants no project access by itself; cannot see or manage unrelated organization projects, and cannot manage organization-wide roles. |
+| **HSE Manager** (HM) — key `hseq_manager` | Organization-wide or assigned-project (configurable) | Owns HSEQ modules — inspections, incidents, corrective actions, compliance reporting, and the org's custom incident/observation categories — at a scope set per assignment. No general organization role management unless separately assigned Company Manager. **Implemented for Projects**: an HSE Manager sees a project once explicitly assigned to it (`project_assignments`, `assignment_role = 'hseq_manager'`) — read-only there; HSEQ-module-specific write access remains a future milestone. |
+| **HSE Officer** (HO) — key `hse_officer` | Assigned project(s) only | Assigned-project operational HSEQ role, kept intentionally separate from Inspector (different responsibilities, never merged). Only sees assigned projects unless explicitly granted broader HSE scope. **Implemented for Projects**: same assignment-driven, read-only project visibility as HSE Manager (`project_assignments`, `assignment_role = 'hse_officer'`). |
+| **Foreman** (FM) — key `foreman` | Assigned project(s)/team(s) only | Frontline operational leadership. Runs toolbox talks/LMRA, approves crew hours, logs observations. May be assigned to manage one, several, or all teams within a project (team assignment, not the role itself, determines which teams); cannot issue final company-level disciplinary actions independently. Direct successor to the retired Supervisor role. **Implemented**: a Foreman's project visibility comes from an active `team_assignments` row (`assignment_role = 'foreman'`) in that project — deliberately **not** a `project_assignments` row like the other manager-tier roles (see [§2](#2-multi-organization-multi-role-model)). |
+| **Inspector** (IN) — key `inspector` | Assigned project(s) only | Conducts formal inspections (scaffold, safety walks) and raises corrective actions. Retained as its own role, distinct from HSE Officer. **Implemented for Projects**: same assignment-driven, read-only project visibility as HSE Manager/HSE Officer (`project_assignments`, `assignment_role = 'inspector'`). |
+| **Recruiter** (RC) — key `recruiter` | Talent Pool only, no internal project access | Future Talent Pool and recruitment access. May see open-to-work employees, qualification validity, and limited organization/client restriction indicators once built. Must not see private disciplinary details or full audit history, and cannot manage organization roles. |
+| **Planner** (PL) — key `planner` | Organization-wide or assigned project(s) | Builds and maintains the daily workforce schedule. Retained: a clear, narrow, planning-only purpose distinct from Workforce Coordinator's broader administrative mandate — deliberately zero HSEQ access. |
+| **Employee** (EM) — key `employee` | Self only | Self-service access only. Views own schedule/documents, submits own timesheet, completes assigned HSEQ forms (LMRA, toolbox talk attendance, observations), signs off. Only sees assigned projects and own permitted records — never a general organization directory. **Implemented for Projects**: a plain Employee sees a project once they hold a current `project_assignments` row (`member`) or `team_assignments` row there — the same "see your own" principle as `employees.profile_id = auth.uid()`. |
 
 ## 2. Multi-Organization, Multi-Role Model
 
 **A user may belong to more than one organization, and may hold more than one role within the same organization.** This replaces an earlier single-org/single-role assumption. Concretely:
 
-- Membership in an organization (`organization_memberships`) is separate from role assignment (`membership_roles`) — see [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables). A membership can carry several roles at once (e.g., a person who is both Supervisor and Inspector), and a person can hold entirely different roles in a second organization they also belong to.
+- Membership in an organization (`organization_memberships`) is separate from role assignment (`membership_roles`) — see [DATABASE_SCHEMA.md §3](./DATABASE_SCHEMA.md#3-core-tables). A membership can carry several roles at once (e.g., a person who is both Project Manager and Foreman, or both HSE Officer and Inspector), and a person can hold entirely different roles in a second organization they also belong to.
 - At any moment, a user operates within one **active organization** (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)); everything in this matrix is evaluated against the role(s) they hold in that active organization only. Roles held in a different organization they also belong to are irrelevant until they switch.
-- **Permissions are the union of the active membership's assigned roles.** If *any* held role grants a capability for a module, the user has it — holding an additional, narrower role never takes something away that a broader role already grants.
+- **Permissions are the union of the active membership's assigned roles.** If *any* held role grants a capability for a module, the user has it — holding an additional, narrower role never takes something away that a broader role already grants. There is no role priority and no "lower role loses to higher role" — adding a role must never reduce or replace permissions already granted by another role.
 - **Explicit restrictions take precedence over the union.** A short list of system-level rules is a hard deny regardless of how many or which roles a user holds:
   - No one can read or write another organization's data, no matter their role in their own organization.
   - No one can update or delete an `audit_events` row (**implemented** — see [DATABASE_SCHEMA.md §8.1](./DATABASE_SCHEMA.md#81-as-implemented-this-milestone)) or a completed `digital_signatures` row (not yet implemented; see [DATABASE_SCHEMA.md §6](./DATABASE_SCHEMA.md#6-hseq-tables-continued) / [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging)) — this is not a role grant, it is the absence of any policy that would allow it.
-  - A handful of narrower, module-specific carve-outs noted in the footnotes below (e.g., a Supervisor's corrective-action management still requires HSEQ Manager sign-off on certain closures) — these are deliberate exceptions to an otherwise-permissive role grant, not general rules.
+  - **Implemented**: Workforce Coordinator can never assign or remove Company Manager, Project Manager, HSE Manager, HSE Officer, Foreman, or Recruiter — enforced at both the RLS level (`membership_roles_insert_managers`/`membership_roles_delete_managers`) and in `modules/employees/permissions.ts`'s `assignableRoleNamesFor()`. A person holding *both* Company Manager and Workforce Coordinator gets Company Manager's unrestricted assignment ability via the union rule above — the restriction only applies to someone relying on Workforce Coordinator alone.
+  - A handful of narrower, module-specific carve-outs noted in the footnotes below (e.g., a Foreman's corrective-action management still requires HSE Manager sign-off on certain closures) — these are deliberate exceptions to an otherwise-permissive role grant, not general rules.
   These checks run *before*, and can override, the ordinary role-union evaluation. See [§6](#6-notes-on-enforcement).
-- "Assigned project(s)" scope (PM, SV, IN, PL) means the role only grants access to projects the user is explicitly linked to (via `schedule_entries`, a project assignment, or being `project_manager_id`) — this project-level scoping is layered on top of the org-level RLS boundary and enforced in the module's `permissions.ts` + supporting RLS policy, not by role alone, and is independent of the multi-role union described above (a user's project assignment doesn't change just because they hold an extra role).
+- **Project visibility is assignment-driven, not a property of the role itself** (project-scoped roles: Project Manager, HSE Manager, HSE Officer, Foreman, Inspector). Roles define *capability* — what a person may do; `project_assignments` (Project Manager/HSE Manager/HSE Officer/Inspector/plain roster member) and `team_assignments` (Foreman, and everyone else's actual crew placement) define *visibility* — which specific projects they can do it in. **Implemented**, Projects & Team Management milestone. Holding one of these roles grants no project access by itself; an explicit, currently-open assignment row does, and only for the project it names — enforced by `has_project_access()`/`is_project_manager()` (`supabase/migrations/20260728090000_projects_and_teams.sql`). There are no implicit visibility rules based on the absence or presence of assignment rows anywhere in this model — including for HSE Manager's configurable scope, and including Foreman, whose visibility comes from `team_assignments` specifically rather than a `project_assignments` row (see its row in [§1](#1-role-definitions)). Company Manager and Workforce Coordinator are the only two roles with unconditional, assignment-independent organization-wide project visibility. Recruiter has no internal project access at all (Talent Pool visibility only, once built) — `project_assignment_role` doesn't special-case Recruiter, but nothing in this milestone's UI ever offers assigning one, and a manually-inserted row would still only grant plain-member visibility, never Talent Pool functionality. See [ARCHITECTURE.md §3.3](./ARCHITECTURE.md#33-how-isolation-is-enforced-defense-in-depth).
 
 ## 3. Permission Legend
 
@@ -42,68 +46,81 @@
 | **V** | View only |
 | **—** | No access |
 
-"Scope" = organization-wide for org-scoped roles (CA, OM, HM, PA), or the specific project(s)/crew the user is assigned to for project-scoped roles (PM, SV, IN, PL). Platform Super Admin scope is explained in row notes, not the legend, since it is structurally different (cross-tenant, not org-internal). **A column represents "this role, if held"** — a user holding multiple roles reads the matrix as one row per held role and takes the highest-privilege symbol across them for each module (F > M > C > O/V > —), subject to the explicit-restriction overrides in [§2](#2-multi-organization-multi-role-model).
+"Scope" = organization-wide for the two unconditionally org-wide roles (CM, WC), or the specific project(s)/team(s) a user is explicitly assigned to for project-scoped roles (PM, HM, HO, FM, IN) — see [§2](#2-multi-organization-multi-role-model)'s assignment-driven visibility principle; HM's scope varies per assignment rather than being fixed. Platform Super Admin scope is explained in row notes, not the legend, since it is structurally different (cross-tenant, not org-internal). Recruiter's scope (Talent Pool only) and Employee's scope (self/assigned only) are likewise explained in row notes. **A column represents "this role, if held"** — a user holding multiple roles reads the matrix as one row per held role and takes the highest-privilege symbol across them for each module (F > M > C > O/V > —), subject to the explicit-restriction overrides in [§2](#2-multi-organization-multi-role-model).
 
 ## 4. Core Operations Modules
 
-| Module | PSA | CA | OM | HM | PM | SV | IN | PL | PA | EM |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Organizations (own org settings) | V¹ | F¹² | V | V | — | — | — | — | V | — |
-| Organization Memberships & Roles | F¹³ | F | V | — | — | — | — | — | V | O |
-| Employee Profiles | — | F | M | V | V | V | — | V | M | O |
-| Projects | — | F | F | V | M⁴ | V⁴ | V⁴ | V | V | V⁴ |
-| Project Locations / Work Areas | — | F | F | V | M⁴ | C⁴ | V⁴ | V | — | V⁴ |
-| Daily Workforce Scheduling | — | F | F | V | M⁴ | C⁴ | — | F | V | O |
-| Worked Hours / Timesheets | — | F | M | — | M⁴ | M⁴ | — | V | F | O⁵ |
-| Hour Discrepancy Requests | — | F | M | — | M⁴ | M⁴ | — | V | F | C⁵ |
-| Payroll Export (CSV / XLSX) | — | V | V | — | — | — | — | — | F | — |
-| Employee Documents & Certificates | — | F | V | V | V | V | — | — | F | O⁶ |
-| Notifications | — | O | O | O | O | O | O | O | O | O |
-| Reports & Dashboards | V¹ | F | F | F | V⁴ | V⁴ | V⁴ | V | M⁷ | — |
+| Module | PSA | CM | WC | PM | HM | HO | FM | IN | RC | PL | EM |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Organizations (own org settings) | V¹ | F¹² | V | — | — | — | — | — | — | — | — |
+| Organization Memberships & Roles | F¹³ | F | M¹⁴ | — | — | — | — | — | — | — | O |
+| Employees | — | F¹⁵ | F¹⁵ | V | V | — | — | V | — | V | O¹⁶ |
+| Projects | — | F | F | M⁴ | V⁴ | V⁴ | V⁴ ¹⁸ | V⁴ | — | —¹⁷ | V⁴ |
+| Teams | — | F | F | M⁴ | V⁴ | V⁴ | V⁴ ¹⁸ | V⁴ | — | —¹⁷ | V⁴ |
+| Project Locations / Work Areas | — | F | F | M⁴ | V⁴ | V⁴ | C⁴ | V⁴ | — | V | V⁴ |
+| Daily Workforce Scheduling | — | F | F | M⁴ | — | — | C⁴ | — | — | F | O |
+| Worked Hours / Timesheets | — | F | M | M⁴ | — | — | M⁴ | — | — | V | O⁵ |
+| Hour Discrepancy Requests | — | F | M | M⁴ | — | — | M⁴ | — | — | V | C⁵ |
+| Employee Documents & Certificates | — | F | V | V | V | V | V | V | — | — | O⁶ |
+| Notifications | — | O | O | O | O | O | O | O | O | O | O |
+| Reports & Dashboards | V¹ | F | F | V⁴ | F | V⁴ | V⁴ | V⁴ | — | V | — |
 
 ¹ PSA sees platform-level health/usage metrics only, not tenant business data, per [ARCHITECTURE.md §3.1](./ARCHITECTURE.md#31-tenant-boundary).
-² Company Admin's "Full" on org settings covers ordinary configuration (name, settings columns); changing an organization's `status` or offboarding it (`deleted_at`) is PSA-only regardless — see [DATABASE_SCHEMA.md — `organizations`](./DATABASE_SCHEMA.md#organizations--global-tenant-root--implemented).
-³ Platform Super Admin's access to Organization Memberships & Roles is specifically for provisioning an organization's **first** Company Admin at onboarding (v1 organizations are created manually by PSA, per [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)) — it does not extend to ongoing membership management of an org's other users, which is Company Admin's job day-to-day.
-⁴ Limited to the project(s) the PM/SV/IN/PL/EM is assigned to.
+² Company Manager's "Full" on org settings covers ordinary configuration (name, settings columns); changing an organization's `status` or offboarding it (`deleted_at`) is PSA-only regardless — see [DATABASE_SCHEMA.md — `organizations`](./DATABASE_SCHEMA.md#organizations--global-tenant-root--implemented).
+³ Platform Super Admin's access to Organization Memberships & Roles is specifically for provisioning an organization's **first** Company Manager at onboarding (v1 organizations are created manually by PSA, per [PRODUCT_REQUIREMENTS.md §3](./PRODUCT_REQUIREMENTS.md#3-non-goals-initial-release)) — it does not extend to ongoing membership management of an org's other users, which is Company Manager's job day-to-day.
+⁴ Limited to the project(s)/team(s) the PM/HM/HO/FM/IN/EM is assigned to — see [§2](#2-multi-organization-multi-role-model)'s assignment-driven visibility principle. **Implemented for the Projects/Teams rows** (Projects & Team Management milestone — `has_project_access()`/`is_project_manager()`, `supabase/migrations/20260728090000_projects_and_teams.sql`); still the target design (not built) for every other row this footnote marks.
 ⁵ Employee: full CRUD on their own draft timesheet before submission; read-only once submitted/approved; can create (but not approve) a discrepancy request against their own timesheet.
 ⁶ Employee: view/upload their own documents; cannot verify/approve them.
-⁷ Payroll/Administration reports are limited to timesheet/hours/document-compliance exports, not HSEQ dashboards.
+¹² Company Manager's "Full" on org settings covers ordinary configuration, not `status`/offboarding — see footnote 2.
+¹³ See footnote 3.
+¹⁴ **Implemented**: Workforce Coordinator may assign/remove most roles but never Company Manager, Project Manager, HSE Manager, HSE Officer, Foreman, or Recruiter — "Manage," not "Full," reflects that restriction (a true "Full" grant would include unrestricted role assignment, which Workforce Coordinator deliberately lacks). See [§2](#2-multi-organization-multi-role-model).
+¹⁵ **Implemented** (Employee Management Foundation milestone, roles updated by the Role Catalogue & Permissions milestone, employment lifecycle added by the Employment Lifecycle milestone): Company Manager and Workforce Coordinator may create, edit, and archive employee records — there is no hard delete at all (`employees` has no `DELETE` RLS policy or grant; see [DATABASE_SCHEMA.md — `employees`](./DATABASE_SCHEMA.md#employees--tenant--implemented)), so "Full" here means archive in place of delete. Both may also assign/remove a linked employee's organization roles via the Roles tab, subject to footnote 14's restriction for Workforce Coordinator, and both may end an employee's current employment or rehire a previously-terminated one (`employee_employment_periods` — see [DATABASE_SCHEMA.md — Employment lifecycle](./DATABASE_SCHEMA.md#employment-lifecycle-employee_employment_periods)), except neither may end their own linked employment record. `platform_super_admin` is never assignable through this UI for anyone. HSE Officer, Foreman, and Recruiter deliberately have **no** organization-wide employee-directory access — see `modules/employees/permissions.ts`'s `EMPLOYEE_READ_ROLES` comment: all three are meant to be project-scoped (or Talent-Pool-scoped, for Recruiter) once that infrastructure exists, so granting org-wide visibility now would be a permission this milestone would have to walk back later.
+¹⁶ **Implemented**: Employee's "Own only" here is narrower than the generic **O** legend — view-only, not edit, and only when `employees.profile_id` matches their own profile id. An employee cannot self-edit their own employment record through this milestone's UI.
+¹⁷ **Deviation from the pre-existing target design**, which showed Planner with unconditional, org-wide 'V' here (matching Daily Workforce Scheduling's own org-wide Planner access, not yet built). As implemented, Planner is **not** part of `project_assignment_role` and holds no special project/team visibility — same as any other role, a Planner sees a project only via an explicit `project_assignments` (as plain `member`) or `team_assignments` row, same as an Employee. Reconcile once Daily Workforce Scheduling (M9) actually needs Planner to see projects org-wide for building a schedule.
+¹⁸ **Implemented**: a Foreman's row here comes from `team_assignments` (`assignment_role = 'foreman'`), not `project_assignments` — see the Foreman row in [§1](#1-role-definitions) and [§2](#2-multi-organization-multi-role-model).
 
 ## 5. HSEQ Modules
 
-| Module | PSA | CA | OM | HM | PM | SV | IN | PL | PA | EM |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Incident/Observation Categories (custom) | — | M⁸ | V | M⁸ | V | V | V | — | — | V |
-| LMRA | — | V | V | F | V⁴ | M⁴ | V⁴ | — | — | C⁴ ⁹ |
-| Toolbox Talks | — | V | V | F | V⁴ | M⁴ | V⁴ | — | — | C⁴ ⁹ |
-| Scaffold Inspections | — | V | V | F | V⁴ | V⁴ | M⁴ | — | — | V⁴ |
-| Safety Walks | — | V | V | F | V⁴ | C⁴ | M⁴ | — | — | — |
-| Corrective Actions | — | V | V | F | M⁴ | M⁴ ¹⁰ | M⁴ ¹⁰ | — | — | O ¹¹ |
-| Incident Reports | — | F | V | F | M⁴ | C⁴ | C⁴ | — | — | C ¹² |
-| Near-Miss Reports | — | V | V | F | V⁴ | C⁴ | C⁴ | — | — | C ¹² |
-| Safety Observations | — | V | V | M | V⁴ | C⁴ | C⁴ | — | — | C ¹² |
-| Attachments & Photographs | — | V | V | F | C⁴ | C⁴ | C⁴ | — | — | C ¹² |
-| Digital Signatures | — | V | V | V | V⁴ | O ¹³ | O ¹³ | — | — | O ¹³ |
-| Audit Logs | V¹⁴ | V | — | V | — | — | — | — | — | — |
+| Module | PSA | CM | WC | PM | HM | HO | FM | IN | RC | PL | EM |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Incident/Observation Categories (custom) | — | M⁸ | V | V | M⁸ | V | V | V | — | — | V |
+| LMRA | — | V | V | V⁴ | F | V⁴ | M⁴ | V⁴ | — | — | C⁴ ⁹ |
+| Toolbox Talks | — | V | V | V⁴ | F | V⁴ | M⁴ | V⁴ | — | — | C⁴ ⁹ |
+| Scaffold Inspections | — | V | V | V⁴ | F | M⁴ | V⁴ | M⁴ | — | — | V⁴ |
+| Safety Walks | — | V | V | V⁴ | F | M⁴ | C⁴ | M⁴ | — | — | — |
+| Corrective Actions | — | V | V | M⁴ | F | M⁴ ¹⁰ | M⁴ ¹⁰ | M⁴ ¹⁰ | — | — | O ¹¹ |
+| Incident Reports | — | F | V | M⁴ | F | C⁴ | C⁴ | C⁴ | — | — | C ¹² |
+| Near-Miss Reports | — | V | V | V⁴ | F | C⁴ | C⁴ | C⁴ | — | — | C ¹² |
+| Safety Observations | — | V | V | V⁴ | M | C⁴ | C⁴ | C⁴ | — | — | C ¹² |
+| Attachments & Photographs | — | V | V | C⁴ | F | C⁴ | C⁴ | C⁴ | — | — | C ¹² |
+| Digital Signatures | — | V | V | V⁴ | V | O ¹³ | O ¹³ | O ¹³ | — | — | O ¹³ |
+| Audit Logs | V¹⁴ | V | — | — | V | — | — | — | — | — | — |
 
-⁸ Company Admin and HSEQ Manager can create/deactivate their organization's **custom** categories; the nine **system** categories (see [DATABASE_SCHEMA.md — `event_categories`](./DATABASE_SCHEMA.md#event_categories--tenant--global-system-rows)) are immutable seed data that no role — including these two — can write to.
+⁸ Company Manager and HSE Manager can create/deactivate their organization's **custom** categories; the nine **system** categories (see [DATABASE_SCHEMA.md — `event_categories`](./DATABASE_SCHEMA.md#event_categories--tenant--global-system-rows)) are immutable seed data that no role — including these two — can write to.
 ⁹ Employee participates in and signs LMRA/toolbox talks they attend; cannot create/schedule them.
-¹⁰ Supervisor and Inspector can create/manage corrective actions raised from their own findings, and update status on items assigned to them; cannot close out actions assigned to others without HSEQ Manager sign-off (module-level rule in `modules/hseq/corrective-actions/permissions.ts`, not just role) — this is one of the explicit restrictions from [§2](#2-multi-organization-multi-role-model) that overrides the plain role grant.
+¹⁰ Foreman, HSE Officer, and Inspector can create/manage corrective actions raised from their own findings, and update status on items assigned to them; cannot close out actions assigned to others without HSE Manager sign-off (module-level rule, not just role) — this is one of the explicit restrictions from [§2](#2-multi-organization-multi-role-model) that overrides the plain role grant.
 ¹¹ Employee can only update/comment on a corrective action *assigned to them* (e.g., mark evidence submitted); cannot change due date/priority or close it.
 ¹² Any authenticated Employee can submit an incident, near-miss, or observation report and attach evidence — this is intentionally broad (safety reporting should never be gated behind a manager role) and views are limited to reports they authored.
 ¹³ A signature is only ever created by the signer, for their own attestation; it is never editable by anyone, including the signer, once written (see [DATABASE_SCHEMA.md — `digital_signatures`](./DATABASE_SCHEMA.md#digital_signatures--tenant)) — another explicit restriction that overrides any role's "Full" grant elsewhere.
-¹⁴ PSA can view platform-level audit entries (e.g., org suspension events); tenant-internal audit logs remain scoped to that org's CA/HM per the tenant isolation rule.
+¹⁴ PSA can view platform-level audit entries (e.g., org suspension events); tenant-internal audit logs remain scoped to that org's Company Manager/HSE Manager per the tenant isolation rule.
 
 ## 6. Notes on Enforcement
 
 - This matrix is the source of truth for two things that must stay in sync: (a) RLS policies in the database, and (b) the `permissions.ts` authorization functions per module referenced in [ARCHITECTURE.md §6](./ARCHITECTURE.md#6-authorization-model). When this matrix changes, both must be updated in the same change set.
 - Permission evaluation is: **union of the active membership's roles' grants for this module, then apply any explicit restriction that overrides it.** Implementation-wise, `permissions.ts` functions take the caller's full role array (not a single role) and the explicit-restriction checks run first and can short-circuit to a deny regardless of what the role union would otherwise allow.
-- "Full" for a manager role (e.g., HSEQ Manager on incident reports) still respects [soft-deletion rules](./DATABASE_SCHEMA.md#7-deletion-behavior-summary) — "delete" means soft delete, and is always audit-logged.
-- Company Admin's broad visibility (V/F across nearly everything) is intentional: they are accountable for the whole tenant, including HSEQ outcomes, even though HSEQ Manager owns day-to-day HSEQ operation.
-- Project-scoped roles (PM, SV, IN, PL) never gain implicit access to a project they are not assigned to, even within their own organization — this is enforced the same way tenant isolation is (a server-side/RLS check), not left to the UI to hide unassigned projects.
-- Where a cell looks inconsistent with intuition (e.g., Planner has no HSEQ access at all), that is deliberate: Planner's responsibility is strictly workforce scheduling, and least-privilege is preferred over granting broad read access "just in case." A Planner who is *also* a Supervisor (multi-role) gets Supervisor's HSEQ access through the union — the Planner role itself still grants none.
+- "Full" for a manager role (e.g., HSE Manager on incident reports) still respects [soft-deletion rules](./DATABASE_SCHEMA.md#7-deletion-behavior-summary) — "delete" means soft delete/archive, and is always audit-logged.
+- Company Manager's broad visibility (V/F across nearly everything) is intentional: they are accountable for the whole tenant, including HSEQ outcomes, even though HSE Manager owns day-to-day HSEQ operation.
+- Project-scoped roles (PM, HM when project-scoped, HO, FM, IN, EM) never gain implicit access to a project they are not assigned to, even within their own organization — this is enforced the same way tenant isolation is (a server-side/RLS check against an explicit assignment row), not left to the UI to hide unassigned projects, and not an implicit rule based on absence of assignments either way — see [§2](#2-multi-organization-multi-role-model).
+- Where a cell looks inconsistent with intuition (e.g., Planner has no HSEQ access at all), that is deliberate: Planner's responsibility is strictly workforce scheduling, and least-privilege is preferred over granting broad read access "just in case." A Planner who is *also* a Foreman (multi-role) gets Foreman's HSEQ access through the union — the Planner role itself still grants none.
+- Recruiter has no row-level grant on any module in §4/§5 beyond what's noted in §1 — its entire surface is the future, separate Talent Pool feature, not this matrix.
 
 ## 7. Open Questions Affecting This Matrix
 
-- Whether HSEQ Manager should be the *sole* role permitted to create organization-specific custom incident/observation categories, or whether Company Admin should also retain it as currently modeled (footnote 8) — see [PRODUCT_REQUIREMENTS.md §10](./PRODUCT_REQUIREMENTS.md#10-open-product-questions).
-- Whether Payroll/Administration needs any read access to incident reports for workers'-compensation-adjacent reporting — currently scoped to zero HSEQ access pending a concrete requirement.
+- Whether HSE Manager should be the *sole* role permitted to create organization-specific custom incident/observation categories, or whether Company Manager should also retain it as currently modeled (footnote 8) — see [PRODUCT_REQUIREMENTS.md §10](./PRODUCT_REQUIREMENTS.md#10-open-product-questions).
+- The exact mechanism for HSE Manager's per-assignment configurable scope (org-wide vs. assigned-project) once the Projects module exists — see [ARCHITECTURE.md §3.3](./ARCHITECTURE.md#33-how-isolation-is-enforced-defense-in-depth).
+
+## 8. Permission Roles vs. Work Positions (Future)
+
+**Not implemented — documentation only** (see [PRODUCT_REQUIREMENTS.md §11.3](./PRODUCT_REQUIREMENTS.md#113-permission-roles-vs-work-positions--two-different-kinds-of-data)). The eleven roles in [§1](#1-role-definitions) are **permission roles**: they answer "what can this person do in the application" — create a corrective action, approve a timesheet, manage employee records, and so on. A future, entirely separate concept, **work positions/trades** (e.g. scaffolder, welder, pipefitter, construction worker, cleaner), answers a different question — "what is this person's job on site" — and is business data, not an authorization grant. A person's position never determines what buttons they see; their role(s) do, exactly as this whole document already describes.
+
+This distinction matters here specifically because it would be a mistake to fold future position data into the `roles` table (e.g. adding `scaffolder` as a "role") — that would conflate two axes that need to evolve independently: the fixed, platform-managed permission catalogue in [§1](#1-role-definitions) (rarely changes, security-sensitive, seeded by migration) versus a much larger, more frequently extended catalogue of real-world job titles (product data, eventually platform-curated per [PRODUCT_REQUIREMENTS.md §11.5](./PRODUCT_REQUIREMENTS.md#115-future-global-position-catalogue), but never an authorization boundary). `employees.position_title` (implemented, free text) remains the only place position information lives today.

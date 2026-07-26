@@ -27,14 +27,14 @@ Every Server Function follows the same shape:
 
 export async function approveTimesheet(input: ApproveTimesheetInput): Promise<ActionResult<Timesheet>> {
   const { user, organizationId, roles } = await requireUser()
-  requireRole(roles, ['company_admin', 'operations_manager', 'supervisor']) // true if roles has ANY of these — a role union check, not equality
+  requireRole(roles, ['company_admin', 'operations_manager', 'foreman']) // true if roles has ANY of these — a role union check, not equality
 
   const parsed = approveTimesheetSchema.safeParse(input)
   if (!parsed.success) {
     return { ok: false, error: { code: 'validation_error', message: parsed.error.message } }
   }
 
-  // domain-specific authorization beyond role (e.g., "supervisor must be assigned to this project")
+  // domain-specific authorization beyond role (e.g., "foreman must be assigned to this project")
   const timesheet = await getTimesheetById(parsed.data.timesheetId, organizationId)
   if (!timesheet) {
     return { ok: false, error: { code: 'not_found', message: 'Timesheet not found' } }

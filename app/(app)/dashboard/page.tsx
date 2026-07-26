@@ -14,7 +14,7 @@ import { requireUser } from "@/lib/auth/session";
 import {
   countActiveMembers,
   getCurrentUserProfile,
-  listActiveOrganizationsForUser,
+  resolveCurrentOrganization,
 } from "@/modules/organizations/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,14 +42,14 @@ const ORG_STATUS_TONE: Record<string, StatusTone> = {
  */
 export default async function DashboardPage() {
   const { user } = await requireUser();
-  const [memberships, profile] = await Promise.all([
-    listActiveOrganizationsForUser(user.id),
+  const [{ organizations, currentOrganizationId }, profile] = await Promise.all([
+    resolveCurrentOrganization(user.id),
     getCurrentUserProfile(user.id),
   ]);
 
   const displayName = profile?.full_name?.trim() || user.email?.split("@")[0] || "there";
 
-  if (memberships.length === 0) {
+  if (organizations.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into an organization." />
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const current = memberships[0].organization;
+  const current = organizations.find((org) => org.id === currentOrganizationId) ?? organizations[0];
   const memberCount = await countActiveMembers(current.id);
   const orgTone = ORG_STATUS_TONE[current.status] ?? "neutral";
 

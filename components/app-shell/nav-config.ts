@@ -24,10 +24,10 @@ import {
  * this same list, so there is exactly one place that defines "what modules
  * exist" and no route this list doesn't account for.
  *
- * `status: "available"` is the only module with a real page behind it in
- * this milestone. Everything else is `"planned"` — a real route exists (so
- * the link is never broken) but it renders a shared placeholder, not a
- * business module. See docs/IMPLEMENTATION_PLAN.md — M7.5.
+ * `status: "available"` means a real business module lives behind the
+ * route (currently Employees and Projects). Everything else is `"planned"`
+ * — a real route exists (so the link is never broken) but it renders a
+ * shared placeholder. See docs/IMPLEMENTATION_PLAN.md — M7.5.
  */
 export type NavStatus = "available" | "planned";
 
@@ -65,9 +65,9 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Employees",
         href: "/employees",
         icon: Users,
-        status: "planned",
+        status: "available",
         description:
-          "HR-facing records for everyone working for your organization — job title, trade, employment type, documents, and emergency contacts.",
+          "Company employment records for your organization — name, position, employment status, and (once activated) organization roles.",
       },
       {
         label: "Timesheets",
@@ -75,7 +75,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Clock,
         status: "planned",
         description:
-          "Worked hours per employee per day, linked to the schedule, with supervisor approval before hours are considered final.",
+          "Worked hours per employee per day, linked to the schedule, with Foreman approval before hours are considered final.",
       },
     ],
   },
@@ -86,9 +86,9 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Projects",
         href: "/projects",
         icon: FolderKanban,
-        status: "planned",
+        status: "available",
         description:
-          "The contracted jobs and sites your organization is executing, with status tracking from planned through closed.",
+          "The contracted jobs and sites your organization is executing, with Team management and status tracking from planning through archived.",
       },
       {
         label: "Equipment",

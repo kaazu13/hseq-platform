@@ -80,12 +80,47 @@ export async function getCurrentUserProfile(userId: string): Promise<Profile | n
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, active_organization_id, created_at, updated_at")
+    .select("id, full_name, phone, active_organization_id, user_number, created_at, updated_at")
     .eq("id", userId)
     .maybeSingle();
 
   if (error) throw error;
   return data;
+}
+
+export type CurrentOrganizationResolution = {
+  organizations: OrganizationSummary[];
+  currentOrganizationId: string | null;
+};
+
+/**
+ * Resolves the signed-in user's organization list AND which one to treat
+ * as "current" for display purposes — the same logic `app/(app)/layout.tsx`
+ * used to compute inline, extracted so every page that needs "which org am
+ * I looking at" (the employees pages, in addition to the layout) shares one
+ * definition instead of four slightly-different copies.
+ *
+ * Resolution order: `profile.active_organization_id` if it points at one of
+ * the user's ACTIVE memberships, otherwise the first membership (by join
+ * date), otherwise `null` (the zero-membership case). Purely a display/UX
+ * concern — no authorization decision anywhere reads this; see
+ * docs/ARCHITECTURE.md §3.2.
+ */
+export async function resolveCurrentOrganization(userId: string): Promise<CurrentOrganizationResolution> {
+  const [memberships, profile] = await Promise.all([
+    listActiveOrganizationsForUser(userId),
+    getCurrentUserProfile(userId),
+  ]);
+
+  const organizations = memberships.map((membership) => membership.organization);
+  const currentOrganizationId =
+    (profile?.active_organization_id &&
+      organizations.some((org) => org.id === profile.active_organization_id) &&
+      profile.active_organization_id) ||
+    organizations[0]?.id ||
+    null;
+
+  return { organizations, currentOrganizationId };
 }
 
 /**

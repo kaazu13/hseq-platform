@@ -10,7 +10,7 @@ No manual light/dark toggle exists yet — dark mode follows `prefers-color-sche
 
 ## 1. Principles
 
-1. **Mobile-first, not mobile-friendly.** Field roles (Employee, Supervisor, Inspector) will use this product on a phone, one-handed, sometimes with gloves on, often outdoors. Design the phone layout first; the desktop layout is progressive enhancement, not the default that gets squeezed down.
+1. **Mobile-first, not mobile-friendly.** Field roles (Employee, Foreman, Inspector) will use this product on a phone, one-handed, sometimes with gloves on, often outdoors. Design the phone layout first; the desktop layout is progressive enhancement, not the default that gets squeezed down.
 2. **Office roles get density; field roles get focus.** Company Admin/Ops/HSEQ Manager dashboards on desktop can be data-dense (tables, filters). Field-facing forms (LMRA, toolbox talk, timesheet entry, incident report) should show one task at a time with large touch targets — don't reuse a dense desktop table pattern on a field form.
 3. **Never block on network optimism you can't guarantee.** Site connectivity is unreliable. Every field-facing mutation needs a clear pending/success/error state — a silent spinner that never resolves is a support ticket from a job site.
 4. **Consistency over novelty.** Use shadcn/ui primitives as given; don't hand-roll a custom button/input/dialog when a primitive already covers the case. Custom components are for HSEQ/domain-specific needs (signature pad, checklist item, severity badge) that shadcn doesn't provide.

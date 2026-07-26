@@ -1,0 +1,641 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect, forbidden } from "next/navigation";
+import { requireAnyRole } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import type { ActionResult } from "@/lib/action-result";
+import type { RoleName } from "@/modules/organizations/types";
+import { EMPLOYEE_WRITE_ROLES } from "./permissions";
+import {
+  createEmployeeFormSchema,
+  employeeFormSchema,
+  endEmploymentFormSchema,
+  rehireFormSchema,
+  type CreateEmployeeFormInput,
+  type EmployeeFormInput,
+  type EndEmploymentFormInput,
+  type RehireFormInput,
+} from "./validation";
+import { getEmployee } from "./queries";
+import type { Employee } from "./types";
+
+/**
+ * Server Functions for the employees domain — follow the fixed recipe in
+ * docs/API_CONVENTIONS.md §3. `organizationId` is an explicit parameter
+ * (not derived from a session claim) per the deviation documented in
+ * lib/auth/session.ts's header comment: there is no Custom Access Token
+ * Auth Hook configured yet, so every one of these re-verifies membership
+ * and role for the SPECIFIC organization passed in, live, every call.
+ */
+
+function flattenFieldErrors(error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } }) {
+  const fieldErrors: Record<string, string> = {};
+  for (const [field, messages] of Object.entries(error.flatten().fieldErrors)) {
+    if (messages?.[0]) fieldErrors[field] = messages[0];
+  }
+  return fieldErrors;
+}
+
+function isUniqueViolation(error: { code?: string }): boolean {
+  return error.code === "23505";
+}
+
+function isRlsViolation(error: { code?: string }): boolean {
+  return error.code === "42501";
+}
+
+/**
+ * Employee numbers are always generated in Postgres (`next_employee_number()`
+ * — supabase/migrations/20260726100100_employee_numbering.sql), never
+ * accepted as input — see that migration's comment for the concurrency-
+ * safety rationale. This is the one call site; `createEmployee` below is
+ * the only thing that ever needs a fresh number.
+ */
+async function allocateEmployeeNumber(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+): Promise<ActionResult<string>> {
+  const { data, error } = await supabase.rpc("next_employee_number", { target_org_id: organizationId });
+
+  if (error || !data) {
+    if (error && isRlsViolation(error)) {
+      forbidden();
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't assign an employee number. Try again." } };
+  }
+
+  return { ok: true, data };
+}
+
+export async function createEmployee(
+  organizationId: string,
+  input: CreateEmployeeFormInput,
+): Promise<ActionResult<{ employeeId: string; employeeNumber: string }>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const parsed = createEmployeeFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) },
+    };
+  }
+
+  const supabase = await createClient();
+
+  const numberResult = await allocateEmployeeNumber(supabase, organizationId);
+  if (!numberResult.ok) {
+    return numberResult;
+  }
+  const employeeNumber = numberResult.data;
+
+  const { data, error } = await supabase
+    .from("employees")
+    .insert({
+      organization_id: organizationId,
+      employee_number: employeeNumber,
+      first_name: parsed.data.firstName,
+      last_name: parsed.data.lastName,
+      work_email: parsed.data.workEmail ?? null,
+      phone: parsed.data.phone ?? null,
+      position_title: parsed.data.positionTitle ?? null,
+      // Always 'active' — a newly created employee is, by definition, on
+      // their first (open) employment period. Not a form field anymore;
+      // see validation.ts's sharedEmployeeFields comment. The
+      // employees_create_initial_period trigger (same migration as the
+      // column lockdown below) creates that first period from start_date
+      // in the same transaction.
+      employment_status: "active",
+      birth_date: parsed.data.birthDate ?? null,
+      start_date: parsed.data.startDate ?? null,
+      created_by: user.id,
+      updated_by: user.id,
+    })
+    .select("id, employee_number")
+    .single();
+
+  if (error || !data) {
+    if (error && isUniqueViolation(error)) {
+      return {
+        ok: false,
+        error: { code: "conflict", message: "That employee number was just taken. Try again." },
+      };
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't create the employee. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "create",
+    entity_type: "employee",
+    entity_id: data.id,
+    changes: {
+      first_name: parsed.data.firstName,
+      last_name: parsed.data.lastName,
+      employee_number: data.employee_number,
+    },
+  });
+
+  revalidatePath("/employees");
+  redirect(`/employees/${encodeURIComponent(data.employee_number)}`);
+}
+
+export async function updateEmployee(
+  organizationId: string,
+  employeeId: string,
+  input: EmployeeFormInput,
+): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const parsed = employeeFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) },
+    };
+  }
+
+  const existing = await getEmployee(organizationId, employeeId);
+  if (!existing) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  // employee_number is deliberately absent here — it is immutable once
+  // assigned (see prevent_employee_number_change(), same migration as
+  // above), and this schema/payload has no field for it at all, so there
+  // is no code path in this function that could send a changed value even
+  // by accident. employment_status/start_date/end_date are likewise absent
+  // — as of the Employment Lifecycle milestone they're owned exclusively
+  // by employee_employment_periods (see endEmployment/rehireEmployee
+  // below) and are no longer directly UPDATE-able by `authenticated` at
+  // the database level (supabase/migrations/20260727090000_employment_periods.sql
+  // §7) — sending them here would fail the UPDATE outright, not just be
+  // redundant.
+  const updatePayload: Partial<Employee> = {
+    first_name: parsed.data.firstName,
+    last_name: parsed.data.lastName,
+    work_email: parsed.data.workEmail ?? null,
+    phone: parsed.data.phone ?? null,
+    position_title: parsed.data.positionTitle ?? null,
+    birth_date: parsed.data.birthDate ?? null,
+  };
+
+  const changes: Record<string, { from: string | null; to: string | null }> = {};
+  for (const key of Object.keys(updatePayload) as (keyof Employee)[]) {
+    const nextValue = updatePayload[key] as string | null;
+    const previousValue = existing[key] as string | null;
+    if (previousValue !== nextValue) {
+      changes[key] = { from: previousValue, to: nextValue };
+    }
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("employees")
+    .update({ ...updatePayload, updated_by: user.id })
+    .eq("organization_id", organizationId)
+    .eq("id", employeeId);
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't save changes. Try again." } };
+  }
+
+  if (Object.keys(changes).length > 0) {
+    await supabase.from("audit_events").insert({
+      organization_id: organizationId,
+      actor_user_id: user.id,
+      action: "update",
+      entity_type: "employee",
+      entity_id: employeeId,
+      changes,
+    });
+  }
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${encodeURIComponent(existing.employee_number)}`);
+  redirect(`/employees/${encodeURIComponent(existing.employee_number)}`);
+}
+
+/**
+ * Soft-archives an employee: `archived_at` is stamped — this is the one
+ * and only signal for "is this employee record archived," per the
+ * correction report (`account_status` is a separate, independent
+ * account/access lifecycle value that must stay decoupled from record
+ * archival). `account_status` is still additionally set to `'archived'`
+ * here because that remains part of today's lifecycle convention, but
+ * nothing anywhere reads `account_status` to decide archive state — see
+ * `archived_at !== null` checks in modules/employees/components/
+ * employee-table.tsx and app/(app)/employees/[employeeNumber]/page.tsx.
+ * The row stays in the database forever (no DELETE policy exists on
+ * `employees` at all — see supabase/migrations/20260725091100_role_helper_and_employees_rls.sql).
+ * Does not touch any linked auth user, profile, membership, or role
+ * assignment — those are explicitly out of scope for this milestone. See
+ * docs/PRODUCT_REQUIREMENTS.md §11 for the documented (not implemented)
+ * future rule that archiving a linked employee should only affect this
+ * organization's access, never the person's global login.
+ */
+export async function archiveEmployee(organizationId: string, employeeId: string): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const existing = await getEmployee(organizationId, employeeId);
+  if (!existing) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  if (existing.profile_id === user.id) {
+    return {
+      ok: false,
+      error: { code: "forbidden", message: "You can't archive your own employee record here." },
+    };
+  }
+
+  if (existing.archived_at !== null) {
+    return { ok: true, data: null };
+  }
+
+  const archivedAt = new Date().toISOString();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("employees")
+    .update({ account_status: "archived", archived_at: archivedAt, updated_by: user.id })
+    .eq("organization_id", organizationId)
+    .eq("id", employeeId);
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't archive the employee. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "archive",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: {
+      archived_at: { from: existing.archived_at, to: archivedAt },
+      account_status: { from: existing.account_status, to: "archived" },
+    },
+  });
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${encodeURIComponent(existing.employee_number)}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Restores an archived employee: clears `archived_at` — the authoritative
+ * un-archive signal, mirroring `archiveEmployee` above — and resets
+ * `account_status` to `'draft'` as the required fallback, since no
+ * "status before archive" is stored anywhere (storing/restoring a richer
+ * previous state is explicitly optional and left for a future milestone).
+ * The employee's UUID, employee_number, and every other field are
+ * untouched. Does not create or activate an auth user and does not send
+ * an invitation — account activation remains entirely out of scope for
+ * this milestone, restored or not.
+ */
+export async function restoreEmployee(organizationId: string, employeeId: string): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const existing = await getEmployee(organizationId, employeeId);
+  if (!existing) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  if (existing.archived_at === null) {
+    return { ok: true, data: null };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("employees")
+    .update({ account_status: "draft", archived_at: null, updated_by: user.id })
+    .eq("organization_id", organizationId)
+    .eq("id", employeeId);
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't restore the employee. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "restore",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: {
+      archived_at: { from: existing.archived_at, to: null },
+      account_status: { from: existing.account_status, to: "draft" },
+    },
+  });
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${encodeURIComponent(existing.employee_number)}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Closes an employee's current, open employment period — the "ending
+ * employment" action. Does NOT touch `archived_at`/`account_status`;
+ * archiving/restoring a record and ending/starting its employment are
+ * deliberately independent signals (see docs/PRODUCT_REQUIREMENTS.md §5.3
+ * and the Role Catalogue & Permissions correction report this milestone
+ * follows the same reasoning from). `employees.employment_status`/
+ * `end_date` update themselves via `employee_employment_periods_sync`
+ * (supabase/migrations/20260727090000_employment_periods.sql §5) — this
+ * function only ever writes to `employee_employment_periods`.
+ */
+export async function endEmployment(
+  organizationId: string,
+  employeeId: string,
+  input: EndEmploymentFormInput,
+): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const parsed = endEmploymentFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) },
+    };
+  }
+
+  const employee = await getEmployee(organizationId, employeeId);
+  if (!employee) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  if (employee.profile_id === user.id) {
+    return {
+      ok: false,
+      error: { code: "forbidden", message: "You can't end your own employment here." },
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { data: openPeriod, error: openPeriodError } = await supabase
+    .from("employee_employment_periods")
+    .select("id, start_date")
+    .eq("organization_id", organizationId)
+    .eq("employee_id", employeeId)
+    .is("end_date", null)
+    .maybeSingle();
+
+  if (openPeriodError) throw openPeriodError;
+  if (!openPeriod) {
+    return { ok: false, error: { code: "conflict", message: "This employee has no active employment period to end." } };
+  }
+
+  if (parsed.data.endDate < openPeriod.start_date) {
+    return {
+      ok: false,
+      error: { code: "validation_error", message: "End date can't be before the period's start date.", fieldErrors: { endDate: "End date can't be before the period's start date." } },
+    };
+  }
+
+  const endedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("employee_employment_periods")
+    .update({
+      end_date: parsed.data.endDate,
+      end_reason: parsed.data.endReason,
+      end_note: parsed.data.endNote ?? null,
+      ended_by: user.id,
+      ended_at: endedAt,
+    })
+    .eq("id", openPeriod.id);
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't end this employment period. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "end_employment",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: {
+      period_id: openPeriod.id,
+      end_date: parsed.data.endDate,
+      end_reason: parsed.data.endReason,
+      end_note: parsed.data.endNote ?? null,
+    },
+  });
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Opens a new employment period for a previously-terminated employee — the
+ * "rehire" action. Creates a NEW `employee_employment_periods` row, never a
+ * new `employees` row, which is what makes the employee_number, UUID, and
+ * every other field on the record carry over unchanged (requirement: an
+ * employee number is reused on rehire, never reissued). Does not touch
+ * `archived_at`/`account_status` — see `endEmployment`'s comment above for
+ * why those stay independent.
+ */
+export async function rehireEmployee(
+  organizationId: string,
+  employeeId: string,
+  input: RehireFormInput,
+): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const parsed = rehireFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) },
+    };
+  }
+
+  const employee = await getEmployee(organizationId, employeeId);
+  if (!employee) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  const supabase = await createClient();
+
+  const { data: openPeriod, error: openPeriodError } = await supabase
+    .from("employee_employment_periods")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("employee_id", employeeId)
+    .is("end_date", null)
+    .maybeSingle();
+
+  if (openPeriodError) throw openPeriodError;
+  if (openPeriod) {
+    return { ok: false, error: { code: "conflict", message: "This employee is already employed — nothing to rehire." } };
+  }
+
+  const { data: newPeriod, error } = await supabase
+    .from("employee_employment_periods")
+    .insert({
+      organization_id: organizationId,
+      employee_id: employeeId,
+      start_date: parsed.data.startDate,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error || !newPeriod) {
+    if (error && isRlsViolation(error)) {
+      forbidden();
+    }
+    return {
+      ok: false,
+      error: {
+        code: "conflict",
+        message: "Couldn't rehire this employee — the start date may be before their last employment period ended.",
+      },
+    };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "rehire",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: { period_id: newPeriod.id, start_date: parsed.data.startDate },
+  });
+
+  revalidatePath("/employees");
+  revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Assigns an existing organization role to the membership backing a linked
+ * employee. `roleId` must belong to the fixed v1 catalogue and its NAME
+ * must be within `assignableRoleNamesFor()` for the caller (permissions.ts)
+ * — that check is defense-in-depth alongside `membership_roles_insert_managers`,
+ * which enforces the same rule at the database level and is the real
+ * backstop (docs/API_CONVENTIONS.md §6).
+ */
+export async function assignEmployeeRole(
+  organizationId: string,
+  employeeId: string,
+  membershipId: string,
+  roleId: string,
+): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const employee = await getEmployee(organizationId, employeeId);
+  if (!employee) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  const supabase = await createClient();
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_memberships")
+    .select("id, user_id")
+    .eq("id", membershipId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (membershipError) throw membershipError;
+  if (!membership || membership.user_id !== employee.profile_id) {
+    return { ok: false, error: { code: "not_found", message: "This employee has no matching organization membership." } };
+  }
+
+  const { data: role, error: roleError } = await supabase.from("roles").select("id, name").eq("id", roleId).maybeSingle();
+  if (roleError) throw roleError;
+  if (!role) {
+    return { ok: false, error: { code: "not_found", message: "That role doesn't exist." } };
+  }
+
+  const { error: insertError } = await supabase.from("membership_roles").insert({
+    organization_id: organizationId,
+    membership_id: membershipId,
+    role_id: roleId,
+    created_by: user.id,
+  });
+
+  if (insertError) {
+    if (isUniqueViolation(insertError)) {
+      return { ok: true, data: null };
+    }
+    if (isRlsViolation(insertError)) {
+      forbidden();
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't assign that role. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "update",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: { role_assigned: role.name as RoleName },
+  });
+
+  revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Removes a role assignment. Unlike an INSERT rejected by RLS (which
+ * Postgres errors on), a DELETE whose row fails the policy's `USING` clause
+ * simply matches zero rows — no error. That is exactly how the "preserve at
+ * least one company_admin" rule (`membership_roles_delete_managers`) shows
+ * up here: a zero-row result means either an authorization failure or the
+ * last-company_admin guard, so it's reported as a conflict rather than a
+ * silent no-op.
+ */
+export async function removeEmployeeRole(
+  organizationId: string,
+  employeeId: string,
+  membershipRoleId: string,
+): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const employee = await getEmployee(organizationId, employeeId);
+  if (!employee) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+
+  const supabase = await createClient();
+  const { data: removed, error } = await supabase
+    .from("membership_roles")
+    .delete()
+    .eq("id", membershipRoleId)
+    .eq("organization_id", organizationId)
+    .select("id, role_id");
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't remove that role. Try again." } };
+  }
+
+  if (!removed || removed.length === 0) {
+    return {
+      ok: false,
+      error: {
+        code: "conflict",
+        message:
+          "That role can't be removed — it may be this organization's last company_admin, which must always keep at least one.",
+      },
+    };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "update",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: { role_removed_id: removed[0].role_id },
+  });
+
+  revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
+  return { ok: true, data: null };
+}
