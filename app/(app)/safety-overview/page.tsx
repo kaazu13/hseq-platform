@@ -1,12 +1,14 @@
 import {
   AlertTriangle,
-  ClipboardCheck,
+  Clock,
   Eye,
   FileBadge,
+  HardHat,
   ListChecks,
   MessagesSquare,
   ShieldAlert,
   ShieldCheck,
+  ShieldX,
   Users,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
@@ -19,6 +21,10 @@ import { getObservationOverviewCounts, listRecentObservationsForOverview, type O
 import { ObservationCard } from "@/modules/observations/components/observation-card";
 import { SafetyOverviewObservationFilters } from "@/modules/observations/components/safety-overview-observation-filters";
 import { getCorrectiveActionOverviewCounts } from "@/modules/corrective-actions/queries";
+import { getScaffoldOverviewCounts, listRecentScaffoldsForOverview, getCurrentInspectionExpiryByScaffold, type ScaffoldListFilters } from "@/modules/scaffolds/queries";
+import { ScaffoldCard } from "@/modules/scaffolds/components/scaffold-card";
+import { SafetyOverviewScaffoldFilters } from "@/modules/scaffolds/components/safety-overview-scaffold-filters";
+import { getScaffoldDefectOverviewCounts } from "@/modules/scaffold-defects/queries";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -91,16 +97,26 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
     dateFrom: params.obsDateFrom,
     dateTo: params.obsDateTo,
   };
+  const scaffoldListFilters: ScaffoldListFilters = {
+    projectId: params.scfProjectId ?? params.projectId,
+    workAreaSearch: params.scfWorkArea,
+    scaffoldType: params.scfScaffoldType,
+    status: params.scfStatus,
+  };
 
-  const [lmraCounts, recentAssessments, observationCounts, recentObservations, correctiveActionCounts, projects] = await Promise.all([
+  const [lmraCounts, recentAssessments, observationCounts, recentObservations, correctiveActionCounts, scaffoldCounts, recentScaffolds, scaffoldDefectCounts, projects] = await Promise.all([
     getLmraOverviewCounts(currentOrganizationId, params.projectId),
     listRecentLmraForOverview(currentOrganizationId, lmraListFilters, 12),
     getObservationOverviewCounts(currentOrganizationId, params.projectId),
     listRecentObservationsForOverview(currentOrganizationId, observationListFilters, 12),
     getCorrectiveActionOverviewCounts(currentOrganizationId, params.projectId),
+    getScaffoldOverviewCounts(currentOrganizationId, params.projectId),
+    listRecentScaffoldsForOverview(currentOrganizationId, scaffoldListFilters, 12),
+    getScaffoldDefectOverviewCounts(currentOrganizationId, params.projectId),
     listProjects(currentOrganizationId),
   ]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
+  const recentScaffoldExpiryById = await getCurrentInspectionExpiryByScaffold(currentOrganizationId, recentScaffolds.map((s) => s.id));
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
@@ -136,9 +152,29 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
       </div>
 
       <div>
+        <SectionHeader title="Scaffold Inspections" className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard variant="live" label="Total active scaffolds" icon={HardHat} value={scaffoldCounts.totalActive} href="/scaffolds" hint="Excludes closed/dismantled" />
+          <StatCard variant="live" label="Safe scaffolds" icon={ShieldCheck} value={scaffoldCounts.safe} href="/scaffolds?status=safe" />
+          <StatCard variant="live" label="Restricted scaffolds" icon={ShieldAlert} value={scaffoldCounts.restricted} href="/scaffolds?status=restricted" />
+          <StatCard variant="live" label="Unsafe scaffolds" icon={ShieldX} value={scaffoldCounts.unsafe} href="/scaffolds?status=unsafe" />
+          <StatCard variant="live" label="Inspections expiring soon" icon={Clock} value={scaffoldCounts.expiringSoon} href="/scaffolds" hint="Within 3 days" />
+          <StatCard variant="live" label="Expired inspections" icon={AlertTriangle} value={scaffoldCounts.expired} href="/scaffolds" />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeader title="Scaffold Defects" className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard variant="live" label="Open scaffold defects" icon={ListChecks} value={scaffoldDefectCounts.open} href="/scaffolds" hint="Open, in progress, or awaiting verification" />
+          <StatCard variant="live" label="Overdue scaffold defects" icon={AlertTriangle} value={scaffoldDefectCounts.overdue} href="/scaffolds" />
+          <StatCard variant="live" label="Defects awaiting verification" icon={Eye} value={scaffoldDefectCounts.awaitingVerification} href="/scaffolds" />
+        </div>
+      </div>
+
+      <div>
         <SectionHeader title="Other safety areas" className="mb-3" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard variant="placeholder" label="Scaffold inspections" icon={ClipboardCheck} href="/inspections" />
           <StatCard variant="placeholder" label="Incidents & near misses" icon={AlertTriangle} href="/incidents" />
           <StatCard variant="placeholder" label="Toolbox meeting participation" icon={MessagesSquare} href="/toolbox-talks" />
           <StatCard variant="placeholder" label="Expiring qualifications & certificates" icon={FileBadge} href="/certificates" />
@@ -170,6 +206,21 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {recentObservations.map((observation) => (
               <ObservationCard key={observation.id} observation={observation} projectName={projectNameById.get(observation.project_id) ?? "Unknown project"} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Recent scaffolds" />
+        <SafetyOverviewScaffoldFilters projects={projects} />
+
+        {recentScaffolds.length === 0 ? (
+          <EmptyState icon={HardHat} title="No scaffolds found" description="Try a different filter, or check back once scaffolds are registered." />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {recentScaffolds.map((scaffold) => (
+              <ScaffoldCard key={scaffold.id} scaffold={scaffold} projectName={projectNameById.get(scaffold.project_id) ?? "Unknown project"} currentInspectionExpiresAt={recentScaffoldExpiryById.get(scaffold.id) ?? null} />
             ))}
           </div>
         )}

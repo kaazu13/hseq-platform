@@ -7,6 +7,7 @@ import {
   FileBadge,
   FileText,
   FolderKanban,
+  HardHat,
   LayoutDashboard,
   ListChecks,
   MessagesSquare,
@@ -130,6 +131,14 @@ export const NAV_GROUPS: NavGroup[] = [
           "Site safety observations — positive recognition and safety issues (unsafe acts/conditions, PPE, housekeeping, and more), with corrective actions tracked to closure.",
       },
       {
+        label: "Scaffold Inspections",
+        href: "/scaffolds",
+        icon: HardHat,
+        status: "available",
+        description:
+          "The scaffold register — tag numbers, type, load class, and a complete chronological inspection history with a 24-item safety checklist, defect tracking, and configurable inspection validity.",
+      },
+      {
         label: "Toolbox Talks",
         href: "/toolbox-talks",
         icon: MessagesSquare,
@@ -138,12 +147,12 @@ export const NAV_GROUPS: NavGroup[] = [
           "Records of safety briefings given to a crew — topic, presenter, and attendee sign-off.",
       },
       {
-        label: "Inspections",
+        label: "Safety Walks",
         href: "/inspections",
         icon: ClipboardCheck,
         status: "planned",
         description:
-          "Structured scaffold inspections and safety walks, with checklist results and photo evidence.",
+          "General safety walks across a project, with checklist results and photo evidence — distinct from Scaffold Inspections, which now has its own dedicated module.",
       },
       {
         label: "Incidents",

@@ -783,6 +783,7 @@ export type Database = {
           employee_number_prefix: string
           id: string
           name: string
+          scaffold_inspection_validity_days: number | null
           slug: string
           status: Database["public"]["Enums"]["organization_status"]
           updated_at: string
@@ -793,6 +794,7 @@ export type Database = {
           employee_number_prefix: string
           id?: string
           name: string
+          scaffold_inspection_validity_days?: number | null
           slug: string
           status?: Database["public"]["Enums"]["organization_status"]
           updated_at?: string
@@ -803,6 +805,7 @@ export type Database = {
           employee_number_prefix?: string
           id?: string
           name?: string
+          scaffold_inspection_validity_days?: number | null
           slug?: string
           status?: Database["public"]["Enums"]["organization_status"]
           updated_at?: string
@@ -940,6 +943,7 @@ export type Database = {
           location: string | null
           name: string
           organization_id: string
+          scaffold_inspection_validity_days: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
           updated_at: string
@@ -956,6 +960,7 @@ export type Database = {
           location?: string | null
           name: string
           organization_id: string
+          scaffold_inspection_validity_days?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
@@ -972,6 +977,7 @@ export type Database = {
           location?: string | null
           name?: string
           organization_id?: string
+          scaffold_inspection_validity_days?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
@@ -1193,6 +1199,456 @@ export type Database = {
           },
         ]
       }
+      scaffold_defects: {
+        Row: {
+          completion_notes: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          immediate_control: string | null
+          inspection_item_id: string | null
+          organization_id: string
+          project_id: string
+          reopen_reason: string | null
+          responsible_person_id: string
+          scaffold_id: string
+          scaffold_inspection_id: string
+          severity: Database["public"]["Enums"]["scaffold_defect_severity"]
+          status: Database["public"]["Enums"]["scaffold_defect_status"]
+          updated_at: string
+          updated_by: string | null
+          verification_notes: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          completion_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          immediate_control?: string | null
+          inspection_item_id?: string | null
+          organization_id: string
+          project_id: string
+          reopen_reason?: string | null
+          responsible_person_id: string
+          scaffold_id: string
+          scaffold_inspection_id: string
+          severity?: Database["public"]["Enums"]["scaffold_defect_severity"]
+          status?: Database["public"]["Enums"]["scaffold_defect_status"]
+          updated_at?: string
+          updated_by?: string | null
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          completion_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          immediate_control?: string | null
+          inspection_item_id?: string | null
+          organization_id?: string
+          project_id?: string
+          reopen_reason?: string | null
+          responsible_person_id?: string
+          scaffold_id?: string
+          scaffold_inspection_id?: string
+          severity?: Database["public"]["Enums"]["scaffold_defect_severity"]
+          status?: Database["public"]["Enums"]["scaffold_defect_status"]
+          updated_at?: string
+          updated_by?: string | null
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_defects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_inspection_fk"
+            columns: ["scaffold_inspection_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspections"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_inspection_item_fk"
+            columns: ["inspection_item_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspection_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_responsible_person_fk"
+            columns: ["responsible_person_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_scaffold_fk"
+            columns: ["scaffold_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_defects_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scaffold_inspection_items: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          item_type: Database["public"]["Enums"]["scaffold_inspection_item_type"]
+          organization_id: string
+          required_corrective_action: string | null
+          result: Database["public"]["Enums"]["scaffold_inspection_item_result"]
+          scaffold_inspection_id: string
+          severity:
+            | Database["public"]["Enums"]["scaffold_defect_severity"]
+            | null
+          updated_at: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          item_type: Database["public"]["Enums"]["scaffold_inspection_item_type"]
+          organization_id: string
+          required_corrective_action?: string | null
+          result?: Database["public"]["Enums"]["scaffold_inspection_item_result"]
+          scaffold_inspection_id: string
+          severity?:
+            | Database["public"]["Enums"]["scaffold_defect_severity"]
+            | null
+          updated_at?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          item_type?: Database["public"]["Enums"]["scaffold_inspection_item_type"]
+          organization_id?: string
+          required_corrective_action?: string | null
+          result?: Database["public"]["Enums"]["scaffold_inspection_item_result"]
+          scaffold_inspection_id?: string
+          severity?:
+            | Database["public"]["Enums"]["scaffold_defect_severity"]
+            | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_inspection_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspection_items_scaffold_inspection_id_fkey"
+            columns: ["scaffold_inspection_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scaffold_inspections: {
+        Row: {
+          correction_reason: string | null
+          corrects_inspection_id: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          inspected_at: string
+          inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
+          inspector_id: string
+          notes: string | null
+          organization_id: string
+          outcome:
+            | Database["public"]["Enums"]["scaffold_inspection_outcome"]
+            | null
+          previous_inspection_id: string | null
+          project_id: string
+          restrictions_notes: string | null
+          scaffold_id: string
+          status: Database["public"]["Enums"]["scaffold_inspection_status"]
+          superseded_by_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          correction_reason?: string | null
+          corrects_inspection_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          inspected_at?: string
+          inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
+          inspector_id: string
+          notes?: string | null
+          organization_id: string
+          outcome?:
+            | Database["public"]["Enums"]["scaffold_inspection_outcome"]
+            | null
+          previous_inspection_id?: string | null
+          project_id: string
+          restrictions_notes?: string | null
+          scaffold_id: string
+          status?: Database["public"]["Enums"]["scaffold_inspection_status"]
+          superseded_by_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          correction_reason?: string | null
+          corrects_inspection_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          inspected_at?: string
+          inspection_reason?: Database["public"]["Enums"]["scaffold_inspection_reason"]
+          inspector_id?: string
+          notes?: string | null
+          organization_id?: string
+          outcome?:
+            | Database["public"]["Enums"]["scaffold_inspection_outcome"]
+            | null
+          previous_inspection_id?: string | null
+          project_id?: string
+          restrictions_notes?: string | null
+          scaffold_id?: string
+          status?: Database["public"]["Enums"]["scaffold_inspection_status"]
+          superseded_by_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_inspections_corrects_fk"
+            columns: ["corrects_inspection_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspections"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_inspector_fk"
+            columns: ["inspector_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_previous_fk"
+            columns: ["previous_inspection_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspections"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_scaffold_fk"
+            columns: ["scaffold_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_superseded_by_fk"
+            columns: ["superseded_by_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspections"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scaffolds: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          erected_at: string | null
+          erected_by: string | null
+          id: string
+          intended_use: string
+          max_height_meters: number | null
+          max_load_class: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          responsible_foreman_id: string
+          scaffold_type: Database["public"]["Enums"]["scaffold_type"]
+          status: Database["public"]["Enums"]["scaffold_status"]
+          structure_reference: string | null
+          tag_number: string
+          updated_at: string
+          updated_by: string | null
+          work_area: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          erected_at?: string | null
+          erected_by?: string | null
+          id?: string
+          intended_use: string
+          max_height_meters?: number | null
+          max_load_class: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          responsible_foreman_id: string
+          scaffold_type: Database["public"]["Enums"]["scaffold_type"]
+          status?: Database["public"]["Enums"]["scaffold_status"]
+          structure_reference?: string | null
+          tag_number: string
+          updated_at?: string
+          updated_by?: string | null
+          work_area: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          erected_at?: string | null
+          erected_by?: string | null
+          id?: string
+          intended_use?: string
+          max_height_meters?: number | null
+          max_load_class?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          responsible_foreman_id?: string
+          scaffold_type?: Database["public"]["Enums"]["scaffold_type"]
+          status?: Database["public"]["Enums"]["scaffold_status"]
+          structure_reference?: string | null
+          tag_number?: string
+          updated_at?: string
+          updated_by?: string | null
+          work_area?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffolds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffolds_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffolds_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffolds_responsible_foreman_fk"
+            columns: ["responsible_foreman_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffolds_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_assignments: {
         Row: {
           assigned_by: string | null
@@ -1383,7 +1839,20 @@ export type Database = {
         Args: { target_observation_id: string }
         Returns: undefined
       }
+      assert_scaffold_inspection_is_draft: {
+        Args: { target_inspection_id: string }
+        Returns: undefined
+      }
       can_close_corrective_action: {
+        Args: {
+          target_created_by: string
+          target_organization_id: string
+          target_project_id: string
+          target_responsible_person_id: string
+        }
+        Returns: boolean
+      }
+      can_close_scaffold_defect: {
         Args: {
           target_created_by: string
           target_organization_id: string
@@ -1417,6 +1886,45 @@ export type Database = {
         Returns: undefined
       }
       escape_ilike_pattern: { Args: { input: string }; Returns: string }
+      finalize_scaffold_inspection: {
+        Args: {
+          target_inspection_id: string
+          target_outcome: Database["public"]["Enums"]["scaffold_inspection_outcome"]
+          target_restrictions_notes?: string
+        }
+        Returns: {
+          correction_reason: string | null
+          corrects_inspection_id: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          inspected_at: string
+          inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
+          inspector_id: string
+          notes: string | null
+          organization_id: string
+          outcome:
+            | Database["public"]["Enums"]["scaffold_inspection_outcome"]
+            | null
+          previous_inspection_id: string | null
+          project_id: string
+          restrictions_notes: string | null
+          scaffold_id: string
+          status: Database["public"]["Enums"]["scaffold_inspection_status"]
+          superseded_by_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scaffold_inspections"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_user_number: { Args: never; Returns: string }
       get_basic_employee_info: {
         Args: { target_employee_ids: string[] }
@@ -1457,6 +1965,10 @@ export type Database = {
         Args: { target_employee_id: string }
         Returns: boolean
       }
+      is_scaffold_manage_tier: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: boolean
+      }
       move_employee_to_team: {
         Args: {
           target_employee_id: string
@@ -1492,8 +2004,16 @@ export type Database = {
         Args: { target_project_id: string; target_team_ids: string[] }
         Returns: undefined
       }
+      resolve_scaffold_inspection_validity_days: {
+        Args: { target_project_id: string }
+        Returns: number
+      }
       save_lmra_hazards: {
         Args: { target_hazards: Json; target_lmra_id: string }
+        Returns: undefined
+      }
+      save_scaffold_inspection_items: {
+        Args: { target_inspection_id: string; target_items: Json }
         Returns: undefined
       }
       save_team_with_assignments: {
@@ -1628,6 +2148,75 @@ export type Database = {
         | "inspector"
         | "member"
       project_status: "planning" | "active" | "completed" | "archived"
+      scaffold_defect_severity: "low" | "medium" | "high" | "critical"
+      scaffold_defect_status:
+        | "open"
+        | "in_progress"
+        | "awaiting_verification"
+        | "closed"
+        | "rejected"
+      scaffold_inspection_item_result:
+        | "acceptable"
+        | "defect_found"
+        | "not_applicable"
+      scaffold_inspection_item_type:
+        | "foundation_sole_boards"
+        | "base_plates_adjustable_bases"
+        | "standards"
+        | "ledgers"
+        | "transoms"
+        | "bracing"
+        | "ties_anchors"
+        | "platforms_decking"
+        | "guardrails"
+        | "midrails"
+        | "toe_boards"
+        | "access_ladders_stairways"
+        | "access_gates"
+        | "loading_bays"
+        | "sheet_netting_condition"
+        | "falling_object_controls"
+        | "scaffold_tag_signage"
+        | "housekeeping"
+        | "maximum_load_information"
+        | "electrical_clearance"
+        | "vehicle_mobile_equipment_protection"
+        | "unauthorized_alterations"
+        | "overall_stability"
+        | "other_identified_issue"
+      scaffold_inspection_outcome:
+        | "safe_for_use"
+        | "safe_with_restrictions"
+        | "unsafe_do_not_use"
+        | "awaiting_corrective_action"
+        | "closed_dismantled"
+      scaffold_inspection_reason:
+        | "initial_handover"
+        | "routine_inspection"
+        | "after_modification"
+        | "after_severe_weather"
+        | "after_impact_incident"
+        | "after_relocation"
+        | "reinspection_following_defects"
+        | "other"
+      scaffold_inspection_status: "draft" | "finalized"
+      scaffold_status:
+        | "pending_inspection"
+        | "safe"
+        | "restricted"
+        | "awaiting_corrective_action"
+        | "unsafe"
+        | "closed"
+      scaffold_type:
+        | "independent"
+        | "birdcage"
+        | "mobile"
+        | "suspended"
+        | "cantilever"
+        | "access_tower"
+        | "loading_bay"
+        | "temporary_roof"
+        | "other"
       team_assignment_role: "member" | "foreman"
       team_color:
         | "gray"
@@ -1851,6 +2440,82 @@ export const Constants = {
         "member",
       ],
       project_status: ["planning", "active", "completed", "archived"],
+      scaffold_defect_severity: ["low", "medium", "high", "critical"],
+      scaffold_defect_status: [
+        "open",
+        "in_progress",
+        "awaiting_verification",
+        "closed",
+        "rejected",
+      ],
+      scaffold_inspection_item_result: [
+        "acceptable",
+        "defect_found",
+        "not_applicable",
+      ],
+      scaffold_inspection_item_type: [
+        "foundation_sole_boards",
+        "base_plates_adjustable_bases",
+        "standards",
+        "ledgers",
+        "transoms",
+        "bracing",
+        "ties_anchors",
+        "platforms_decking",
+        "guardrails",
+        "midrails",
+        "toe_boards",
+        "access_ladders_stairways",
+        "access_gates",
+        "loading_bays",
+        "sheet_netting_condition",
+        "falling_object_controls",
+        "scaffold_tag_signage",
+        "housekeeping",
+        "maximum_load_information",
+        "electrical_clearance",
+        "vehicle_mobile_equipment_protection",
+        "unauthorized_alterations",
+        "overall_stability",
+        "other_identified_issue",
+      ],
+      scaffold_inspection_outcome: [
+        "safe_for_use",
+        "safe_with_restrictions",
+        "unsafe_do_not_use",
+        "awaiting_corrective_action",
+        "closed_dismantled",
+      ],
+      scaffold_inspection_reason: [
+        "initial_handover",
+        "routine_inspection",
+        "after_modification",
+        "after_severe_weather",
+        "after_impact_incident",
+        "after_relocation",
+        "reinspection_following_defects",
+        "other",
+      ],
+      scaffold_inspection_status: ["draft", "finalized"],
+      scaffold_status: [
+        "pending_inspection",
+        "safe",
+        "restricted",
+        "awaiting_corrective_action",
+        "unsafe",
+        "closed",
+      ],
+      scaffold_type: [
+        "independent",
+        "birdcage",
+        "mobile",
+        "suspended",
+        "cantilever",
+        "access_tower",
+        "loading_bay",
+        "temporary_roof",
+        "other",
+      ],
       team_assignment_role: ["member", "foreman"],
       team_color: [
         "gray",
