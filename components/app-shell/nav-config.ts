@@ -3,6 +3,7 @@ import {
   BarChart3,
   ClipboardCheck,
   Clock,
+  Eye,
   FileBadge,
   FileText,
   FolderKanban,
@@ -119,6 +120,14 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description:
           "A short, structured go/no-go risk check completed by a crew immediately before starting a task.",
+      },
+      {
+        label: "Safety Observations",
+        href: "/observations",
+        icon: Eye,
+        status: "available",
+        description:
+          "Site safety observations — positive recognition and safety issues (unsafe acts/conditions, PPE, housekeeping, and more), with corrective actions tracked to closure.",
       },
       {
         label: "Toolbox Talks",

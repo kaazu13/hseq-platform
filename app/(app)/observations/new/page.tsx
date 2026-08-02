@@ -1,0 +1,86 @@
+import { forbidden, notFound } from "next/navigation";
+import { requireUser, getUserRoleNames } from "@/lib/auth/session";
+import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { getProject } from "@/modules/projects/queries";
+import { listObservationCreatableProjects, listObservationCandidateEmployees } from "@/modules/observations/queries";
+import { ObservationForm } from "@/modules/observations/components/observation-form";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Eye } from "lucide-react";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+
+type NewObservationPageProps = {
+  searchParams: Promise<Record<string, string | undefined>>;
+};
+
+/**
+ * Two-step create: pick a project, then fill in the observation — same
+ * shape as app/(app)/lmra/new/page.tsx, for the same reason (project isn't
+ * a field inside ObservationForm; it's an immutable identity column once
+ * created). The picker's project list (`listObservationCreatableProjects`)
+ * is broader than LMRA's — any project the caller has ANY current
+ * assignment on, not just a foreman-specific one — matching this module's
+ * "safety reporting should never be gated behind a manager role" grant.
+ */
+export default async function NewObservationPage({ searchParams }: NewObservationPageProps) {
+  const params = await searchParams;
+  const { user } = await requireUser();
+  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+
+  if (!currentOrganizationId) {
+    forbidden();
+  }
+
+  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const creatableProjects = await listObservationCreatableProjects(currentOrganizationId, user.id, roleNames);
+
+  if (!params.projectId) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title="New observation" description="Choose the project this observation is for." />
+        {creatableProjects.length === 0 ? (
+          <EmptyState
+            icon={Eye}
+            title="You're not assigned to any projects"
+            description="You need an active assignment on a project before you can report an observation for it."
+            className="flex-1"
+          />
+        ) : (
+          <Card className="max-w-md">
+            <CardContent className="flex flex-col gap-3 pt-4">
+              {creatableProjects.map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/observations/new?projectId=${project.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 text-sm font-medium transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  {project.name}
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  const project = await getProject(currentOrganizationId, params.projectId);
+  if (!project) {
+    notFound();
+  }
+  if (!creatableProjects.some((candidate) => candidate.id === project.id)) {
+    forbidden();
+  }
+
+  const candidates = await listObservationCandidateEmployees(currentOrganizationId, project.id);
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      <PageHeader title="New observation" description={`For ${project.name}.`} />
+      <div className="max-w-3xl">
+        <ObservationForm mode="create" organizationId={currentOrganizationId} projectId={project.id} projectName={project.name} candidates={candidates} />
+      </div>
+    </div>
+  );
+}

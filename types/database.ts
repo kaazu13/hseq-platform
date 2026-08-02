@@ -90,6 +90,119 @@ export type Database = {
           },
         ]
       }
+      corrective_actions: {
+        Row: {
+          closure_evidence: string | null
+          completion_notes: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          observation_id: string
+          organization_id: string
+          priority: Database["public"]["Enums"]["corrective_action_priority"]
+          project_id: string
+          reopen_reason: string | null
+          responsible_person_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["corrective_action_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          closure_evidence?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          observation_id: string
+          organization_id: string
+          priority?: Database["public"]["Enums"]["corrective_action_priority"]
+          project_id: string
+          reopen_reason?: string | null
+          responsible_person_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["corrective_action_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          closure_evidence?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          observation_id?: string
+          organization_id?: string
+          priority?: Database["public"]["Enums"]["corrective_action_priority"]
+          project_id?: string
+          reopen_reason?: string | null
+          responsible_person_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["corrective_action_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corrective_actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_observation_fk"
+            columns: ["observation_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "safety_observations"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_responsible_person_fk"
+            columns: ["responsible_person_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_employment_periods: {
         Row: {
           created_at: string
@@ -915,6 +1028,171 @@ export type Database = {
         }
         Relationships: []
       }
+      safety_observation_participants: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          observation_id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          observation_id: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          observation_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_observation_participants_employee_fk"
+            columns: ["employee_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "safety_observation_participants_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "safety_observations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_observation_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_observations: {
+        Row: {
+          category: Database["public"]["Enums"]["observation_category"]
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          immediate_action_taken: string | null
+          is_stop_work: boolean
+          observed_at: string
+          observer_id: string
+          organization_id: string
+          project_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_level: Database["public"]["Enums"]["observation_risk_level"]
+          status: Database["public"]["Enums"]["observation_status"]
+          updated_at: string
+          updated_by: string | null
+          work_area: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["observation_category"]
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          immediate_action_taken?: string | null
+          is_stop_work?: boolean
+          observed_at?: string
+          observer_id: string
+          organization_id: string
+          project_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_level?: Database["public"]["Enums"]["observation_risk_level"]
+          status?: Database["public"]["Enums"]["observation_status"]
+          updated_at?: string
+          updated_by?: string | null
+          work_area: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["observation_category"]
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          immediate_action_taken?: string | null
+          is_stop_work?: boolean
+          observed_at?: string
+          observer_id?: string
+          organization_id?: string
+          project_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_level?: Database["public"]["Enums"]["observation_risk_level"]
+          status?: Database["public"]["Enums"]["observation_status"]
+          updated_at?: string
+          updated_by?: string | null
+          work_area?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_observations_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_observations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_observations_observer_fk"
+            columns: ["observer_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "safety_observations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_observations_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "safety_observations_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_observations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_assignments: {
         Row: {
           assigned_by: string | null
@@ -1093,9 +1371,26 @@ export type Database = {
         Args: { target_lmra_id: string }
         Returns: undefined
       }
+      assert_no_unresolved_corrective_actions: {
+        Args: { target_observation_id: string }
+        Returns: undefined
+      }
       assert_project_not_archived: {
         Args: { target_project_id: string }
         Returns: undefined
+      }
+      assert_safety_observation_is_open: {
+        Args: { target_observation_id: string }
+        Returns: undefined
+      }
+      can_close_corrective_action: {
+        Args: {
+          target_created_by: string
+          target_organization_id: string
+          target_project_id: string
+          target_responsible_person_id: string
+        }
+        Returns: boolean
       }
       count_employees: {
         Args: {
@@ -1272,6 +1567,13 @@ export type Database = {
         | "archive"
         | "end_employment"
         | "rehire"
+      corrective_action_priority: "low" | "medium" | "high" | "critical"
+      corrective_action_status:
+        | "open"
+        | "in_progress"
+        | "awaiting_verification"
+        | "closed"
+        | "rejected"
       employee_account_status:
         | "draft"
         | "invited"
@@ -1302,6 +1604,22 @@ export type Database = {
       lmra_result: "go" | "no_go"
       lmra_status: "draft" | "submitted" | "approved" | "rejected" | "archived"
       membership_status: "invited" | "active" | "suspended" | "removed"
+      observation_category:
+        | "positive_observation"
+        | "unsafe_act"
+        | "unsafe_condition"
+        | "line_of_fire"
+        | "working_at_height"
+        | "falling_objects"
+        | "material_handling"
+        | "housekeeping"
+        | "tools_equipment"
+        | "mobile_equipment_mewp"
+        | "access_egress"
+        | "ppe"
+        | "other"
+      observation_risk_level: "low" | "medium" | "high" | "critical"
+      observation_status: "open" | "closed"
       organization_status: "trial" | "active" | "suspended"
       project_assignment_role:
         | "project_manager"
@@ -1466,6 +1784,14 @@ export const Constants = {
         "end_employment",
         "rehire",
       ],
+      corrective_action_priority: ["low", "medium", "high", "critical"],
+      corrective_action_status: [
+        "open",
+        "in_progress",
+        "awaiting_verification",
+        "closed",
+        "rejected",
+      ],
       employee_account_status: [
         "draft",
         "invited",
@@ -1499,6 +1825,23 @@ export const Constants = {
       lmra_result: ["go", "no_go"],
       lmra_status: ["draft", "submitted", "approved", "rejected", "archived"],
       membership_status: ["invited", "active", "suspended", "removed"],
+      observation_category: [
+        "positive_observation",
+        "unsafe_act",
+        "unsafe_condition",
+        "line_of_fire",
+        "working_at_height",
+        "falling_objects",
+        "material_handling",
+        "housekeeping",
+        "tools_equipment",
+        "mobile_equipment_mewp",
+        "access_egress",
+        "ppe",
+        "other",
+      ],
+      observation_risk_level: ["low", "medium", "high", "critical"],
+      observation_status: ["open", "closed"],
       organization_status: ["trial", "active", "suspended"],
       project_assignment_role: [
         "project_manager",
