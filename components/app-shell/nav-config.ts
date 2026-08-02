@@ -10,6 +10,7 @@ import {
   ListChecks,
   MessagesSquare,
   Settings,
+  ShieldAlert,
   ShieldCheck,
   Users,
   Wrench,
@@ -55,6 +56,14 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: LayoutDashboard,
         status: "available",
         description: "Your organization at a glance.",
+      },
+      {
+        label: "Safety Overview",
+        href: "/safety-overview",
+        icon: ShieldAlert,
+        status: "available",
+        description:
+          "LMRA activity, open safety items, and expiring qualifications across your organization, filterable by project, work area, date, and status.",
       },
     ],
   },
@@ -107,7 +116,7 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "LMRA",
         href: "/lmra",
         icon: ShieldCheck,
-        status: "planned",
+        status: "available",
         description:
           "A short, structured go/no-go risk check completed by a crew immediately before starting a task.",
       },

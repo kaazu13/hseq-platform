@@ -51,12 +51,18 @@ export async function saveTeamWithAssignments(
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("save_team_with_assignments", {
-    target_team_id: teamId,
+    // target_team_id/target_code/target_description are genuinely nullable
+    // at the DB level (create vs. update, optional fields), but the
+    // generated Args type has no way to know that — supabase gen types
+    // infers "nullable" only from an explicit `default null` in the SQL
+    // signature, not from callers being allowed to pass null. Cast, don't
+    // widen the whole Args type.
+    target_team_id: teamId as string,
     target_project_id: projectId,
     target_name: parsed.data.name,
-    target_code: parsed.data.code ?? null,
+    target_code: (parsed.data.code ?? null) as string,
     target_color: parsed.data.color,
-    target_description: parsed.data.description ?? null,
+    target_description: (parsed.data.description ?? null) as string,
     target_status: parsed.data.status,
     target_assignments: assignmentChanges.map((change) => ({ employee_id: change.employeeId, role: change.role })),
   });

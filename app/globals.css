@@ -141,3 +141,15 @@
     @apply font-sans;
   }
 }
+
+/* Printable pages (e.g. an LMRA detail page) render without the persistent
+   app shell — the sidebar and top bar exist to navigate between pages,
+   which is meaningless on paper. Page content still opts out of individual
+   interactive controls itself via the `print:hidden` utility. */
+@media print {
+  [data-slot="sidebar"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-rail"] {
+    display: none !important;
+  }
+}

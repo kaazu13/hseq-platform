@@ -485,32 +485,57 @@ Configurable classification used by Incident Reports (and optionally Safety Obse
 
 ## 6. HSEQ Tables (continued)
 
-### `lmra_assessments` — **[tenant]**
+### `lmra_assessments` — **[tenant]** — IMPLEMENTED, `supabase/migrations/20260801090000_lmra.sql`
+The table below reflects what was actually built, which deviates from the original proposal above in four deliberate ways (all documented in the migration's own header comment): `work_area` is plain text, not a `location_id` FK to a `project_locations` table (that table doesn't exist); `work_date` (date) + `shift` (text) are separate fields instead of a single `conducted_at` timestamp — matching how a crew actually schedules a shift's work, not just logs a moment; `created_by`/`created_at` naming instead of `conducted_by`/`conducted_at`, consistent with every other table's audit-column naming in this schema; there is no `risk_level` column, since the 12-item per-hazard checklist (`lmra_hazards`, below) already carries that detail at a finer grain than one summary enum could.
+
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
 | `organization_id` | uuid not null, FK | |
-| `project_id` | uuid not null, FK `projects(id)` | |
-| `location_id` | uuid null, FK `project_locations(id)` | |
-| `conducted_by` | uuid not null, FK `profiles(id)` | |
-| `conducted_at` | timestamptz not null | |
-| `task_description` | text not null | |
-| `risk_level` | `risk_level` not null | |
-| `result` | `lmra_result` not null | |
+| `project_id` | uuid not null, FK `projects(id)` (composite, `(id, organization_id)`) | Immutable after creation. |
+| `work_area` | text not null | |
+| `work_activity` | text not null | |
+| `work_date` | date not null | |
+| `shift` | text not null | |
+| `responsible_foreman_id` | uuid not null, FK `employees(id)` (composite), `on delete restrict` | Deliberately not `set null` — an assessment must always name a responsible foreman, even a since-departed one. |
+| `status` | `lmra_status` not null, default `'draft'` | `draft` → `submitted` → `approved`/`rejected` → (optionally back to `draft` to correct) → `archived` (terminal, HSE Manager only). |
+| `result` | `lmra_result` not null, default `'go'` | `go` / `no_go`. |
+| `stop_work_reason` | text null | Required by a CHECK constraint whenever `result = 'no_go'`. |
 | `notes` | text null | |
-| `created_at` / `updated_at` / `created_by` / `updated_by` | | |
-| `deleted_at` | timestamptz null | HSEQ evidence — never hard-deleted. |
+| `created_at` / `created_by` / `updated_at` / `updated_by` | | |
+| `submitted_at` / `submitted_by` | timestamptz / uuid, null | |
+| `reviewed_at` / `reviewed_by` / `review_notes` | timestamptz / uuid / text, null | |
+| `approved_at` | timestamptz null | Set only when `status` becomes `approved`. |
+| `archived_at` / `archived_by` | timestamptz / uuid, null | |
 
-### `lmra_participants` — **[tenant]** (join table)
+**Deletion behavior**: no delete grant on this table at all — HSEQ evidence, never hard-deleted (matches the "Soft delete" row in §8's table below, superseded here by the richer `status` workflow rather than a `deleted_at` column).
+
+### `lmra_hazards` — **[tenant]** — IMPLEMENTED (new table, not in the original proposal)
+One row per `(lmra_assessment_id, hazard_type)` — exactly 12 rows per assessment, one for each of the fixed `lmra_hazard_type` enum values (working at height, falling objects, line of fire, manual material handling, lifting operations, mobile equipment/MEWP, weather conditions, access and egress, housekeeping, tools and equipment, simultaneous operations, other), auto-created by an `AFTER INSERT` trigger on `lmra_assessments` the moment the parent row is created — the client never inserts or deletes individual hazard rows, only updates the 12 that already exist (via the `save_lmra_hazards()` RPC).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `organization_id` | uuid not null, FK | Denormalized, same rationale as `lmra_participants`. |
+| `lmra_assessment_id` | uuid not null, FK `lmra_assessments(id)` | |
+| `hazard_type` | `lmra_hazard_type` not null | |
+| `is_applicable` | boolean not null, default `true` | |
+| `controls` | text null | |
+| `responsible_person_id` | uuid null, FK `employees(id)` (composite), `on delete set null` | |
+| `controls_confirmed` | boolean not null, default `false` | |
+| `other_description` | text null | Only meaningful when `hazard_type = 'other'`. |
+
+**Constraints**: `unique (lmra_assessment_id, hazard_type)`. Editable only while the parent assessment is `draft` (`assert_lmra_assessment_is_draft()`).
+
+### `lmra_participants` — **[tenant]** (join table) — IMPLEMENTED
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid PK | |
 | `organization_id` | uuid not null, FK | Denormalized for RLS simplicity/performance (avoids a join through `lmra_assessments` in every policy). |
 | `lmra_assessment_id` | uuid not null, FK `lmra_assessments(id)` | |
-| `employee_id` | uuid not null, FK `employees(id)` | |
-| `signature_id` | uuid null, FK `digital_signatures(id)` | |
+| `employee_id` | uuid not null, FK `employees(id)` (composite) | |
 
-**Constraints**: `unique (lmra_assessment_id, employee_id)`.
+**Constraints**: `unique (lmra_assessment_id, employee_id)`. Editable only while the parent assessment is `draft`, same as `lmra_hazards`. `signature_id`/digital-signature attestation from the original proposal is deferred — `digital_signatures` isn't built yet (see §8.2).
 
 ### `toolbox_talks` — **[tenant]**
 | Column | Type | Notes |

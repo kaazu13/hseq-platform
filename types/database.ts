@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -58,6 +83,86 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_employment_periods: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          end_date: string | null
+          end_note: string | null
+          end_reason:
+            | Database["public"]["Enums"]["employment_end_reason"]
+            | null
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          organization_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          end_date?: string | null
+          end_note?: string | null
+          end_reason?:
+            | Database["public"]["Enums"]["employment_end_reason"]
+            | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          organization_id: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          end_date?: string | null
+          end_note?: string | null
+          end_reason?:
+            | Database["public"]["Enums"]["employment_end_reason"]
+            | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          organization_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_employment_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_periods_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_periods_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_employment_periods_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -160,73 +265,247 @@ export type Database = {
           },
         ]
       }
-      employee_employment_periods: {
+      lmra_assessments: {
         Row: {
+          approved_at: string | null
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           created_by: string | null
-          employee_id: string
-          end_date: string | null
-          end_note: string | null
-          end_reason: Database["public"]["Enums"]["employment_end_reason"] | null
-          ended_at: string | null
-          ended_by: string | null
           id: string
+          notes: string | null
           organization_id: string
-          start_date: string
+          project_id: string
+          responsible_foreman_id: string
+          result: Database["public"]["Enums"]["lmra_result"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift: string
+          status: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason: string | null
+          submitted_at: string | null
+          submitted_by: string | null
           updated_at: string
+          updated_by: string | null
+          work_activity: string
+          work_area: string
+          work_date: string
         }
         Insert: {
+          approved_at?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string | null
-          employee_id: string
-          end_date?: string | null
-          end_note?: string | null
-          end_reason?: Database["public"]["Enums"]["employment_end_reason"] | null
-          ended_at?: string | null
-          ended_by?: string | null
           id?: string
+          notes?: string | null
           organization_id: string
-          start_date: string
+          project_id: string
+          responsible_foreman_id: string
+          result?: Database["public"]["Enums"]["lmra_result"]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shift: string
+          status?: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
           updated_at?: string
+          updated_by?: string | null
+          work_activity: string
+          work_area: string
+          work_date: string
         }
         Update: {
+          approved_at?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string | null
-          employee_id?: string
-          end_date?: string | null
-          end_note?: string | null
-          end_reason?: Database["public"]["Enums"]["employment_end_reason"] | null
-          ended_at?: string | null
-          ended_by?: string | null
           id?: string
+          notes?: string | null
           organization_id?: string
-          start_date?: string
+          project_id?: string
+          responsible_foreman_id?: string
+          result?: Database["public"]["Enums"]["lmra_result"]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shift?: string
+          status?: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
           updated_at?: string
+          updated_by?: string | null
+          work_activity?: string
+          work_area?: string
+          work_date?: string
         }
         Relationships: [
           {
-            foreignKeyName: "employee_employment_periods_created_by_fkey"
+            foreignKeyName: "lmra_assessments_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lmra_assessments_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employee_employment_periods_employee_id_fkey"
-            columns: ["employee_id"]
+            foreignKeyName: "lmra_assessments_foreman_fk"
+            columns: ["responsible_foreman_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "lmra_assessments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employee_employment_periods_ended_by_fkey"
-            columns: ["ended_by"]
+            foreignKeyName: "lmra_assessments_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "lmra_assessments_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employee_employment_periods_organization_id_fkey"
+            foreignKeyName: "lmra_assessments_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lmra_assessments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lmra_hazards: {
+        Row: {
+          controls: string | null
+          controls_confirmed: boolean
+          created_at: string
+          hazard_type: Database["public"]["Enums"]["lmra_hazard_type"]
+          id: string
+          is_applicable: boolean
+          lmra_assessment_id: string
+          organization_id: string
+          other_description: string | null
+          responsible_person_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          controls?: string | null
+          controls_confirmed?: boolean
+          created_at?: string
+          hazard_type: Database["public"]["Enums"]["lmra_hazard_type"]
+          id?: string
+          is_applicable?: boolean
+          lmra_assessment_id: string
+          organization_id: string
+          other_description?: string | null
+          responsible_person_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          controls?: string | null
+          controls_confirmed?: boolean
+          created_at?: string
+          hazard_type?: Database["public"]["Enums"]["lmra_hazard_type"]
+          id?: string
+          is_applicable?: boolean
+          lmra_assessment_id?: string
+          organization_id?: string
+          other_description?: string | null
+          responsible_person_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lmra_hazards_lmra_assessment_id_fkey"
+            columns: ["lmra_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "lmra_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lmra_hazards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lmra_hazards_responsible_person_fk"
+            columns: ["responsible_person_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      lmra_participants: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          lmra_assessment_id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          lmra_assessment_id: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          lmra_assessment_id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lmra_participants_employee_fk"
+            columns: ["employee_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "lmra_participants_lmra_assessment_id_fkey"
+            columns: ["lmra_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "lmra_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lmra_participants_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -434,7 +713,7 @@ export type Database = {
           id: string
           phone?: string | null
           updated_at?: string
-          user_number?: string
+          user_number: string
         }
         Update: {
           active_organization_id?: string | null
@@ -451,79 +730,6 @@ export type Database = {
             columns: ["active_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      projects: {
-        Row: {
-          client_name: string | null
-          code: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          end_date: string | null
-          id: string
-          location: string | null
-          name: string
-          organization_id: string
-          start_date: string | null
-          status: Database["public"]["Enums"]["project_status"]
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          client_name?: string | null
-          code?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          location?: string | null
-          name: string
-          organization_id: string
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["project_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          client_name?: string | null
-          code?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          location?: string | null
-          name?: string
-          organization_id?: string
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["project_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "projects_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -609,6 +815,79 @@ export type Database = {
           },
         ]
       }
+      projects: {
+        Row: {
+          client_name: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          name: string
+          organization_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          client_name?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          organization_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          client_name?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          organization_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           created_at: string
@@ -635,83 +914,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      teams: {
-        Row: {
-          code: string | null
-          color: Database["public"]["Enums"]["team_color"]
-          created_at: string
-          created_by: string | null
-          description: string | null
-          display_order: number
-          id: string
-          name: string
-          organization_id: string
-          project_id: string
-          status: Database["public"]["Enums"]["team_status"]
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          code?: string | null
-          color?: Database["public"]["Enums"]["team_color"]
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          display_order?: number
-          id?: string
-          name: string
-          organization_id: string
-          project_id: string
-          status?: Database["public"]["Enums"]["team_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          code?: string | null
-          color?: Database["public"]["Enums"]["team_color"]
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          display_order?: number
-          id?: string
-          name?: string
-          organization_id?: string
-          project_id?: string
-          status?: Database["public"]["Enums"]["team_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teams_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teams_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teams_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teams_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       team_assignments: {
         Row: {
@@ -797,6 +999,83 @@ export type Database = {
           },
         ]
       }
+      teams: {
+        Row: {
+          code: string | null
+          color: Database["public"]["Enums"]["team_color"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          organization_id: string
+          project_id: string
+          status: Database["public"]["Enums"]["team_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code?: string | null
+          color?: Database["public"]["Enums"]["team_color"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          organization_id: string
+          project_id: string
+          status?: Database["public"]["Enums"]["team_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string | null
+          color?: Database["public"]["Enums"]["team_color"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          organization_id?: string
+          project_id?: string
+          status?: Database["public"]["Enums"]["team_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "teams_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -805,6 +1084,18 @@ export type Database = {
       allocate_employee_number: {
         Args: { target_org_id: string }
         Returns: string
+      }
+      assert_employee_eligible_for_assignment: {
+        Args: { target_employee_id: string }
+        Returns: undefined
+      }
+      assert_lmra_assessment_is_draft: {
+        Args: { target_lmra_id: string }
+        Returns: undefined
+      }
+      assert_project_not_archived: {
+        Args: { target_project_id: string }
+        Returns: undefined
       }
       count_employees: {
         Args: {
@@ -831,16 +1122,16 @@ export type Database = {
         Returns: undefined
       }
       escape_ilike_pattern: { Args: { input: string }; Returns: string }
-      generate_user_number: { Args: Record<string, never>; Returns: string }
+      generate_user_number: { Args: never; Returns: string }
       get_basic_employee_info: {
         Args: { target_employee_ids: string[] }
         Returns: {
-          id: string
+          archived_at: string
           first_name: string
+          id: string
           last_name: string
-          position_title: string | null
-          profile_id: string | null
-          archived_at: string | null
+          position_title: string
+          profile_id: string
         }[]
       }
       has_any_organization_role: {
@@ -859,6 +1150,10 @@ export type Database = {
         Args: { target_org_id: string }
         Returns: boolean
       }
+      is_project_foreman: {
+        Args: { target_project_id: string }
+        Returns: boolean
+      }
       is_project_manager: {
         Args: { target_project_id: string }
         Returns: boolean
@@ -875,25 +1170,69 @@ export type Database = {
           target_role?: Database["public"]["Enums"]["team_assignment_role"]
           target_team_id: string
         }
-        Returns: Database["public"]["Tables"]["team_assignments"]["Row"]
+        Returns: {
+          assigned_by: string | null
+          assignment_role: Database["public"]["Enums"]["team_assignment_role"]
+          created_at: string
+          employee_id: string
+          end_at: string | null
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          start_at: string
+          team_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "team_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       next_employee_number: { Args: { target_org_id: string }; Returns: string }
       reorder_teams: {
         Args: { target_project_id: string; target_team_ids: string[] }
         Returns: undefined
       }
+      save_lmra_hazards: {
+        Args: { target_hazards: Json; target_lmra_id: string }
+        Returns: undefined
+      }
       save_team_with_assignments: {
         Args: {
           target_assignments?: Json
-          target_code: string | null
+          target_code: string
           target_color: Database["public"]["Enums"]["team_color"]
-          target_description: string | null
+          target_description: string
           target_name: string
           target_project_id: string
           target_status: Database["public"]["Enums"]["team_status"]
-          target_team_id: string | null
+          target_team_id: string
         }
-        Returns: Database["public"]["Tables"]["teams"]["Row"]
+        Returns: {
+          code: string | null
+          color: Database["public"]["Enums"]["team_color"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          organization_id: string
+          project_id: string
+          status: Database["public"]["Enums"]["team_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_employees: {
         Args: {
@@ -940,14 +1279,48 @@ export type Database = {
         | "active"
         | "suspended"
         | "archived"
-      employment_end_reason: "resigned" | "terminated" | "layoff" | "end_of_contract" | "other"
+      employment_end_reason:
+        | "resigned"
+        | "terminated"
+        | "layoff"
+        | "end_of_contract"
+        | "other"
       employment_status: "active" | "inactive" | "on_leave" | "terminated"
+      lmra_hazard_type:
+        | "working_at_height"
+        | "falling_objects"
+        | "line_of_fire"
+        | "manual_material_handling"
+        | "lifting_operations"
+        | "mobile_equipment_mewp"
+        | "weather_conditions"
+        | "access_egress"
+        | "housekeeping"
+        | "tools_equipment"
+        | "simultaneous_operations"
+        | "other"
+      lmra_result: "go" | "no_go"
+      lmra_status: "draft" | "submitted" | "approved" | "rejected" | "archived"
       membership_status: "invited" | "active" | "suspended" | "removed"
       organization_status: "trial" | "active" | "suspended"
-      project_assignment_role: "project_manager" | "hseq_manager" | "hse_officer" | "inspector" | "member"
+      project_assignment_role:
+        | "project_manager"
+        | "hseq_manager"
+        | "hse_officer"
+        | "inspector"
+        | "member"
       project_status: "planning" | "active" | "completed" | "archived"
       team_assignment_role: "member" | "foreman"
-      team_color: "gray" | "blue" | "green" | "yellow" | "orange" | "red" | "purple" | "cyan" | "brown"
+      team_color:
+        | "gray"
+        | "blue"
+        | "green"
+        | "yellow"
+        | "orange"
+        | "red"
+        | "purple"
+        | "cyan"
+        | "brown"
       team_status: "active" | "archived"
     }
     CompositeTypes: {
@@ -1074,6 +1447,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       audit_action: [
@@ -1098,14 +1474,52 @@ export const Constants = {
         "suspended",
         "archived",
       ],
-      employment_end_reason: ["resigned", "terminated", "layoff", "end_of_contract", "other"],
+      employment_end_reason: [
+        "resigned",
+        "terminated",
+        "layoff",
+        "end_of_contract",
+        "other",
+      ],
       employment_status: ["active", "inactive", "on_leave", "terminated"],
+      lmra_hazard_type: [
+        "working_at_height",
+        "falling_objects",
+        "line_of_fire",
+        "manual_material_handling",
+        "lifting_operations",
+        "mobile_equipment_mewp",
+        "weather_conditions",
+        "access_egress",
+        "housekeeping",
+        "tools_equipment",
+        "simultaneous_operations",
+        "other",
+      ],
+      lmra_result: ["go", "no_go"],
+      lmra_status: ["draft", "submitted", "approved", "rejected", "archived"],
       membership_status: ["invited", "active", "suspended", "removed"],
       organization_status: ["trial", "active", "suspended"],
-      project_assignment_role: ["project_manager", "hseq_manager", "hse_officer", "inspector", "member"],
+      project_assignment_role: [
+        "project_manager",
+        "hseq_manager",
+        "hse_officer",
+        "inspector",
+        "member",
+      ],
       project_status: ["planning", "active", "completed", "archived"],
       team_assignment_role: ["member", "foreman"],
-      team_color: ["gray", "blue", "green", "yellow", "orange", "red", "purple", "cyan", "brown"],
+      team_color: [
+        "gray",
+        "blue",
+        "green",
+        "yellow",
+        "orange",
+        "red",
+        "purple",
+        "cyan",
+        "brown",
+      ],
       team_status: ["active", "archived"],
     },
   },
