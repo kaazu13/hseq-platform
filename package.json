@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "seed:test-org": "tsx scripts/seed-test-org.ts",
-    "cleanup:test-org": "tsx scripts/cleanup-test-org.ts"
+    "cleanup:test-org": "tsx scripts/cleanup-test-org.ts",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -35,10 +39,12 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "postgres": "^3.4.9",
     "supabase": "^2.109.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   },
   "allowScripts": {
     "esbuild@0.28.1": true
