@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  BookOpen,
   Clock,
   Eye,
   FileBadge,
@@ -9,6 +10,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldX,
+  Siren,
   Users,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
@@ -25,6 +27,13 @@ import { getScaffoldOverviewCounts, listRecentScaffoldsForOverview, getCurrentIn
 import { ScaffoldCard } from "@/modules/scaffolds/components/scaffold-card";
 import { SafetyOverviewScaffoldFilters } from "@/modules/scaffolds/components/safety-overview-scaffold-filters";
 import { getScaffoldDefectOverviewCounts } from "@/modules/scaffold-defects/queries";
+import { getToolboxMeetingOverviewCounts, listRecentToolboxMeetingsForOverview, type ToolboxMeetingListFilters } from "@/modules/toolbox-meetings/queries";
+import { ToolboxMeetingCard } from "@/modules/toolbox-meetings/components/toolbox-meeting-card";
+import { getToolboxTemplateOverviewCounts } from "@/modules/toolbox-templates/queries";
+import { getSafetyFlashOverviewCounts, listRecentSafetyFlashesForOverview, type SafetyFlashListFilters } from "@/modules/safety-flash/queries";
+import { SafetyFlashCard } from "@/modules/safety-flash/components/safety-flash-card";
+import { SafetyOverviewToolboxMeetingFilters } from "@/modules/toolbox-meetings/components/safety-overview-toolbox-meeting-filters";
+import { SafetyOverviewSafetyFlashFilters } from "@/modules/safety-flash/components/safety-overview-safety-flash-filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -58,9 +67,12 @@ type SafetyOverviewPageProps = {
  * param without one of them silently returning nothing; `projectId` is the
  * one param genuinely shared/consistent across every section on this page.
  *
- * Every category with no underlying module yet (scaffold inspections,
- * incidents, toolbox talks, certificates) renders `StatCard`'s
- * `"placeholder"` variant — never a fabricated number.
+ * Every category with no underlying module yet (incidents, certificates)
+ * renders `StatCard`'s `"placeholder"` variant — never a fabricated
+ * number. Toolbox Meetings/Safety Flash show no attendance percentages or
+ * missing-acknowledgement counts — that module is document-based (an
+ * uploaded PDF is the complete evidence record), with no digital
+ * attendance tracked at all.
  */
 export default async function SafetyOverviewPage({ searchParams }: SafetyOverviewPageProps) {
   const params = await searchParams;
@@ -103,8 +115,31 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
     scaffoldType: params.scfScaffoldType,
     status: params.scfStatus,
   };
+  const toolboxMeetingListFilters: ToolboxMeetingListFilters = {
+    projectId: params.tbmProjectId ?? params.projectId,
+    search: params.tbmSearch,
+  };
+  const safetyFlashListFilters: SafetyFlashListFilters = {
+    projectId: params.sfProjectId ?? params.projectId,
+    search: params.sfSearch,
+  };
 
-  const [lmraCounts, recentAssessments, observationCounts, recentObservations, correctiveActionCounts, scaffoldCounts, recentScaffolds, scaffoldDefectCounts, projects] = await Promise.all([
+  const [
+    lmraCounts,
+    recentAssessments,
+    observationCounts,
+    recentObservations,
+    correctiveActionCounts,
+    scaffoldCounts,
+    recentScaffolds,
+    scaffoldDefectCounts,
+    toolboxMeetingCounts,
+    recentToolboxMeetings,
+    toolboxTemplateCounts,
+    safetyFlashCounts,
+    recentSafetyFlashes,
+    projects,
+  ] = await Promise.all([
     getLmraOverviewCounts(currentOrganizationId, params.projectId),
     listRecentLmraForOverview(currentOrganizationId, lmraListFilters, 12),
     getObservationOverviewCounts(currentOrganizationId, params.projectId),
@@ -113,6 +148,11 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
     getScaffoldOverviewCounts(currentOrganizationId, params.projectId),
     listRecentScaffoldsForOverview(currentOrganizationId, scaffoldListFilters, 12),
     getScaffoldDefectOverviewCounts(currentOrganizationId, params.projectId),
+    getToolboxMeetingOverviewCounts(currentOrganizationId, params.projectId),
+    listRecentToolboxMeetingsForOverview(currentOrganizationId, toolboxMeetingListFilters, 12),
+    getToolboxTemplateOverviewCounts(currentOrganizationId),
+    getSafetyFlashOverviewCounts(currentOrganizationId, params.projectId),
+    listRecentSafetyFlashesForOverview(currentOrganizationId, safetyFlashListFilters, 12),
     listProjects(currentOrganizationId),
   ]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
@@ -173,10 +213,40 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
       </div>
 
       <div>
+        <SectionHeader title="Toolbox Meetings" description="Document-based evidence — no digital attendance/acknowledgement tracking" className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard variant="live" label="Uploaded today" icon={MessagesSquare} value={toolboxMeetingCounts.uploadedToday} href="/toolbox-meetings" />
+          <StatCard variant="live" label="Uploaded this week" icon={MessagesSquare} value={toolboxMeetingCounts.uploadedThisWeek} href="/toolbox-meetings" />
+          <StatCard
+            variant="live"
+            label="Latest toolbox meeting"
+            icon={MessagesSquare}
+            value={toolboxMeetingCounts.latest ? toolboxMeetingCounts.latest.title : "—"}
+            href={toolboxMeetingCounts.latest ? `/toolbox-meetings/${toolboxMeetingCounts.latest.id}` : "/toolbox-meetings"}
+          />
+          <StatCard variant="live" label="Active templates" icon={BookOpen} value={toolboxTemplateCounts.activeCount} href="/toolbox-meetings?section=templates" />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeader title="Safety Flash" className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard variant="live" label="Issued today" icon={Siren} value={safetyFlashCounts.issuedToday} href="/toolbox-meetings?section=safety-flash" />
+          <StatCard variant="live" label="Issued this week" icon={Siren} value={safetyFlashCounts.issuedThisWeek} href="/toolbox-meetings?section=safety-flash" />
+          <StatCard
+            variant="live"
+            label="Latest Safety Flash"
+            icon={Siren}
+            value={safetyFlashCounts.latest ? safetyFlashCounts.latest.title : "—"}
+            href={safetyFlashCounts.latest ? `/toolbox-meetings/safety-flash/${safetyFlashCounts.latest.id}` : "/toolbox-meetings?section=safety-flash"}
+          />
+        </div>
+      </div>
+
+      <div>
         <SectionHeader title="Other safety areas" className="mb-3" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard variant="placeholder" label="Incidents & near misses" icon={AlertTriangle} href="/incidents" />
-          <StatCard variant="placeholder" label="Toolbox meeting participation" icon={MessagesSquare} href="/toolbox-talks" />
           <StatCard variant="placeholder" label="Expiring qualifications & certificates" icon={FileBadge} href="/certificates" />
         </div>
       </div>
@@ -221,6 +291,36 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {recentScaffolds.map((scaffold) => (
               <ScaffoldCard key={scaffold.id} scaffold={scaffold} projectName={projectNameById.get(scaffold.project_id) ?? "Unknown project"} currentInspectionExpiresAt={recentScaffoldExpiryById.get(scaffold.id) ?? null} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Recent toolbox meetings" />
+        <SafetyOverviewToolboxMeetingFilters projects={projects} />
+
+        {recentToolboxMeetings.length === 0 ? (
+          <EmptyState icon={MessagesSquare} title="No toolbox meetings found" description="Try a different filter, or check back once meetings are uploaded." />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {recentToolboxMeetings.map((meeting) => (
+              <ToolboxMeetingCard key={meeting.id} meeting={meeting} projectName={projectNameById.get(meeting.project_id) ?? "Unknown project"} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Recent Safety Flashes" />
+        <SafetyOverviewSafetyFlashFilters projects={projects} />
+
+        {recentSafetyFlashes.length === 0 ? (
+          <EmptyState icon={Siren} title="No Safety Flashes found" description="Try a different filter, or check back once flashes are issued." />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {recentSafetyFlashes.map((flash) => (
+              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? "Unknown project") : "Organization-wide"} />
             ))}
           </div>
         )}

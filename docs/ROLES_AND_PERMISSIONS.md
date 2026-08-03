@@ -85,7 +85,9 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | Incident/Observation Categories (custom) | — | M⁸ | V | V | M⁸ | V | V | V | — | — | V |
 | LMRA | — | V | V | V⁴ | F | V⁴ | M⁴ | V⁴ | — | — | C⁴ ⁹ |
-| Toolbox Talks | — | V | V | V⁴ | F | V⁴ | M⁴ | V⁴ | — | — | C⁴ ⁹ |
+| Toolbox Meetings | — | V | V | V⁴ | F | M⁴ | V⁴ | V⁴ | — | — | V⁴ ¹⁹ |
+| Toolbox Templates | — | V | V | V | F | M | V | V | — | — | — ¹⁹ |
+| Safety Flash | — | V | V | V⁴ | F | M⁴ ²⁰ | V⁴ | V⁴ | — | — | V⁴ ¹⁹ |
 | Scaffold Inspections | — | V | V | V⁴ | F | M⁴ | V⁴ | M⁴ | — | — | V⁴ |
 | Safety Walks | — | V | V | V⁴ | F | M⁴ | C⁴ | M⁴ | — | — | — |
 | Corrective Actions | — | V | V | M⁴ | F | M⁴ ¹⁰ | M⁴ ¹⁰ | M⁴ ¹⁰ | — | — | O ¹¹ |
@@ -103,6 +105,8 @@
 ¹² Any authenticated Employee can submit an incident, near-miss, or observation report and attach evidence — this is intentionally broad (safety reporting should never be gated behind a manager role) and views are limited to reports they authored.
 ¹³ A signature is only ever created by the signer, for their own attestation; it is never editable by anyone, including the signer, once written (see [DATABASE_SCHEMA.md — `digital_signatures`](./DATABASE_SCHEMA.md#digital_signatures--tenant)) — another explicit restriction that overrides any role's "Full" grant elsewhere.
 ¹⁴ PSA can view platform-level audit entries (e.g., org suspension events); tenant-internal audit logs remain scoped to that org's Company Manager/HSE Manager per the tenant isolation rule.
+¹⁹ **Implemented, redesigned**: this row previously described a structured digital-attendance/sign-off design ("Toolbox Talks" — topic, presenter, attendee sign-off), matching the old LMRA-like Contribute-tier Employee access. It was replaced with a simpler **document-based** model before that design was built: an authorized HSE user (HSE Manager or HSE Officer) uploads one completed PDF per meeting/flash — the meeting content and paper attendance evidence, or a one-page safety bulletin — as the permanent record. There is no digital attendance, acknowledgement, signature, or participant tracking, so there is nothing for an Employee (or Foreman/PM/Inspector) to *contribute* — their access is **View only** (Foreman/PM/Inspector: their assigned project's records; Employee: active records available to their project or organization). HSE Officer and HSE Manager are the only roles that upload/manage records — see footnote 20 for Safety Flash's additional organization-wide case. Toolbox Templates has no project dimension at all (an organization-wide reusable library), so its column has no `⁴` project-scope marker and Employee has no access (`—`) — templates are an HSE planning resource, not an employee-facing record.
+²⁰ HSE Officer's Safety Flash management is project-scoped (`M⁴`) when a Safety Flash names a project, but Safety Flash's `project_id` is **optional** — general, non-project-specific bulletins are a normal case. An HSE Officer may also create/manage an organization-wide Safety Flash (no project set) without needing a project assignment, since it isn't inherently tied to one; that flash is then visible to every role's Safety Flash `V`/`V⁴` grant org-wide, the same way a project-scoped one is visible to everyone assigned to that project.
 
 ## 6. Notes on Enforcement
 

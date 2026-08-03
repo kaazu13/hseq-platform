@@ -139,12 +139,12 @@ export const NAV_GROUPS: NavGroup[] = [
           "The scaffold register — tag numbers, type, load class, and a complete chronological inspection history with a 24-item safety checklist, defect tracking, and configurable inspection validity.",
       },
       {
-        label: "Toolbox Talks",
-        href: "/toolbox-talks",
+        label: "Toolbox Meetings",
+        href: "/toolbox-meetings",
         icon: MessagesSquare,
-        status: "planned",
+        status: "available",
         description:
-          "Records of safety briefings given to a crew — topic, presenter, and attendee sign-off.",
+          "A document-based register of completed toolbox meetings, a reusable PDF template library, and Safety Flash bulletins — the signed attendance evidence lives inside each uploaded PDF, with no separate digital attendance/acknowledgement workflow.",
       },
       {
         label: "Safety Walks",

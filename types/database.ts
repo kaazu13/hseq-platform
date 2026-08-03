@@ -1034,6 +1034,220 @@ export type Database = {
         }
         Relationships: []
       }
+      safety_flash_file_replacements: {
+        Row: {
+          id: string
+          new_original_filename: string
+          new_storage_bucket: string
+          new_storage_object_path: string
+          organization_id: string
+          previous_original_filename: string
+          previous_storage_bucket: string
+          previous_storage_object_path: string
+          reason: string
+          replaced_at: string
+          replaced_by: string
+          safety_flash_id: string
+        }
+        Insert: {
+          id?: string
+          new_original_filename: string
+          new_storage_bucket: string
+          new_storage_object_path: string
+          organization_id: string
+          previous_original_filename: string
+          previous_storage_bucket: string
+          previous_storage_object_path: string
+          reason: string
+          replaced_at?: string
+          replaced_by: string
+          safety_flash_id: string
+        }
+        Update: {
+          id?: string
+          new_original_filename?: string
+          new_storage_bucket?: string
+          new_storage_object_path?: string
+          organization_id?: string
+          previous_original_filename?: string
+          previous_storage_bucket?: string
+          previous_storage_object_path?: string
+          reason?: string
+          replaced_at?: string
+          replaced_by?: string
+          safety_flash_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_flash_file_replacements_flash_fk"
+            columns: ["safety_flash_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "safety_flashes"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "safety_flash_file_replacements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_flash_file_replacements_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_flash_number_counters: {
+        Row: {
+          next_number: number
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          next_number?: number
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          next_number?: number
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_flash_number_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      safety_flashes: {
+        Row: {
+          category: Database["public"]["Enums"]["hseq_document_category"]
+          created_at: string
+          created_by: string | null
+          date_issued: string
+          file_checksum_sha256: string | null
+          file_size_bytes: number
+          flash_number: number
+          id: string
+          issued_by_employee_id: string
+          language: string
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          project_id: string | null
+          status: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          summary: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["hseq_document_category"]
+          created_at?: string
+          created_by?: string | null
+          date_issued: string
+          file_checksum_sha256?: string | null
+          file_size_bytes: number
+          flash_number?: number
+          id?: string
+          issued_by_employee_id: string
+          language: string
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          summary?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["hseq_document_category"]
+          created_at?: string
+          created_by?: string | null
+          date_issued?: string
+          file_checksum_sha256?: string | null
+          file_size_bytes?: number
+          flash_number?: number
+          id?: string
+          issued_by_employee_id?: string
+          language?: string
+          mime_type?: string
+          organization_id?: string
+          original_filename?: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket?: string
+          storage_object_path?: string
+          summary?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_flashes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_flashes_issued_by_fk"
+            columns: ["issued_by_employee_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "safety_flashes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_flashes_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "safety_flashes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_flashes_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       safety_observation_participants: {
         Row: {
           created_at: string
@@ -1810,6 +2024,382 @@ export type Database = {
           },
         ]
       }
+      toolbox_meeting_file_replacements: {
+        Row: {
+          id: string
+          new_original_filename: string
+          new_storage_bucket: string
+          new_storage_object_path: string
+          organization_id: string
+          previous_original_filename: string
+          previous_storage_bucket: string
+          previous_storage_object_path: string
+          reason: string
+          replaced_at: string
+          replaced_by: string
+          toolbox_meeting_id: string
+        }
+        Insert: {
+          id?: string
+          new_original_filename: string
+          new_storage_bucket: string
+          new_storage_object_path: string
+          organization_id: string
+          previous_original_filename: string
+          previous_storage_bucket: string
+          previous_storage_object_path: string
+          reason: string
+          replaced_at?: string
+          replaced_by: string
+          toolbox_meeting_id: string
+        }
+        Update: {
+          id?: string
+          new_original_filename?: string
+          new_storage_bucket?: string
+          new_storage_object_path?: string
+          organization_id?: string
+          previous_original_filename?: string
+          previous_storage_bucket?: string
+          previous_storage_object_path?: string
+          reason?: string
+          replaced_at?: string
+          replaced_by?: string
+          toolbox_meeting_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolbox_meeting_file_replacements_meeting_fk"
+            columns: ["toolbox_meeting_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "toolbox_meetings"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "toolbox_meeting_file_replacements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_meeting_file_replacements_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      toolbox_meeting_number_counters: {
+        Row: {
+          next_number: number
+          organization_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          next_number?: number
+          organization_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          next_number?: number
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolbox_meeting_number_counters_project_id_organization_id_fkey"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      toolbox_meetings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_checksum_sha256: string | null
+          file_size_bytes: number
+          held_by_employee_id: string
+          id: string
+          meeting_date: string
+          meeting_number: number
+          mime_type: string
+          notes: string | null
+          organization_id: string
+          original_filename: string
+          project_id: string
+          status: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          uploaded_at: string
+          uploaded_by: string
+          work_area: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_checksum_sha256?: string | null
+          file_size_bytes: number
+          held_by_employee_id: string
+          id?: string
+          meeting_date: string
+          meeting_number?: number
+          mime_type: string
+          notes?: string | null
+          organization_id: string
+          original_filename: string
+          project_id: string
+          status?: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          uploaded_at?: string
+          uploaded_by: string
+          work_area?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_checksum_sha256?: string | null
+          file_size_bytes?: number
+          held_by_employee_id?: string
+          id?: string
+          meeting_date?: string
+          meeting_number?: number
+          mime_type?: string
+          notes?: string | null
+          organization_id?: string
+          original_filename?: string
+          project_id?: string
+          status?: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket?: string
+          storage_object_path?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          uploaded_at?: string
+          uploaded_by?: string
+          work_area?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolbox_meetings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_meetings_held_by_fk"
+            columns: ["held_by_employee_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "toolbox_meetings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_meetings_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "toolbox_meetings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_meetings_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      toolbox_template_file_replacements: {
+        Row: {
+          id: string
+          new_original_filename: string
+          new_storage_bucket: string
+          new_storage_object_path: string
+          organization_id: string
+          previous_original_filename: string
+          previous_storage_bucket: string
+          previous_storage_object_path: string
+          reason: string
+          replaced_at: string
+          replaced_by: string
+          toolbox_template_id: string
+        }
+        Insert: {
+          id?: string
+          new_original_filename: string
+          new_storage_bucket: string
+          new_storage_object_path: string
+          organization_id: string
+          previous_original_filename: string
+          previous_storage_bucket: string
+          previous_storage_object_path: string
+          reason: string
+          replaced_at?: string
+          replaced_by: string
+          toolbox_template_id: string
+        }
+        Update: {
+          id?: string
+          new_original_filename?: string
+          new_storage_bucket?: string
+          new_storage_object_path?: string
+          organization_id?: string
+          previous_original_filename?: string
+          previous_storage_bucket?: string
+          previous_storage_object_path?: string
+          reason?: string
+          replaced_at?: string
+          replaced_by?: string
+          toolbox_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolbox_template_file_replacements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_template_file_replacements_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_template_file_replacements_template_fk"
+            columns: ["toolbox_template_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "toolbox_templates"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      toolbox_templates: {
+        Row: {
+          category: Database["public"]["Enums"]["hseq_document_category"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_checksum_sha256: string | null
+          file_size_bytes: number
+          id: string
+          language: string
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          status: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["hseq_document_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_checksum_sha256?: string | null
+          file_size_bytes: number
+          id?: string
+          language: string
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          status?: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["hseq_document_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_checksum_sha256?: string | null
+          file_size_bytes?: number
+          id?: string
+          language?: string
+          mime_type?: string
+          organization_id?: string
+          original_filename?: string
+          status?: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket?: string
+          storage_object_path?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolbox_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_templates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolbox_templates_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1843,6 +2433,10 @@ export type Database = {
         Args: { target_inspection_id: string }
         Returns: undefined
       }
+      assert_toolbox_authorized_employee: {
+        Args: { target_employee_id: string; target_organization_id: string }
+        Returns: undefined
+      }
       can_close_corrective_action: {
         Args: {
           target_created_by: string
@@ -1870,6 +2464,14 @@ export type Database = {
           target_org_id: string
         }
         Returns: number
+      }
+      employee_has_any_organization_role: {
+        Args: {
+          role_names: string[]
+          target_employee_id: string
+          target_organization_id: string
+        }
+        Returns: boolean
       }
       employee_matches_filters: {
         Args: {
@@ -1937,6 +2539,16 @@ export type Database = {
           profile_id: string
         }[]
       }
+      get_toolbox_authorized_employee_info: {
+        Args: { target_employee_ids: string[] }
+        Returns: {
+          employee_number: string
+          first_name: string
+          id: string
+          last_name: string
+          profile_id: string
+        }[]
+      }
       has_any_organization_role: {
         Args: { role_names: string[]; target_org_id: string }
         Returns: boolean
@@ -1965,9 +2577,31 @@ export type Database = {
         Args: { target_employee_id: string }
         Returns: boolean
       }
+      is_safety_flash_manage_tier: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: boolean
+      }
       is_scaffold_manage_tier: {
         Args: { target_organization_id: string; target_project_id: string }
         Returns: boolean
+      }
+      is_toolbox_manage_tier: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: boolean
+      }
+      is_toolbox_template_manage_tier: {
+        Args: { target_organization_id: string }
+        Returns: boolean
+      }
+      list_toolbox_authorized_employees: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: {
+          employee_number: string
+          first_name: string
+          id: string
+          last_name: string
+          profile_id: string
+        }[]
       }
       move_employee_to_team: {
         Args: {
@@ -2003,6 +2637,127 @@ export type Database = {
       reorder_teams: {
         Args: { target_project_id: string; target_team_ids: string[] }
         Returns: undefined
+      }
+      replace_safety_flash_file: {
+        Args: {
+          new_file_checksum_sha256: string
+          new_file_size_bytes: number
+          new_mime_type: string
+          new_original_filename: string
+          new_storage_object_path: string
+          reason: string
+          target_flash_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["hseq_document_category"]
+          created_at: string
+          created_by: string | null
+          date_issued: string
+          file_checksum_sha256: string | null
+          file_size_bytes: number
+          flash_number: number
+          id: string
+          issued_by_employee_id: string
+          language: string
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          project_id: string | null
+          status: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          summary: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          uploaded_at: string
+          uploaded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "safety_flashes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_toolbox_meeting_file: {
+        Args: {
+          new_file_checksum_sha256: string
+          new_file_size_bytes: number
+          new_mime_type: string
+          new_original_filename: string
+          new_storage_object_path: string
+          reason: string
+          target_meeting_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          file_checksum_sha256: string | null
+          file_size_bytes: number
+          held_by_employee_id: string
+          id: string
+          meeting_date: string
+          meeting_number: number
+          mime_type: string
+          notes: string | null
+          organization_id: string
+          original_filename: string
+          project_id: string
+          status: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          uploaded_at: string
+          uploaded_by: string
+          work_area: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "toolbox_meetings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_toolbox_template_file: {
+        Args: {
+          new_file_checksum_sha256: string
+          new_file_size_bytes: number
+          new_mime_type: string
+          new_original_filename: string
+          new_storage_object_path: string
+          reason: string
+          target_template_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["hseq_document_category"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_checksum_sha256: string | null
+          file_size_bytes: number
+          id: string
+          language: string
+          mime_type: string
+          organization_id: string
+          original_filename: string
+          status: Database["public"]["Enums"]["toolbox_document_status"]
+          storage_bucket: string
+          storage_object_path: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          uploaded_at: string
+          uploaded_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "toolbox_templates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       resolve_scaffold_inspection_validity_days: {
         Args: { target_project_id: string }
@@ -2108,6 +2863,25 @@ export type Database = {
         | "end_of_contract"
         | "other"
       employment_status: "active" | "inactive" | "on_leave" | "terminated"
+      hseq_document_category:
+        | "working_at_height"
+        | "line_of_fire"
+        | "material_handling"
+        | "falling_objects"
+        | "scaffold_erection_dismantling"
+        | "scaffold_inspection"
+        | "ppe"
+        | "access_egress"
+        | "housekeeping"
+        | "lifting_operations"
+        | "mewp_mobile_equipment"
+        | "tools_equipment"
+        | "weather_conditions"
+        | "emergency_response"
+        | "alcohol_drugs"
+        | "fit_for_work"
+        | "incident_lessons_learned"
+        | "other"
       lmra_hazard_type:
         | "working_at_height"
         | "falling_objects"
@@ -2229,6 +3003,7 @@ export type Database = {
         | "cyan"
         | "brown"
       team_status: "active" | "archived"
+      toolbox_document_status: "active" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2397,6 +3172,26 @@ export const Constants = {
         "other",
       ],
       employment_status: ["active", "inactive", "on_leave", "terminated"],
+      hseq_document_category: [
+        "working_at_height",
+        "line_of_fire",
+        "material_handling",
+        "falling_objects",
+        "scaffold_erection_dismantling",
+        "scaffold_inspection",
+        "ppe",
+        "access_egress",
+        "housekeeping",
+        "lifting_operations",
+        "mewp_mobile_equipment",
+        "tools_equipment",
+        "weather_conditions",
+        "emergency_response",
+        "alcohol_drugs",
+        "fit_for_work",
+        "incident_lessons_learned",
+        "other",
+      ],
       lmra_hazard_type: [
         "working_at_height",
         "falling_objects",
@@ -2529,6 +3324,7 @@ export const Constants = {
         "brown",
       ],
       team_status: ["active", "archived"],
+      toolbox_document_status: ["active", "archived"],
     },
   },
 } as const
