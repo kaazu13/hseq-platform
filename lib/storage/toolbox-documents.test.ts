@@ -5,7 +5,7 @@ import { validatePdfFile, computeSha256Checksum, buildToolboxMeetingObjectPath, 
 const PDF_MAGIC = new TextEncoder().encode("%PDF-1.4\n%mock pdf content");
 
 function makePdfFile(name = "meeting.pdf", bytes: Uint8Array = PDF_MAGIC, type = "application/pdf") {
-  return new File([bytes], name, { type });
+  return new File([Buffer.from(bytes)], name, { type });
 }
 
 describe("validatePdfFile", () => {

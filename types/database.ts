@@ -90,6 +90,48 @@ export type Database = {
           },
         ]
       }
+      bootstrap_audit_log: {
+        Row: {
+          id: string
+          notes: string | null
+          organization_id: string
+          performed_at: string
+          role_assigned: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          organization_id: string
+          performed_at?: string
+          role_assigned: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          performed_at?: string
+          role_assigned?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bootstrap_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bootstrap_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corrective_actions: {
         Row: {
           closure_evidence: string | null
@@ -2436,6 +2478,31 @@ export type Database = {
       assert_toolbox_authorized_employee: {
         Args: { target_employee_id: string; target_organization_id: string }
         Returns: undefined
+      }
+      bootstrap_first_owner: {
+        Args: {
+          notes?: string
+          target_organization_id: string
+          target_user_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          organization_id: string
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       can_close_corrective_action: {
         Args: {

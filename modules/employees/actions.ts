@@ -127,6 +127,95 @@ export async function createEmployee(
   redirect(`/employees/${encodeURIComponent(data.employee_number)}`);
 }
 
+/**
+ * Creates an employee record AND links it to an existing organization
+ * member's login account in one step (`profile_id` set at insert time,
+ * rather than the separate create-then-`linkEmployeeToProfile` sequence)
+ * — used by the /admin/members page for a member who is an active
+ * organization member but has no employee record yet (a real onboarding
+ * gap this milestone found: a membership/role can exist with zero linked
+ * employee record, which is exactly why that member showed up with no
+ * assignable projects anywhere in the app). Unlike `createEmployee`, this
+ * does NOT redirect — the admin page stays on its own list.
+ */
+export async function createEmployeeForMember(organizationId: string, profileId: string, input: CreateEmployeeFormInput): Promise<ActionResult<{ employeeId: string; employeeNumber: string }>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const parsed = createEmployeeFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  const supabase = await createClient();
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_memberships")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membershipError) throw membershipError;
+  if (!membership) {
+    return { ok: false, error: { code: "validation_error", message: "That account has no active membership in this organization." } };
+  }
+
+  const { data: alreadyLinked, error: alreadyLinkedError } = await supabase.from("employees").select("id").eq("organization_id", organizationId).eq("profile_id", profileId).maybeSingle();
+  if (alreadyLinkedError) throw alreadyLinkedError;
+  if (alreadyLinked) {
+    return { ok: false, error: { code: "conflict", message: "This account already has a linked employee record." } };
+  }
+
+  const numberResult = await allocateEmployeeNumber(supabase, organizationId);
+  if (!numberResult.ok) {
+    return numberResult;
+  }
+  const employeeNumber = numberResult.data;
+
+  const { data, error } = await supabase
+    .from("employees")
+    .insert({
+      organization_id: organizationId,
+      profile_id: profileId,
+      employee_number: employeeNumber,
+      first_name: parsed.data.firstName,
+      last_name: parsed.data.lastName,
+      work_email: parsed.data.workEmail ?? null,
+      phone: parsed.data.phone ?? null,
+      position_title: parsed.data.positionTitle ?? null,
+      employment_status: "active",
+      birth_date: parsed.data.birthDate ?? null,
+      start_date: parsed.data.startDate ?? null,
+      created_by: user.id,
+      updated_by: user.id,
+    })
+    .select("id, employee_number")
+    .single();
+
+  if (error || !data) {
+    if (error && isUniqueViolation(error)) {
+      return { ok: false, error: { code: "conflict", message: "That employee number or linked account was just taken. Try again." } };
+    }
+    if (error && isRlsViolation(error)) {
+      forbidden();
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't create the employee record. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "create",
+    entity_type: "employee",
+    entity_id: data.id,
+    changes: { first_name: parsed.data.firstName, last_name: parsed.data.lastName, employee_number: data.employee_number, profile_linked: profileId },
+  });
+
+  revalidatePath("/admin/members");
+  revalidatePath(`/employees/${encodeURIComponent(data.employee_number)}`);
+  return { ok: true, data: { employeeId: data.id, employeeNumber: data.employee_number } };
+}
+
 export async function updateEmployee(
   organizationId: string,
   employeeId: string,
@@ -576,6 +665,80 @@ export async function assignEmployeeRole(
   });
 
   revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Links an existing employee record to a login account (`employees.profile_id`)
+ * — the gap noted in that column's own comment
+ * (supabase/migrations/20260725091000_employees.sql: "if this is ever set
+ * by a future activation flow, that flow must validate the referenced
+ * profile has an ACTIVE organization_memberships row for this same
+ * organization_id"). This is that flow's first implementation. Column-level
+ * grants already permit this write today (no REVOKE targets `profile_id`),
+ * so this is a normal RLS-enforced Server Function, not a privileged
+ * bypass — gated by the same EMPLOYEE_WRITE_ROLES as every other employee
+ * mutation.
+ *
+ * Refuses to overwrite an existing link (the employee must be unlinked
+ * first — no unlink action exists yet, deliberately: this milestone only
+ * needs to ADD the first link for an owner-account onboarding gap, not a
+ * general re-linking workflow) and refuses to link a profile with no
+ * ACTIVE membership in this organization (the exact validation the
+ * column's original comment called for). The partial unique index
+ * `employees_organization_id_profile_id_key`
+ * (20260804092000_employee_profile_link_uniqueness.sql) is the database-level
+ * backstop against linking the same profile to two employee rows in one
+ * organization.
+ */
+export async function linkEmployeeToProfile(organizationId: string, employeeId: string, profileId: string): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+
+  const employee = await getEmployee(organizationId, employeeId);
+  if (!employee) {
+    return { ok: false, error: { code: "not_found", message: "Employee not found." } };
+  }
+  if (employee.profile_id) {
+    return { ok: false, error: { code: "conflict", message: "This employee record is already linked to a login account." } };
+  }
+
+  const supabase = await createClient();
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("organization_memberships")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membershipError) throw membershipError;
+  if (!membership) {
+    return { ok: false, error: { code: "validation_error", message: "That account has no active membership in this organization yet." } };
+  }
+
+  const { error } = await supabase.from("employees").update({ profile_id: profileId, updated_by: user.id }).eq("organization_id", organizationId).eq("id", employeeId);
+
+  if (error) {
+    if (isUniqueViolation(error)) {
+      return { ok: false, error: { code: "conflict", message: "That account is already linked to a different employee record in this organization." } };
+    }
+    if (isRlsViolation(error)) {
+      forbidden();
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't link the account. Try again." } };
+  }
+
+  await supabase.from("audit_events").insert({
+    organization_id: organizationId,
+    actor_user_id: user.id,
+    action: "update",
+    entity_type: "employee",
+    entity_id: employeeId,
+    changes: { profile_linked: profileId },
+  });
+
+  revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
+  revalidatePath("/admin/members");
   return { ok: true, data: null };
 }
 

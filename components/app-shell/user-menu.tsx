@@ -108,7 +108,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/settings" />}>
+              <DropdownMenuItem render={<Link href="/account" />}>
                 <User />
                 Account
               </DropdownMenuItem>
