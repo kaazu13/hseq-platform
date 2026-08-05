@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toEmployeeOptions } from "./employee-combobox";
+import { toEmployeeOptions } from "./employee-options";
 
 describe("toEmployeeOptions", () => {
   it("maps id/first_name/last_name into value/label", () => {

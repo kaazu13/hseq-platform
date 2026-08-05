@@ -16,7 +16,7 @@ import { ObservationParticipantsPicker } from "@/modules/observations/components
 import { ObservationReviewCloseCard } from "@/modules/observations/components/observation-review-close-card";
 import { ObservationPrintButton } from "@/modules/observations/components/observation-print-button";
 import { CorrectiveActionsSection } from "@/modules/corrective-actions/components/corrective-actions-section";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";

@@ -9,7 +9,7 @@ import { HSEQ_DOCUMENT_CATEGORY_LABELS } from "@/modules/toolbox-templates/types
 import { SafetyFlashEditForm } from "@/modules/safety-flash/components/safety-flash-edit-form";
 import { SafetyFlashStatusToggle } from "@/modules/safety-flash/components/safety-flash-status-toggle";
 import { SafetyFlashReplaceFileForm } from "@/modules/safety-flash/components/safety-flash-replace-file-form";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ToolboxDocumentStatusBadge } from "@/components/shared/toolbox-document-status-badge";

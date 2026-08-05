@@ -7,7 +7,7 @@ import { canManageLmra } from "@/modules/lmra/permissions";
 import { LmraAssessmentForm } from "@/modules/lmra/components/lmra-assessment-form";
 import { LmraHazardChecklist } from "@/modules/lmra/components/lmra-hazard-checklist";
 import { LmraParticipantsPicker } from "@/modules/lmra/components/lmra-participants-picker";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 

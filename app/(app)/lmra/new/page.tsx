@@ -4,7 +4,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getProject } from "@/modules/projects/queries";
 import { listLmraCreatableProjects, listLmraCandidateEmployees } from "@/modules/lmra/queries";
 import { LmraAssessmentForm } from "@/modules/lmra/components/lmra-assessment-form";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ShieldCheck } from "lucide-react";

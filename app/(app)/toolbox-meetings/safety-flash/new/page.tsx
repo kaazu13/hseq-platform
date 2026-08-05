@@ -4,7 +4,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { listSafetyFlashAuthorizedEmployees } from "@/modules/safety-flash/queries";
 import { SafetyFlashForm } from "@/modules/safety-flash/components/safety-flash-form";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 
 export default async function NewSafetyFlashPage() {

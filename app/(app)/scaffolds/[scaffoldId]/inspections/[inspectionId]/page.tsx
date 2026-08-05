@@ -13,7 +13,7 @@ import { ScaffoldPrintButton } from "@/modules/scaffolds/components/scaffold-pri
 import { listDefectsForInspection } from "@/modules/scaffold-defects/queries";
 import { canManageScaffoldDefectDetails } from "@/modules/scaffold-defects/permissions";
 import { ScaffoldDefectsSection } from "@/modules/scaffold-defects/components/scaffold-defects-section";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Card, CardContent } from "@/components/ui/card";

@@ -3,7 +3,7 @@ import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDe
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
 import type { Project } from "@/modules/projects/types";
 import type { RoleName } from "@/modules/organizations/types";
-import type { EmployeeOption } from "@/components/shared/employee-combobox";
+import type { EmployeeOption } from "@/modules/employees/employee-options";
 
 /**
  * Server-only data access for the Scaffolds/Scaffold Inspections domain —

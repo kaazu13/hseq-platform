@@ -4,7 +4,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getScaffold, isCallerProjectAccessible, listScaffoldCandidateEmployees, listInspectionsForScaffold } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { InspectionForm } from "@/modules/scaffolds/components/inspection-form";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 
 type NewInspectionPageProps = {

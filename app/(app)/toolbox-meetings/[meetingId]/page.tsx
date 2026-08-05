@@ -8,7 +8,7 @@ import { formatToolboxMeetingNumberLabel } from "@/modules/toolbox-meetings/type
 import { ToolboxMeetingEditForm } from "@/modules/toolbox-meetings/components/toolbox-meeting-edit-form";
 import { ToolboxMeetingStatusToggle } from "@/modules/toolbox-meetings/components/toolbox-meeting-status-toggle";
 import { ToolboxMeetingReplaceFileForm } from "@/modules/toolbox-meetings/components/toolbox-meeting-replace-file-form";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ToolboxDocumentStatusBadge } from "@/components/shared/toolbox-document-status-badge";

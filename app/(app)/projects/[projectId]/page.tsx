@@ -7,7 +7,7 @@ import { getProject, getMyProjectAssignmentRoles, listProjectAssignments } from 
 import { canManageProject } from "@/modules/projects/permissions";
 import { listActiveEmployeesForPicker } from "@/modules/employees/queries";
 import { listTeamsWithAssignments, listProjectRosterCandidates } from "@/modules/teams/queries";
-import type { EmployeeOption } from "@/components/shared/employee-combobox";
+import type { EmployeeOption } from "@/modules/employees/employee-options";
 import { ProjectOverviewTab } from "@/modules/projects/components/project-overview-tab";
 import { ProjectAssignmentsTab } from "@/modules/projects/components/project-assignments-tab";
 import { ProjectStatusBadge } from "@/modules/projects/components/project-status-badge";

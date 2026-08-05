@@ -12,7 +12,8 @@ import {
   OBSERVATION_STATUS_LABELS,
 } from "@/modules/observations/types";
 import type { Project } from "@/modules/projects/types";
-import { EmployeeCombobox, toEmployeeOptions, type EmployeeOption } from "@/components/shared/employee-combobox";
+import { EmployeeCombobox } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions, type EmployeeOption } from "@/modules/employees/employee-options";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";

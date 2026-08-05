@@ -13,7 +13,7 @@ import { LmraParticipantsPicker } from "@/modules/lmra/components/lmra-participa
 import { LmraSubmitCard } from "@/modules/lmra/components/lmra-submit-card";
 import { LmraReviewCard } from "@/modules/lmra/components/lmra-review-card";
 import { LmraDetailActions } from "@/modules/lmra/components/lmra-detail-actions";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";

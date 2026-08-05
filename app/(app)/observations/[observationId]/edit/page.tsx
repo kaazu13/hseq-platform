@@ -6,7 +6,7 @@ import { getObservation, isCallerProjectAccessible, listObservationCandidateEmpl
 import { canEditObservation } from "@/modules/observations/permissions";
 import { ObservationForm } from "@/modules/observations/components/observation-form";
 import { ObservationParticipantsPicker } from "@/modules/observations/components/observation-participants-picker";
-import { toEmployeeOptions } from "@/components/shared/employee-combobox";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 

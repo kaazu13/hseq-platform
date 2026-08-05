@@ -15,32 +15,16 @@ import {
   useComboboxFilter,
 } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
+import type { EmployeeOption } from "@/modules/employees/employee-options";
 
-/**
- * A person a caller can be offered as a selectable option — the minimal,
- * safe field set Part 7 asks search RPCs to return: id, name, employee
- * number, and a role/trade label ONLY when the platform reliably knows
- * one (never fabricated — see modules/scaffolds/team-eligibility.ts's
- * header comment on why most callers pass `roleLabel: null` today).
- */
-export type EmployeeOption = {
-  value: string;
-  label: string;
-  employeeNumber: string | null;
-  roleLabel: string | null;
-};
-
-/**
- * Converts the common `{id, first_name, last_name, employee_number?}`
- * shape most existing candidate queries already return (e.g.
- * `get_basic_employee_info()`'s BasicEmployee, which has no
- * employee_number by design) into `EmployeeOption[]` for this component.
- * `employeeNumber`/`roleLabel` are simply absent (null) wherever the
- * source query doesn't provide them — never fabricated.
- */
-export function toEmployeeOptions<T extends { id: string; first_name: string; last_name: string; employee_number?: string | null }>(rows: T[]): EmployeeOption[] {
-  return rows.map((row) => ({ value: row.id, label: `${row.first_name} ${row.last_name}`, employeeNumber: row.employee_number ?? null, roleLabel: null }));
-}
+// `EmployeeOption`/`toEmployeeOptions` live in modules/employees/employee-options.ts
+// (no "use client" directive) specifically so Server Components can call
+// toEmployeeOptions() directly — importing ANY export, including a plain
+// function, from a "use client" module from a Server Component is invalid
+// in the App Router. Re-exporting the type here only, not the function,
+// keeps that boundary enforced: this file is the client component, that
+// one is the neutral helper. See components/shared/employee-combobox-boundary.test.ts.
+export type { EmployeeOption };
 
 type EmployeeComboboxProps = {
   id?: string;
