@@ -12,8 +12,8 @@ import {
   type ScaffoldInspectionItem,
   type ScaffoldInspectionItemResult,
   type ScaffoldDefectSeverity,
-  type BasicEmployee,
 } from "@/modules/scaffolds/types";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import { ScaffoldDefectFormDialog } from "@/modules/scaffold-defects/components/scaffold-defect-form-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ type InspectionChecklistProps = {
   scaffoldId: string;
   projectId: string;
   items: ScaffoldInspectionItem[];
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   readOnly: boolean;
 };
 

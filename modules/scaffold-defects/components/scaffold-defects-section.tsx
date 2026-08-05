@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ListChecks, Plus } from "lucide-react";
-import type { ScaffoldDefectDetail, BasicEmployee } from "@/modules/scaffold-defects/types";
+import type { ScaffoldDefectDetail } from "@/modules/scaffold-defects/types";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import type { RoleName } from "@/modules/organizations/types";
 import { ScaffoldDefectItem } from "@/modules/scaffold-defects/components/scaffold-defect-item";
 import { ScaffoldDefectFormDialog } from "@/modules/scaffold-defects/components/scaffold-defect-form-dialog";
@@ -15,7 +16,7 @@ type ScaffoldDefectsSectionProps = {
   scaffoldId: string;
   projectId: string;
   defects: ScaffoldDefectDetail[];
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   canCreate: boolean;
   canManageDetails: boolean;
   roleNames: RoleName[];

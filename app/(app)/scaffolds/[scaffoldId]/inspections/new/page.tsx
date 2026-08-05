@@ -4,6 +4,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getScaffold, isCallerProjectAccessible, listScaffoldCandidateEmployees, listInspectionsForScaffold } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { InspectionForm } from "@/modules/scaffolds/components/inspection-form";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 
 type NewInspectionPageProps = {
@@ -38,7 +39,7 @@ export default async function NewInspectionPage({ params }: NewInspectionPagePro
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="New inspection" description={`${scaffold.tag_number} · ${scaffold.work_area}`} />
       <div className="max-w-3xl">
-        <InspectionForm organizationId={currentOrganizationId} scaffoldId={scaffold.id} projectId={scaffold.project_id} candidates={candidates} priorInspections={priorInspections} />
+        <InspectionForm organizationId={currentOrganizationId} scaffoldId={scaffold.id} projectId={scaffold.project_id} candidates={toEmployeeOptions(candidates)} priorInspections={priorInspections} />
       </div>
     </div>
   );

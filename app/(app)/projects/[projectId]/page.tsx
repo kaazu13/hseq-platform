@@ -7,6 +7,7 @@ import { getProject, getMyProjectAssignmentRoles, listProjectAssignments } from 
 import { canManageProject } from "@/modules/projects/permissions";
 import { listActiveEmployeesForPicker } from "@/modules/employees/queries";
 import { listTeamsWithAssignments, listProjectRosterCandidates } from "@/modules/teams/queries";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import { ProjectOverviewTab } from "@/modules/projects/components/project-overview-tab";
 import { ProjectAssignmentsTab } from "@/modules/projects/components/project-assignments-tab";
 import { ProjectStatusBadge } from "@/modules/projects/components/project-status-badge";
@@ -52,12 +53,19 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   ]);
   const canManage = canManageProject(roleNames, myProjectRoles);
 
-  const [teams, rosterCandidates, projectAssignments, pickerEmployees] = await Promise.all([
+  const [teams, rosterCandidates, projectAssignments, pickerEmployeeRows] = await Promise.all([
     listTeamsWithAssignments(currentOrganizationId, projectId),
     listProjectRosterCandidates(currentOrganizationId, projectId),
     listProjectAssignments(currentOrganizationId, projectId),
     listActiveEmployeesForPicker(currentOrganizationId),
   ]);
+
+  const pickerEmployees: EmployeeOption[] = pickerEmployeeRows.map((employee) => ({
+    value: employee.id,
+    label: `${employee.first_name} ${employee.last_name}`,
+    employeeNumber: null,
+    roleLabel: employee.position_title,
+  }));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">

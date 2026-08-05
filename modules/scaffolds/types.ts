@@ -17,6 +17,7 @@ import type { Database, Enums } from "@/types/database";
 export type Scaffold = Database["public"]["Tables"]["scaffolds"]["Row"];
 export type ScaffoldInspection = Database["public"]["Tables"]["scaffold_inspections"]["Row"];
 export type ScaffoldInspectionItem = Database["public"]["Tables"]["scaffold_inspection_items"]["Row"];
+export type ScaffoldTeamMember = Database["public"]["Tables"]["scaffold_team_members"]["Row"];
 
 export type ScaffoldType = Enums<"scaffold_type">;
 export type ScaffoldStatus = Enums<"scaffold_status">;
@@ -250,7 +251,43 @@ export type ScaffoldInspectionDetail = ScaffoldInspection & {
   items: ScaffoldInspectionItem[];
 };
 
+/** One resolved scaffold team member — the employee fields a display list/print view needs, never more (see get_basic_employee_info()'s own narrow column set). */
+export type ScaffoldTeamMemberDetail = {
+  id: string;
+  employeeId: string;
+  teamPosition: number;
+  firstName: string;
+  lastName: string;
+};
+
 /** One scaffold with everything a detail page needs, resolved in one place. */
 export type ScaffoldDetail = Scaffold & {
   responsibleForeman: BasicEmployee | null;
+  teamMembers: ScaffoldTeamMemberDetail[];
 };
+
+/**
+ * Formats the three optional dimension columns into the required
+ * "5.70 m H × 12.00 m L × 1.20 m W" display — omitting whichever
+ * dimensions aren't recorded rather than showing a placeholder for them
+ * (this milestone's explicit "if only some dimensions exist, show only
+ * available dimensions" requirement). Returns null when none are set, so
+ * callers can render their own empty state instead of an empty string.
+ */
+export function formatScaffoldDimensions(scaffold: Pick<Scaffold, "height_metres" | "length_metres" | "width_metres">): string | null {
+  const parts: string[] = [];
+  if (scaffold.height_metres !== null) parts.push(`${Number(scaffold.height_metres).toFixed(2)} m H`);
+  if (scaffold.length_metres !== null) parts.push(`${Number(scaffold.length_metres).toFixed(2)} m L`);
+  if (scaffold.width_metres !== null) parts.push(`${Number(scaffold.width_metres).toFixed(2)} m W`);
+  return parts.length > 0 ? parts.join(" × ") : null;
+}
+
+/**
+ * Suggested, documented scaffold-team-size bound — the milestone's own
+ * suggested range (minimum 1, maximum 50). Enforced both here (zod) and
+ * loosely backstopped by the database's own generous `team_position`
+ * range check (1-200) — the app-layer limit is the real, single source of
+ * truth for "reasonable," not the database's wider allowance.
+ */
+export const SCAFFOLD_TEAM_MIN_SIZE = 1;
+export const SCAFFOLD_TEAM_MAX_SIZE = 50;

@@ -12,8 +12,8 @@ import {
   type SafetyObservation,
   type ObservationCategory,
   type ObservationRiskLevel,
-  type BasicEmployee,
 } from "@/modules/observations/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,7 +26,7 @@ type ObservationFormProps = {
   organizationId: string;
   projectId: string;
   projectName: string;
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
 } & ({ mode: "create"; observation?: undefined } | { mode: "edit"; observation: SafetyObservation });
 
 /** Converts a stored timestamptz to the `datetime-local` input's expected local-time value — no timezone conversion beyond what the browser's Date object already does for display. */
@@ -123,20 +123,16 @@ export function ObservationForm({ organizationId, projectId, projectName, candid
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="observerId">Observer</Label>
-          <Select value={observerId} onValueChange={(value) => setObserverId(value ?? "")}>
-            <SelectTrigger id="observerId" className="w-full" aria-invalid={Boolean(fieldError("observerId"))}>
-              <SelectValue placeholder="Who made this observation" />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldError("observerId") && <p className="text-sm text-destructive">{fieldError("observerId")}</p>}
+          <EmployeeComboboxField
+            label="Observer"
+            htmlFor="observerId"
+            value={observerId || null}
+            onValueChange={(id) => setObserverId(id ?? "")}
+            options={candidates}
+            placeholder="Who made this observation"
+            clearable={false}
+            error={fieldError("observerId")}
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">

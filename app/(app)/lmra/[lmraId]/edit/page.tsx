@@ -7,6 +7,7 @@ import { canManageLmra } from "@/modules/lmra/permissions";
 import { LmraAssessmentForm } from "@/modules/lmra/components/lmra-assessment-form";
 import { LmraHazardChecklist } from "@/modules/lmra/components/lmra-hazard-checklist";
 import { LmraParticipantsPicker } from "@/modules/lmra/components/lmra-participants-picker";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 
@@ -64,6 +65,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
   const projectName = project?.name ?? "Project unavailable";
 
   const candidates = await listLmraCandidateEmployees(currentOrganizationId, assessment.project_id);
+  const employeeOptions = toEmployeeOptions(candidates);
   const hazardsEditable = assessment.status === "draft";
 
   return (
@@ -71,7 +73,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
       <PageHeader title="Edit LMRA" description={`${projectName} · ${assessment.work_activity}`} />
 
       <div className="max-w-3xl">
-        <LmraAssessmentForm mode="edit" organizationId={currentOrganizationId} projectId={assessment.project_id} projectName={projectName} candidates={candidates} assessment={assessment} />
+        <LmraAssessmentForm mode="edit" organizationId={currentOrganizationId} projectId={assessment.project_id} projectName={projectName} candidates={employeeOptions} assessment={assessment} />
       </div>
 
       <div className="flex flex-col gap-3">
@@ -81,7 +83,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
           lmraId={assessment.id}
           projectId={assessment.project_id}
           hazards={assessment.hazards}
-          candidates={candidates}
+          candidates={employeeOptions}
           readOnly={!hazardsEditable}
         />
       </div>

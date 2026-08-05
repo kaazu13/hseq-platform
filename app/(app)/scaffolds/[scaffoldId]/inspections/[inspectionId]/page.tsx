@@ -13,6 +13,7 @@ import { ScaffoldPrintButton } from "@/modules/scaffolds/components/scaffold-pri
 import { listDefectsForInspection } from "@/modules/scaffold-defects/queries";
 import { canManageScaffoldDefectDetails } from "@/modules/scaffold-defects/permissions";
 import { ScaffoldDefectsSection } from "@/modules/scaffold-defects/components/scaffold-defects-section";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,7 +64,7 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
   const projectName = project?.name ?? "Project unavailable";
   const canManage = canManageScaffold(roleNames, hasProjectAccess);
   const canManageDefects = canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
-  const candidates = await listScaffoldCandidateEmployees(currentOrganizationId, inspection.project_id);
+  const candidates = toEmployeeOptions(await listScaffoldCandidateEmployees(currentOrganizationId, inspection.project_id));
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">

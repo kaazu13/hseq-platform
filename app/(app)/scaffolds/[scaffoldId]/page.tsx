@@ -6,7 +6,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getScaffold, listInspectionsForScaffold, isCallerProjectAccessible, getCurrentInspectionExpiryByScaffold } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
-import { SCAFFOLD_TYPE_LABELS } from "@/modules/scaffolds/types";
+import { SCAFFOLD_TYPE_LABELS, formatScaffoldDimensions } from "@/modules/scaffolds/types";
 import { ScaffoldStatusBadge } from "@/modules/scaffolds/components/scaffold-status-badge";
 import { InspectionHistoryList } from "@/modules/scaffolds/components/inspection-history-list";
 import { ScaffoldPrintButton } from "@/modules/scaffolds/components/scaffold-print-button";
@@ -106,10 +106,10 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Maximum permitted load</p>
             <p className="text-sm">{scaffold.max_load_class}</p>
           </div>
-          {scaffold.max_height_meters && (
+          {formatScaffoldDimensions(scaffold) && (
             <div>
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Maximum height</p>
-              <p className="text-sm">{scaffold.max_height_meters} m</p>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Dimensions</p>
+              <p className="text-sm">{formatScaffoldDimensions(scaffold)}</p>
             </div>
           )}
           {scaffold.erected_by && (
@@ -134,6 +134,25 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
           )}
         </CardContent>
       </Card>
+
+      <div className="flex flex-col gap-3">
+        <SectionHeader title={`Scaffold team${scaffold.teamMembers.length > 0 ? ` — ${scaffold.teamMembers.length} members` : ""}`} />
+        {scaffold.teamMembers.length === 0 ? (
+          <EmptyState icon={HardHat} title="No scaffold team members recorded" />
+        ) : (
+          <Card>
+            <CardContent className="pt-4">
+              <ol className="flex flex-col gap-1.5 text-sm">
+                {scaffold.teamMembers.map((member, index) => (
+                  <li key={member.id}>
+                    {index + 1}. {member.firstName} {member.lastName}
+                  </li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       <div className="flex flex-col gap-3">
         <SectionHeader

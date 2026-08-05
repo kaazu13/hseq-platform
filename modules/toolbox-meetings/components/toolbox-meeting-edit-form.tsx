@@ -4,16 +4,14 @@ import { useState, useTransition, type FormEvent } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { updateToolboxMeetingMetadata } from "@/modules/toolbox-meetings/actions";
 import type { ToolboxMeeting } from "@/modules/toolbox-meetings/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type ToolboxEmployeeOption = { id: string; first_name: string; last_name: string };
-
-export function ToolboxMeetingEditForm({ organizationId, meeting, candidates }: { organizationId: string; meeting: ToolboxMeeting; candidates: ToolboxEmployeeOption[] }) {
+export function ToolboxMeetingEditForm({ organizationId, meeting, candidates }: { organizationId: string; meeting: ToolboxMeeting; candidates: EmployeeOption[] }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -76,20 +74,15 @@ export function ToolboxMeetingEditForm({ organizationId, meeting, candidates }: 
           <Input id="workArea" name="workArea" defaultValue={meeting.work_area ?? ""} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="heldByEmployeeId">HSE person who held the meeting</Label>
-          <Select value={heldByEmployeeId} onValueChange={(value) => setHeldByEmployeeId(value ?? "")}>
-            <SelectTrigger id="heldByEmployeeId" className="w-full" aria-invalid={Boolean(fieldError("heldByEmployeeId"))}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldError("heldByEmployeeId") && <p className="text-sm text-destructive">{fieldError("heldByEmployeeId")}</p>}
+          <EmployeeComboboxField
+            label="HSE person who held the meeting"
+            htmlFor="heldByEmployeeId"
+            value={heldByEmployeeId || null}
+            onValueChange={(id) => setHeldByEmployeeId(id ?? "")}
+            options={candidates}
+            clearable={false}
+            error={fieldError("heldByEmployeeId")}
+          />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label htmlFor="notes">Notes (optional)</Label>

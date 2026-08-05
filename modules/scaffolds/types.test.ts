@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getScaffoldDisplayStatus, SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
+import { getScaffoldDisplayStatus, SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS, formatScaffoldDimensions, SCAFFOLD_TEAM_MIN_SIZE, SCAFFOLD_TEAM_MAX_SIZE } from "./types";
 
 const NOW = new Date("2026-08-10T12:00:00.000Z");
 
@@ -40,5 +40,33 @@ describe("getScaffoldDisplayStatus", () => {
 
   it("treats an expiry of exactly now as already expired", () => {
     expect(getScaffoldDisplayStatus("safe", NOW.toISOString(), NOW)).toBe("expired");
+  });
+});
+
+describe("formatScaffoldDimensions", () => {
+  it("formats all three dimensions as '<H> m H × <L> m L × <W> m W'", () => {
+    expect(formatScaffoldDimensions({ height_metres: 5.7, length_metres: 12, width_metres: 1.2 })).toBe("5.70 m H × 12.00 m L × 1.20 m W");
+  });
+
+  it("omits whichever dimensions aren't recorded rather than showing a placeholder", () => {
+    expect(formatScaffoldDimensions({ height_metres: 5.7, length_metres: null, width_metres: null })).toBe("5.70 m H");
+    expect(formatScaffoldDimensions({ height_metres: null, length_metres: 12, width_metres: null })).toBe("12.00 m L");
+    expect(formatScaffoldDimensions({ height_metres: null, length_metres: null, width_metres: 1.2 })).toBe("1.20 m W");
+    expect(formatScaffoldDimensions({ height_metres: 5.7, length_metres: 12, width_metres: null })).toBe("5.70 m H × 12.00 m L");
+  });
+
+  it("returns null when no dimensions are recorded, so callers can render their own empty state", () => {
+    expect(formatScaffoldDimensions({ height_metres: null, length_metres: null, width_metres: null })).toBeNull();
+  });
+
+  it("always shows exactly two decimal places regardless of stored precision", () => {
+    expect(formatScaffoldDimensions({ height_metres: 5, length_metres: null, width_metres: null })).toBe("5.00 m H");
+  });
+});
+
+describe("scaffold team size bounds", () => {
+  it("documents the suggested minimum and maximum team size", () => {
+    expect(SCAFFOLD_TEAM_MIN_SIZE).toBe(1);
+    expect(SCAFFOLD_TEAM_MAX_SIZE).toBe(50);
   });
 });

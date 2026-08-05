@@ -16,6 +16,7 @@ import { ObservationParticipantsPicker } from "@/modules/observations/components
 import { ObservationReviewCloseCard } from "@/modules/observations/components/observation-review-close-card";
 import { ObservationPrintButton } from "@/modules/observations/components/observation-print-button";
 import { CorrectiveActionsSection } from "@/modules/corrective-actions/components/corrective-actions-section";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
   const canManageActionDetails = canManageCorrectiveActionDetails(roleNames, isProjectManager, hasProjectAccess);
 
   const candidates = await listObservationCandidateEmployees(currentOrganizationId, observation.project_id);
-  const actionCandidates = await listCorrectiveActionCandidateEmployees(currentOrganizationId, observation.project_id);
+  const actionCandidates = toEmployeeOptions(await listCorrectiveActionCandidateEmployees(currentOrganizationId, observation.project_id));
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">

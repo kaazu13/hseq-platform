@@ -11,12 +11,13 @@ import {
 import { OrgSwitcher } from "@/components/app-shell/org-switcher";
 import { NavMain } from "@/components/app-shell/nav-main";
 import { UserMenu } from "@/components/app-shell/user-menu";
-import type { OrganizationSummary } from "@/modules/organizations/types";
+import type { OrganizationSummary, RoleName } from "@/modules/organizations/types";
 
 type AppSidebarProps = {
   organizations: OrganizationSummary[];
   currentOrganizationId: string | null;
   user: { name: string; email: string };
+  roleNames: RoleName[];
 };
 
 /**
@@ -29,7 +30,7 @@ type AppSidebarProps = {
  * everything interactive (org switching, the user menu, active nav state)
  * is pushed down into the small client components it renders.
  */
-export function AppSidebar({ organizations, currentOrganizationId, user }: AppSidebarProps) {
+export function AppSidebar({ organizations, currentOrganizationId, user, roleNames }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -45,7 +46,7 @@ export function AppSidebar({ organizations, currentOrganizationId, user }: AppSi
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain />
+        <NavMain roleNames={roleNames} />
       </SidebarContent>
 
       <SidebarFooter>

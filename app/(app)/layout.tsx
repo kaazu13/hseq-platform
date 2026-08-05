@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentOrganization, getCurrentUserProfile } from "@/modules/organizations/queries";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
@@ -27,6 +27,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     getCurrentUserProfile(user.id),
     cookies(),
   ]);
+  const roleNames = currentOrganizationId ? await getUserRoleNames(currentOrganizationId) : [];
 
   const sidebarOpenCookie = cookieStore.get("sidebar_state")?.value;
   const defaultSidebarOpen = sidebarOpenCookie !== "false";
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         organizations={organizations}
         currentOrganizationId={currentOrganizationId}
         user={{ name: displayName, email: user.email ?? "" }}
+        roleNames={roleNames}
       />
       <SidebarInset>
         <TopBar />

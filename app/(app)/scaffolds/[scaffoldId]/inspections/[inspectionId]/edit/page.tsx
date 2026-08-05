@@ -11,6 +11,7 @@ import { listDefectsForInspection, listScaffoldDefectCandidateEmployees } from "
 import { hasUnresolvedScaffoldDefects } from "@/modules/scaffold-defects/types";
 import { canManageScaffoldDefectDetails } from "@/modules/scaffold-defects/permissions";
 import { ScaffoldDefectsSection } from "@/modules/scaffold-defects/components/scaffold-defects-section";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 
@@ -63,6 +64,7 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
     listScaffoldDefectCandidateEmployees(currentOrganizationId, inspection.project_id),
   ]);
   const canManageDefects = canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
+  const defectCandidateOptions = toEmployeeOptions(defectCandidates);
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
@@ -73,7 +75,7 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Checklist" description="24 fixed safety items — mark each Acceptable, Defect found, or Not applicable." />
-        <InspectionChecklist organizationId={currentOrganizationId} inspectionId={inspection.id} scaffoldId={scaffoldId} projectId={inspection.project_id} items={inspection.items} candidates={defectCandidates} readOnly={false} />
+        <InspectionChecklist organizationId={currentOrganizationId} inspectionId={inspection.id} scaffoldId={scaffoldId} projectId={inspection.project_id} items={inspection.items} candidates={defectCandidateOptions} readOnly={false} />
       </div>
 
       <div className="flex flex-col gap-3">
@@ -84,7 +86,7 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
           scaffoldId={scaffoldId}
           projectId={inspection.project_id}
           defects={defects}
-          candidates={defectCandidates}
+          candidates={defectCandidateOptions}
           canCreate={canManageDefects}
           canManageDetails={canManageDefects}
           roleNames={roleNames}

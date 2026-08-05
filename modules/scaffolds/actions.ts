@@ -61,7 +61,9 @@ export async function createScaffold(organizationId: string, input: ScaffoldForm
       scaffold_type: parsed.data.scaffoldType,
       intended_use: parsed.data.intendedUse,
       max_load_class: parsed.data.maxLoadClass,
-      max_height_meters: parsed.data.maxHeightMeters ?? null,
+      height_metres: parsed.data.heightMetres ?? null,
+      length_metres: parsed.data.lengthMetres ?? null,
+      width_metres: parsed.data.widthMetres ?? null,
       erected_by: parsed.data.erectedBy ?? null,
       responsible_foreman_id: parsed.data.responsibleForemanId,
       erected_at: parsed.data.erectedAt ?? null,
@@ -81,6 +83,34 @@ export async function createScaffold(organizationId: string, input: ScaffoldForm
       return { ok: false, error: { code: "validation_error", message: error.message } };
     }
     return { ok: false, error: { code: "server_error", message: "Couldn't register the scaffold. Try again." } };
+  }
+
+  // Bulk-insert the whole team in ONE call — a single multi-row INSERT is
+  // one statement/transaction, so an ineligible/forged/duplicate employee
+  // id anywhere in the batch rolls back the ENTIRE team (never a partial
+  // roster) rather than failing row-by-row. The scaffold record itself is
+  // already committed at this point (a separate, earlier statement) — if
+  // the team insert fails, the scaffold still exists with zero team
+  // members, and the caller is sent to its edit page to add the team
+  // rather than losing everything just entered.
+  if (parsed.data.teamMemberIds.length > 0) {
+    const teamRows = parsed.data.teamMemberIds.map((employeeId, index) => ({
+      organization_id: organizationId,
+      // project_id is re-derived and validated by
+      // validate_scaffold_team_member_insert() regardless of what's sent
+      // here (never client-trusted) — passed explicitly only because the
+      // generated Insert type requires it (no DB-level default).
+      project_id: parsed.data.projectId,
+      scaffold_id: data.id,
+      employee_id: employeeId,
+      team_position: index + 1,
+      added_by: user.id,
+    }));
+    const { error: teamError } = await supabase.from("scaffold_team_members").insert(teamRows);
+    if (teamError) {
+      revalidatePath("/scaffolds");
+      redirect(`/scaffolds/${data.id}/edit?teamError=1`);
+    }
   }
 
   revalidatePath("/scaffolds");
@@ -106,7 +136,9 @@ export async function updateScaffold(organizationId: string, scaffoldId: string,
         scaffold_type: parsed.data.scaffoldType,
         intended_use: parsed.data.intendedUse,
         max_load_class: parsed.data.maxLoadClass,
-        max_height_meters: parsed.data.maxHeightMeters ?? null,
+        height_metres: parsed.data.heightMetres ?? null,
+        length_metres: parsed.data.lengthMetres ?? null,
+        width_metres: parsed.data.widthMetres ?? null,
         erected_by: parsed.data.erectedBy ?? null,
         responsible_foreman_id: parsed.data.responsibleForemanId,
         erected_at: parsed.data.erectedAt ?? null,
@@ -132,8 +164,78 @@ export async function updateScaffold(organizationId: string, scaffoldId: string,
     return { ok: false, error: { code: "not_found", message: "Scaffold not found." } };
   }
 
+  const teamResult = await reconcileScaffoldTeam(supabase, organizationId, projectId, scaffoldId, user.id, parsed.data.teamMemberIds);
+  if (!teamResult.ok) {
+    return teamResult;
+  }
+
   revalidatePath(`/scaffolds/${scaffoldId}`);
   revalidatePath(`/scaffolds/${scaffoldId}/edit`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Reconciles a scaffold's active team-member roster to exactly
+ * `nextEmployeeIds` — members no longer selected are non-destructively
+ * removed (removed_at/removed_by, never deleted — full history stays in
+ * `scaffold_team_members`), members newly selected are added at the next
+ * available `team_position`, and members present in both sets are left
+ * completely untouched (their original `added_at`/`added_by`/`team_position`
+ * never rewritten just because the form was resubmitted). "Team member N"
+ * numbering shown to users is always computed at display time from array
+ * order, never assumed to equal the stored `team_position` — see
+ * modules/scaffolds/types.ts's ScaffoldTeamMemberDetail comment.
+ */
+async function reconcileScaffoldTeam(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationId: string,
+  projectId: string,
+  scaffoldId: string,
+  actingUserId: string,
+  nextEmployeeIds: string[],
+): Promise<ActionResult<null>> {
+  const { data: currentActive, error: currentError } = await supabase.from("scaffold_team_members").select("id, employee_id, team_position").eq("scaffold_id", scaffoldId).is("removed_at", null);
+  if (currentError) throw currentError;
+
+  const nextSet = new Set(nextEmployeeIds);
+  const currentByEmployeeId = new Map((currentActive ?? []).map((row) => [row.employee_id, row]));
+
+  const toRemove = (currentActive ?? []).filter((row) => !nextSet.has(row.employee_id));
+  const toAdd = nextEmployeeIds.filter((employeeId) => !currentByEmployeeId.has(employeeId));
+
+  if (toRemove.length > 0) {
+    const { error: removeError } = await supabase
+      .from("scaffold_team_members")
+      .update({ removed_at: new Date().toISOString(), removed_by: actingUserId })
+      .in(
+        "id",
+        toRemove.map((row) => row.id),
+      );
+    if (removeError) {
+      return { ok: false, error: { code: "server_error", message: "Couldn't update the scaffold team. Try again." } };
+    }
+  }
+
+  if (toAdd.length > 0) {
+    const highestExistingPosition = (currentActive ?? []).reduce((max, row) => Math.max(max, row.team_position), 0);
+    let nextPosition = highestExistingPosition + 1;
+    const teamRows = toAdd.map((employeeId) => ({
+      organization_id: organizationId,
+      project_id: projectId,
+      scaffold_id: scaffoldId,
+      employee_id: employeeId,
+      team_position: nextPosition++,
+      added_by: actingUserId,
+    }));
+    const { error: addError } = await supabase.from("scaffold_team_members").insert(teamRows);
+    if (addError) {
+      if (isRaisedException(addError)) {
+        return { ok: false, error: { code: "validation_error", message: addError.message } };
+      }
+      return { ok: false, error: { code: "server_error", message: "Couldn't add the new scaffold team members. Try again." } };
+    }
+  }
+
   return { ok: true, data: null };
 }
 

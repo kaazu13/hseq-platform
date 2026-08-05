@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalText } from "@/lib/validation";
+import { SCAFFOLD_TEAM_MIN_SIZE, SCAFFOLD_TEAM_MAX_SIZE } from "./types";
 
 /**
  * Server Function validation for the Scaffolds/Scaffold Inspections
@@ -21,15 +22,22 @@ const SCAFFOLD_TYPE_VALUES = [
   "other",
 ] as const;
 
-export const scaffoldFormSchema = z.object({
-  projectId: z.string().uuid("Choose a project"),
-  tagNumber: z.string().trim().min(1, "Tag number is required"),
-  workArea: z.string().trim().min(1, "Work area is required"),
-  structureReference: optionalText,
-  scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
-  intendedUse: z.string().trim().min(1, "Intended use is required"),
-  maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required"),
-  maxHeightMeters: z
+/**
+ * A positive decimal field accepting a raw form string ("5", "5.7",
+ * "12.25") and producing `number | undefined` — the ROOT CAUSE FIX for
+ * "Invalid input: expected string, received number": this schema's INPUT
+ * type is `string | undefined`, and it must stay that way end to end —
+ * the client must pass the raw string through untouched (never
+ * pre-convert to `Number(...)` before calling the Server Function, which
+ * is exactly what modules/scaffolds/components/scaffold-form.tsx used to
+ * do for the old `maxHeightMeters` field). Rejects non-numeric text, NaN,
+ * Infinity, zero, and negative values; permits any decimal precision on
+ * input (excessive precision is handled consistently by the database's
+ * own `numeric(10,2)` ROUNDING on write, not a second, differently-behaved
+ * rejection here — see the migration's header comment).
+ */
+function optionalPositiveDecimal(fieldLabel: string) {
+  return z
     .string()
     .trim()
     .optional()
@@ -37,22 +45,58 @@ export const scaffoldFormSchema = z.object({
       if (value === "" || value === undefined) return undefined;
       const parsed = Number(value);
       if (!Number.isFinite(parsed) || parsed <= 0) {
-        ctx.addIssue({ code: "custom", message: "Enter a positive height" });
+        ctx.addIssue({ code: "custom", message: `Enter a positive ${fieldLabel}` });
         return undefined;
       }
       return parsed;
-    }),
-  erectedBy: optionalText,
-  responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
-  erectedAt: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value === "" || value === undefined ? undefined : value))
-    .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date").optional()),
-  notes: optionalText,
-});
-export type ScaffoldFormInput = z.infer<typeof scaffoldFormSchema>;
+    });
+}
+
+export const scaffoldFormSchema = z
+  .object({
+    projectId: z.string().uuid("Choose a project"),
+    tagNumber: z.string().trim().min(1, "Tag number is required"),
+    workArea: z.string().trim().min(1, "Work area is required"),
+    structureReference: optionalText,
+    scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
+    intendedUse: z.string().trim().min(1, "Intended use is required"),
+    maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required"),
+    heightMetres: optionalPositiveDecimal("height"),
+    lengthMetres: optionalPositiveDecimal("length"),
+    widthMetres: optionalPositiveDecimal("width"),
+    erectedBy: optionalText,
+    responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
+    erectedAt: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => (value === "" || value === undefined ? undefined : value))
+      .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date").optional()),
+    notes: optionalText,
+    teamSize: z
+      .string()
+      .trim()
+      .transform((value, ctx) => {
+        const parsed = Number(value);
+        if (!Number.isInteger(parsed) || parsed < SCAFFOLD_TEAM_MIN_SIZE || parsed > SCAFFOLD_TEAM_MAX_SIZE) {
+          ctx.addIssue({ code: "custom", message: `Team size must be between ${SCAFFOLD_TEAM_MIN_SIZE} and ${SCAFFOLD_TEAM_MAX_SIZE}` });
+          return SCAFFOLD_TEAM_MIN_SIZE;
+        }
+        return parsed;
+      }),
+    teamMemberIds: z
+      .array(z.string().uuid("Each team member must be a valid selection"))
+      .refine((ids) => new Set(ids).size === ids.length, { message: "The same employee is selected more than once" }),
+  })
+  .refine((data) => data.teamMemberIds.length === data.teamSize, {
+    message: "Select exactly the number of team members matching the chosen team size",
+    path: ["teamMemberIds"],
+  })
+  .refine((data) => !data.teamMemberIds.includes(data.responsibleForemanId), {
+    message: "The Responsible Foreman cannot also be selected as an ordinary team member",
+    path: ["teamMemberIds"],
+  });
+export type ScaffoldFormInput = z.input<typeof scaffoldFormSchema>;
 
 const SCAFFOLD_INSPECTION_REASON_VALUES = [
   "initial_handover",

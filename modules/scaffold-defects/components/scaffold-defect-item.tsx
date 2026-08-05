@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Pencil } from "lucide-react";
 import { closeScaffoldDefect, rejectScaffoldDefect, reopenScaffoldDefect, updateScaffoldDefectProgress } from "@/modules/scaffold-defects/actions";
 import { canCloseScaffoldDefect, canUpdateScaffoldDefectProgress } from "@/modules/scaffold-defects/permissions";
-import { SCAFFOLD_DEFECT_STATUS_LABELS, type ScaffoldDefectDetail, type BasicEmployee } from "@/modules/scaffold-defects/types";
+import { SCAFFOLD_DEFECT_STATUS_LABELS, type ScaffoldDefectDetail } from "@/modules/scaffold-defects/types";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import type { RoleName } from "@/modules/organizations/types";
 import { ScaffoldDefectStatusBadge } from "@/modules/scaffold-defects/components/scaffold-defect-status-badge";
 import { ScaffoldDefectSeverityBadge } from "@/modules/scaffold-defects/components/scaffold-defect-severity-badge";
@@ -27,7 +28,7 @@ type ScaffoldDefectItemProps = {
   scaffoldId: string;
   projectId: string;
   defect: ScaffoldDefectDetail;
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   canManageDetails: boolean;
   roleNames: RoleName[];
   hasProjectAccess: boolean;

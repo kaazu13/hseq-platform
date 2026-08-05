@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Pencil } from "lucide-react";
 import { closeCorrectiveAction, rejectCorrectiveAction, reopenCorrectiveAction, updateCorrectiveActionProgress } from "@/modules/corrective-actions/actions";
 import { canCloseCorrectiveAction, canUpdateCorrectiveActionProgress } from "@/modules/corrective-actions/permissions";
-import { CORRECTIVE_ACTION_STATUS_LABELS, type CorrectiveActionDetail, type BasicEmployee } from "@/modules/corrective-actions/types";
+import { CORRECTIVE_ACTION_STATUS_LABELS, type CorrectiveActionDetail } from "@/modules/corrective-actions/types";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import type { RoleName } from "@/modules/organizations/types";
 import { CorrectiveActionStatusBadge } from "@/modules/corrective-actions/components/corrective-action-status-badge";
 import { CorrectiveActionPriorityBadge } from "@/modules/corrective-actions/components/corrective-action-priority-badge";
@@ -33,7 +34,7 @@ type CorrectiveActionItemProps = {
   observationId: string;
   projectId: string;
   action: CorrectiveActionDetail;
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   canManageDetails: boolean;
   /** Raw context this item computes its OWN canUpdateProgress/canClose from — those two depend on whether THIS action is assigned to/authored by the current user, which varies per action and can't be precomputed once for the whole list (see modules/corrective-actions/permissions.ts). */
   roleNames: RoleName[];

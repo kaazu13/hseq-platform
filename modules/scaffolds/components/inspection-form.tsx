@@ -4,7 +4,8 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { createInspection } from "@/modules/scaffolds/actions";
-import { SCAFFOLD_INSPECTION_REASONS, SCAFFOLD_INSPECTION_REASON_LABELS, type ScaffoldInspectionReason, type ScaffoldInspection, type BasicEmployee } from "@/modules/scaffolds/types";
+import { SCAFFOLD_INSPECTION_REASONS, SCAFFOLD_INSPECTION_REASON_LABELS, type ScaffoldInspectionReason, type ScaffoldInspection } from "@/modules/scaffolds/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ type InspectionFormProps = {
   organizationId: string;
   scaffoldId: string;
   projectId: string;
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   /** Prior inspections for this scaffold — the picker for previousInspectionId, required when the reason is "re-inspection following defects." */
   priorInspections: ScaffoldInspection[];
 };
@@ -84,22 +85,17 @@ export function InspectionForm({ organizationId, scaffoldId, projectId, candidat
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="inspectorId">Inspector</Label>
-          <Select value={inspectorId} onValueChange={(value) => setInspectorId(value ?? "")}>
-            <SelectTrigger id="inspectorId" className="w-full" aria-invalid={Boolean(fieldError("inspectorId"))}>
-              <SelectValue placeholder="Choose the inspector" />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldError("inspectorId") && <p className="text-sm text-destructive">{fieldError("inspectorId")}</p>}
-        </div>
+        <EmployeeComboboxField
+          label="Inspector"
+          htmlFor="inspectorId"
+          value={inspectorId || null}
+          onValueChange={(id) => setInspectorId(id ?? "")}
+          options={candidates}
+          placeholder="Search by name or employee number…"
+          emptyMessage="No eligible inspectors found for this project."
+          clearable={false}
+          error={fieldError("inspectorId")}
+        />
 
         {(inspectionReason === "reinspection_following_defects" || priorInspections.length > 0) && (
           <div className="flex flex-col gap-1.5 sm:col-span-2">

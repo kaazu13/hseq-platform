@@ -9,6 +9,7 @@ import { HSEQ_DOCUMENT_CATEGORY_LABELS } from "@/modules/toolbox-templates/types
 import { SafetyFlashEditForm } from "@/modules/safety-flash/components/safety-flash-edit-form";
 import { SafetyFlashStatusToggle } from "@/modules/safety-flash/components/safety-flash-status-toggle";
 import { SafetyFlashReplaceFileForm } from "@/modules/safety-flash/components/safety-flash-replace-file-form";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ToolboxDocumentStatusBadge } from "@/components/shared/toolbox-document-status-badge";
@@ -34,7 +35,7 @@ export default async function SafetyFlashDetailPage({ params }: SafetyFlashDetai
     notFound();
   }
 
-  const [roleNames, hasProjectAccess, project, previewUrl, replacements, candidates] = await Promise.all([
+  const [roleNames, hasProjectAccess, project, previewUrl, replacements, candidateRows] = await Promise.all([
     getUserRoleNames(currentOrganizationId),
     flash.project_id ? isCallerProjectAccessible(flash.project_id) : Promise.resolve(false),
     flash.project_id ? getProject(currentOrganizationId, flash.project_id) : Promise.resolve(null),
@@ -43,6 +44,7 @@ export default async function SafetyFlashDetailPage({ params }: SafetyFlashDetai
     listSafetyFlashAuthorizedEmployees(currentOrganizationId, flash.project_id),
   ]);
 
+  const candidates = toEmployeeOptions(candidateRows);
   const canManage = canManageSafetyFlash(roleNames, flash.project_id, hasProjectAccess);
 
   return (

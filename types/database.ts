@@ -1803,15 +1803,98 @@ export type Database = {
           },
         ]
       }
+      scaffold_team_members: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          employee_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          removed_at: string | null
+          removed_by: string | null
+          scaffold_id: string
+          team_position: number
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          employee_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          removed_at?: string | null
+          removed_by?: string | null
+          scaffold_id: string
+          team_position: number
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          employee_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          scaffold_id?: string
+          team_position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_team_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_team_members_employee_fk"
+            columns: ["employee_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_team_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_team_members_project_fk"
+            columns: ["project_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "scaffold_team_members_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_team_members_scaffold_fk"
+            columns: ["scaffold_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       scaffolds: {
         Row: {
           created_at: string
           created_by: string | null
           erected_at: string | null
           erected_by: string | null
+          height_metres: number | null
           id: string
           intended_use: string
-          max_height_meters: number | null
+          length_metres: number | null
           max_load_class: string
           notes: string | null
           organization_id: string
@@ -1823,6 +1906,7 @@ export type Database = {
           tag_number: string
           updated_at: string
           updated_by: string | null
+          width_metres: number | null
           work_area: string
         }
         Insert: {
@@ -1830,9 +1914,10 @@ export type Database = {
           created_by?: string | null
           erected_at?: string | null
           erected_by?: string | null
+          height_metres?: number | null
           id?: string
           intended_use: string
-          max_height_meters?: number | null
+          length_metres?: number | null
           max_load_class: string
           notes?: string | null
           organization_id: string
@@ -1844,6 +1929,7 @@ export type Database = {
           tag_number: string
           updated_at?: string
           updated_by?: string | null
+          width_metres?: number | null
           work_area: string
         }
         Update: {
@@ -1851,9 +1937,10 @@ export type Database = {
           created_by?: string | null
           erected_at?: string | null
           erected_by?: string | null
+          height_metres?: number | null
           id?: string
           intended_use?: string
-          max_height_meters?: number | null
+          length_metres?: number | null
           max_load_class?: string
           notes?: string | null
           organization_id?: string
@@ -1865,6 +1952,7 @@ export type Database = {
           tag_number?: string
           updated_at?: string
           updated_by?: string | null
+          width_metres?: number | null
           work_area?: string
         }
         Relationships: [
@@ -2628,6 +2716,22 @@ export type Database = {
         Args: { target_project_id: string }
         Returns: boolean
       }
+      is_eligible_scaffold_foreman: {
+        Args: {
+          target_employee_id: string
+          target_organization_id: string
+          target_project_id: string
+        }
+        Returns: boolean
+      }
+      is_eligible_scaffold_team_member: {
+        Args: {
+          target_employee_id: string
+          target_organization_id: string
+          target_project_id: string
+        }
+        Returns: boolean
+      }
       is_organization_member: {
         Args: { target_org_id: string }
         Returns: boolean
@@ -2659,6 +2763,25 @@ export type Database = {
       is_toolbox_template_manage_tier: {
         Args: { target_organization_id: string }
         Returns: boolean
+      }
+      list_eligible_scaffold_foremen: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: {
+          employee_number: string
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
+      list_eligible_scaffold_team_members: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: {
+          employee_number: string
+          first_name: string
+          id: string
+          last_name: string
+          position_title: string
+        }[]
       }
       list_toolbox_authorized_employees: {
         Args: { target_organization_id: string; target_project_id: string }

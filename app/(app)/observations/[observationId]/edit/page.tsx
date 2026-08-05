@@ -6,6 +6,7 @@ import { getObservation, isCallerProjectAccessible, listObservationCandidateEmpl
 import { canEditObservation } from "@/modules/observations/permissions";
 import { ObservationForm } from "@/modules/observations/components/observation-form";
 import { ObservationParticipantsPicker } from "@/modules/observations/components/observation-participants-picker";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 
@@ -48,13 +49,14 @@ export default async function EditObservationPage({ params }: EditObservationPag
 
   const projectName = project?.name ?? "Project unavailable";
   const candidates = await listObservationCandidateEmployees(currentOrganizationId, observation.project_id);
+  const employeeOptions = toEmployeeOptions(candidates);
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
       <PageHeader title="Edit observation" description={`${projectName} · ${observation.work_area}`} />
 
       <div className="max-w-3xl">
-        <ObservationForm mode="edit" organizationId={currentOrganizationId} projectId={observation.project_id} projectName={projectName} candidates={candidates} observation={observation} />
+        <ObservationForm mode="edit" organizationId={currentOrganizationId} projectId={observation.project_id} projectName={projectName} candidates={employeeOptions} observation={observation} />
       </div>
 
       <div className="flex flex-col gap-3">

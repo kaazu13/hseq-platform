@@ -4,19 +4,19 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { createLmra, updateLmra } from "@/modules/lmra/actions";
-import type { LmraAssessment, BasicEmployee } from "@/modules/lmra/types";
+import type { LmraAssessment } from "@/modules/lmra/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type LmraAssessmentFormProps = {
   organizationId: string;
   projectId: string;
   projectName: string;
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
 } & ({ mode: "create"; assessment?: undefined } | { mode: "edit"; assessment: LmraAssessment });
 
 /**
@@ -105,20 +105,16 @@ export function LmraAssessmentForm({ organizationId, projectId, projectName, can
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="responsibleForemanId">Responsible foreman</Label>
-          <Select value={foremanId} onValueChange={(value) => setForemanId(value ?? "")}>
-            <SelectTrigger id="responsibleForemanId" className="w-full" aria-invalid={Boolean(fieldError("responsibleForemanId"))}>
-              <SelectValue placeholder="Choose the responsible foreman" />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldError("responsibleForemanId") && <p className="text-sm text-destructive">{fieldError("responsibleForemanId")}</p>}
+          <EmployeeComboboxField
+            label="Responsible foreman"
+            htmlFor="responsibleForemanId"
+            value={foremanId || null}
+            onValueChange={(id) => setForemanId(id ?? "")}
+            options={candidates}
+            placeholder="Choose the responsible foreman"
+            clearable={false}
+            error={fieldError("responsibleForemanId")}
+          />
           {candidates.length === 0 && (
             <p className="text-sm text-muted-foreground">No one is currently rostered onto this project — assign workers on the project&apos;s Assignments tab first.</p>
           )}

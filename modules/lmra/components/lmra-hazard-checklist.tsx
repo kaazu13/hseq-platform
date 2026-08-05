@@ -4,12 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { updateLmraHazards } from "@/modules/lmra/actions";
-import { LMRA_HAZARD_TYPES, LMRA_HAZARD_TYPE_LABELS, type LmraHazard, type LmraHazardInput, type BasicEmployee } from "@/modules/lmra/types";
+import { LMRA_HAZARD_TYPES, LMRA_HAZARD_TYPE_LABELS, type LmraHazard, type LmraHazardInput } from "@/modules/lmra/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type LmraHazardChecklistProps = {
@@ -17,7 +17,7 @@ type LmraHazardChecklistProps = {
   lmraId: string;
   projectId: string;
   hazards: LmraHazard[];
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   readOnly: boolean;
 };
 
@@ -119,24 +119,15 @@ export function LmraHazardChecklist({ organizationId, lmraId, projectId, hazards
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={`responsible-${row.hazardType}`}>Responsible person</Label>
-                  <Select
-                    value={row.responsiblePersonId ?? "none"}
-                    onValueChange={(value) => updateRow(index, { responsiblePersonId: value === "none" ? null : value })}
+                  <EmployeeComboboxField
+                    label="Responsible person"
+                    htmlFor={`responsible-${row.hazardType}`}
+                    value={row.responsiblePersonId}
+                    onValueChange={(id) => updateRow(index, { responsiblePersonId: id })}
+                    options={candidates}
+                    placeholder="Not assigned"
                     disabled={readOnly}
-                  >
-                    <SelectTrigger id={`responsible-${row.hazardType}`} className="w-full">
-                      <SelectValue placeholder="Not assigned" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not assigned</SelectItem>
-                      {candidates.map((candidate) => (
-                        <SelectItem key={candidate.id} value={candidate.id}>
-                          {candidate.first_name} {candidate.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
 
                 <div className="flex items-center gap-2 self-end">

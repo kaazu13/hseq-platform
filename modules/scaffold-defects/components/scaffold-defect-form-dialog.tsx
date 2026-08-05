@@ -4,7 +4,8 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { createScaffoldDefect, updateScaffoldDefectDetails } from "@/modules/scaffold-defects/actions";
-import { SCAFFOLD_DEFECT_SEVERITIES, SCAFFOLD_DEFECT_SEVERITY_LABELS, type ScaffoldDefect, type ScaffoldDefectSeverity, type BasicEmployee } from "@/modules/scaffold-defects/types";
+import { SCAFFOLD_DEFECT_SEVERITIES, SCAFFOLD_DEFECT_SEVERITY_LABELS, type ScaffoldDefect, type ScaffoldDefectSeverity } from "@/modules/scaffold-defects/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +19,7 @@ type ScaffoldDefectFormDialogProps = {
   inspectionId: string;
   scaffoldId: string;
   projectId: string;
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   /** Pre-fills inspection_item_id when raised directly from a checklist row (create mode only). */
   inspectionItemId?: string;
   /** Undefined = create mode. */
@@ -97,22 +98,17 @@ export function ScaffoldDefectFormDialog({ organizationId, inspectionId, scaffol
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="responsiblePersonId">Responsible person</Label>
-                <Select value={responsiblePersonId} onValueChange={(value) => setResponsiblePersonId(value ?? "")}>
-                  <SelectTrigger id="responsiblePersonId" className="w-full" aria-invalid={Boolean(fieldErrors.responsiblePersonId)}>
-                    <SelectValue placeholder="Choose someone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {candidates.map((candidate) => (
-                      <SelectItem key={candidate.id} value={candidate.id}>
-                        {candidate.first_name} {candidate.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fieldErrors.responsiblePersonId && <p className="text-sm text-destructive">{fieldErrors.responsiblePersonId}</p>}
-              </div>
+              <EmployeeComboboxField
+                label="Responsible person"
+                htmlFor="responsiblePersonId"
+                value={responsiblePersonId || null}
+                onValueChange={(id) => setResponsiblePersonId(id ?? "")}
+                options={candidates}
+                placeholder="Search by name…"
+                emptyMessage="No eligible people found."
+                clearable={false}
+                error={fieldErrors.responsiblePersonId}
+              />
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="severity">Severity</Label>

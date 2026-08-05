@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { scaffoldFormSchema, inspectionFormSchema, inspectionItemsFormSchema, finalizeInspectionFormSchema, correctionReasonFormSchema } from "./validation";
 import { SCAFFOLD_INSPECTION_ITEM_TYPES } from "./types";
 
+const TEAM_MEMBER_A = "123e4567-e89b-42d3-a456-426614174010";
+const TEAM_MEMBER_B = "123e4567-e89b-42d3-a456-426614174011";
+
 const VALID_SCAFFOLD_INPUT = {
   projectId: "123e4567-e89b-42d3-a456-426614174000",
   tagNumber: "SC-042",
@@ -10,18 +13,26 @@ const VALID_SCAFFOLD_INPUT = {
   scaffoldType: "independent",
   intendedUse: "Facade repair access",
   maxLoadClass: "Light Duty (2.0 kN/m2)",
-  maxHeightMeters: "12.5",
+  heightMetres: "12.5",
+  lengthMetres: "8",
+  widthMetres: "1.2",
   erectedBy: "",
   responsibleForemanId: "123e4567-e89b-42d3-a456-426614174001",
   erectedAt: "",
   notes: "",
+  teamSize: "2",
+  teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_B],
 };
 
 describe("scaffoldFormSchema", () => {
   it("accepts a fully populated valid input", () => {
     const result = scaffoldFormSchema.safeParse(VALID_SCAFFOLD_INPUT);
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.maxHeightMeters).toBe(12.5);
+    if (result.success) {
+      expect(result.data.heightMetres).toBe(12.5);
+      expect(result.data.lengthMetres).toBe(8);
+      expect(result.data.widthMetres).toBe(1.2);
+    }
   });
 
   it("rejects blank tag number/work area/intended use/max load class", () => {
@@ -31,16 +42,34 @@ describe("scaffoldFormSchema", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxLoadClass: "" }).success).toBe(false);
   });
 
-  it("rejects a non-positive or non-numeric max height", () => {
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxHeightMeters: "0" }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxHeightMeters: "-5" }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxHeightMeters: "not a number" }).success).toBe(false);
+  it("rejects a non-positive or non-numeric height/length/width", () => {
+    for (const field of ["heightMetres", "lengthMetres", "widthMetres"] as const) {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, [field]: "0" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, [field]: "-5" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, [field]: "not a number" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, [field]: "Infinity" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, [field]: "NaN" }).success).toBe(false);
+    }
   });
 
-  it("allows max height to be omitted — 'maximum height, where known'", () => {
-    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxHeightMeters: "" });
+  it("accepts decimal and integer height/length/width", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, heightMetres: "5.7", lengthMetres: "12", widthMetres: "1.2" });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.maxHeightMeters).toBeUndefined();
+    if (result.success) {
+      expect(result.data.heightMetres).toBe(5.7);
+      expect(result.data.lengthMetres).toBe(12);
+      expect(result.data.widthMetres).toBe(1.2);
+    }
+  });
+
+  it("allows height/length/width to be omitted independently — 'where known'", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, heightMetres: "", lengthMetres: "", widthMetres: "" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.heightMetres).toBeUndefined();
+      expect(result.data.lengthMetres).toBeUndefined();
+      expect(result.data.widthMetres).toBeUndefined();
+    }
   });
 
   it("accepts every fixed scaffold type", () => {
@@ -52,6 +81,38 @@ describe("scaffoldFormSchema", () => {
 
   it("rejects a scaffold type outside the fixed list", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, scaffoldType: "trestle" }).success).toBe(false);
+  });
+
+  it("accepts team sizes across the full valid range, rejects zero/negative/non-integer/over-max", () => {
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "1", teamMemberIds: [TEAM_MEMBER_A] }).success).toBe(true);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "0", teamMemberIds: [] }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "-1", teamMemberIds: [] }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "2.5", teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_B] }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "51", teamMemberIds: Array.from({ length: 51 }, (_, i) => `123e4567-e89b-42d3-a456-42661417${String(4100 + i).padStart(4, "0")}`) }).success).toBe(false);
+  });
+
+  it("rejects when submitted team member count doesn't match the declared team size", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "3", teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_B] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate employees within the submitted team", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "2", teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_A] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects the Responsible Foreman also appearing as an ordinary team member", () => {
+    const result = scaffoldFormSchema.safeParse({
+      ...VALID_SCAFFOLD_INPUT,
+      teamSize: "2",
+      teamMemberIds: [VALID_SCAFFOLD_INPUT.responsibleForemanId, TEAM_MEMBER_B],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a forged non-UUID team member id", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "1", teamMemberIds: ["not-a-uuid"] });
+    expect(result.success).toBe(false);
   });
 });
 

@@ -2,7 +2,7 @@ import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getProject } from "@/modules/projects/queries";
-import { listScaffoldCreatableProjects, listScaffoldCandidateEmployees } from "@/modules/scaffolds/queries";
+import { listScaffoldCreatableProjects, listEligibleScaffoldForemen, listEligibleScaffoldTeamMembers } from "@/modules/scaffolds/queries";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -56,13 +56,16 @@ export default async function NewScaffoldPage({ searchParams }: NewScaffoldPageP
     forbidden();
   }
 
-  const candidates = await listScaffoldCandidateEmployees(currentOrganizationId, project.id);
+  const [foremanOptions, teamMemberOptions] = await Promise.all([
+    listEligibleScaffoldForemen(currentOrganizationId, project.id),
+    listEligibleScaffoldTeamMembers(currentOrganizationId, project.id),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Register scaffold" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <ScaffoldForm mode="create" organizationId={currentOrganizationId} projectId={project.id} projectName={project.name} candidates={candidates} />
+        <ScaffoldForm mode="create" organizationId={currentOrganizationId} projectId={project.id} projectName={project.name} foremanOptions={foremanOptions} teamMemberOptions={teamMemberOptions} />
       </div>
     </div>
   );

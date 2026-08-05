@@ -6,18 +6,17 @@ import { Loader2, UserMinus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { assignProjectRole, endProjectAssignment } from "@/modules/projects/actions";
 import { PROJECT_ASSIGNMENT_ROLES, PROJECT_ASSIGNMENT_ROLE_LABELS, type ProjectAssignmentRole, type ProjectAssignmentWithEmployee } from "@/modules/projects/types";
+import { EmployeeCombobox, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 
-type PickerEmployee = { id: string; first_name: string; last_name: string; position_title: string | null };
-
 type ProjectAssignmentsTabProps = {
   organizationId: string;
   projectId: string;
   assignments: ProjectAssignmentWithEmployee[];
-  pickerEmployees: PickerEmployee[];
+  pickerEmployees: EmployeeOption[];
   canManage: boolean;
 };
 
@@ -37,7 +36,7 @@ export function ProjectAssignmentsTab({ organizationId, projectId, assignments, 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<ProjectAssignmentRole>("member");
 
-  const assignedEmployeeIds = new Set(assignments.map((assignment) => assignment.employee_id));
+  const assignedEmployeeIds = assignments.map((assignment) => assignment.employee_id);
 
   function handleAssign() {
     if (!selectedEmployeeId) return;
@@ -106,20 +105,15 @@ export function ProjectAssignmentsTab({ organizationId, projectId, assignments, 
         <div className="flex flex-wrap items-end gap-2 border-t pt-4">
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Employee</span>
-            <Select value={selectedEmployeeId} onValueChange={(value) => setSelectedEmployeeId(value ?? "")}>
-              <SelectTrigger className="w-56" aria-label="Employee to assign">
-                <SelectValue placeholder="Select an employee" />
-              </SelectTrigger>
-              <SelectContent>
-                {pickerEmployees
-                  .filter((employee) => !assignedEmployeeIds.has(employee.id))
-                  .map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.first_name} {employee.last_name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <EmployeeCombobox
+              aria-label="Employee to assign"
+              value={selectedEmployeeId || null}
+              onValueChange={(id) => setSelectedEmployeeId(id ?? "")}
+              options={pickerEmployees}
+              excludeIds={assignedEmployeeIds}
+              placeholder="Search by name…"
+              clearable={false}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Role</span>

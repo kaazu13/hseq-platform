@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Breadcrumb,
@@ -10,7 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ALL_NAV_ITEMS } from "@/components/app-shell/nav-config";
+import { ALL_NAV_ITEMS, isNavItemActive } from "@/components/app-shell/nav-config";
 
 /**
  * Derives the breadcrumb trail from the current route and the shared nav
@@ -24,9 +24,8 @@ import { ALL_NAV_ITEMS } from "@/components/app-shell/nav-config";
  */
 export function Breadcrumbs() {
   const pathname = usePathname();
-  const current = ALL_NAV_ITEMS.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const searchParams = useSearchParams();
+  const current = ALL_NAV_ITEMS.find((item) => isNavItemActive(item, pathname, searchParams));
 
   return (
     <Breadcrumb>

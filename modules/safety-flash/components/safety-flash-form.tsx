@@ -6,6 +6,7 @@ import { AlertCircle, Loader2, Upload } from "lucide-react";
 import { createSafetyFlash } from "@/modules/safety-flash/actions";
 import type { Project } from "@/modules/projects/types";
 import { HSEQ_DOCUMENT_CATEGORIES, HSEQ_DOCUMENT_CATEGORY_LABELS, SUGGESTED_DOCUMENT_LANGUAGES, type HseqDocumentCategory } from "@/modules/toolbox-templates/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type SafetyFlashEmployeeOption = { id: string; first_name: string; last_name: string };
-
-export function SafetyFlashForm({ organizationId, projects, candidates }: { organizationId: string; projects: Project[]; candidates: SafetyFlashEmployeeOption[] }) {
+export function SafetyFlashForm({ organizationId, projects, candidates }: { organizationId: string; projects: Project[]; candidates: EmployeeOption[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -129,20 +128,16 @@ export function SafetyFlashForm({ organizationId, projects, candidates }: { orga
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="issuedByEmployeeId">Issued by</Label>
-          <Select value={issuedByEmployeeId} onValueChange={(value) => setIssuedByEmployeeId(value ?? "")}>
-            <SelectTrigger id="issuedByEmployeeId" className="w-full" aria-invalid={Boolean(fieldError("issuedByEmployeeId"))}>
-              <SelectValue placeholder="Choose who issued this Safety Flash" />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldError("issuedByEmployeeId") && <p className="text-sm text-destructive">{fieldError("issuedByEmployeeId")}</p>}
+          <EmployeeComboboxField
+            label="Issued by"
+            htmlFor="issuedByEmployeeId"
+            value={issuedByEmployeeId || null}
+            onValueChange={(id) => setIssuedByEmployeeId(id ?? "")}
+            options={candidates}
+            placeholder="Choose who issued this Safety Flash"
+            clearable={false}
+            error={fieldError("issuedByEmployeeId")}
+          />
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">

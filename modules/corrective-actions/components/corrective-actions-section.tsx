@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ListChecks, Plus } from "lucide-react";
-import type { CorrectiveActionDetail, BasicEmployee } from "@/modules/corrective-actions/types";
+import type { CorrectiveActionDetail } from "@/modules/corrective-actions/types";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import type { RoleName } from "@/modules/organizations/types";
 import { CorrectiveActionItem } from "@/modules/corrective-actions/components/corrective-action-item";
 import { CorrectiveActionFormDialog } from "@/modules/corrective-actions/components/corrective-action-form-dialog";
@@ -14,7 +15,7 @@ type CorrectiveActionsSectionProps = {
   observationId: string;
   projectId: string;
   actions: CorrectiveActionDetail[];
-  candidates: BasicEmployee[];
+  candidates: EmployeeOption[];
   canCreate: boolean;
   canManageDetails: boolean;
   roleNames: RoleName[];

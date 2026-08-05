@@ -12,6 +12,7 @@ import {
   OBSERVATION_STATUS_LABELS,
 } from "@/modules/observations/types";
 import type { Project } from "@/modules/projects/types";
+import { EmployeeCombobox, toEmployeeOptions, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,7 @@ export function ObservationFilters({ projects, responsiblePersons }: { projects:
   }
 
   const hasActiveFilters = FILTER_KEYS.some((key) => Boolean(searchParams.get(key)));
+  const responsiblePersonOptions: EmployeeOption[] = toEmployeeOptions(responsiblePersons);
 
   function clearFilters() {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
@@ -139,19 +141,15 @@ export function ObservationFilters({ projects, responsiblePersons }: { projects:
         </SelectContent>
       </Select>
 
-      <Select value={searchParams.get("responsiblePersonId") ?? "all"} onValueChange={(value) => setParam("responsiblePersonId", value)}>
-        <SelectTrigger className="w-full sm:w-48" aria-label="Filter by corrective action responsible person">
-          <SelectValue placeholder="Any responsible person" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Any responsible person</SelectItem>
-          {responsiblePersons.map((person) => (
-            <SelectItem key={person.id} value={person.id}>
-              {person.first_name} {person.last_name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="w-full sm:w-48">
+        <EmployeeCombobox
+          aria-label="Filter by corrective action responsible person"
+          value={searchParams.get("responsiblePersonId") ?? null}
+          onValueChange={(id) => setParam("responsiblePersonId", id)}
+          options={responsiblePersonOptions}
+          placeholder="Any responsible person"
+        />
+      </div>
 
       <div className="flex items-center gap-2">
         <Checkbox

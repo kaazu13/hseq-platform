@@ -4,6 +4,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { listSafetyFlashAuthorizedEmployees } from "@/modules/safety-flash/queries";
 import { SafetyFlashForm } from "@/modules/safety-flash/components/safety-flash-form";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 
 export default async function NewSafetyFlashPage() {
@@ -20,7 +21,8 @@ export default async function NewSafetyFlashPage() {
     forbidden();
   }
 
-  const [projects, candidates] = await Promise.all([listProjects(currentOrganizationId), listSafetyFlashAuthorizedEmployees(currentOrganizationId, null)]);
+  const [projects, candidateRows] = await Promise.all([listProjects(currentOrganizationId), listSafetyFlashAuthorizedEmployees(currentOrganizationId, null)]);
+  const candidates = toEmployeeOptions(candidateRows);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">

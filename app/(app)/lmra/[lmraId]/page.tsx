@@ -13,6 +13,7 @@ import { LmraParticipantsPicker } from "@/modules/lmra/components/lmra-participa
 import { LmraSubmitCard } from "@/modules/lmra/components/lmra-submit-card";
 import { LmraReviewCard } from "@/modules/lmra/components/lmra-review-card";
 import { LmraDetailActions } from "@/modules/lmra/components/lmra-detail-actions";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
   const canManage = canManageLmra(roleNames, isForeman);
   const canArchive = canArchiveLmra(roleNames);
   const candidates = await listLmraCandidateEmployees(currentOrganizationId, assessment.project_id);
+  const employeeOptions = toEmployeeOptions(candidates);
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
@@ -166,7 +168,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
           lmraId={assessment.id}
           projectId={assessment.project_id}
           hazards={assessment.hazards}
-          candidates={candidates}
+          candidates={employeeOptions}
           readOnly
         />
       </div>

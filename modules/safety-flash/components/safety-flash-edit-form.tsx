@@ -5,6 +5,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { updateSafetyFlashMetadata } from "@/modules/safety-flash/actions";
 import { HSEQ_DOCUMENT_CATEGORIES, HSEQ_DOCUMENT_CATEGORY_LABELS, SUGGESTED_DOCUMENT_LANGUAGES, type HseqDocumentCategory } from "@/modules/toolbox-templates/types";
 import type { SafetyFlash } from "@/modules/safety-flash/types";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-type SafetyFlashEmployeeOption = { id: string; first_name: string; last_name: string };
-
-export function SafetyFlashEditForm({ organizationId, flash, candidates }: { organizationId: string; flash: SafetyFlash; candidates: SafetyFlashEmployeeOption[] }) {
+export function SafetyFlashEditForm({ organizationId, flash, candidates }: { organizationId: string; flash: SafetyFlash; candidates: EmployeeOption[] }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -96,20 +95,15 @@ export function SafetyFlashEditForm({ organizationId, flash, candidates }: { org
           {fieldErrors.language && <p className="text-sm text-destructive">{fieldErrors.language}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="issuedByEmployeeId">Issued by</Label>
-          <Select value={issuedByEmployeeId} onValueChange={(value) => setIssuedByEmployeeId(value ?? "")}>
-            <SelectTrigger id="issuedByEmployeeId" className="w-full" aria-invalid={Boolean(fieldErrors.issuedByEmployeeId)}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {fieldErrors.issuedByEmployeeId && <p className="text-sm text-destructive">{fieldErrors.issuedByEmployeeId}</p>}
+          <EmployeeComboboxField
+            label="Issued by"
+            htmlFor="issuedByEmployeeId"
+            value={issuedByEmployeeId || null}
+            onValueChange={(id) => setIssuedByEmployeeId(id ?? "")}
+            options={candidates}
+            clearable={false}
+            error={fieldErrors.issuedByEmployeeId}
+          />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <Label htmlFor="summary">Summary (optional)</Label>

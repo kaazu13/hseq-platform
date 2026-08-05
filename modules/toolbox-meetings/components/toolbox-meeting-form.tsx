@@ -4,19 +4,17 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Upload } from "lucide-react";
 import { createToolboxMeeting } from "@/modules/toolbox-meetings/actions";
+import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-
-type ToolboxEmployeeOption = { id: string; first_name: string; last_name: string };
 
 type ToolboxMeetingFormProps = {
   organizationId: string;
   projectId: string;
-  candidates: ToolboxEmployeeOption[];
+  candidates: EmployeeOption[];
 };
 
 /** Create-only — a toolbox meeting's PDF and identity fields are locked once uploaded; corrections go through the controlled replace workflow, and metadata edits go through a separate, simpler edit form (see toolbox-meeting-edit-form.tsx). */
@@ -91,21 +89,17 @@ export function ToolboxMeetingForm({ organizationId, projectId, candidates }: To
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <Label htmlFor="heldByEmployeeId">HSE person who held the meeting</Label>
-          <Select value={heldByEmployeeId} onValueChange={(value) => setHeldByEmployeeId(value ?? "")}>
-            <SelectTrigger id="heldByEmployeeId" className="w-full" aria-invalid={Boolean(fieldError("heldByEmployeeId"))}>
-              <SelectValue placeholder="Choose the HSE person who held the meeting" />
-            </SelectTrigger>
-            <SelectContent>
-              {candidates.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.first_name} {candidate.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EmployeeComboboxField
+            label="HSE person who held the meeting"
+            htmlFor="heldByEmployeeId"
+            value={heldByEmployeeId || null}
+            onValueChange={(id) => setHeldByEmployeeId(id ?? "")}
+            options={candidates}
+            placeholder="Choose the HSE person who held the meeting"
+            clearable={false}
+            error={fieldError("heldByEmployeeId")}
+          />
           {candidates.length === 0 && <p className="text-sm text-muted-foreground">No HSE Manager/Officer is assigned to this project yet.</p>}
-          {fieldError("heldByEmployeeId") && <p className="text-sm text-destructive">{fieldError("heldByEmployeeId")}</p>}
         </div>
 
         <div className="flex flex-col gap-1.5 sm:col-span-2">

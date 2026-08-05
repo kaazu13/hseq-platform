@@ -8,6 +8,7 @@ import { formatToolboxMeetingNumberLabel } from "@/modules/toolbox-meetings/type
 import { ToolboxMeetingEditForm } from "@/modules/toolbox-meetings/components/toolbox-meeting-edit-form";
 import { ToolboxMeetingStatusToggle } from "@/modules/toolbox-meetings/components/toolbox-meeting-status-toggle";
 import { ToolboxMeetingReplaceFileForm } from "@/modules/toolbox-meetings/components/toolbox-meeting-replace-file-form";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ToolboxDocumentStatusBadge } from "@/components/shared/toolbox-document-status-badge";
@@ -33,7 +34,7 @@ export default async function ToolboxMeetingDetailPage({ params }: ToolboxMeetin
     notFound();
   }
 
-  const [roleNames, hasProjectAccess, project, previewUrl, replacements, candidates] = await Promise.all([
+  const [roleNames, hasProjectAccess, project, previewUrl, replacements, candidateRows] = await Promise.all([
     getUserRoleNames(currentOrganizationId),
     isCallerProjectAccessible(meeting.project_id),
     getProject(currentOrganizationId, meeting.project_id),
@@ -42,6 +43,7 @@ export default async function ToolboxMeetingDetailPage({ params }: ToolboxMeetin
     listToolboxAuthorizedEmployees(currentOrganizationId, meeting.project_id),
   ]);
 
+  const candidates = toEmployeeOptions(candidateRows);
   const canManage = canManageToolboxMeeting(roleNames, hasProjectAccess);
 
   return (

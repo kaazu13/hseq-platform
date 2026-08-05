@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, BasicEmployee } from "./types";
+import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, BasicEmployee, ScaffoldTeamMemberDetail } from "./types";
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
 import type { Project } from "@/modules/projects/types";
 import type { RoleName } from "@/modules/organizations/types";
+import type { EmployeeOption } from "@/components/shared/employee-combobox";
 
 /**
  * Server-only data access for the Scaffolds/Scaffold Inspections domain —
@@ -56,12 +57,33 @@ export async function getScaffold(organizationId: string, scaffoldId: string): P
   if (error) throw error;
   if (!scaffold) return null;
 
+  const { data: teamRows, error: teamError } = await supabase
+    .from("scaffold_team_members")
+    .select("id, employee_id, team_position")
+    .eq("scaffold_id", scaffoldId)
+    .is("removed_at", null)
+    .order("team_position", { ascending: true });
+  if (teamError) throw teamError;
+
+  const employeeIds = [scaffold.responsible_foreman_id, ...(teamRows ?? []).map((row) => row.employee_id)];
   const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", {
-    target_employee_ids: [scaffold.responsible_foreman_id],
+    target_employee_ids: employeeIds,
   });
   if (employeesError) throw employeesError;
+  const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
 
-  return { ...scaffold, responsibleForeman: employees?.[0] ?? null };
+  const teamMembers: ScaffoldTeamMemberDetail[] = (teamRows ?? []).map((row) => {
+    const employee = employeeById.get(row.employee_id);
+    return {
+      id: row.id,
+      employeeId: row.employee_id,
+      teamPosition: row.team_position,
+      firstName: employee?.first_name ?? "Unknown",
+      lastName: employee?.last_name ?? "employee",
+    };
+  });
+
+  return { ...scaffold, responsibleForeman: employeeById.get(scaffold.responsible_foreman_id) ?? null, teamMembers };
 }
 
 /** The current (finalized, not superseded) inspection's `expires_at` for each scaffold in `scaffoldIds` — the one query every "is this scaffold's status still valid right now" display needs (list badges, Safety Overview counts). Null entries mean no finalized inspection has ever applied (e.g. still pending_inspection). */
@@ -103,6 +125,26 @@ export async function listScaffoldCandidateEmployees(organizationId: string, pro
   const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
   if (employeesError) throw employeesError;
   return (employees ?? []).sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
+}
+
+function toEmployeeOption(row: { id: string; first_name: string; last_name: string; employee_number: string | null }, roleLabel: string | null): EmployeeOption {
+  return { value: row.id, label: `${row.first_name} ${row.last_name}`, employeeNumber: row.employee_number, roleLabel };
+}
+
+/** Candidate pool for the Responsible Foreman picker — active employees who hold the organization Foreman role AND an open Foreman team assignment on this project (list_eligible_scaffold_foremen(), the same eligibility the database itself enforces on insert/update — see 20260805090000_scaffold_team_and_dimensions.sql). */
+export async function listEligibleScaffoldForemen(organizationId: string, projectId: string): Promise<EmployeeOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_foremen", { target_organization_id: organizationId, target_project_id: projectId });
+  if (error) throw error;
+  return (data ?? []).map((row) => toEmployeeOption(row, "Foreman"));
+}
+
+/** Candidate pool for ordinary scaffold team-member slots — active project roster employees excluding specialist/management roles (list_eligible_scaffold_team_members()). `roleLabel` is deliberately left null: no reliable trade/job-title field exists on this platform yet — see the migration's header comment. */
+export async function listEligibleScaffoldTeamMembers(organizationId: string, projectId: string): Promise<EmployeeOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_team_members", { target_organization_id: organizationId, target_project_id: projectId });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({ value: row.id, label: `${row.first_name} ${row.last_name}`, employeeNumber: row.employee_number, roleLabel: row.position_title }));
 }
 
 const SCAFFOLD_MANAGE_ELIGIBLE_ROLES: RoleName[] = ["hse_officer", "inspector"];

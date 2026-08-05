@@ -4,6 +4,7 @@ import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getProject } from "@/modules/projects/queries";
 import { listObservationCreatableProjects, listObservationCandidateEmployees } from "@/modules/observations/queries";
 import { ObservationForm } from "@/modules/observations/components/observation-form";
+import { toEmployeeOptions } from "@/components/shared/employee-combobox";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Eye } from "lucide-react";
@@ -73,7 +74,7 @@ export default async function NewObservationPage({ searchParams }: NewObservatio
     forbidden();
   }
 
-  const candidates = await listObservationCandidateEmployees(currentOrganizationId, project.id);
+  const candidates = toEmployeeOptions(await listObservationCandidateEmployees(currentOrganizationId, project.id));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">

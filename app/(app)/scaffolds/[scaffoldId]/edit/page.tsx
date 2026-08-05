@@ -2,7 +2,7 @@ import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentOrganization } from "@/modules/organizations/queries";
 import { getProject } from "@/modules/projects/queries";
-import { getScaffold, isCallerProjectAccessible, listScaffoldCandidateEmployees } from "@/modules/scaffolds/queries";
+import { getScaffold, isCallerProjectAccessible, listEligibleScaffoldForemen, listEligibleScaffoldTeamMembers } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
 import { PageHeader } from "@/components/shared/page-header";
@@ -36,13 +36,16 @@ export default async function EditScaffoldPage({ params }: EditScaffoldPageProps
   }
 
   const projectName = project?.name ?? "Project unavailable";
-  const candidates = await listScaffoldCandidateEmployees(currentOrganizationId, scaffold.project_id);
+  const [foremanOptions, teamMemberOptions] = await Promise.all([
+    listEligibleScaffoldForemen(currentOrganizationId, scaffold.project_id),
+    listEligibleScaffoldTeamMembers(currentOrganizationId, scaffold.project_id),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Edit scaffold" description={`${projectName} · ${scaffold.tag_number}`} />
       <div className="max-w-3xl">
-        <ScaffoldForm mode="edit" organizationId={currentOrganizationId} projectId={scaffold.project_id} projectName={projectName} candidates={candidates} scaffold={scaffold} />
+        <ScaffoldForm mode="edit" organizationId={currentOrganizationId} projectId={scaffold.project_id} projectName={projectName} foremanOptions={foremanOptions} teamMemberOptions={teamMemberOptions} scaffold={scaffold} />
       </div>
     </div>
   );
