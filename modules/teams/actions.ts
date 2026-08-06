@@ -33,13 +33,13 @@ export type TeamAssignmentChange = { employeeId: string; role: "member" | "forem
  * data) is the correct next step, not a bug report.
  */
 export async function saveTeamWithAssignments(
-  organizationId: string,
+  companyId: string,
   projectId: string,
   teamId: string | null,
   input: TeamFormInput,
   assignmentChanges: TeamAssignmentChange[],
 ): Promise<ActionResult<{ teamId: string }>> {
-  const { userId } = await requireProjectManageAccess(organizationId, projectId);
+  const { userId } = await requireProjectManageAccess(companyId, projectId);
 
   const parsed = teamFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -84,7 +84,7 @@ export async function saveTeamWithAssignments(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: userId,
     action: teamId ? "update" : "create",
     entity_type: "team",
@@ -105,8 +105,8 @@ export async function saveTeamWithAssignments(
  * controls this milestone; a future drag-and-drop UI can call this exact
  * same function with a drag-reordered array and needs no other change.
  */
-export async function reorderTeams(organizationId: string, projectId: string, orderedTeamIds: string[]): Promise<ActionResult<null>> {
-  await requireProjectManageAccess(organizationId, projectId);
+export async function reorderTeams(companyId: string, projectId: string, orderedTeamIds: string[]): Promise<ActionResult<null>> {
+  await requireProjectManageAccess(companyId, projectId);
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("reorder_teams", {
@@ -133,12 +133,12 @@ export async function reorderTeams(organizationId: string, projectId: string, or
  * this project and opens the new one, in a single transaction.
  */
 export async function setTeamAssignment(
-  organizationId: string,
+  companyId: string,
   projectId: string,
   teamId: string,
   input: SetTeamAssignmentInput,
 ): Promise<ActionResult<null>> {
-  const { userId } = await requireProjectManageAccess(organizationId, projectId);
+  const { userId } = await requireProjectManageAccess(companyId, projectId);
 
   const parsed = setTeamAssignmentSchema.safeParse(input);
   if (!parsed.success) {
@@ -173,7 +173,7 @@ export async function setTeamAssignment(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: userId,
     action: "update",
     entity_type: "team",
@@ -186,8 +186,8 @@ export async function setTeamAssignment(
 }
 
 /** Removes an employee from a team entirely (no replacement) via `end_team_assignment()`. */
-export async function removeTeamAssignment(organizationId: string, projectId: string, teamId: string, employeeId: string): Promise<ActionResult<null>> {
-  const { userId } = await requireProjectManageAccess(organizationId, projectId);
+export async function removeTeamAssignment(companyId: string, projectId: string, teamId: string, employeeId: string): Promise<ActionResult<null>> {
+  const { userId } = await requireProjectManageAccess(companyId, projectId);
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("end_team_assignment", {
@@ -203,7 +203,7 @@ export async function removeTeamAssignment(organizationId: string, projectId: st
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: userId,
     action: "update",
     entity_type: "team",

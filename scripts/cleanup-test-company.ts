@@ -1,19 +1,19 @@
 /**
  * Removes all "Northstar Scaffolding Test AB" test data created by
- * scripts/seed-test-org.ts. Never touches any other organization (Valutris
+ * scripts/seed-test-company.ts. Never touches any other company (Valutris
  * included) and never deletes the requester's own platform account — only
- * that account's membership/role in THIS org is removed (by virtue of it
- * being scoped to this org's id, exactly like every other row here).
+ * that account's membership/role in THIS company is removed (by virtue of it
+ * being scoped to this company's id, exactly like every other row here).
  *
- * Every org-scoped table (projects, project_assignments, teams,
+ * Every company-scoped table (projects, project_assignments, teams,
  * team_assignments, employees, employee_employment_periods,
- * organization_memberships, membership_roles) has an
- * `organization_id ... references organizations (id) on delete cascade` FK
+ * company_memberships, membership_roles) has an
+ * `company_id ... references companies (id) on delete cascade` FK
  * — confirmed by reading every migration that defines one. Deleting the
- * `organizations` row itself is therefore sufficient and FK-safe; there is
+ * `companies` row itself is therefore sufficient and FK-safe; there is
  * no manual per-table deletion order to get wrong.
  *
- * Run: npm run cleanup:test-org
+ * Run: npm run cleanup:test-company
  */
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -47,10 +47,10 @@ const admin = createSupabaseClient<Database>(
   { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-const ORG_SLUG = "northstar-scaffolding-test";
+const COMPANY_SLUG = "northstar-scaffolding-test";
 
 // Auth accounts this seed can create — deleted here too, since they exist
-// for no purpose outside this test org. The requester's own account is
+// for no purpose outside this test company. The requester's own account is
 // deliberately NOT in this list.
 const SEED_ACCOUNT_EMAILS = [
   "northstar.cm@example.com",
@@ -68,21 +68,21 @@ const SEED_ACCOUNT_EMAILS = [
 ];
 
 async function main() {
-  console.log(`\n=== Cleaning up Northstar Scaffolding Test AB (slug: ${ORG_SLUG}) ===\n`);
+  console.log(`\n=== Cleaning up Northstar Scaffolding Test AB (slug: ${COMPANY_SLUG}) ===\n`);
 
-  const { data: org, error: orgErr } = await admin
-    .from("organizations")
+  const { data: company, error: orgErr } = await admin
+    .from("companies")
     .select("id, name")
-    .eq("slug", ORG_SLUG)
+    .eq("slug", COMPANY_SLUG)
     .maybeSingle();
   if (orgErr) throw orgErr;
 
-  if (!org) {
-    console.log("No organization with this slug exists — nothing to clean up.");
+  if (!company) {
+    console.log("No company with this slug exists — nothing to clean up.");
   } else {
-    const { error: delErr } = await admin.from("organizations").delete().eq("id", org.id);
+    const { error: delErr } = await admin.from("companies").delete().eq("id", company.id);
     if (delErr) throw delErr;
-    console.log(`Deleted organization "${org.name}" (${org.id}) and everything cascaded from it ` +
+    console.log(`Deleted company "${company.name}" (${company.id}) and everything cascaded from it ` +
       `(projects, teams, project/team assignments, employees, employment periods, memberships, membership roles).`);
   }
 

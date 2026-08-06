@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -19,9 +19,9 @@ import { toolboxMeetingMetadataSchema, toolboxMeetingEditFormSchema, replaceFile
  * JSON input object, since a File isn't JSON-serializable.
  */
 
-async function requireToolboxMeetingManageAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(organizationId), isCallerProjectAccessible(projectId)]);
+async function requireToolboxMeetingManageAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(companyId), isCallerProjectAccessible(projectId)]);
 
   if (!canManageToolboxMeeting(roleNames, hasProjectAccess)) {
     forbidden();
@@ -30,7 +30,7 @@ async function requireToolboxMeetingManageAccess(organizationId: string, project
   return { user, roleNames };
 }
 
-export async function createToolboxMeeting(organizationId: string, formData: FormData): Promise<ActionResult<{ meetingId: string }>> {
+export async function createToolboxMeeting(companyId: string, formData: FormData): Promise<ActionResult<{ meetingId: string }>> {
   const metadata = {
     projectId: String(formData.get("projectId") ?? ""),
     title: String(formData.get("title") ?? ""),
@@ -53,11 +53,11 @@ export async function createToolboxMeeting(organizationId: string, formData: For
     return { ok: false, error: { code: "validation_error", message: pdfCheck.message, fieldErrors: { file: pdfCheck.message } } };
   }
 
-  const { user } = await requireToolboxMeetingManageAccess(organizationId, parsed.data.projectId);
+  const { user } = await requireToolboxMeetingManageAccess(companyId, parsed.data.projectId);
   const supabase = await createClient();
 
   const meetingId = randomUUID();
-  const objectPath = buildToolboxMeetingObjectPath(organizationId, parsed.data.projectId, meetingId, file.name);
+  const objectPath = buildToolboxMeetingObjectPath(companyId, parsed.data.projectId, meetingId, file.name);
   const uploadResult = await uploadPdfToToolboxBucket(supabase, objectPath, file);
   if (!uploadResult.ok) {
     return { ok: false, error: { code: "server_error", message: uploadResult.message } };
@@ -68,7 +68,7 @@ export async function createToolboxMeeting(organizationId: string, formData: For
     .from("toolbox_meetings")
     .insert({
       id: meetingId,
-      organization_id: organizationId,
+      company_id: companyId,
       project_id: parsed.data.projectId,
       title: parsed.data.title,
       meeting_date: parsed.data.meetingDate,
@@ -105,13 +105,13 @@ export async function createToolboxMeeting(organizationId: string, formData: For
   redirect(`/toolbox-meetings/${data.id}`);
 }
 
-export async function updateToolboxMeetingMetadata(organizationId: string, meetingId: string, projectId: string, input: unknown): Promise<ActionResult<null>> {
+export async function updateToolboxMeetingMetadata(companyId: string, meetingId: string, projectId: string, input: unknown): Promise<ActionResult<null>> {
   const parsed = toolboxMeetingEditFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireToolboxMeetingManageAccess(organizationId, projectId);
+  const { user } = await requireToolboxMeetingManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -127,7 +127,7 @@ export async function updateToolboxMeetingMetadata(organizationId: string, meeti
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", meetingId);
 
   if (error) {
@@ -145,11 +145,11 @@ export async function updateToolboxMeetingMetadata(organizationId: string, meeti
   return { ok: true, data: null };
 }
 
-export async function setToolboxMeetingStatus(organizationId: string, meetingId: string, projectId: string, status: "active" | "archived"): Promise<ActionResult<null>> {
-  const { user } = await requireToolboxMeetingManageAccess(organizationId, projectId);
+export async function setToolboxMeetingStatus(companyId: string, meetingId: string, projectId: string, status: "active" | "archived"): Promise<ActionResult<null>> {
+  const { user } = await requireToolboxMeetingManageAccess(companyId, projectId);
   const supabase = await createClient();
 
-  const { error, count } = await supabase.from("toolbox_meetings").update({ status, updated_by: user.id }, { count: "exact" }).eq("organization_id", organizationId).eq("id", meetingId);
+  const { error, count } = await supabase.from("toolbox_meetings").update({ status, updated_by: user.id }, { count: "exact" }).eq("company_id", companyId).eq("id", meetingId);
 
   if (error) {
     if (isRlsViolation(error)) forbidden();
@@ -165,7 +165,7 @@ export async function setToolboxMeetingStatus(organizationId: string, meetingId:
 }
 
 /** Controlled replacement of an incorrectly-uploaded PDF — records who/when/why and the previous+new storage references via replace_toolbox_meeting_file(), never a silent overwrite. */
-export async function replaceToolboxMeetingFile(organizationId: string, meetingId: string, projectId: string, formData: FormData): Promise<ActionResult<null>> {
+export async function replaceToolboxMeetingFile(companyId: string, meetingId: string, projectId: string, formData: FormData): Promise<ActionResult<null>> {
   const reasonParsed = replaceFileReasonSchema.safeParse({ reason: String(formData.get("reason") ?? "") });
   if (!reasonParsed.success) {
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(reasonParsed.error) } };
@@ -180,10 +180,10 @@ export async function replaceToolboxMeetingFile(organizationId: string, meetingI
     return { ok: false, error: { code: "validation_error", message: pdfCheck.message, fieldErrors: { file: pdfCheck.message } } };
   }
 
-  await requireToolboxMeetingManageAccess(organizationId, projectId);
+  await requireToolboxMeetingManageAccess(companyId, projectId);
   const supabase = await createClient();
 
-  const objectPath = buildToolboxMeetingObjectPath(organizationId, projectId, meetingId, file.name);
+  const objectPath = buildToolboxMeetingObjectPath(companyId, projectId, meetingId, file.name);
   const uploadResult = await uploadPdfToToolboxBucket(supabase, objectPath, file);
   if (!uploadResult.ok) {
     return { ok: false, error: { code: "server_error", message: uploadResult.message } };

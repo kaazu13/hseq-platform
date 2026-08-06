@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type EmployeeFormProps =
-  | { mode: "create"; organizationId: string; employee?: undefined }
-  | { mode: "edit"; organizationId: string; employee: Employee };
+  | { mode: "create"; companyId: string; employee?: undefined }
+  | { mode: "edit"; companyId: string; employee: Employee };
 
 /**
  * Shared create/edit form for the fields employment lifecycle doesn't own.
@@ -42,7 +42,7 @@ type EmployeeFormProps =
  * under the user — the browser leaves every field exactly as typed unless
  * this component's own code changes it.
  */
-export function EmployeeForm({ mode, organizationId, employee }: EmployeeFormProps) {
+export function EmployeeForm({ mode, companyId, employee }: EmployeeFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -66,8 +66,8 @@ export function EmployeeForm({ mode, organizationId, employee }: EmployeeFormPro
     startTransition(async () => {
       const result =
         mode === "create"
-          ? await createEmployee(organizationId, { ...shared, startDate: String(formData.get("startDate") ?? "") })
-          : await updateEmployee(organizationId, employee.id, shared);
+          ? await createEmployee(companyId, { ...shared, startDate: String(formData.get("startDate") ?? "") })
+          : await updateEmployee(companyId, employee.id, shared);
 
       // On success both actions redirect server-side and this component
       // unmounts — a value only ever comes back here on failure.

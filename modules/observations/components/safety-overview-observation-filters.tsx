@@ -30,7 +30,7 @@ const FILTER_KEYS = ["obsWorkArea", "obsProjectId", "obsCategory", "obsRiskLevel
  * `projectId`/`workArea`/`status`/`dateFrom`/`dateTo` with the LMRA
  * section's OWN unprefixed filter bar living on this same page.
  * Deliberately omits responsiblePerson/overdueOnly — the milestone's
- * Safety Overview requirement only lists "organization, project, area,
+ * Safety Overview requirement only lists "company, project, area,
  * date, and status" as the filters to respect here, not the full
  * Observations-list filter set.
  */

@@ -21,9 +21,9 @@ const FILTER_KEYS = ["workArea", "status", "projectId", "dateFrom", "dateTo"] as
  * header comment for why those can't share a date filter with "today"/"this
  * week"/"overdue").
  *
- * "Organization" is implicit (the current organization context, like every
+ * "Company" is implicit (the current company context, like every
  * other page). This schema has no "company" concept distinct from
- * organization/project — see the milestone report for that disclosure;
+ * company/project — see the milestone report for that disclosure;
  * there is deliberately no fake "company" dropdown here.
  */
 export function SafetyOverviewFilters({ projects }: { projects: Project[] }) {

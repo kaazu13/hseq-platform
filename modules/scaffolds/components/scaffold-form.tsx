@@ -18,7 +18,7 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
 
 type ScaffoldFormProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   projectName: string;
   foremanOptions: EmployeeOption[];
@@ -37,7 +37,7 @@ const TEAM_SIZE_OPTIONS = Array.from({ length: SCAFFOLD_TEAM_MAX_SIZE - SCAFFOLD
  * which is what caused the raw-UUID-after-selection bug this milestone
  * fixes (see that component's header comment for the root cause).
  */
-export function ScaffoldForm({ organizationId, projectId, projectName, foremanOptions, teamMemberOptions, mode, scaffold }: ScaffoldFormProps) {
+export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions, teamMemberOptions, mode, scaffold }: ScaffoldFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export function ScaffoldForm({ organizationId, projectId, projectName, foremanOp
     };
 
     startTransition(async () => {
-      const result = mode === "create" ? await createScaffold(organizationId, input) : await updateScaffold(organizationId, scaffold.id, projectId, input);
+      const result = mode === "create" ? await createScaffold(companyId, input) : await updateScaffold(companyId, scaffold.id, projectId, input);
 
       if (!result.ok) {
         setFormError(result.error.message);

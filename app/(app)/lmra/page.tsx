@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, ShieldCheck } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listLmraAssessments, type LmraListFilters } from "@/modules/lmra/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { LmraCard } from "@/modules/lmra/components/lmra-card";
@@ -18,28 +18,28 @@ type LmraPageProps = {
  * Real LMRA list, replacing the `ComingSoonPage` placeholder — see
  * docs/DATABASE_SCHEMA.md's `lmra_assessments` section and
  * supabase/migrations/20260801090000_lmra.sql. RLS (lmra_assessments_select)
- * is the real scoping (org-wide HSE/company roles see every assessment in
- * the organization; everyone else only what has_project_access() grants
+ * is the real scoping (company-wide HSE/company roles see every assessment in
+ * the company; everyone else only what has_project_access() grants
  * them) — this page never filters visibility client-side, only the
  * work-area/status/project/date facets in LmraFilters.
  *
  * "New LMRA" always links to /lmra/new, which does its own project-picker
  * and eligibility check (docs/ROLES_AND_PERMISSIONS.md §5's LMRA row is
- * project-scoped, not a single org-wide "can create" flag — see
+ * project-scoped, not a single company-wide "can create" flag — see
  * modules/lmra/queries.ts's listLmraCreatableProjects).
  */
 export default async function LmraPage({ searchParams }: LmraPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="LMRA" description="Last Minute Risk Assessments — a go/no-go check completed before starting work." />
         <EmptyState
           icon={ShieldCheck}
-          title="You're not part of an organization yet"
+          title="You're not part of an company yet"
           description="Once an administrator adds your account to one, LMRAs will appear here."
           className="flex-1"
         />
@@ -56,8 +56,8 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
   };
 
   const [assessments, projects] = await Promise.all([
-    listLmraAssessments(currentOrganizationId, filters),
-    listProjects(currentOrganizationId),
+    listLmraAssessments(currentCompanyId, filters),
+    listProjects(currentCompanyId),
   ]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
 

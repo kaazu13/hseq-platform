@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 type ObservationParticipantsPickerProps = {
-  organizationId: string;
+  companyId: string;
   observationId: string;
   projectId: string;
   createdBy: string | null;
@@ -22,7 +22,7 @@ type ObservationParticipantsPickerProps = {
 
 /** People involved, optional ("where appropriate") — checkbox picker over the project roster, same convention as modules/lmra/components/lmra-participants-picker.tsx. */
 export function ObservationParticipantsPicker({
-  organizationId,
+  companyId,
   observationId,
   projectId,
   createdBy,
@@ -47,7 +47,7 @@ export function ObservationParticipantsPicker({
   function handleSave() {
     setFormError(null);
     startTransition(async () => {
-      const result = await updateObservationParticipants(organizationId, observationId, projectId, createdBy, [...selectedIds]);
+      const result = await updateObservationParticipants(companyId, observationId, projectId, createdBy, [...selectedIds]);
       if (!result.ok) {
         setFormError(result.error.message);
         return;

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization, getCurrentUserProfile } from "@/modules/organizations/queries";
+import { resolveCurrentCompany, getCurrentUserProfile } from "@/modules/companies/queries";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { TopBar } from "@/components/app-shell/top-bar";
@@ -13,8 +13,8 @@ import { TopBar } from "@/components/app-shell/top-bar";
  * requests to /login before this ever renders, but this layout re-verifies
  * independently so a proxy matcher gap can't silently expose the route.
  *
- * "Current organization" resolution is shared with every employees page via
- * `resolveCurrentOrganization()` (modules/organizations/queries.ts) — see
+ * "Current company" resolution is shared with every employees page via
+ * `resolveCurrentCompany()` (modules/companies/queries.ts) — see
  * that function's own comment for the exact resolution order. Purely a
  * display/UX concern; no authorization decision anywhere reads it — see
  * docs/ARCHITECTURE.md §3.2.
@@ -22,12 +22,12 @@ import { TopBar } from "@/components/app-shell/top-bar";
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireUser();
 
-  const [{ organizations, currentOrganizationId }, profile, cookieStore] = await Promise.all([
-    resolveCurrentOrganization(user.id),
+  const [{ companies, currentCompanyId }, profile, cookieStore] = await Promise.all([
+    resolveCurrentCompany(user.id),
     getCurrentUserProfile(user.id),
     cookies(),
   ]);
-  const roleNames = currentOrganizationId ? await getUserRoleNames(currentOrganizationId) : [];
+  const roleNames = currentCompanyId ? await getUserRoleNames(currentCompanyId) : [];
 
   const sidebarOpenCookie = cookieStore.get("sidebar_state")?.value;
   const defaultSidebarOpen = sidebarOpenCookie !== "false";
@@ -37,8 +37,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
       <AppSidebar
-        organizations={organizations}
-        currentOrganizationId={currentOrganizationId}
+        companies={companies}
+        currentCompanyId={currentCompanyId}
         user={{ name: displayName, email: user.email ?? "" }}
         roleNames={roleNames}
       />

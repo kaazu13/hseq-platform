@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { canManageEmployees } from "@/modules/employees/permissions";
 import { getEmployeeByNumber } from "@/modules/employees/queries";
 import { EmployeeForm } from "@/modules/employees/components/employee-form";
@@ -13,18 +13,18 @@ type EditEmployeePageProps = {
 export default async function EditEmployeePage({ params }: EditEmployeePageProps) {
   const { employeeNumber } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   if (!canManageEmployees(roleNames)) {
     forbidden();
   }
 
-  const employee = await getEmployeeByNumber(currentOrganizationId, employeeNumber);
+  const employee = await getEmployeeByNumber(currentCompanyId, employeeNumber);
   if (!employee) {
     notFound();
   }
@@ -36,7 +36,7 @@ export default async function EditEmployeePage({ params }: EditEmployeePageProps
         description="Update this employee's record."
       />
       <div className="max-w-2xl">
-        <EmployeeForm mode="edit" organizationId={currentOrganizationId} employee={employee} />
+        <EmployeeForm mode="edit" companyId={currentCompanyId} employee={employee} />
       </div>
     </div>
   );

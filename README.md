@@ -2,7 +2,7 @@
 
 A multi-tenant construction workforce and HSEQ (Health, Safety, Environment,
 Quality) platform built on Next.js 16 (App Router) and Supabase. Tracks
-organizations, employees, projects, and teams today, with the HSEQ-specific
+companies, employees, projects, and teams today, with the HSEQ-specific
 modules (inspections, incidents, corrective actions, LMRA, toolbox talks,
 certificates) scoped but not yet built — see `docs/PRODUCT_REQUIREMENTS.md`.
 
@@ -21,8 +21,8 @@ certificates) scoped but not yet built — see `docs/PRODUCT_REQUIREMENTS.md`.
   validate → mutate → audit → revalidate) documented in
   `docs/API_CONVENTIONS.md`.
 - **Multi-tenancy**: every tenant-owned table traces back to
-  `organizations`; a person can belong to multiple organizations via
-  `organization_memberships`, each with its own role assignments.
+  `companies`; a person can belong to multiple companies via
+  `company_memberships`, each with its own role assignments.
 
 For the full picture, see `docs/ARCHITECTURE.md`.
 
@@ -99,19 +99,19 @@ divide responsibility.
 
 ## Seed workflow
 
-`supabase/seed.sql` (the role catalogue + one example organization) runs
+`supabase/seed.sql` (the role catalogue + one example company) runs
 automatically on `supabase db reset`/`supabase start`.
 
-For a fuller, realistic multi-role test organization (useful for manually
-exercising the app as different kinds of users), `scripts/seed-test-org.ts`
+For a fuller, realistic multi-role test company (useful for manually
+exercising the app as different kinds of users), `scripts/seed-test-company.ts`
 creates an idempotent, clearly-named "Northstar Scaffolding Test AB"
-organization with a full staff, two projects, and four teams — safe to
-re-run, never touches any other organization. `scripts/cleanup-test-org.ts`
+company with a full staff, two projects, and four teams — safe to
+re-run, never touches any other company. `scripts/cleanup-test-company.ts`
 removes it again. Both require `SUPABASE_SECRET_KEY` in `.env.local`.
 
 ```bash
-npm run seed:test-org
-npm run cleanup:test-org
+npm run seed:test-company
+npm run cleanup:test-company
 ```
 
 ## Test commands
@@ -127,7 +127,7 @@ npm run cleanup:test-org
 |---|---|---|
 | `npm test` | Alias for `test:unit` | No |
 | `npm run test:unit` | Pure-function unit tests (`lib/`, `modules/*/permissions.ts`) | No |
-| `npm run test:db` | Database/RLS tests (`tests/db/`) — cross-org isolation, role permissions, employment invariants, project/team invariants | **Yes** |
+| `npm run test:db` | Database/RLS tests (`tests/db/`) — cross-company isolation, role permissions, employment invariants, project/team invariants | **Yes** |
 | `npm run test:integration` | Server Action integration tests (`tests/integration/`) — a small representative set exercising real actions against real Supabase | **Yes** |
 
 `test:unit` is always safe to run anywhere (CI included) with zero setup.

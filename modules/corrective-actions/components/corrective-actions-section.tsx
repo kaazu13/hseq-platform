@@ -4,14 +4,14 @@ import { useState } from "react";
 import { ListChecks, Plus } from "lucide-react";
 import type { CorrectiveActionDetail } from "@/modules/corrective-actions/types";
 import type { EmployeeOption } from "@/components/shared/employee-combobox";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { CorrectiveActionItem } from "@/modules/corrective-actions/components/corrective-action-item";
 import { CorrectiveActionFormDialog } from "@/modules/corrective-actions/components/corrective-action-form-dialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 
 type CorrectiveActionsSectionProps = {
-  organizationId: string;
+  companyId: string;
   observationId: string;
   projectId: string;
   actions: CorrectiveActionDetail[];
@@ -26,7 +26,7 @@ type CorrectiveActionsSectionProps = {
 
 /** Corrective-action management, embedded on the observation detail page (this milestone's explicit placement — no standalone Corrective Actions list page). */
 export function CorrectiveActionsSection({
-  organizationId,
+  companyId,
   observationId,
   projectId,
   actions,
@@ -58,7 +58,7 @@ export function CorrectiveActionsSection({
           {actions.map((action) => (
             <CorrectiveActionItem
               key={action.id}
-              organizationId={organizationId}
+              companyId={companyId}
               observationId={observationId}
               projectId={projectId}
               action={action}
@@ -75,7 +75,7 @@ export function CorrectiveActionsSection({
 
       {canCreate && (
         <CorrectiveActionFormDialog
-          organizationId={organizationId}
+          companyId={companyId}
           observationId={observationId}
           projectId={projectId}
           candidates={candidates}

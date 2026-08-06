@@ -14,8 +14,8 @@ import { requireUser } from "@/lib/auth/session";
 import {
   countActiveMembers,
   getCurrentUserProfile,
-  resolveCurrentOrganization,
-} from "@/modules/organizations/queries";
+  resolveCurrentCompany,
+} from "@/modules/companies/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
@@ -31,7 +31,7 @@ const ORG_STATUS_TONE: Record<string, StatusTone> = {
 };
 
 /**
- * Organization-aware dashboard — see docs/IMPLEMENTATION_PLAN.md M7.5.
+ * Company-aware dashboard — see docs/IMPLEMENTATION_PLAN.md M7.5.
  *
  * Exactly one thing on this page is a real KPI (Team Members, from
  * `countActiveMembers`); everything else is a `StatCard`/`EmptyState` in
@@ -42,28 +42,28 @@ const ORG_STATUS_TONE: Record<string, StatusTone> = {
  */
 export default async function DashboardPage() {
   const { user } = await requireUser();
-  const [{ organizations, currentOrganizationId }, profile] = await Promise.all([
-    resolveCurrentOrganization(user.id),
+  const [{ companies, currentCompanyId }, profile] = await Promise.all([
+    resolveCurrentCompany(user.id),
     getCurrentUserProfile(user.id),
   ]);
 
   const displayName = profile?.full_name?.trim() || user.email?.split("@")[0] || "there";
 
-  if (organizations.length === 0) {
+  if (companies.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into an organization." />
+        <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into an company." />
         <EmptyState
           icon={Users}
-          title="You're not part of an organization yet"
-          description="Organizations are set up manually for now. Once an administrator adds your account to one, it will appear here automatically — no action needed on your end."
+          title="You're not part of an company yet"
+          description="Companies are set up manually for now. Once an administrator adds your account to one, it will appear here automatically — no action needed on your end."
           className="flex-1"
         />
       </div>
     );
   }
 
-  const current = organizations.find((org) => org.id === currentOrganizationId) ?? organizations[0];
+  const current = companies.find((company) => company.id === currentCompanyId) ?? companies[0];
   const memberCount = await countActiveMembers(current.id);
   const orgTone = ORG_STATUS_TONE[current.status] ?? "neutral";
 
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
         <CardContent className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Current organization
+              Current company
             </span>
             <span className="text-lg font-semibold">{current.name}</span>
           </div>
@@ -138,7 +138,7 @@ export default async function DashboardPage() {
               <EmptyState
                 icon={Activity}
                 title="No activity yet"
-                description="Actions taken across your organization will show up here once business modules are in place."
+                description="Actions taken across your company will show up here once business modules are in place."
               />
             </CardContent>
           </Card>

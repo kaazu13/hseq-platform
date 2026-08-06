@@ -7,7 +7,7 @@ import { closeCorrectiveAction, rejectCorrectiveAction, reopenCorrectiveAction, 
 import { canCloseCorrectiveAction, canUpdateCorrectiveActionProgress } from "@/modules/corrective-actions/permissions";
 import { CORRECTIVE_ACTION_STATUS_LABELS, type CorrectiveActionDetail } from "@/modules/corrective-actions/types";
 import type { EmployeeOption } from "@/components/shared/employee-combobox";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { CorrectiveActionStatusBadge } from "@/modules/corrective-actions/components/corrective-action-status-badge";
 import { CorrectiveActionPriorityBadge } from "@/modules/corrective-actions/components/corrective-action-priority-badge";
 import { CorrectiveActionFormDialog } from "@/modules/corrective-actions/components/corrective-action-form-dialog";
@@ -30,7 +30,7 @@ const PROGRESS_STATUSES = ["open", "in_progress", "awaiting_verification"] as co
 type ProgressStatus = (typeof PROGRESS_STATUSES)[number];
 
 type CorrectiveActionItemProps = {
-  organizationId: string;
+  companyId: string;
   observationId: string;
   projectId: string;
   action: CorrectiveActionDetail;
@@ -49,7 +49,7 @@ function formatDate(value: string): string {
 
 /** One corrective action's card — description, responsible person, badges, and every control this milestone requires: progress advance, close, reject, reopen. Every write goes through the exact Server Function the database's validate_corrective_action_update()/can_close_corrective_action() were designed to back — see modules/corrective-actions/permissions.ts's header comment. */
 export function CorrectiveActionItem({
-  organizationId,
+  companyId,
   observationId,
   projectId,
   action,
@@ -92,7 +92,7 @@ export function CorrectiveActionItem({
 
   function handleUpdateProgress() {
     runAction(() =>
-      updateCorrectiveActionProgress(organizationId, action.id, observationId, projectId, action.responsible_person_id, {
+      updateCorrectiveActionProgress(companyId, action.id, observationId, projectId, action.responsible_person_id, {
         status: progressStatus,
         completionNotes,
       }),
@@ -101,7 +101,7 @@ export function CorrectiveActionItem({
 
   function handleClose() {
     runAction(
-      () => closeCorrectiveAction(organizationId, action.id, observationId, projectId, action.created_by, action.responsible_person_id, { closureEvidence }),
+      () => closeCorrectiveAction(companyId, action.id, observationId, projectId, action.created_by, action.responsible_person_id, { closureEvidence }),
       () => setCloseConfirmOpen(false),
     );
   }
@@ -111,8 +111,8 @@ export function CorrectiveActionItem({
     runAction(
       () =>
         kind === "reject"
-          ? rejectCorrectiveAction(organizationId, action.id, observationId, projectId, action.created_by, action.responsible_person_id, { reason })
-          : reopenCorrectiveAction(organizationId, action.id, observationId, projectId, action.created_by, action.responsible_person_id, { reason }),
+          ? rejectCorrectiveAction(companyId, action.id, observationId, projectId, action.created_by, action.responsible_person_id, { reason })
+          : reopenCorrectiveAction(companyId, action.id, observationId, projectId, action.created_by, action.responsible_person_id, { reason }),
       () => {
         setReasonDialog(null);
         setReason("");
@@ -221,7 +221,7 @@ export function CorrectiveActionItem({
 
       {canManageDetails && (
         <CorrectiveActionFormDialog
-          organizationId={organizationId}
+          companyId={companyId}
           observationId={observationId}
           projectId={projectId}
           candidates={candidates}

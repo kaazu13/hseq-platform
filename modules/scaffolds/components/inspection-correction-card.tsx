@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type InspectionCorrectionCardProps = {
-  organizationId: string;
+  companyId: string;
   scaffoldId: string;
   projectId: string;
   inspectionId: string;
@@ -26,7 +26,7 @@ type InspectionCorrectionCardProps = {
  * referencing it; finalizing THAT is what actually links the two records
  * together (see finalize_scaffold_inspection() in the migration).
  */
-export function InspectionCorrectionCard({ organizationId, scaffoldId, projectId, inspectionId }: InspectionCorrectionCardProps) {
+export function InspectionCorrectionCard({ companyId, scaffoldId, projectId, inspectionId }: InspectionCorrectionCardProps) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -35,7 +35,7 @@ export function InspectionCorrectionCard({ organizationId, scaffoldId, projectId
   function handleStart() {
     setFormError(null);
     startTransition(async () => {
-      const result = await startInspectionCorrection(organizationId, scaffoldId, projectId, inspectionId, { correctionReason });
+      const result = await startInspectionCorrection(companyId, scaffoldId, projectId, inspectionId, { correctionReason });
       if (!result.ok) {
         setFormError(result.error.message);
         setConfirmOpen(false);

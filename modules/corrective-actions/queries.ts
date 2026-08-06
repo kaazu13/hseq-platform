@@ -4,7 +4,7 @@ import type { CorrectiveAction, CorrectiveActionDetail, BasicEmployee } from "./
 /**
  * Server-only data access for the Corrective Actions domain — see
  * docs/API_CONVENTIONS.md §7. Plain queries filtered explicitly by
- * `organization_id` (RLS also enforces this — see
+ * `company_id` (RLS also enforces this — see
  * supabase/migrations/20260802120000_safety_observations_and_corrective_actions.sql
  * — but explicit scoping keeps index usage and intent readable).
  */
@@ -26,12 +26,12 @@ async function resolveResponsiblePersons(supabase: Awaited<ReturnType<typeof cre
 }
 
 /** Every corrective action for one observation — RLS (corrective_actions_select) does the real scoping. Oldest first (the order they were raised). */
-export async function listCorrectiveActionsForObservation(organizationId: string, observationId: string): Promise<CorrectiveActionDetail[]> {
+export async function listCorrectiveActionsForObservation(companyId: string, observationId: string): Promise<CorrectiveActionDetail[]> {
   const supabase = await createClient();
   const { data: actions, error } = await supabase
     .from("corrective_actions")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("observation_id", observationId)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -41,13 +41,13 @@ export async function listCorrectiveActionsForObservation(organizationId: string
   return actions.map((action) => ({ ...action, responsiblePerson: responsibleById.get(action.responsible_person_id) ?? null }));
 }
 
-/** A single corrective action scoped to `organizationId` — null if it doesn't exist, belongs to another org, or RLS hides it. */
-export async function getCorrectiveAction(organizationId: string, actionId: string): Promise<CorrectiveActionDetail | null> {
+/** A single corrective action scoped to `companyId` — null if it doesn't exist, belongs to another company, or RLS hides it. */
+export async function getCorrectiveAction(companyId: string, actionId: string): Promise<CorrectiveActionDetail | null> {
   const supabase = await createClient();
   const { data: action, error } = await supabase
     .from("corrective_actions")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", actionId)
     .maybeSingle();
   if (error) throw error;
@@ -58,12 +58,12 @@ export async function getCorrectiveAction(organizationId: string, actionId: stri
 }
 
 /** Employee ids currently rostered onto `projectId` — the candidate pool for the responsible-person select, same convention as modules/observations/queries.ts's listObservationCandidateEmployees. */
-export async function listCorrectiveActionCandidateEmployees(organizationId: string, projectId: string): Promise<BasicEmployee[]> {
+export async function listCorrectiveActionCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_assignments")
     .select("employee_id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .is("end_at", null);
   if (error) throw error;
@@ -93,12 +93,12 @@ export type CorrectiveActionOverviewCounts = {
  * modules/corrective-actions/types.ts's comment on why there's no separate
  * SQL function for this — a plain PostgREST filter expresses it exactly).
  */
-export async function getCorrectiveActionOverviewCounts(organizationId: string, projectId?: string): Promise<CorrectiveActionOverviewCounts> {
+export async function getCorrectiveActionOverviewCounts(companyId: string, projectId?: string): Promise<CorrectiveActionOverviewCounts> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 
   function scoped() {
-    let q = supabase.from("corrective_actions").select("id", { count: "exact", head: true }).eq("organization_id", organizationId);
+    let q = supabase.from("corrective_actions").select("id", { count: "exact", head: true }).eq("company_id", companyId);
     if (projectId) q = q.eq("project_id", projectId);
     return q;
   }

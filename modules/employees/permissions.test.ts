@@ -43,7 +43,7 @@ describe("canViewEmployeeDirectory", () => {
     }
   });
 
-  it("deliberately excludes hse_officer, foreman, and recruiter (project-scoped, not org-wide, per the Role Catalogue milestone)", () => {
+  it("deliberately excludes hse_officer, foreman, and recruiter (project-scoped, not company-wide, per the Role Catalogue milestone)", () => {
     expect(canViewEmployeeDirectory(["hse_officer"])).toBe(false);
     expect(canViewEmployeeDirectory(["foreman"])).toBe(false);
     expect(canViewEmployeeDirectory(["recruiter"])).toBe(false);

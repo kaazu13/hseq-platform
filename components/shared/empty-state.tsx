@@ -12,7 +12,7 @@ type EmptyStateProps = {
 /**
  * Standard "nothing here yet" body — see docs/UI_GUIDELINES.md §6 (Empty
  * state: "guidance + relevant next action, never a blank table with just
- * headers"). Used both for genuine empty results (e.g. zero organization
+ * headers"). Used both for genuine empty results (e.g. zero company
  * memberships) and, styled the same way for consistency, inside
  * `ComingSoonPanel` for not-yet-built modules.
  */

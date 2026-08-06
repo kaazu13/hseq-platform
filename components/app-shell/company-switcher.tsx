@@ -17,34 +17,34 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { setActiveOrganization } from "@/modules/organizations/actions";
-import type { OrganizationSummary } from "@/modules/organizations/types";
+import { setActiveCompany } from "@/modules/companies/actions";
+import type { CompanySummary } from "@/modules/companies/types";
 
-type OrgSwitcherProps = {
-  organizations: OrganizationSummary[];
-  currentOrganizationId: string | null;
+type CompanySwitcherProps = {
+  companies: CompanySummary[];
+  currentCompanyId: string | null;
 };
 
 /**
- * Organization switcher — see docs/UI_GUIDELINES.md §4: shown only for
+ * Company switcher — see docs/UI_GUIDELINES.md §4: shown only for
  * users with more than one active membership; for the common
- * single-organization case it's invisible (plain text), not a disabled or
+ * single-company case it's invisible (plain text), not a disabled or
  * empty dropdown. Zero-membership case renders nothing here at all — the
  * dashboard's own empty state (components/shared/empty-state.tsx via
  * app/(app)/dashboard/page.tsx) is where that's communicated, not the
  * sidebar chrome.
  */
-export function OrgSwitcher({ organizations, currentOrganizationId }: OrgSwitcherProps) {
+export function CompanySwitcher({ companies, currentCompanyId }: CompanySwitcherProps) {
   const [isPending, startTransition] = useTransition();
 
-  if (organizations.length === 0) {
+  if (companies.length === 0) {
     return null;
   }
 
   const current =
-    organizations.find((org) => org.id === currentOrganizationId) ?? organizations[0];
+    companies.find((company) => company.id === currentCompanyId) ?? companies[0];
 
-  if (organizations.length === 1) {
+  if (companies.length === 1) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -57,10 +57,10 @@ export function OrgSwitcher({ organizations, currentOrganizationId }: OrgSwitche
     );
   }
 
-  function handleSelect(organizationId: string, name: string) {
-    if (organizationId === current.id) return;
+  function handleSelect(companyId: string, name: string) {
+    if (companyId === current.id) return;
     startTransition(async () => {
-      const result = await setActiveOrganization(organizationId);
+      const result = await setActiveCompany(companyId);
       if (!result.ok) {
         toast.error(result.error.message);
         return;
@@ -94,17 +94,17 @@ export function OrgSwitcher({ organizations, currentOrganizationId }: OrgSwitche
                 associated items inside the same group. */}
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Organizations
+                Companies
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {organizations.map((org) => (
+              {companies.map((company) => (
                 <DropdownMenuItem
-                  key={org.id}
-                  onClick={() => handleSelect(org.id, org.name)}
+                  key={company.id}
+                  onClick={() => handleSelect(company.id, company.name)}
                   className="justify-between"
                 >
-                  <span className="truncate">{org.name}</span>
-                  {org.id === current.id ? <Check className="size-4" /> : null}
+                  <span className="truncate">{company.name}</span>
+                  {company.id === current.id ? <Check className="size-4" /> : null}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>

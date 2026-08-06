@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ToolboxMeetingEditForm({ organizationId, meeting, candidates }: { organizationId: string; meeting: ToolboxMeeting; candidates: EmployeeOption[] }) {
+export function ToolboxMeetingEditForm({ companyId, meeting, candidates }: { companyId: string; meeting: ToolboxMeeting; candidates: EmployeeOption[] }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -34,7 +34,7 @@ export function ToolboxMeetingEditForm({ organizationId, meeting, candidates }: 
     };
 
     startTransition(async () => {
-      const result = await updateToolboxMeetingMetadata(organizationId, meeting.id, meeting.project_id, input);
+      const result = await updateToolboxMeetingMetadata(companyId, meeting.id, meeting.project_id, input);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

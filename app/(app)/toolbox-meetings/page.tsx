@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MessagesSquare, Plus, BookOpen, Siren } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { listToolboxMeetings, type ToolboxMeetingListFilters } from "@/modules/toolbox-meetings/queries";
 import { ToolboxMeetingCard } from "@/modules/toolbox-meetings/components/toolbox-meeting-card";
@@ -33,18 +33,18 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
   const params = await searchParams;
   const section = (params.section === "templates" || params.section === "safety-flash" ? params.section : "meetings") as ToolboxSection;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Toolbox Meetings" description="Completed toolbox meetings, reusable templates, and Safety Flash bulletins." />
-        <EmptyState icon={MessagesSquare} title="You're not part of an organization yet" description="Once an administrator adds your account to one, records will appear here." className="flex-1" />
+        <EmptyState icon={MessagesSquare} title="You're not part of an company yet" description="Once an administrator adds your account to one, records will appear here." className="flex-1" />
       </div>
     );
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
 
   if (section === "templates") {
     const canManage = canViewToolboxTemplate(roleNames);
@@ -59,7 +59,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
     }
 
     const filters: ToolboxTemplateListFilters = { category: params.category, language: params.language, search: params.search, status: params.status };
-    const templates = await listToolboxTemplates(currentOrganizationId, filters);
+    const templates = await listToolboxTemplates(currentCompanyId, filters);
     const canCreate = canViewToolboxTemplate(roleNames) && roleNames.some((role) => ["hseq_manager", "hse_officer"].includes(role));
 
     return (
@@ -100,7 +100,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
     };
-    const [flashes, projects] = await Promise.all([listSafetyFlashes(currentOrganizationId, filters), listProjects(currentOrganizationId)]);
+    const [flashes, projects] = await Promise.all([listSafetyFlashes(currentCompanyId, filters), listProjects(currentCompanyId)]);
     const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
 
     return (
@@ -121,7 +121,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {flashes.map((flash) => (
-              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? "Unknown project") : "Organization-wide"} />
+              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? "Unknown project") : "Company-wide"} />
             ))}
           </div>
         )}
@@ -136,7 +136,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
     dateFrom: params.dateFrom,
     dateTo: params.dateTo,
   };
-  const [meetings, projects] = await Promise.all([listToolboxMeetings(currentOrganizationId, filters), listProjects(currentOrganizationId)]);
+  const [meetings, projects] = await Promise.all([listToolboxMeetings(currentCompanyId, filters), listProjects(currentCompanyId)]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
 
   return (

@@ -16,12 +16,12 @@ async function resolveResponsiblePersons(supabase: Awaited<ReturnType<typeof cre
 }
 
 /** Every defect for one inspection, oldest first (the order they were raised). */
-export async function listDefectsForInspection(organizationId: string, inspectionId: string): Promise<ScaffoldDefectDetail[]> {
+export async function listDefectsForInspection(companyId: string, inspectionId: string): Promise<ScaffoldDefectDetail[]> {
   const supabase = await createClient();
   const { data: defects, error } = await supabase
     .from("scaffold_defects")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("scaffold_inspection_id", inspectionId)
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -32,12 +32,12 @@ export async function listDefectsForInspection(organizationId: string, inspectio
 }
 
 /** Every defect currently open against a scaffold, across all of its inspections — what a scaffold's "unresolved history" looks like at a glance. */
-export async function listDefectsForScaffold(organizationId: string, scaffoldId: string): Promise<ScaffoldDefectDetail[]> {
+export async function listDefectsForScaffold(companyId: string, scaffoldId: string): Promise<ScaffoldDefectDetail[]> {
   const supabase = await createClient();
   const { data: defects, error } = await supabase
     .from("scaffold_defects")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("scaffold_id", scaffoldId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -47,10 +47,10 @@ export async function listDefectsForScaffold(organizationId: string, scaffoldId:
   return defects.map((defect) => ({ ...defect, responsiblePerson: responsibleById.get(defect.responsible_person_id) ?? null }));
 }
 
-/** A single defect scoped to `organizationId` — null if it doesn't exist, belongs to another org, or RLS hides it. */
-export async function getScaffoldDefect(organizationId: string, defectId: string): Promise<ScaffoldDefectDetail | null> {
+/** A single defect scoped to `companyId` — null if it doesn't exist, belongs to another company, or RLS hides it. */
+export async function getScaffoldDefect(companyId: string, defectId: string): Promise<ScaffoldDefectDetail | null> {
   const supabase = await createClient();
-  const { data: defect, error } = await supabase.from("scaffold_defects").select("*").eq("organization_id", organizationId).eq("id", defectId).maybeSingle();
+  const { data: defect, error } = await supabase.from("scaffold_defects").select("*").eq("company_id", companyId).eq("id", defectId).maybeSingle();
   if (error) throw error;
   if (!defect) return null;
 
@@ -59,9 +59,9 @@ export async function getScaffoldDefect(organizationId: string, defectId: string
 }
 
 /** Employee ids currently rostered onto `projectId` — the candidate pool for the responsible-person select, same convention as every other module this session. */
-export async function listScaffoldDefectCandidateEmployees(organizationId: string, projectId: string): Promise<BasicEmployee[]> {
+export async function listScaffoldDefectCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("project_assignments").select("employee_id").eq("organization_id", organizationId).eq("project_id", projectId).is("end_at", null);
+  const { data, error } = await supabase.from("project_assignments").select("employee_id").eq("company_id", companyId).eq("project_id", projectId).is("end_at", null);
   if (error) throw error;
   const employeeIds = [...new Set((data ?? []).map((row) => row.employee_id))];
   if (employeeIds.length === 0) return [];
@@ -80,12 +80,12 @@ export type ScaffoldDefectOverviewCounts = {
 };
 
 /** Counts backing the Safety Overview's Scaffold Defects section — mirrors modules/corrective-actions/queries.ts's getCorrectiveActionOverviewCounts() exactly. */
-export async function getScaffoldDefectOverviewCounts(organizationId: string, projectId?: string): Promise<ScaffoldDefectOverviewCounts> {
+export async function getScaffoldDefectOverviewCounts(companyId: string, projectId?: string): Promise<ScaffoldDefectOverviewCounts> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 
   function scoped() {
-    let q = supabase.from("scaffold_defects").select("id", { count: "exact", head: true }).eq("organization_id", organizationId);
+    let q = supabase.from("scaffold_defects").select("id", { count: "exact", head: true }).eq("company_id", companyId);
     if (projectId) q = q.eq("project_id", projectId);
     return q;
   }

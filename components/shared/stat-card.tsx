@@ -19,7 +19,7 @@ type StatCardProps = {
  *
  * Two variants, deliberately visually distinct rather than both showing a
  * number:
- *  - `"live"`: a real value from a real query (e.g. organization count).
+ *  - `"live"`: a real value from a real query (e.g. company count).
  *  - `"placeholder"`: the underlying module doesn't exist yet. Renders an
  *    em dash and a "Not yet available" badge instead of "0" — a true zero
  *    would read as "we checked and there are none," which is a claim

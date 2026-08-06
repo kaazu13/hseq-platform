@@ -7,14 +7,14 @@ import { toast } from "sonner";
 import { assignEmployeeRole, removeEmployeeRole } from "@/modules/employees/actions";
 import { assignableRoleNamesFor } from "@/modules/employees/permissions";
 import type { EmployeeRoleInfo } from "@/modules/employees/types";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 
 type EmployeeRolesTabProps = {
-  organizationId: string;
+  companyId: string;
   employeeId: string;
   hasLinkedAccount: boolean;
   roleInfo: EmployeeRoleInfo;
@@ -24,7 +24,7 @@ type EmployeeRolesTabProps = {
 };
 
 /**
- * Roles come entirely from `organization_memberships`/`membership_roles`/
+ * Roles come entirely from `company_memberships`/`membership_roles`/
  * `roles` — this is deliberately NOT a second role system for employees
  * (this milestone's explicit constraint). An employee record can exist
  * before its linked account is activated (`docs/PRODUCT_REQUIREMENTS.md`),
@@ -33,7 +33,7 @@ type EmployeeRolesTabProps = {
  * with assignable roles.
  */
 export function EmployeeRolesTab({
-  organizationId,
+  companyId,
   employeeId,
   hasLinkedAccount,
   roleInfo,
@@ -51,7 +51,7 @@ export function EmployeeRolesTab({
       <EmptyState
         icon={ShieldOff}
         title="Roles aren't assignable yet"
-        description="This employee has no linked, active account in this organization yet. Roles become assignable once account activation is implemented and this employee accepts an invitation."
+        description="This employee has no linked, active account in this company yet. Roles become assignable once account activation is implemented and this employee accepts an invitation."
       />
     );
   }
@@ -63,7 +63,7 @@ export function EmployeeRolesTab({
   function handleAssign() {
     if (!selectedRoleId || !roleInfo.membershipId) return;
     startTransition(async () => {
-      const result = await assignEmployeeRole(organizationId, employeeId, roleInfo.membershipId!, selectedRoleId);
+      const result = await assignEmployeeRole(companyId, employeeId, roleInfo.membershipId!, selectedRoleId);
       if (!result.ok) {
         toast.error(result.error.message);
         return;
@@ -76,7 +76,7 @@ export function EmployeeRolesTab({
   function handleRemove(membershipRoleId: string) {
     setRemovingId(membershipRoleId);
     startTransition(async () => {
-      const result = await removeEmployeeRole(organizationId, employeeId, membershipRoleId);
+      const result = await removeEmployeeRole(companyId, employeeId, membershipRoleId);
       setRemovingId(null);
       if (!result.ok) {
         toast.error(result.error.message);

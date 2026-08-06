@@ -1,4 +1,4 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Permission checks for Safety Flash — see
@@ -6,7 +6,7 @@ import type { RoleName } from "@/modules/organizations/types";
  * | M⁴ ²⁰ | V⁴ | V⁴ | — | — | V⁴) and footnote 20. `project_id` is
  * optional, so unlike modules/toolbox-meetings/permissions.ts,
  * `hasProjectAccess` is only checked when a project is actually named —
- * an HSE Officer may create/manage an organization-wide flash (no
+ * an HSE Officer may create/manage an company-wide flash (no
  * project) without holding any project assignment at all.
  */
 

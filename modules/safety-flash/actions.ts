@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -12,9 +12,9 @@ import { canManageSafetyFlash } from "./permissions";
 import { isCallerProjectAccessible } from "./queries";
 import { safetyFlashMetadataSchema, safetyFlashEditFormSchema, replaceFileReasonSchema } from "./validation";
 
-async function requireSafetyFlashManageAccess(organizationId: string, projectId: string | null) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(organizationId), projectId ? isCallerProjectAccessible(projectId) : Promise.resolve(false)]);
+async function requireSafetyFlashManageAccess(companyId: string, projectId: string | null) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(companyId), projectId ? isCallerProjectAccessible(projectId) : Promise.resolve(false)]);
 
   if (!canManageSafetyFlash(roleNames, projectId, hasProjectAccess)) {
     forbidden();
@@ -23,7 +23,7 @@ async function requireSafetyFlashManageAccess(organizationId: string, projectId:
   return { user, roleNames };
 }
 
-export async function createSafetyFlash(organizationId: string, formData: FormData): Promise<ActionResult<{ flashId: string }>> {
+export async function createSafetyFlash(companyId: string, formData: FormData): Promise<ActionResult<{ flashId: string }>> {
   const rawProjectId = String(formData.get("projectId") ?? "");
   const metadata = {
     projectId: rawProjectId,
@@ -49,11 +49,11 @@ export async function createSafetyFlash(organizationId: string, formData: FormDa
   }
 
   const projectId = parsed.data.projectId ?? null;
-  const { user } = await requireSafetyFlashManageAccess(organizationId, projectId);
+  const { user } = await requireSafetyFlashManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const flashId = randomUUID();
-  const objectPath = buildSafetyFlashObjectPath(organizationId, projectId, flashId, file.name);
+  const objectPath = buildSafetyFlashObjectPath(companyId, projectId, flashId, file.name);
   const uploadResult = await uploadPdfToToolboxBucket(supabase, objectPath, file);
   if (!uploadResult.ok) {
     return { ok: false, error: { code: "server_error", message: uploadResult.message } };
@@ -64,7 +64,7 @@ export async function createSafetyFlash(organizationId: string, formData: FormDa
     .from("safety_flashes")
     .insert({
       id: flashId,
-      organization_id: organizationId,
+      company_id: companyId,
       project_id: projectId,
       title: parsed.data.title,
       date_issued: parsed.data.dateIssued,
@@ -97,13 +97,13 @@ export async function createSafetyFlash(organizationId: string, formData: FormDa
   redirect(`/toolbox-meetings/safety-flash/${data.id}`);
 }
 
-export async function updateSafetyFlashMetadata(organizationId: string, flashId: string, projectId: string | null, input: unknown): Promise<ActionResult<null>> {
+export async function updateSafetyFlashMetadata(companyId: string, flashId: string, projectId: string | null, input: unknown): Promise<ActionResult<null>> {
   const parsed = safetyFlashEditFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireSafetyFlashManageAccess(organizationId, projectId);
+  const { user } = await requireSafetyFlashManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -120,7 +120,7 @@ export async function updateSafetyFlashMetadata(organizationId: string, flashId:
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", flashId);
 
   if (error) {
@@ -138,11 +138,11 @@ export async function updateSafetyFlashMetadata(organizationId: string, flashId:
   return { ok: true, data: null };
 }
 
-export async function setSafetyFlashStatus(organizationId: string, flashId: string, projectId: string | null, status: "active" | "archived"): Promise<ActionResult<null>> {
-  const { user } = await requireSafetyFlashManageAccess(organizationId, projectId);
+export async function setSafetyFlashStatus(companyId: string, flashId: string, projectId: string | null, status: "active" | "archived"): Promise<ActionResult<null>> {
+  const { user } = await requireSafetyFlashManageAccess(companyId, projectId);
   const supabase = await createClient();
 
-  const { error, count } = await supabase.from("safety_flashes").update({ status, updated_by: user.id }, { count: "exact" }).eq("organization_id", organizationId).eq("id", flashId);
+  const { error, count } = await supabase.from("safety_flashes").update({ status, updated_by: user.id }, { count: "exact" }).eq("company_id", companyId).eq("id", flashId);
 
   if (error) {
     if (isRlsViolation(error)) forbidden();
@@ -157,7 +157,7 @@ export async function setSafetyFlashStatus(organizationId: string, flashId: stri
   return { ok: true, data: null };
 }
 
-export async function replaceSafetyFlashFile(organizationId: string, flashId: string, projectId: string | null, formData: FormData): Promise<ActionResult<null>> {
+export async function replaceSafetyFlashFile(companyId: string, flashId: string, projectId: string | null, formData: FormData): Promise<ActionResult<null>> {
   const reasonParsed = replaceFileReasonSchema.safeParse({ reason: String(formData.get("reason") ?? "") });
   if (!reasonParsed.success) {
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(reasonParsed.error) } };
@@ -172,10 +172,10 @@ export async function replaceSafetyFlashFile(organizationId: string, flashId: st
     return { ok: false, error: { code: "validation_error", message: pdfCheck.message, fieldErrors: { file: pdfCheck.message } } };
   }
 
-  await requireSafetyFlashManageAccess(organizationId, projectId);
+  await requireSafetyFlashManageAccess(companyId, projectId);
   const supabase = await createClient();
 
-  const objectPath = buildSafetyFlashObjectPath(organizationId, projectId, flashId, file.name);
+  const objectPath = buildSafetyFlashObjectPath(companyId, projectId, flashId, file.name);
   const uploadResult = await uploadPdfToToolboxBucket(supabase, objectPath, file);
   if (!uploadResult.ok) {
     return { ok: false, error: { code: "server_error", message: uploadResult.message } };

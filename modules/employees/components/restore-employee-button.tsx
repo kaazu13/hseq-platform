@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 
 type RestoreEmployeeButtonProps = {
-  organizationId: string;
+  companyId: string;
   employeeId: string;
   employeeName: string;
 };
@@ -22,11 +22,11 @@ type RestoreEmployeeButtonProps = {
  * archiving, even though restoring is the less destructive direction — it
  * still changes a status other views (filters, the roles tab) depend on.
  */
-export function RestoreEmployeeButton({ organizationId, employeeId, employeeName }: RestoreEmployeeButtonProps) {
+export function RestoreEmployeeButton({ companyId, employeeId, employeeName }: RestoreEmployeeButtonProps) {
   const router = useRouter();
 
   async function handleConfirm() {
-    const result = await restoreEmployee(organizationId, employeeId);
+    const result = await restoreEmployee(companyId, employeeId);
     if (!result.ok) {
       toast.error(result.error.message);
       return;

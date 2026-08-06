@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { canManageToolboxMeeting } from "./permissions";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 describe("canManageToolboxMeeting", () => {
   it("hseq_manager can always manage, even without project access", () => {

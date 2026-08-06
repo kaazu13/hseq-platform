@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmptyState } from "@/components/shared/empty-state";
 
 type ProjectAssignmentsTabProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   assignments: ProjectAssignmentWithEmployee[];
   pickerEmployees: EmployeeOption[];
@@ -25,11 +25,11 @@ type ProjectAssignmentsTabProps = {
  * Project Manager(s)/HSEQ Manager(s)/HSE Officer(s)/Inspector(s). Mirrors
  * modules/employees/components/employee-roles-tab.tsx's add/remove pattern.
  * Assigning a manager-tier role that the chosen employee doesn't already
- * hold as an organization role is rejected server-side
+ * hold as an company role is rejected server-side
  * (validate_project_assignment_role_holder() in the migration) — the error
  * surfaces via the same toast path as any other validation failure.
  */
-export function ProjectAssignmentsTab({ organizationId, projectId, assignments, pickerEmployees, canManage }: ProjectAssignmentsTabProps) {
+export function ProjectAssignmentsTab({ companyId, projectId, assignments, pickerEmployees, canManage }: ProjectAssignmentsTabProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function ProjectAssignmentsTab({ organizationId, projectId, assignments, 
   function handleAssign() {
     if (!selectedEmployeeId) return;
     startTransition(async () => {
-      const result = await assignProjectRole(organizationId, projectId, {
+      const result = await assignProjectRole(companyId, projectId, {
         employeeId: selectedEmployeeId,
         assignmentRole: selectedRole,
         notes: undefined,
@@ -58,7 +58,7 @@ export function ProjectAssignmentsTab({ organizationId, projectId, assignments, 
   function handleRemove(assignmentId: string) {
     setRemovingId(assignmentId);
     startTransition(async () => {
-      const result = await endProjectAssignment(organizationId, projectId, assignmentId);
+      const result = await endProjectAssignment(companyId, projectId, assignmentId);
       setRemovingId(null);
       if (!result.ok) {
         toast.error(result.error.message);

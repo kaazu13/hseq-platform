@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { ToolboxDocumentStatus } from "@/modules/toolbox-meetings/types";
 
-export function ToolboxMeetingStatusToggle({ organizationId, meetingId, projectId, status }: { organizationId: string; meetingId: string; projectId: string; status: ToolboxDocumentStatus }) {
+export function ToolboxMeetingStatusToggle({ companyId, meetingId, projectId, status }: { companyId: string; meetingId: string; projectId: string; status: ToolboxDocumentStatus }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export function ToolboxMeetingStatusToggle({ organizationId, meetingId, projectI
     setError(null);
     const nextStatus = status === "active" ? "archived" : "active";
     startTransition(async () => {
-      const result = await setToolboxMeetingStatus(organizationId, meetingId, projectId, nextStatus);
+      const result = await setToolboxMeetingStatus(companyId, meetingId, projectId, nextStatus);
       if (!result.ok) setError(result.error.message);
     });
   }

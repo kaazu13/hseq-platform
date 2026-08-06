@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type RehireEmployeeDialogProps = {
-  organizationId: string;
+  companyId: string;
   employeeId: string;
   employeeName: string;
 };
@@ -33,7 +33,7 @@ const TODAY = () => new Date().toISOString().slice(0, 10);
  * employee number and every other field on the record carry over
  * unchanged (see that Server Function's comment).
  */
-export function RehireEmployeeDialog({ organizationId, employeeId, employeeName }: RehireEmployeeDialogProps) {
+export function RehireEmployeeDialog({ companyId, employeeId, employeeName }: RehireEmployeeDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -45,7 +45,7 @@ export function RehireEmployeeDialog({ organizationId, employeeId, employeeName 
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await rehireEmployee(organizationId, employeeId, {
+      const result = await rehireEmployee(companyId, employeeId, {
         startDate: String(formData.get("startDate") ?? ""),
       });
       if (!result.ok) {

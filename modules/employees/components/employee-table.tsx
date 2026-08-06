@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type EmployeeTableProps = {
-  organizationId: string;
+  companyId: string;
   employees: EmployeeListItem[];
   roleInfoById: Map<string, EmployeeRoleInfo>;
   canManage: boolean;
@@ -35,12 +35,12 @@ function RolesCell({ employee, roleInfo }: { employee: EmployeeListItem; roleInf
 }
 
 function RowActions({
-  organizationId,
+  companyId,
   employee,
   canManage,
   currentUserId,
 }: {
-  organizationId: string;
+  companyId: string;
   employee: EmployeeListItem;
   canManage: boolean;
   currentUserId: string;
@@ -68,9 +68,9 @@ function RowActions({
       )}
       {canManage && !isSelf && (
         isArchived ? (
-          <RestoreEmployeeButton organizationId={organizationId} employeeId={employee.id} employeeName={employeeName} />
+          <RestoreEmployeeButton companyId={companyId} employeeId={employee.id} employeeName={employeeName} />
         ) : (
-          <ArchiveEmployeeButton organizationId={organizationId} employeeId={employee.id} employeeName={employeeName} />
+          <ArchiveEmployeeButton companyId={companyId} employeeId={employee.id} employeeName={employeeName} />
         )
       )}
     </div>
@@ -83,7 +83,7 @@ function RowActions({
  * render from the same `employees`/`roleInfoById` data, so there is exactly
  * one source of truth for a row's contents.
  */
-export function EmployeeTable({ organizationId, employees, roleInfoById, canManage, currentUserId }: EmployeeTableProps) {
+export function EmployeeTable({ companyId, employees, roleInfoById, canManage, currentUserId }: EmployeeTableProps) {
   return (
     <>
       <div className="hidden overflow-hidden rounded-lg border sm:block">
@@ -120,7 +120,7 @@ export function EmployeeTable({ organizationId, employees, roleInfoById, canMana
                 </TableCell>
                 <TableCell>
                   <RowActions
-                    organizationId={organizationId}
+                    companyId={companyId}
                     employee={employee}
                     canManage={canManage}
                     currentUserId={currentUserId}
@@ -154,7 +154,7 @@ export function EmployeeTable({ organizationId, employees, roleInfoById, canMana
             </div>
             <RolesCell employee={employee} roleInfo={roleInfoById.get(employee.id)} />
             <RowActions
-              organizationId={organizationId}
+              companyId={companyId}
               employee={employee}
               canManage={canManage}
               currentUserId={currentUserId}

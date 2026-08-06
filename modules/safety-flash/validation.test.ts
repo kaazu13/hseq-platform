@@ -12,7 +12,7 @@ const VALID_INPUT = {
 };
 
 describe("safetyFlashMetadataSchema", () => {
-  it("accepts a fully populated valid input with no project (organization-wide)", () => {
+  it("accepts a fully populated valid input with no project (company-wide)", () => {
     const result = safetyFlashMetadataSchema.safeParse(VALID_INPUT);
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.projectId).toBeUndefined();

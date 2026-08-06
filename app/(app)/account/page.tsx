@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserCog } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getAccountOverview } from "@/modules/account/queries";
 import { MEMBERSHIP_STATUS_LABELS } from "@/modules/account/types";
 import { PROJECT_ASSIGNMENT_ROLE_LABELS } from "@/modules/projects/types";
@@ -25,33 +25,33 @@ function initialsFor(name: string, email: string) {
 /**
  * The real Account page — replaces the account-menu's dead "Account" link
  * (previously pointed at the /settings placeholder). Shows exactly what
- * the signed-in user's account actually looks like: organization, active
+ * the signed-in user's account actually looks like: company, active
  * roles, assigned projects, account status — all read directly from the
  * membership/RLS architecture (getAccountOverview), never fabricated or
  * inferred client-side. Only full_name/phone are editable here; role,
- * organization, and status are always rendered read-only, with a link to
+ * company, and status are always rendered read-only, with a link to
  * /admin/members for anyone actually authorized to change them.
  */
 export default async function AccountPage() {
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Account" />
-        <EmptyState icon={UserCog} title="You're not part of an organization yet" description="Once an administrator adds your account to one, your account details will appear here." className="flex-1" />
+        <EmptyState icon={UserCog} title="You're not part of an company yet" description="Once an administrator adds your account to one, your account details will appear here." className="flex-1" />
       </div>
     );
   }
 
-  const [overview, roleNames] = await Promise.all([getAccountOverview(currentOrganizationId, user.id), getUserRoleNames(currentOrganizationId)]);
+  const [overview, roleNames] = await Promise.all([getAccountOverview(currentCompanyId, user.id), getUserRoleNames(currentCompanyId)]);
 
   if (!overview) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Account" />
-        <EmptyState icon={UserCog} title="Account details unavailable" description="Your membership in this organization couldn't be loaded. Try reloading the page." className="flex-1" />
+        <EmptyState icon={UserCog} title="Account details unavailable" description="Your membership in this company couldn't be loaded. Try reloading the page." className="flex-1" />
       </div>
     );
   }
@@ -62,7 +62,7 @@ export default async function AccountPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
-      <PageHeader title="Account" description="Your profile, organization, roles, and project assignments." />
+      <PageHeader title="Account" description="Your profile, company, roles, and project assignments." />
 
       <Card>
         <CardContent className="flex flex-col gap-6 sm:flex-row sm:items-start">
@@ -77,8 +77,8 @@ export default async function AccountPage() {
 
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-muted-foreground">Organization</dt>
-                <dd className="text-sm font-medium">{overview.organization.name}</dd>
+                <dt className="text-xs text-muted-foreground">Company</dt>
+                <dd className="text-sm font-medium">{overview.company.name}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Account status</dt>
@@ -119,7 +119,7 @@ export default async function AccountPage() {
             </CardContent>
           </Card>
         ) : (
-          <EmptyState icon={UserCog} title="No linked employee record" description="This account isn't linked to a company employment record yet — project assignments require one. An administrator can link one from Organization Members." />
+          <EmptyState icon={UserCog} title="No linked employee record" description="This account isn't linked to a company employment record yet — project assignments require one. An administrator can link one from Company Members." />
         )}
       </div>
 
@@ -144,15 +144,15 @@ export default async function AccountPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title="Edit profile" description="Full name and phone are the only fields you can change here — role and organization are managed by an administrator." />
+        <SectionHeader title="Edit profile" description="Full name and phone are the only fields you can change here — role and company are managed by an administrator." />
         <ProfileEditForm fullName={overview.profile.fullName} phone={overview.profile.phone} />
       </div>
 
       {canAdminister && (
         <div className="flex flex-col gap-3">
-          <SectionHeader title="Organization administration" />
+          <SectionHeader title="Company administration" />
           <Link href="/admin/members" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-            Manage organization members →
+            Manage company members →
           </Link>
         </div>
       )}

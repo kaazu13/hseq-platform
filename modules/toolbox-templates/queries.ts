@@ -11,9 +11,9 @@ export type ToolboxTemplateListFilters = {
   status?: string;
 };
 
-export async function listToolboxTemplates(organizationId: string, filters: ToolboxTemplateListFilters = {}): Promise<ToolboxTemplate[]> {
+export async function listToolboxTemplates(companyId: string, filters: ToolboxTemplateListFilters = {}): Promise<ToolboxTemplate[]> {
   const supabase = await createClient();
-  let query = supabase.from("toolbox_templates").select("*").eq("organization_id", organizationId);
+  let query = supabase.from("toolbox_templates").select("*").eq("company_id", companyId);
 
   if (filters.category) query = query.eq("category", filters.category as ToolboxTemplate["category"]);
   if (filters.language) query = query.eq("language", filters.language);
@@ -25,9 +25,9 @@ export async function listToolboxTemplates(organizationId: string, filters: Tool
   return data ?? [];
 }
 
-export async function getToolboxTemplate(organizationId: string, templateId: string): Promise<ToolboxTemplate | null> {
+export async function getToolboxTemplate(companyId: string, templateId: string): Promise<ToolboxTemplate | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("toolbox_templates").select("*").eq("organization_id", organizationId).eq("id", templateId).maybeSingle();
+  const { data, error } = await supabase.from("toolbox_templates").select("*").eq("company_id", companyId).eq("id", templateId).maybeSingle();
   if (error) throw error;
   return data ?? null;
 }
@@ -48,9 +48,9 @@ export type ToolboxTemplateOverviewCounts = {
   activeCount: number;
 };
 
-export async function getToolboxTemplateOverviewCounts(organizationId: string): Promise<ToolboxTemplateOverviewCounts> {
+export async function getToolboxTemplateOverviewCounts(companyId: string): Promise<ToolboxTemplateOverviewCounts> {
   const supabase = await createClient();
-  const { count, error } = await supabase.from("toolbox_templates").select("id", { count: "exact", head: true }).eq("organization_id", organizationId).eq("status", "active");
+  const { count, error } = await supabase.from("toolbox_templates").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active");
   if (error) throw error;
   return { activeCount: count ?? 0 };
 }

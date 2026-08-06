@@ -1,12 +1,12 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Permission checks for Toolbox Templates — see
  * docs/ROLES_AND_PERMISSIONS.md §5's Toolbox Templates row (— | V | V | V
  * | F | M | V | V | — | — | —). No project dimension at all (an
- * organization-wide library), so unlike every other module this session
+ * company-wide library), so unlike every other module this session
  * there is no `hasProjectAccess` parameter — HSE Manager AND HSE Officer
- * both get straightforward organization-wide manage access. Employee has
+ * both get straightforward company-wide manage access. Employee has
  * no access at all — templates are an HSE planning resource.
  */
 

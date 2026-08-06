@@ -63,25 +63,25 @@ export function uniqueSuffix(): string {
 
 // ── Fixture builders — all run as the plain `sql` connection (the local
 // dev Postgres role is superuser-equivalent and bypasses RLS, exactly the
-// "service-role/manual operation" pattern organizations.sql documents as
-// the intended way to create an organization). ──────────────────────────
+// "service-role/manual operation" pattern companies.sql documents as
+// the intended way to create an company). ──────────────────────────
 
-export type TestOrg = { orgId: string; slug: string };
+export type TestCompany = { companyId: string; slug: string };
 
-export async function createTestOrg(label: string): Promise<TestOrg> {
+export async function createTestCompany(label: string): Promise<TestCompany> {
   const slug = `test-${label}-${uniqueSuffix()}`;
   const prefix = slug.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const [row] = await sql`
-    insert into organizations (name, slug, employee_number_prefix, status)
-    values (${`Test Org (${label})`}, ${slug}, ${prefix}, 'active')
+    insert into companies (name, slug, employee_number_prefix, status)
+    values (${`Test Company (${label})`}, ${slug}, ${prefix}, 'active')
     returning id
   `;
-  return { orgId: row.id as string, slug };
+  return { companyId: row.id as string, slug };
 }
 
-/** Cascades away every org-scoped row (see supabase/migrations — every tenant table's organization_id FK is `on delete cascade`). */
-export async function deleteTestOrg(orgId: string): Promise<void> {
-  await sql`delete from organizations where id = ${orgId}`;
+/** Cascades away every company-scoped row (see supabase/migrations — every tenant table's company_id FK is `on delete cascade`). */
+export async function deleteTestCompany(companyId: string): Promise<void> {
+  await sql`delete from companies where id = ${companyId}`;
 }
 
 export type TestUser = { userId: string; email: string };
@@ -90,7 +90,7 @@ export type TestUser = { userId: string; email: string };
  * Creates a minimal auth.users row directly — legitimate ONLY in a test
  * fixture context running as the local superuser role, mirroring the same
  * pattern pgTAP-based Supabase RLS test suites use. Application code never
- * does this (see lib/supabase/admin.ts / scripts/seed-test-org.ts, which
+ * does this (see lib/supabase/admin.ts / scripts/seed-test-company.ts, which
  * use the real Admin API instead) — this shortcut is acceptable here
  * specifically because these rows never leave a disposable local database
  * and are deleted at the end of every test.
@@ -124,34 +124,34 @@ export async function deleteTestUser(userId: string): Promise<void> {
 }
 
 export async function addMembership(
-  orgId: string,
+  companyId: string,
   userId: string,
   roleNames: string[],
   status: "active" | "invited" | "suspended" | "removed" = "active",
 ): Promise<string> {
   const [row] = await sql`
-    insert into organization_memberships (organization_id, user_id, status, joined_at)
-    values (${orgId}, ${userId}, ${status}, now())
+    insert into company_memberships (company_id, user_id, status, joined_at)
+    values (${companyId}, ${userId}, ${status}, now())
     returning id
   `;
   for (const roleName of roleNames) {
     await sql`
-      insert into membership_roles (organization_id, membership_id, role_id)
-      select ${orgId}, ${row.id}, id from roles where name = ${roleName}
+      insert into membership_roles (company_id, membership_id, role_id)
+      select ${companyId}, ${row.id}, id from roles where name = ${roleName}
     `;
   }
   return row.id as string;
 }
 
 export async function createTestEmployee(
-  orgId: string,
+  companyId: string,
   profileId: string | null,
   firstName: string,
   lastName: string,
 ): Promise<string> {
   const [row] = await sql`
-    insert into employees (organization_id, profile_id, employee_number, first_name, last_name, employment_status, start_date)
-    values (${orgId}, ${profileId}, ${`EMP-${uniqueSuffix()}`}, ${firstName}, ${lastName}, 'active', current_date)
+    insert into employees (company_id, profile_id, employee_number, first_name, last_name, employment_status, start_date)
+    values (${companyId}, ${profileId}, ${`EMP-${uniqueSuffix()}`}, ${firstName}, ${lastName}, 'active', current_date)
     returning id
   `;
   // employees_create_initial_period (AFTER INSERT) + sync trigger already
@@ -161,19 +161,19 @@ export async function createTestEmployee(
   return row.id as string;
 }
 
-export async function createTestProject(orgId: string, name: string, status: "planning" | "active" | "completed" | "archived" = "active"): Promise<string> {
+export async function createTestProject(companyId: string, name: string, status: "planning" | "active" | "completed" | "archived" = "active"): Promise<string> {
   const [row] = await sql`
-    insert into projects (organization_id, name, status)
-    values (${orgId}, ${name}, ${status})
+    insert into projects (company_id, name, status)
+    values (${companyId}, ${name}, ${status})
     returning id
   `;
   return row.id as string;
 }
 
-export async function createTestTeam(orgId: string, projectId: string, name: string): Promise<string> {
+export async function createTestTeam(companyId: string, projectId: string, name: string): Promise<string> {
   const [row] = await sql`
-    insert into teams (organization_id, project_id, name)
-    values (${orgId}, ${projectId}, ${name})
+    insert into teams (company_id, project_id, name)
+    values (${companyId}, ${projectId}, ${name})
     returning id
   `;
   return row.id as string;
@@ -186,9 +186,9 @@ export async function roleId(roleName: string): Promise<string> {
 }
 
 /** Extracted from what was seven copies of the same inline lookup across tests/db/role-permissions.test.ts. */
-export async function getMembershipId(orgId: string, userId: string): Promise<string> {
-  const [row] = await sql`select id from organization_memberships where organization_id = ${orgId} and user_id = ${userId}`;
-  if (!row) throw new Error(`no organization_memberships row for org ${orgId} / user ${userId}`);
+export async function getMembershipId(companyId: string, userId: string): Promise<string> {
+  const [row] = await sql`select id from company_memberships where company_id = ${companyId} and user_id = ${userId}`;
+  if (!row) throw new Error(`no company_memberships row for company ${companyId} / user ${userId}`);
   return row.id as string;
 }
 
@@ -202,6 +202,6 @@ export async function getMembershipId(orgId: string, userId: string): Promise<st
  */
 export const RLS_VIOLATION = { code: "42501" }; // insufficient_privilege — an RLS policy (or a missing GRANT) rejected the operation
 export const UNIQUE_VIOLATION = { code: "23505" }; // a partial/unique index already has a matching open row
-export const FK_VIOLATION = { code: "23503" }; // a composite FK (e.g. teams_project_fk) rejected a cross-organization reference
+export const FK_VIOLATION = { code: "23503" }; // a composite FK (e.g. teams_project_fk) rejected a cross-company reference
 export const RAISED_EXCEPTION = { code: "P0001" }; // an explicit `raise exception` in a guard trigger/function with no overridden SQLSTATE (isRaisedException()'s exact check, from the DB side)
 export const CHECK_VIOLATION = { code: "23514" }; // a plain table CHECK constraint (not a trigger) rejected the row

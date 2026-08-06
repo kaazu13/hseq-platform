@@ -12,13 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type ToolboxMeetingFormProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   candidates: EmployeeOption[];
 };
 
 /** Create-only — a toolbox meeting's PDF and identity fields are locked once uploaded; corrections go through the controlled replace workflow, and metadata edits go through a separate, simpler edit form (see toolbox-meeting-edit-form.tsx). */
-export function ToolboxMeetingForm({ organizationId, projectId, candidates }: ToolboxMeetingFormProps) {
+export function ToolboxMeetingForm({ companyId, projectId, candidates }: ToolboxMeetingFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function ToolboxMeetingForm({ organizationId, projectId, candidates }: To
     formData.set("file", file);
 
     startTransition(async () => {
-      const result = await createToolboxMeeting(organizationId, formData);
+      const result = await createToolboxMeeting(companyId, formData);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

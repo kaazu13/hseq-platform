@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 type LmraParticipantsPickerProps = {
-  organizationId: string;
+  companyId: string;
   lmraId: string;
   projectId: string;
   candidates: BasicEmployee[];
@@ -20,7 +20,7 @@ type LmraParticipantsPickerProps = {
 };
 
 /** Workers involved — checkbox picker over the project roster, same "only project-assigned employees are selectable" convention as the responsible-foreman select. Diffed against the current set server-side (see updateLmraParticipants), not replaced wholesale. */
-export function LmraParticipantsPicker({ organizationId, lmraId, projectId, candidates, currentParticipantIds, readOnly }: LmraParticipantsPickerProps) {
+export function LmraParticipantsPicker({ companyId, lmraId, projectId, candidates, currentParticipantIds, readOnly }: LmraParticipantsPickerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -38,7 +38,7 @@ export function LmraParticipantsPicker({ organizationId, lmraId, projectId, cand
   function handleSave() {
     setFormError(null);
     startTransition(async () => {
-      const result = await updateLmraParticipants(organizationId, lmraId, projectId, [...selectedIds]);
+      const result = await updateLmraParticipants(companyId, lmraId, projectId, [...selectedIds]);
       if (!result.ok) {
         setFormError(result.error.message);
         return;

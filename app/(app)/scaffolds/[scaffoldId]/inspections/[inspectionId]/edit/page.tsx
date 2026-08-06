@@ -1,6 +1,6 @@
 import { forbidden, notFound, redirect } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getInspection, getScaffold, isCallerProjectAccessible } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
@@ -30,13 +30,13 @@ type EditInspectionPageProps = {
 export default async function EditInspectionPage({ params }: EditInspectionPageProps) {
   const { scaffoldId, inspectionId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const inspection = await getInspection(currentOrganizationId, inspectionId);
+  const inspection = await getInspection(currentCompanyId, inspectionId);
   if (!inspection || inspection.scaffold_id !== scaffoldId) {
     notFound();
   }
@@ -45,10 +45,10 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
   }
 
   const [roleNames, hasProjectAccess, scaffold, project] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     isCallerProjectAccessible(inspection.project_id),
-    getScaffold(currentOrganizationId, scaffoldId),
-    getProject(currentOrganizationId, inspection.project_id),
+    getScaffold(currentCompanyId, scaffoldId),
+    getProject(currentCompanyId, inspection.project_id),
   ]);
 
   if (!canManageScaffold(roleNames, hasProjectAccess)) {
@@ -60,8 +60,8 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
 
   const projectName = project?.name ?? "Project unavailable";
   const [defects, defectCandidates] = await Promise.all([
-    listDefectsForInspection(currentOrganizationId, inspectionId),
-    listScaffoldDefectCandidateEmployees(currentOrganizationId, inspection.project_id),
+    listDefectsForInspection(currentCompanyId, inspectionId),
+    listScaffoldDefectCandidateEmployees(currentCompanyId, inspection.project_id),
   ]);
   const canManageDefects = canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
   const defectCandidateOptions = toEmployeeOptions(defectCandidates);
@@ -75,13 +75,13 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Checklist" description="24 fixed safety items — mark each Acceptable, Defect found, or Not applicable." />
-        <InspectionChecklist organizationId={currentOrganizationId} inspectionId={inspection.id} scaffoldId={scaffoldId} projectId={inspection.project_id} items={inspection.items} candidates={defectCandidateOptions} readOnly={false} />
+        <InspectionChecklist companyId={currentCompanyId} inspectionId={inspection.id} scaffoldId={scaffoldId} projectId={inspection.project_id} items={inspection.items} candidates={defectCandidateOptions} readOnly={false} />
       </div>
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Defects" />
         <ScaffoldDefectsSection
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           inspectionId={inspection.id}
           scaffoldId={scaffoldId}
           projectId={inspection.project_id}
@@ -96,7 +96,7 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
       </div>
 
       <InspectionFinalizeCard
-        organizationId={currentOrganizationId}
+        companyId={currentCompanyId}
         inspectionId={inspection.id}
         scaffoldId={scaffoldId}
         projectId={inspection.project_id}

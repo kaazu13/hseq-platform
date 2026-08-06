@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getSafetyFlash, getSafetyFlashPreviewUrl, listSafetyFlashFileReplacements, listSafetyFlashAuthorizedEmployees, isCallerProjectAccessible } from "@/modules/safety-flash/queries";
 import { canManageSafetyFlash } from "@/modules/safety-flash/permissions";
@@ -24,24 +24,24 @@ type SafetyFlashDetailPageProps = {
 export default async function SafetyFlashDetailPage({ params }: SafetyFlashDetailPageProps) {
   const { flashId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const flash = await getSafetyFlash(currentOrganizationId, flashId);
+  const flash = await getSafetyFlash(currentCompanyId, flashId);
   if (!flash) {
     notFound();
   }
 
   const [roleNames, hasProjectAccess, project, previewUrl, replacements, candidateRows] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     flash.project_id ? isCallerProjectAccessible(flash.project_id) : Promise.resolve(false),
-    flash.project_id ? getProject(currentOrganizationId, flash.project_id) : Promise.resolve(null),
+    flash.project_id ? getProject(currentCompanyId, flash.project_id) : Promise.resolve(null),
     getSafetyFlashPreviewUrl(flash.storage_object_path),
     listSafetyFlashFileReplacements(flash.id),
-    listSafetyFlashAuthorizedEmployees(currentOrganizationId, flash.project_id),
+    listSafetyFlashAuthorizedEmployees(currentCompanyId, flash.project_id),
   ]);
 
   const candidates = toEmployeeOptions(candidateRows);
@@ -55,7 +55,7 @@ export default async function SafetyFlashDetailPage({ params }: SafetyFlashDetai
         <CardContent className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
           <div>
             <p className="text-xs text-muted-foreground">Scope</p>
-            <p className="text-sm font-medium">{project?.name ?? "Organization-wide"}</p>
+            <p className="text-sm font-medium">{project?.name ?? "Company-wide"}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Date issued</p>
@@ -95,17 +95,17 @@ export default async function SafetyFlashDetailPage({ params }: SafetyFlashDetai
         <>
           <div className="flex flex-col gap-3">
             <SectionHeader title="Edit details" />
-            <SafetyFlashEditForm organizationId={currentOrganizationId} flash={flash} candidates={candidates} />
+            <SafetyFlashEditForm companyId={currentCompanyId} flash={flash} candidates={candidates} />
           </div>
 
           <div className="flex flex-col gap-3">
             <SectionHeader title="Status" />
-            <SafetyFlashStatusToggle organizationId={currentOrganizationId} flashId={flash.id} projectId={flash.project_id} status={flash.status} />
+            <SafetyFlashStatusToggle companyId={currentCompanyId} flashId={flash.id} projectId={flash.project_id} status={flash.status} />
           </div>
 
           <div className="flex flex-col gap-3">
             <SectionHeader title="Replace PDF" description="If an incorrect PDF was uploaded, replace it here. The previous file is retained, never overwritten." />
-            <SafetyFlashReplaceFileForm organizationId={currentOrganizationId} flashId={flash.id} projectId={flash.project_id} />
+            <SafetyFlashReplaceFileForm companyId={currentCompanyId} flashId={flash.id} projectId={flash.project_id} />
           </div>
         </>
       )}

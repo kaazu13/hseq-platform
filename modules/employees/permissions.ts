@@ -1,4 +1,4 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Employee module role gates — mirror the database-level rules exactly
@@ -14,11 +14,11 @@ import type { RoleName } from "@/modules/organizations/types";
 export const EMPLOYEE_WRITE_ROLES: RoleName[] = ["company_admin", "operations_manager"];
 
 /**
- * May view the full organization employee list/detail, read-only.
+ * May view the full company employee list/detail, read-only.
  * Deliberately does NOT include `foreman`, `hse_officer`, or `recruiter`
  * (Role Catalogue & Permissions milestone) — all three are meant to be
  * project-scoped once the Projects module exists; granting them
- * organization-wide employee visibility now would be a permission this
+ * company-wide employee visibility now would be a permission this
  * milestone would have to walk back later, not a safe default. `recruiter`
  * additionally gets its own, separate, much narrower future Talent Pool
  * surface instead of this list — see docs/PRODUCT_REQUIREMENTS.md §11.6.

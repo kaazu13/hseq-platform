@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -25,16 +25,16 @@ import {
  * narrower role set modules/scaffold-defects/permissions.ts documents.
  */
 
-async function getMyEmployeeId(organizationId: string, userId: string): Promise<string | null> {
+async function getMyEmployeeId(companyId: string, userId: string): Promise<string | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("employees").select("id").eq("organization_id", organizationId).eq("profile_id", userId).maybeSingle();
+  const { data, error } = await supabase.from("employees").select("id").eq("company_id", companyId).eq("profile_id", userId).maybeSingle();
   if (error) throw error;
   return data?.id ?? null;
 }
 
-async function requireManageDetailsAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(organizationId), isCallerProjectAccessible(projectId)]);
+async function requireManageDetailsAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(companyId), isCallerProjectAccessible(projectId)]);
 
   if (!canManageScaffoldDefectDetails(roleNames, hasProjectAccess)) {
     forbidden();
@@ -43,9 +43,9 @@ async function requireManageDetailsAccess(organizationId: string, projectId: str
   return { user };
 }
 
-async function requireProgressAccess(organizationId: string, projectId: string, responsiblePersonId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const [roleNames, hasProjectAccess, myEmployeeId] = await Promise.all([getUserRoleNames(organizationId), isCallerProjectAccessible(projectId), getMyEmployeeId(organizationId, user.id)]);
+async function requireProgressAccess(companyId: string, projectId: string, responsiblePersonId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess, myEmployeeId] = await Promise.all([getUserRoleNames(companyId), isCallerProjectAccessible(projectId), getMyEmployeeId(companyId, user.id)]);
 
   const isAssignee = myEmployeeId !== null && myEmployeeId === responsiblePersonId;
   if (!canUpdateScaffoldDefectProgress(roleNames, hasProjectAccess, isAssignee)) {
@@ -55,9 +55,9 @@ async function requireProgressAccess(organizationId: string, projectId: string, 
   return { user };
 }
 
-async function requireCloseAccess(organizationId: string, projectId: string, createdBy: string | null, responsiblePersonId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const [roleNames, hasProjectAccess, myEmployeeId] = await Promise.all([getUserRoleNames(organizationId), isCallerProjectAccessible(projectId), getMyEmployeeId(organizationId, user.id)]);
+async function requireCloseAccess(companyId: string, projectId: string, createdBy: string | null, responsiblePersonId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess, myEmployeeId] = await Promise.all([getUserRoleNames(companyId), isCallerProjectAccessible(projectId), getMyEmployeeId(companyId, user.id)]);
 
   const isOwnEntry = createdBy === user.id || (myEmployeeId !== null && myEmployeeId === responsiblePersonId);
   if (!canCloseScaffoldDefect(roleNames, hasProjectAccess, isOwnEntry)) {
@@ -68,7 +68,7 @@ async function requireCloseAccess(organizationId: string, projectId: string, cre
 }
 
 export async function createScaffoldDefect(
-  organizationId: string,
+  companyId: string,
   inspectionId: string,
   scaffoldId: string,
   projectId: string,
@@ -79,13 +79,13 @@ export async function createScaffoldDefect(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireManageDetailsAccess(organizationId, projectId);
+  const { user } = await requireManageDetailsAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("scaffold_defects")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       scaffold_inspection_id: inspectionId,
       // scaffold_id/project_id are re-derived and validated by
       // sync_scaffold_defect_denormalized_columns() regardless of what's
@@ -118,7 +118,7 @@ export async function createScaffoldDefect(
 }
 
 export async function updateScaffoldDefectDetails(
-  organizationId: string,
+  companyId: string,
   defectId: string,
   inspectionId: string,
   scaffoldId: string,
@@ -130,7 +130,7 @@ export async function updateScaffoldDefectDetails(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireManageDetailsAccess(organizationId, projectId);
+  const { user } = await requireManageDetailsAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -146,7 +146,7 @@ export async function updateScaffoldDefectDetails(
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", defectId);
 
   if (error) {
@@ -165,7 +165,7 @@ export async function updateScaffoldDefectDetails(
 }
 
 export async function updateScaffoldDefectProgress(
-  organizationId: string,
+  companyId: string,
   defectId: string,
   inspectionId: string,
   scaffoldId: string,
@@ -178,13 +178,13 @@ export async function updateScaffoldDefectProgress(
     return { ok: false, error: { code: "validation_error", message: "Check the status update.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireProgressAccess(organizationId, projectId, responsiblePersonId);
+  const { user } = await requireProgressAccess(companyId, projectId, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
     .from("scaffold_defects")
     .update({ status: parsed.data.status, completion_notes: parsed.data.completionNotes ?? null, updated_by: user.id }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", defectId)
     .not("status", "in", "(closed,rejected)");
 
@@ -204,7 +204,7 @@ export async function updateScaffoldDefectProgress(
 }
 
 export async function closeScaffoldDefect(
-  organizationId: string,
+  companyId: string,
   defectId: string,
   inspectionId: string,
   scaffoldId: string,
@@ -218,7 +218,7 @@ export async function closeScaffoldDefect(
     return { ok: false, error: { code: "validation_error", message: "Check the verification notes." } };
   }
 
-  const { user } = await requireCloseAccess(organizationId, projectId, createdBy, responsiblePersonId);
+  const { user } = await requireCloseAccess(companyId, projectId, createdBy, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -227,7 +227,7 @@ export async function closeScaffoldDefect(
       { status: "closed", verification_notes: parsed.data.verificationNotes ?? null, verified_by: user.id, verified_at: new Date().toISOString(), updated_by: user.id },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", defectId)
     .eq("status", "awaiting_verification");
 
@@ -247,7 +247,7 @@ export async function closeScaffoldDefect(
 }
 
 export async function rejectScaffoldDefect(
-  organizationId: string,
+  companyId: string,
   defectId: string,
   inspectionId: string,
   scaffoldId: string,
@@ -261,7 +261,7 @@ export async function rejectScaffoldDefect(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireCloseAccess(organizationId, projectId, createdBy, responsiblePersonId);
+  const { user } = await requireCloseAccess(companyId, projectId, createdBy, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -270,7 +270,7 @@ export async function rejectScaffoldDefect(
       { status: "rejected", reopen_reason: parsed.data.reason, verified_by: user.id, verified_at: new Date().toISOString(), updated_by: user.id },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", defectId)
     .eq("status", "awaiting_verification");
 
@@ -290,7 +290,7 @@ export async function rejectScaffoldDefect(
 }
 
 export async function reopenScaffoldDefect(
-  organizationId: string,
+  companyId: string,
   defectId: string,
   inspectionId: string,
   scaffoldId: string,
@@ -304,13 +304,13 @@ export async function reopenScaffoldDefect(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireCloseAccess(organizationId, projectId, createdBy, responsiblePersonId);
+  const { user } = await requireCloseAccess(companyId, projectId, createdBy, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
     .from("scaffold_defects")
     .update({ status: "open", reopen_reason: parsed.data.reason, updated_by: user.id }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", defectId)
     .in("status", ["closed", "rejected"]);
 

@@ -26,7 +26,7 @@ export function isRlsViolation(error: { code?: string }): boolean {
   return error.code === "42501";
 }
 
-/** Postgres error code for an unhandled `RAISE EXCEPTION` in a plpgsql function/trigger with no explicit SQLSTATE — e.g. validate_project_assignment_role_holder()'s "doesn't hold that organization role" check. */
+/** Postgres error code for an unhandled `RAISE EXCEPTION` in a plpgsql function/trigger with no explicit SQLSTATE — e.g. validate_project_assignment_role_holder()'s "doesn't hold that company role" check. */
 export function isRaisedException(error: { code?: string }): boolean {
   return error.code === "P0001";
 }

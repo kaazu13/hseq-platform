@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { listScaffoldCreatableProjects, listEligibleScaffoldForemen, listEligibleScaffoldTeamMembers } from "@/modules/scaffolds/queries";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
@@ -18,14 +18,14 @@ type NewScaffoldPageProps = {
 export default async function NewScaffoldPage({ searchParams }: NewScaffoldPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
-  const creatableProjects = await listScaffoldCreatableProjects(currentOrganizationId, user.id, roleNames);
+  const roleNames = await getUserRoleNames(currentCompanyId);
+  const creatableProjects = await listScaffoldCreatableProjects(currentCompanyId, user.id, roleNames);
 
   if (!params.projectId) {
     return (
@@ -48,7 +48,7 @@ export default async function NewScaffoldPage({ searchParams }: NewScaffoldPageP
     );
   }
 
-  const project = await getProject(currentOrganizationId, params.projectId);
+  const project = await getProject(currentCompanyId, params.projectId);
   if (!project) {
     notFound();
   }
@@ -57,15 +57,15 @@ export default async function NewScaffoldPage({ searchParams }: NewScaffoldPageP
   }
 
   const [foremanOptions, teamMemberOptions] = await Promise.all([
-    listEligibleScaffoldForemen(currentOrganizationId, project.id),
-    listEligibleScaffoldTeamMembers(currentOrganizationId, project.id),
+    listEligibleScaffoldForemen(currentCompanyId, project.id),
+    listEligibleScaffoldTeamMembers(currentCompanyId, project.id),
   ]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Register scaffold" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <ScaffoldForm mode="create" organizationId={currentOrganizationId} projectId={project.id} projectName={project.name} foremanOptions={foremanOptions} teamMemberOptions={teamMemberOptions} />
+        <ScaffoldForm mode="create" companyId={currentCompanyId} projectId={project.id} projectName={project.name} foremanOptions={foremanOptions} teamMemberOptions={teamMemberOptions} />
       </div>
     </div>
   );

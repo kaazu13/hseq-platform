@@ -9,7 +9,7 @@ import { defineConfig } from "vitest/config";
  *
  * Run sequentially (no parallel test files) — every test shares one local
  * Postgres instance and creates/tears down its own disposable
- * organization per test, so cross-file parallelism isn't worth the
+ * company per test, so cross-file parallelism isn't worth the
  * isolation risk at this test count.
  */
 export default defineConfig({

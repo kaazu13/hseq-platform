@@ -26,7 +26,7 @@ export default async function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl">Sign in</CardTitle>
-          <CardDescription>Enter your credentials to access your organization.</CardDescription>
+          <CardDescription>Enter your credentials to access your company.</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />

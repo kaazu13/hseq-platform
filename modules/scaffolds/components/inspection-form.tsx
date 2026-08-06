@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type InspectionFormProps = {
-  organizationId: string;
+  companyId: string;
   scaffoldId: string;
   projectId: string;
   candidates: EmployeeOption[];
@@ -23,7 +23,7 @@ type InspectionFormProps = {
 };
 
 /** Starts a new inspection — core fields only; the checklist is created automatically (24 fixed rows) and edited on the next page. */
-export function InspectionForm({ organizationId, scaffoldId, projectId, candidates, priorInspections }: InspectionFormProps) {
+export function InspectionForm({ companyId, scaffoldId, projectId, candidates, priorInspections }: InspectionFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function InspectionForm({ organizationId, scaffoldId, projectId, candidat
     };
 
     startTransition(async () => {
-      const result = await createInspection(organizationId, scaffoldId, projectId, input);
+      const result = await createInspection(companyId, scaffoldId, projectId, input);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

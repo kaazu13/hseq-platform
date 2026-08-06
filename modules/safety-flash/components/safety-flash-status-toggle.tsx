@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { ToolboxDocumentStatus } from "@/modules/safety-flash/types";
 
-export function SafetyFlashStatusToggle({ organizationId, flashId, projectId, status }: { organizationId: string; flashId: string; projectId: string | null; status: ToolboxDocumentStatus }) {
+export function SafetyFlashStatusToggle({ companyId, flashId, projectId, status }: { companyId: string; flashId: string; projectId: string | null; status: ToolboxDocumentStatus }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export function SafetyFlashStatusToggle({ organizationId, flashId, projectId, st
     setError(null);
     const nextStatus = status === "active" ? "archived" : "active";
     startTransition(async () => {
-      const result = await setSafetyFlashStatus(organizationId, flashId, projectId, nextStatus);
+      const result = await setSafetyFlashStatus(companyId, flashId, projectId, nextStatus);
       if (!result.ok) setError(result.error.message);
     });
   }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { HardHat, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listScaffolds, getCurrentInspectionExpiryByScaffold, type ScaffoldListFilters } from "@/modules/scaffolds/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { ScaffoldCard } from "@/modules/scaffolds/components/scaffold-card";
@@ -24,13 +24,13 @@ type ScaffoldsPageProps = {
 export default async function ScaffoldsPage({ searchParams }: ScaffoldsPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Scaffold Inspections" description="The scaffold register — structures, their inspection history, and current status." />
-        <EmptyState icon={HardHat} title="You're not part of an organization yet" description="Once an administrator adds your account to one, scaffolds will appear here." className="flex-1" />
+        <EmptyState icon={HardHat} title="You're not part of an company yet" description="Once an administrator adds your account to one, scaffolds will appear here." className="flex-1" />
       </div>
     );
   }
@@ -42,9 +42,9 @@ export default async function ScaffoldsPage({ searchParams }: ScaffoldsPageProps
     status: params.status,
   };
 
-  const [scaffolds, projects] = await Promise.all([listScaffolds(currentOrganizationId, filters), listProjects(currentOrganizationId)]);
+  const [scaffolds, projects] = await Promise.all([listScaffolds(currentCompanyId, filters), listProjects(currentCompanyId)]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
-  const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(currentOrganizationId, scaffolds.map((s) => s.id));
+  const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(currentCompanyId, scaffolds.map((s) => s.id));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">

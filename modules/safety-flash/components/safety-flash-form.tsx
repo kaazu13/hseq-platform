@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-export function SafetyFlashForm({ organizationId, projects, candidates }: { organizationId: string; projects: Project[]; candidates: EmployeeOption[] }) {
+export function SafetyFlashForm({ companyId, projects, candidates }: { companyId: string; projects: Project[]; candidates: EmployeeOption[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function SafetyFlashForm({ organizationId, projects, candidates }: { orga
     formData.set("file", file);
 
     startTransition(async () => {
-      const result = await createSafetyFlash(organizationId, formData);
+      const result = await createSafetyFlash(companyId, formData);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});
@@ -78,13 +78,13 @@ export function SafetyFlashForm({ organizationId, projects, candidates }: { orga
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="projectId">Project (optional — leave blank for organization-wide)</Label>
+          <Label htmlFor="projectId">Project (optional — leave blank for company-wide)</Label>
           <Select value={projectId || "none"} onValueChange={(value) => setProjectId(value === "none" ? "" : (value ?? ""))}>
             <SelectTrigger id="projectId" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Organization-wide (no project)</SelectItem>
+              <SelectItem value="none">Company-wide (no project)</SelectItem>
               {projects.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}

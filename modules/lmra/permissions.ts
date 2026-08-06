@@ -1,4 +1,4 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * LMRA module role gates — mirror the RLS in

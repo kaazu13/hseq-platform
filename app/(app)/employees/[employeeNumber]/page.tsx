@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileBadge, FileText, FolderKanban, History, Pencil } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getEmployeeByNumber, getEmployeeRoleInfo, listAllRoles, listEmploymentPeriods } from "@/modules/employees/queries";
 import { canManageEmployeeRoles, canManageEmployees, canManageEmploymentLifecycle } from "@/modules/employees/permissions";
 import { EmployeeOverviewTab } from "@/modules/employees/components/employee-overview-tab";
@@ -42,18 +42,18 @@ function initialsOf(firstName: string, lastName: string): string {
 export default async function EmployeeDetailPage({ params }: EmployeeDetailPageProps) {
   const { employeeNumber } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     notFound();
   }
 
-  const employee = await getEmployeeByNumber(currentOrganizationId, employeeNumber);
+  const employee = await getEmployeeByNumber(currentCompanyId, employeeNumber);
   if (!employee) {
     notFound();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   const canManage = canManageEmployees(roleNames);
   const canManageRoles = canManageEmployeeRoles(roleNames);
   const canManageEmployment = canManageEmploymentLifecycle(roleNames);
@@ -66,9 +66,9 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
   const employeeName = `${employee.first_name} ${employee.last_name}`;
 
   const [roleInfo, allRoles, employmentPeriods] = await Promise.all([
-    getEmployeeRoleInfo(currentOrganizationId, employee.profile_id),
+    getEmployeeRoleInfo(currentCompanyId, employee.profile_id),
     listAllRoles(),
-    listEmploymentPeriods(currentOrganizationId, employee.id),
+    listEmploymentPeriods(currentCompanyId, employee.id),
   ]);
 
   return (
@@ -90,9 +90,9 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
               </Button>
               {!isSelf &&
                 (isArchived ? (
-                  <RestoreEmployeeButton organizationId={currentOrganizationId} employeeId={employee.id} employeeName={employeeName} />
+                  <RestoreEmployeeButton companyId={currentCompanyId} employeeId={employee.id} employeeName={employeeName} />
                 ) : (
-                  <ArchiveEmployeeButton organizationId={currentOrganizationId} employeeId={employee.id} employeeName={employeeName} />
+                  <ArchiveEmployeeButton companyId={currentCompanyId} employeeId={employee.id} employeeName={employeeName} />
                 ))}
             </>
           ) : undefined
@@ -138,7 +138,7 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
 
         <TabsContent value="roles" className="pt-4">
           <EmployeeRolesTab
-            organizationId={currentOrganizationId}
+            companyId={currentCompanyId}
             employeeId={employee.id}
             hasLinkedAccount={employee.profile_id !== null}
             roleInfo={roleInfo}
@@ -150,7 +150,7 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
 
         <TabsContent value="employment" className="pt-4">
           <EmploymentHistoryTab
-            organizationId={currentOrganizationId}
+            companyId={currentCompanyId}
             employeeId={employee.id}
             employeeName={employeeName}
             periods={employmentPeriods}

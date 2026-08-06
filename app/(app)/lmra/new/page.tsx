@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { listLmraCreatableProjects, listLmraCandidateEmployees } from "@/modules/lmra/queries";
 import { LmraAssessmentForm } from "@/modules/lmra/components/lmra-assessment-form";
@@ -23,7 +23,7 @@ type NewLmraPageProps = {
  * step — no client JS needed for the picker itself.
  *
  * The picker's project list (`listLmraCreatableProjects`) is already scoped
- * to what THIS caller can actually create an LMRA for (org-wide if HSE
+ * to what THIS caller can actually create an LMRA for (company-wide if HSE
  * Manager, otherwise only their own foreman project(s)) — same
  * project-scoped permission model as docs/ROLES_AND_PERMISSIONS.md §5,
  * mirrored in modules/lmra/permissions.ts's canManageLmra.
@@ -31,15 +31,15 @@ type NewLmraPageProps = {
 export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   const isHseqManager = roleNames.includes("hseq_manager");
-  const creatableProjects = await listLmraCreatableProjects(currentOrganizationId, user.id, isHseqManager);
+  const creatableProjects = await listLmraCreatableProjects(currentCompanyId, user.id, isHseqManager);
 
   if (!params.projectId) {
     return (
@@ -71,7 +71,7 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
     );
   }
 
-  const project = await getProject(currentOrganizationId, params.projectId);
+  const project = await getProject(currentCompanyId, params.projectId);
   if (!project) {
     notFound();
   }
@@ -79,13 +79,13 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
     forbidden();
   }
 
-  const candidates = toEmployeeOptions(await listLmraCandidateEmployees(currentOrganizationId, project.id));
+  const candidates = toEmployeeOptions(await listLmraCandidateEmployees(currentCompanyId, project.id));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="New LMRA" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <LmraAssessmentForm mode="create" organizationId={currentOrganizationId} projectId={project.id} projectName={project.name} candidates={candidates} />
+        <LmraAssessmentForm mode="create" companyId={currentCompanyId} projectId={project.id} projectName={project.name} candidates={candidates} />
       </div>
     </div>
   );

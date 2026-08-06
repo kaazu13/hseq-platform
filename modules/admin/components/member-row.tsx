@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Loader2, X } from "lucide-react";
-import { setMembershipStatus } from "@/modules/organizations/actions";
+import { setMembershipStatus } from "@/modules/companies/actions";
 import { assignEmployeeRole, removeEmployeeRole, createEmployeeForMember } from "@/modules/employees/actions";
 import { assignProjectRole } from "@/modules/projects/actions";
 import { MEMBERSHIP_STATUS_LABELS, MEMBERSHIP_STATUSES } from "@/modules/account/types";
 import type { MembershipStatus } from "@/modules/account/types";
-import type { OrganizationMemberOverview } from "@/modules/account/queries";
+import type { CompanyMemberOverview } from "@/modules/account/queries";
 import { PROJECT_ASSIGNMENT_ROLES, PROJECT_ASSIGNMENT_ROLE_LABELS } from "@/modules/projects/types";
 import type { Project } from "@/modules/projects/types";
 import { Badge } from "@/components/ui/badge";
@@ -21,14 +21,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 type RoleOption = { id: string; name: string; display_label: string };
 
 export function MemberRow({
-  organizationId,
+  companyId,
   member,
   isSelf,
   assignableRoles,
   projects,
 }: {
-  organizationId: string;
-  member: OrganizationMemberOverview;
+  companyId: string;
+  member: CompanyMemberOverview;
   isSelf: boolean;
   assignableRoles: RoleOption[];
   projects: Project[];
@@ -46,7 +46,7 @@ export function MemberRow({
   function handleStatusChange(status: MembershipStatus) {
     setError(null);
     startTransition(async () => {
-      const result = await setMembershipStatus(organizationId, member.membershipId, status);
+      const result = await setMembershipStatus(companyId, member.membershipId, status);
       if (!result.ok) setError(result.error.message);
     });
   }
@@ -55,7 +55,7 @@ export function MemberRow({
     if (!member.employee || !selectedRoleId) return;
     setError(null);
     startTransition(async () => {
-      const result = await assignEmployeeRole(organizationId, member.employee!.id, member.membershipId, selectedRoleId);
+      const result = await assignEmployeeRole(companyId, member.employee!.id, member.membershipId, selectedRoleId);
       if (!result.ok) setError(result.error.message);
       else setSelectedRoleId("");
     });
@@ -65,7 +65,7 @@ export function MemberRow({
     if (!member.employee) return;
     setError(null);
     startTransition(async () => {
-      const result = await removeEmployeeRole(organizationId, member.employee!.id, membershipRoleId);
+      const result = await removeEmployeeRole(companyId, member.employee!.id, membershipRoleId);
       if (!result.ok) setError(result.error.message);
     });
   }
@@ -74,7 +74,7 @@ export function MemberRow({
     if (!member.employee || !selectedProjectId) return;
     setError(null);
     startTransition(async () => {
-      const result = await assignProjectRole(organizationId, selectedProjectId, { employeeId: member.employee!.id, assignmentRole: selectedAssignmentRole, notes: undefined });
+      const result = await assignProjectRole(companyId, selectedProjectId, { employeeId: member.employee!.id, assignmentRole: selectedAssignmentRole, notes: undefined });
       if (!result.ok) setError(result.error.message);
       else setSelectedProjectId("");
     });
@@ -87,7 +87,7 @@ export function MemberRow({
     }
     setError(null);
     startTransition(async () => {
-      const result = await createEmployeeForMember(organizationId, member.userId, { firstName, lastName, workEmail: undefined, phone: undefined, positionTitle: undefined, birthDate: undefined, startDate: undefined });
+      const result = await createEmployeeForMember(companyId, member.userId, { firstName, lastName, workEmail: undefined, phone: undefined, positionTitle: undefined, birthDate: undefined, startDate: undefined });
       if (!result.ok) setError(result.error.message);
     });
   }

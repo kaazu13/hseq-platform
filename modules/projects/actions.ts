@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, forbidden } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -14,21 +14,21 @@ import { getProject, getMyProjectAssignmentRoles } from "./queries";
  * Server Functions for the projects domain — same fixed recipe as
  * modules/employees/actions.ts (docs/API_CONVENTIONS.md §3). Project-level
  * write access can't be decided from role names alone (an assigned Project
- * Manager may manage their own project without any org-wide role), so
- * every mutation here re-derives "org-wide manager OR this project's PM"
+ * Manager may manage their own project without any company-wide role), so
+ * every mutation here re-derives "company-wide manager OR this project's PM"
  * live — mirroring is_project_manager() (the migration's RLS backstop)
  * rather than trusting a client-supplied flag.
  */
 
-/** Exported for reuse by modules/teams/actions.ts — team management shares the exact same "org-wide manager OR this project's assigned Project Manager" gate as project management (see modules/teams/permissions.ts's canManageTeams). */
+/** Exported for reuse by modules/teams/actions.ts — team management shares the exact same "company-wide manager OR this project's assigned Project Manager" gate as project management (see modules/teams/permissions.ts's canManageTeams). */
 export async function requireProjectManageAccess(
-  organizationId: string,
+  companyId: string,
   projectId: string,
 ): Promise<{ userId: string }> {
-  const { user } = await requireOrganizationMembership(organizationId);
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, myProjectRoles] = await Promise.all([
-    getUserRoleNames(organizationId),
-    getMyProjectAssignmentRoles(organizationId, projectId, user.id),
+    getUserRoleNames(companyId),
+    getMyProjectAssignmentRoles(companyId, projectId, user.id),
   ]);
 
   if (!canManageProject(roleNames, myProjectRoles)) {
@@ -39,11 +39,11 @@ export async function requireProjectManageAccess(
 }
 
 export async function createProject(
-  organizationId: string,
+  companyId: string,
   input: ProjectFormInput,
 ): Promise<ActionResult<{ projectId: string }>> {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const roleNames = await getUserRoleNames(organizationId);
+  const { user } = await requireCompanyMembership(companyId);
+  const roleNames = await getUserRoleNames(companyId);
   if (!roleNames.some((role) => PROJECT_CREATE_ROLES.includes(role))) {
     forbidden();
   }
@@ -60,7 +60,7 @@ export async function createProject(
   const { data, error } = await supabase
     .from("projects")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       name: parsed.data.name,
       client_name: parsed.data.clientName ?? null,
       code: parsed.data.code ?? null,
@@ -77,13 +77,13 @@ export async function createProject(
 
   if (error || !data) {
     if (error && isUniqueViolation(error)) {
-      return { ok: false, error: { code: "conflict", message: "A project with that code already exists in this organization." } };
+      return { ok: false, error: { code: "conflict", message: "A project with that code already exists in this company." } };
     }
     return { ok: false, error: { code: "server_error", message: "Couldn't create the project. Try again." } };
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "create",
     entity_type: "project",
@@ -95,8 +95,8 @@ export async function createProject(
   redirect(`/projects/${data.id}`);
 }
 
-export async function updateProject(organizationId: string, projectId: string, input: ProjectFormInput): Promise<ActionResult<null>> {
-  const { userId } = await requireProjectManageAccess(organizationId, projectId);
+export async function updateProject(companyId: string, projectId: string, input: ProjectFormInput): Promise<ActionResult<null>> {
+  const { userId } = await requireProjectManageAccess(companyId, projectId);
 
   const parsed = projectFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -106,7 +106,7 @@ export async function updateProject(organizationId: string, projectId: string, i
     };
   }
 
-  const existing = await getProject(organizationId, projectId);
+  const existing = await getProject(companyId, projectId);
   if (!existing) {
     return { ok: false, error: { code: "not_found", message: "Project not found." } };
   }
@@ -124,17 +124,17 @@ export async function updateProject(organizationId: string, projectId: string, i
   };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("projects").update(updatePayload).eq("organization_id", organizationId).eq("id", projectId);
+  const { error } = await supabase.from("projects").update(updatePayload).eq("company_id", companyId).eq("id", projectId);
 
   if (error) {
     if (isUniqueViolation(error)) {
-      return { ok: false, error: { code: "conflict", message: "A project with that code already exists in this organization." } };
+      return { ok: false, error: { code: "conflict", message: "A project with that code already exists in this company." } };
     }
     return { ok: false, error: { code: "server_error", message: "Couldn't save changes. Try again." } };
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: userId,
     action: "update",
     entity_type: "project",
@@ -151,17 +151,17 @@ export async function updateProject(organizationId: string, projectId: string, i
  * Adds (or re-opens) a project-level assignment — the roster (`member`) or
  * a manager-tier role. `validate_project_assignment_insert()` (the
  * migration) rejects: a manager-tier role for an employee who doesn't
- * already hold the matching organization role; any role for an employee
+ * already hold the matching company role; any role for an employee
  * who isn't currently employed or is archived; or any role at all if the
  * project itself is archived — each surfaced here as a validation error
  * rather than a raw database exception.
  */
 export async function assignProjectRole(
-  organizationId: string,
+  companyId: string,
   projectId: string,
   input: AssignProjectRoleInput,
 ): Promise<ActionResult<null>> {
-  const { userId } = await requireProjectManageAccess(organizationId, projectId);
+  const { userId } = await requireProjectManageAccess(companyId, projectId);
 
   const parsed = assignProjectRoleSchema.safeParse(input);
   if (!parsed.success) {
@@ -173,7 +173,7 @@ export async function assignProjectRole(
 
   const supabase = await createClient();
   const { error } = await supabase.from("project_assignments").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     project_id: projectId,
     employee_id: parsed.data.employeeId,
     assignment_role: parsed.data.assignmentRole,
@@ -195,7 +195,7 @@ export async function assignProjectRole(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: userId,
     action: "update",
     entity_type: "project",
@@ -216,15 +216,15 @@ export async function assignProjectRole(
  * too, so they can never remain "actively on a team" with zero project
  * roster standing.
  */
-export async function endProjectAssignment(organizationId: string, projectId: string, assignmentId: string): Promise<ActionResult<null>> {
-  const { userId } = await requireProjectManageAccess(organizationId, projectId);
+export async function endProjectAssignment(companyId: string, projectId: string, assignmentId: string): Promise<ActionResult<null>> {
+  const { userId } = await requireProjectManageAccess(companyId, projectId);
 
   const supabase = await createClient();
   const endedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from("project_assignments")
     .update({ end_at: endedAt, ended_by: userId, ended_at: endedAt })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .eq("id", assignmentId)
     .is("end_at", null)
@@ -238,7 +238,7 @@ export async function endProjectAssignment(organizationId: string, projectId: st
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: userId,
     action: "update",
     entity_type: "project",

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-export function SafetyFlashEditForm({ organizationId, flash, candidates }: { organizationId: string; flash: SafetyFlash; candidates: EmployeeOption[] }) {
+export function SafetyFlashEditForm({ companyId, flash, candidates }: { companyId: string; flash: SafetyFlash; candidates: EmployeeOption[] }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -38,7 +38,7 @@ export function SafetyFlashEditForm({ organizationId, flash, candidates }: { org
     };
 
     startTransition(async () => {
-      const result = await updateSafetyFlashMetadata(organizationId, flash.id, flash.project_id, input);
+      const result = await updateSafetyFlashMetadata(companyId, flash.id, flash.project_id, input);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

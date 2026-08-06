@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -29,22 +29,22 @@ import {
  * breakdown this module implements.
  */
 
-async function getMyEmployeeId(organizationId: string, userId: string): Promise<string | null> {
+async function getMyEmployeeId(companyId: string, userId: string): Promise<string | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("employees")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("profile_id", userId)
     .maybeSingle();
   if (error) throw error;
   return data?.id ?? null;
 }
 
-async function requireCreateAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireCreateAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, isProjectManager, hasProjectAccess] = await Promise.all([
-    getUserRoleNames(organizationId),
+    getUserRoleNames(companyId),
     isCallerProjectManager(projectId),
     isCallerProjectAccessible(projectId),
   ]);
@@ -56,10 +56,10 @@ async function requireCreateAccess(organizationId: string, projectId: string) {
   return { user };
 }
 
-async function requireManageDetailsAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireManageDetailsAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, isProjectManager, hasProjectAccess] = await Promise.all([
-    getUserRoleNames(organizationId),
+    getUserRoleNames(companyId),
     isCallerProjectManager(projectId),
     isCallerProjectAccessible(projectId),
   ]);
@@ -71,13 +71,13 @@ async function requireManageDetailsAccess(organizationId: string, projectId: str
   return { user };
 }
 
-async function requireProgressAccess(organizationId: string, projectId: string, responsiblePersonId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireProgressAccess(companyId: string, projectId: string, responsiblePersonId: string) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, isProjectManager, hasProjectAccess, myEmployeeId] = await Promise.all([
-    getUserRoleNames(organizationId),
+    getUserRoleNames(companyId),
     isCallerProjectManager(projectId),
     isCallerProjectAccessible(projectId),
-    getMyEmployeeId(organizationId, user.id),
+    getMyEmployeeId(companyId, user.id),
   ]);
 
   const isAssignee = myEmployeeId !== null && myEmployeeId === responsiblePersonId;
@@ -88,12 +88,12 @@ async function requireProgressAccess(organizationId: string, projectId: string, 
   return { user };
 }
 
-async function requireCloseAccess(organizationId: string, projectId: string, createdBy: string | null, responsiblePersonId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireCloseAccess(companyId: string, projectId: string, createdBy: string | null, responsiblePersonId: string) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, isProjectManager, myEmployeeId] = await Promise.all([
-    getUserRoleNames(organizationId),
+    getUserRoleNames(companyId),
     isCallerProjectManager(projectId),
-    getMyEmployeeId(organizationId, user.id),
+    getMyEmployeeId(companyId, user.id),
   ]);
 
   const isOwnEntry = createdBy === user.id || (myEmployeeId !== null && myEmployeeId === responsiblePersonId);
@@ -105,7 +105,7 @@ async function requireCloseAccess(organizationId: string, projectId: string, cre
 }
 
 export async function createCorrectiveAction(
-  organizationId: string,
+  companyId: string,
   observationId: string,
   projectId: string,
   input: CorrectiveActionFormInput,
@@ -115,13 +115,13 @@ export async function createCorrectiveAction(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireCreateAccess(organizationId, projectId);
+  const { user } = await requireCreateAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("corrective_actions")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       observation_id: observationId,
       project_id: projectId,
       description: parsed.data.description,
@@ -147,7 +147,7 @@ export async function createCorrectiveAction(
 }
 
 export async function updateCorrectiveActionDetails(
-  organizationId: string,
+  companyId: string,
   actionId: string,
   observationId: string,
   projectId: string,
@@ -158,7 +158,7 @@ export async function updateCorrectiveActionDetails(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireManageDetailsAccess(organizationId, projectId);
+  const { user } = await requireManageDetailsAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -173,7 +173,7 @@ export async function updateCorrectiveActionDetails(
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", actionId);
 
   if (error) {
@@ -192,7 +192,7 @@ export async function updateCorrectiveActionDetails(
 }
 
 export async function updateCorrectiveActionProgress(
-  organizationId: string,
+  companyId: string,
   actionId: string,
   observationId: string,
   projectId: string,
@@ -204,7 +204,7 @@ export async function updateCorrectiveActionProgress(
     return { ok: false, error: { code: "validation_error", message: "Check the status update.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireProgressAccess(organizationId, projectId, responsiblePersonId);
+  const { user } = await requireProgressAccess(companyId, projectId, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -213,7 +213,7 @@ export async function updateCorrectiveActionProgress(
       { status: parsed.data.status, completion_notes: parsed.data.completionNotes ?? null, updated_by: user.id },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", actionId)
     .not("status", "in", "(closed,rejected)");
 
@@ -233,7 +233,7 @@ export async function updateCorrectiveActionProgress(
 }
 
 export async function closeCorrectiveAction(
-  organizationId: string,
+  companyId: string,
   actionId: string,
   observationId: string,
   projectId: string,
@@ -246,7 +246,7 @@ export async function closeCorrectiveAction(
     return { ok: false, error: { code: "validation_error", message: "Check the closure evidence." } };
   }
 
-  const { user } = await requireCloseAccess(organizationId, projectId, createdBy, responsiblePersonId);
+  const { user } = await requireCloseAccess(companyId, projectId, createdBy, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -261,7 +261,7 @@ export async function closeCorrectiveAction(
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", actionId)
     .eq("status", "awaiting_verification");
 
@@ -281,7 +281,7 @@ export async function closeCorrectiveAction(
 }
 
 export async function rejectCorrectiveAction(
-  organizationId: string,
+  companyId: string,
   actionId: string,
   observationId: string,
   projectId: string,
@@ -294,7 +294,7 @@ export async function rejectCorrectiveAction(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireCloseAccess(organizationId, projectId, createdBy, responsiblePersonId);
+  const { user } = await requireCloseAccess(companyId, projectId, createdBy, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -303,7 +303,7 @@ export async function rejectCorrectiveAction(
       { status: "rejected", reopen_reason: parsed.data.reason, reviewed_by: user.id, reviewed_at: new Date().toISOString(), updated_by: user.id },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", actionId)
     .eq("status", "awaiting_verification");
 
@@ -323,7 +323,7 @@ export async function rejectCorrectiveAction(
 }
 
 export async function reopenCorrectiveAction(
-  organizationId: string,
+  companyId: string,
   actionId: string,
   observationId: string,
   projectId: string,
@@ -336,7 +336,7 @@ export async function reopenCorrectiveAction(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireCloseAccess(organizationId, projectId, createdBy, responsiblePersonId);
+  const { user } = await requireCloseAccess(companyId, projectId, createdBy, responsiblePersonId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -345,7 +345,7 @@ export async function reopenCorrectiveAction(
       { status: "open", reopen_reason: parsed.data.reason, updated_by: user.id },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", actionId)
     .in("status", ["closed", "rejected"]);
 

@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type ProjectFormProps =
-  | { mode: "create"; organizationId: string; project?: undefined }
-  | { mode: "edit"; organizationId: string; project: Project };
+  | { mode: "create"; companyId: string; project?: undefined }
+  | { mode: "edit"; companyId: string; project: Project };
 
 /**
  * Shared create/edit form — same field set either way (Assigned Project
@@ -25,7 +25,7 @@ type ProjectFormProps =
  * modules/employees/components/employee-form.tsx's header comment for why
  * (React 19's automatic form-reset on host form actions).
  */
-export function ProjectForm({ mode, organizationId, project }: ProjectFormProps) {
+export function ProjectForm({ mode, companyId, project }: ProjectFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -50,7 +50,7 @@ export function ProjectForm({ mode, organizationId, project }: ProjectFormProps)
     };
 
     startTransition(async () => {
-      const result = mode === "create" ? await createProject(organizationId, input) : await updateProject(organizationId, project.id, input);
+      const result = mode === "create" ? await createProject(companyId, input) : await updateProject(companyId, project.id, input);
 
       if (!result.ok) {
         setFormError(result.error.message);

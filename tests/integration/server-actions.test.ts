@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "node:crypto";
-import { sql, createTestOrg, deleteTestOrg, addMembership, createTestEmployee, createTestProject, createTestTeam } from "../db/helpers";
+import { sql, createTestCompany, deleteTestCompany, addMembership, createTestEmployee, createTestProject, createTestTeam } from "../db/helpers";
 import { createIntegrationTestUser, deleteIntegrationTestUser, signInAs, clearTestCookies } from "./helpers";
 import { createEmployee, updateEmployee } from "@/modules/employees/actions";
 import { setTeamAssignment } from "@/modules/teams/actions";
@@ -13,8 +13,8 @@ import { setTeamAssignment } from "@/modules/teams/actions";
  * platform-context shim these need to run outside an actual request.
  */
 describe("Server Action integration", () => {
-  let orgA: Awaited<ReturnType<typeof createTestOrg>>;
-  let orgB: Awaited<ReturnType<typeof createTestOrg>>;
+  let companyA: Awaited<ReturnType<typeof createTestCompany>>;
+  let companyB: Awaited<ReturnType<typeof createTestCompany>>;
   let adminUserId: string;
   let plainEmployeeUserId: string;
   // randomUUID rather than Date.now() — guarantees uniqueness even if this
@@ -25,19 +25,19 @@ describe("Server Action integration", () => {
   const password = "Integration-Test-Only-1!";
 
   beforeAll(async () => {
-    orgA = await createTestOrg("integration-a");
-    orgB = await createTestOrg("integration-b");
+    companyA = await createTestCompany("integration-a");
+    companyB = await createTestCompany("integration-b");
 
     adminUserId = await createIntegrationTestUser(adminEmail, password, "Integration Admin");
     plainEmployeeUserId = await createIntegrationTestUser(plainEmail, password, "Integration Plain User");
 
-    await addMembership(orgA.orgId, adminUserId, ["company_admin"]);
-    await addMembership(orgA.orgId, plainEmployeeUserId, ["employee"]);
+    await addMembership(companyA.companyId, adminUserId, ["company_admin"]);
+    await addMembership(companyA.companyId, plainEmployeeUserId, ["employee"]);
   });
 
   afterAll(async () => {
-    await deleteTestOrg(orgA.orgId);
-    await deleteTestOrg(orgB.orgId);
+    await deleteTestCompany(companyA.companyId);
+    await deleteTestCompany(companyB.companyId);
     await deleteIntegrationTestUser(adminUserId);
     await deleteIntegrationTestUser(plainEmployeeUserId);
     await sql.end();
@@ -51,7 +51,7 @@ describe("Server Action integration", () => {
     // exactly as it does for real in Next.js). That thrown redirect IS the
     // success signal here.
     await expect(
-      createEmployee(orgA.orgId, {
+      createEmployee(companyA.companyId, {
         firstName: "Happy",
         lastName: "Path",
         workEmail: undefined,
@@ -60,7 +60,7 @@ describe("Server Action integration", () => {
       }),
     ).rejects.toThrow(/^NEXT_REDIRECT:\/employees\//);
 
-    const [row] = await sql`select id, first_name, last_name from employees where organization_id = ${orgA.orgId} and first_name = 'Happy' and last_name = 'Path'`;
+    const [row] = await sql`select id, first_name, last_name from employees where company_id = ${companyA.companyId} and first_name = 'Happy' and last_name = 'Path'`;
     expect(row).toBeDefined();
 
     clearTestCookies();
@@ -70,7 +70,7 @@ describe("Server Action integration", () => {
     await signInAs(plainEmail, password);
 
     await expect(
-      createEmployee(orgA.orgId, {
+      createEmployee(companyA.companyId, {
         firstName: "Should",
         lastName: "NotExist",
         workEmail: undefined,
@@ -79,18 +79,18 @@ describe("Server Action integration", () => {
       }),
     ).rejects.toThrow("NEXT_FORBIDDEN");
 
-    const rows = await sql`select id from employees where organization_id = ${orgA.orgId} and first_name = 'Should' and last_name = 'NotExist'`;
+    const rows = await sql`select id from employees where company_id = ${companyA.companyId} and first_name = 'Should' and last_name = 'NotExist'`;
     expect(rows).toHaveLength(0);
 
     clearTestCookies();
   });
 
-  it("cross-organization rejection: updating an employee that belongs to a DIFFERENT org returns not_found, not a leak", async () => {
-    const employeeInOrgB = await createTestEmployee(orgB.orgId, null, "Org B", "Employee");
+  it("cross-company rejection: updating an employee that belongs to a DIFFERENT company returns not_found, not a leak", async () => {
+    const employeeInOrgB = await createTestEmployee(companyB.companyId, null, "Company B", "Employee");
 
-    await signInAs(adminEmail, password); // company_admin of Org A only
+    await signInAs(adminEmail, password); // company_admin of Company A only
 
-    const result = await updateEmployee(orgA.orgId, employeeInOrgB, {
+    const result = await updateEmployee(companyA.companyId, employeeInOrgB, {
       firstName: "Hacked",
       lastName: "Name",
       workEmail: undefined,
@@ -103,24 +103,24 @@ describe("Server Action integration", () => {
     }
 
     const [unchanged] = await sql`select first_name from employees where id = ${employeeInOrgB}`;
-    expect(unchanged.first_name).toBe("Org B"); // untouched
+    expect(unchanged.first_name).toBe("Company B"); // untouched
 
     clearTestCookies();
   });
 
   it("project/team assignment invariant: setTeamAssignment moves an employee, closing the old assignment and opening the new one", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Integration Move Project");
-    const teamAlpha = await createTestTeam(orgA.orgId, projectId, "Integration Alpha");
-    const teamBravo = await createTestTeam(orgA.orgId, projectId, "Integration Bravo");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "Move", "Via Action");
-    await sql`insert into project_assignments (organization_id, project_id, employee_id, assignment_role) values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member')`;
+    const projectId = await createTestProject(companyA.companyId, "Integration Move Project");
+    const teamAlpha = await createTestTeam(companyA.companyId, projectId, "Integration Alpha");
+    const teamBravo = await createTestTeam(companyA.companyId, projectId, "Integration Bravo");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Move", "Via Action");
+    await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')`;
 
     await signInAs(adminEmail, password);
 
-    const placeResult = await setTeamAssignment(orgA.orgId, projectId, teamAlpha, { employeeId, role: "member" });
+    const placeResult = await setTeamAssignment(companyA.companyId, projectId, teamAlpha, { employeeId, role: "member" });
     expect(placeResult.ok).toBe(true);
 
-    const moveResult = await setTeamAssignment(orgA.orgId, projectId, teamBravo, { employeeId, role: "member" });
+    const moveResult = await setTeamAssignment(companyA.companyId, projectId, teamBravo, { employeeId, role: "member" });
     expect(moveResult.ok).toBe(true);
 
     const rows = await sql`select team_id, end_at from team_assignments where project_id = ${projectId} and employee_id = ${employeeId} order by start_at`;

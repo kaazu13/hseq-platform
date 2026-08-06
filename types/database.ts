@@ -44,34 +44,34 @@ export type Database = {
           action: Database["public"]["Enums"]["audit_action"]
           actor_user_id: string | null
           changes: Json | null
+          company_id: string | null
           created_at: string
           entity_id: string
           entity_type: string
           id: string
           ip_address: unknown
-          organization_id: string | null
         }
         Insert: {
           action: Database["public"]["Enums"]["audit_action"]
           actor_user_id?: string | null
           changes?: Json | null
+          company_id?: string | null
           created_at?: string
           entity_id: string
           entity_type: string
           id?: string
           ip_address?: unknown
-          organization_id?: string | null
         }
         Update: {
           action?: Database["public"]["Enums"]["audit_action"]
           actor_user_id?: string | null
           changes?: Json | null
+          company_id?: string | null
           created_at?: string
           entity_id?: string
           entity_type?: string
           id?: string
           ip_address?: unknown
-          organization_id?: string | null
         }
         Relationships: [
           {
@@ -82,45 +82,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "audit_events_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "audit_events_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
       }
       bootstrap_audit_log: {
         Row: {
+          company_id: string
           id: string
           notes: string | null
-          organization_id: string
           performed_at: string
           role_assigned: string
           user_id: string
         }
         Insert: {
+          company_id: string
           id?: string
           notes?: string | null
-          organization_id: string
           performed_at?: string
           role_assigned: string
           user_id: string
         }
         Update: {
+          company_id?: string
           id?: string
           notes?: string | null
-          organization_id?: string
           performed_at?: string
           role_assigned?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "bootstrap_audit_log_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "bootstrap_audit_log_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -132,9 +132,140 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          employee_number_prefix: string
+          id: string
+          name: string
+          scaffold_inspection_validity_days: number | null
+          slug: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          employee_number_prefix: string
+          id?: string
+          name: string
+          scaffold_inspection_validity_days?: number | null
+          slug: string
+          status?: Database["public"]["Enums"]["company_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          employee_number_prefix?: string
+          id?: string
+          name?: string
+          scaffold_inspection_validity_days?: number | null
+          slug?: string
+          status?: Database["public"]["Enums"]["company_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_employee_number_counters: {
+        Row: {
+          company_id: string
+          next_number: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          next_number?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          next_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_employee_number_counters_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_memberships: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invited_at?: string | null
+          joined_at?: string | null
+          status?: Database["public"]["Enums"]["membership_status"]
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invited_at?: string | null
+          joined_at?: string | null
+          status?: Database["public"]["Enums"]["membership_status"]
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_memberships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_memberships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_memberships_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corrective_actions: {
         Row: {
           closure_evidence: string | null
+          company_id: string
           completion_notes: string | null
           created_at: string
           created_by: string | null
@@ -142,7 +273,6 @@ export type Database = {
           due_date: string
           id: string
           observation_id: string
-          organization_id: string
           priority: Database["public"]["Enums"]["corrective_action_priority"]
           project_id: string
           reopen_reason: string | null
@@ -155,6 +285,7 @@ export type Database = {
         }
         Insert: {
           closure_evidence?: string | null
+          company_id: string
           completion_notes?: string | null
           created_at?: string
           created_by?: string | null
@@ -162,7 +293,6 @@ export type Database = {
           due_date: string
           id?: string
           observation_id: string
-          organization_id: string
           priority?: Database["public"]["Enums"]["corrective_action_priority"]
           project_id: string
           reopen_reason?: string | null
@@ -175,6 +305,7 @@ export type Database = {
         }
         Update: {
           closure_evidence?: string | null
+          company_id?: string
           completion_notes?: string | null
           created_at?: string
           created_by?: string | null
@@ -182,7 +313,6 @@ export type Database = {
           due_date?: string
           id?: string
           observation_id?: string
-          organization_id?: string
           priority?: Database["public"]["Enums"]["corrective_action_priority"]
           project_id?: string
           reopen_reason?: string | null
@@ -203,31 +333,31 @@ export type Database = {
           },
           {
             foreignKeyName: "corrective_actions_observation_fk"
-            columns: ["observation_id", "organization_id"]
+            columns: ["observation_id", "company_id"]
             isOneToOne: false
             referencedRelation: "safety_observations"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "corrective_actions_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "corrective_actions_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "corrective_actions_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "corrective_actions_responsible_person_fk"
-            columns: ["responsible_person_id", "organization_id"]
+            columns: ["responsible_person_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "corrective_actions_reviewed_by_fkey"
@@ -247,6 +377,7 @@ export type Database = {
       }
       employee_employment_periods: {
         Row: {
+          company_id: string
           created_at: string
           created_by: string | null
           employee_id: string
@@ -258,11 +389,11 @@ export type Database = {
           ended_at: string | null
           ended_by: string | null
           id: string
-          organization_id: string
           start_date: string
           updated_at: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           created_by?: string | null
           employee_id: string
@@ -274,11 +405,11 @@ export type Database = {
           ended_at?: string | null
           ended_by?: string | null
           id?: string
-          organization_id: string
           start_date: string
           updated_at?: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           created_by?: string | null
           employee_id?: string
@@ -290,7 +421,6 @@ export type Database = {
           ended_at?: string | null
           ended_by?: string | null
           id?: string
-          organization_id?: string
           start_date?: string
           updated_at?: string
         }
@@ -317,10 +447,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employee_employment_periods_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "employee_employment_periods_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -330,6 +460,7 @@ export type Database = {
           account_status: Database["public"]["Enums"]["employee_account_status"]
           archived_at: string | null
           birth_date: string | null
+          company_id: string
           created_at: string
           created_by: string | null
           employee_number: string
@@ -338,7 +469,6 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
-          organization_id: string
           phone: string | null
           position_title: string | null
           profile_id: string | null
@@ -351,6 +481,7 @@ export type Database = {
           account_status?: Database["public"]["Enums"]["employee_account_status"]
           archived_at?: string | null
           birth_date?: string | null
+          company_id: string
           created_at?: string
           created_by?: string | null
           employee_number: string
@@ -359,7 +490,6 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
-          organization_id: string
           phone?: string | null
           position_title?: string | null
           profile_id?: string | null
@@ -372,6 +502,7 @@ export type Database = {
           account_status?: Database["public"]["Enums"]["employee_account_status"]
           archived_at?: string | null
           birth_date?: string | null
+          company_id?: string
           created_at?: string
           created_by?: string | null
           employee_number?: string
@@ -380,7 +511,6 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
-          organization_id?: string
           phone?: string | null
           position_title?: string | null
           profile_id?: string | null
@@ -398,10 +528,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -425,11 +555,11 @@ export type Database = {
           approved_at: string | null
           archived_at: string | null
           archived_by: string | null
+          company_id: string
           created_at: string
           created_by: string | null
           id: string
           notes: string | null
-          organization_id: string
           project_id: string
           responsible_foreman_id: string
           result: Database["public"]["Enums"]["lmra_result"]
@@ -451,11 +581,11 @@ export type Database = {
           approved_at?: string | null
           archived_at?: string | null
           archived_by?: string | null
+          company_id: string
           created_at?: string
           created_by?: string | null
           id?: string
           notes?: string | null
-          organization_id: string
           project_id: string
           responsible_foreman_id: string
           result?: Database["public"]["Enums"]["lmra_result"]
@@ -477,11 +607,11 @@ export type Database = {
           approved_at?: string | null
           archived_at?: string | null
           archived_by?: string | null
+          company_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
           notes?: string | null
-          organization_id?: string
           project_id?: string
           responsible_foreman_id?: string
           result?: Database["public"]["Enums"]["lmra_result"]
@@ -516,24 +646,24 @@ export type Database = {
           },
           {
             foreignKeyName: "lmra_assessments_foreman_fk"
-            columns: ["responsible_foreman_id", "organization_id"]
+            columns: ["responsible_foreman_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "lmra_assessments_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "lmra_assessments_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lmra_assessments_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "lmra_assessments_reviewed_by_fkey"
@@ -560,6 +690,7 @@ export type Database = {
       }
       lmra_hazards: {
         Row: {
+          company_id: string
           controls: string | null
           controls_confirmed: boolean
           created_at: string
@@ -567,12 +698,12 @@ export type Database = {
           id: string
           is_applicable: boolean
           lmra_assessment_id: string
-          organization_id: string
           other_description: string | null
           responsible_person_id: string | null
           updated_at: string
         }
         Insert: {
+          company_id: string
           controls?: string | null
           controls_confirmed?: boolean
           created_at?: string
@@ -580,12 +711,12 @@ export type Database = {
           id?: string
           is_applicable?: boolean
           lmra_assessment_id: string
-          organization_id: string
           other_description?: string | null
           responsible_person_id?: string | null
           updated_at?: string
         }
         Update: {
+          company_id?: string
           controls?: string | null
           controls_confirmed?: boolean
           created_at?: string
@@ -593,7 +724,6 @@ export type Database = {
           id?: string
           is_applicable?: boolean
           lmra_assessment_id?: string
-          organization_id?: string
           other_description?: string | null
           responsible_person_id?: string | null
           updated_at?: string
@@ -607,50 +737,50 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lmra_hazards_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "lmra_hazards_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lmra_hazards_responsible_person_fk"
-            columns: ["responsible_person_id", "organization_id"]
+            columns: ["responsible_person_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
         ]
       }
       lmra_participants: {
         Row: {
+          company_id: string
           created_at: string
           employee_id: string
           id: string
           lmra_assessment_id: string
-          organization_id: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           employee_id: string
           id?: string
           lmra_assessment_id: string
-          organization_id: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           employee_id?: string
           id?: string
           lmra_assessment_id?: string
-          organization_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "lmra_participants_employee_fk"
-            columns: ["employee_id", "organization_id"]
+            columns: ["employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "lmra_participants_lmra_assessment_id_fkey"
@@ -660,37 +790,37 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lmra_participants_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "lmra_participants_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
       }
       membership_roles: {
         Row: {
+          company_id: string
           created_at: string
           created_by: string | null
           id: string
           membership_id: string
-          organization_id: string
           role_id: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           created_by?: string | null
           id?: string
           membership_id: string
-          organization_id: string
           role_id: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
           membership_id?: string
-          organization_id?: string
           role_id?: string
         }
         Relationships: [
@@ -705,14 +835,14 @@ export type Database = {
             foreignKeyName: "membership_roles_membership_id_fkey"
             columns: ["membership_id"]
             isOneToOne: false
-            referencedRelation: "organization_memberships"
+            referencedRelation: "company_memberships"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "membership_roles_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "membership_roles_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -724,139 +854,9 @@ export type Database = {
           },
         ]
       }
-      organization_employee_number_counters: {
-        Row: {
-          next_number: number
-          organization_id: string
-          updated_at: string
-        }
-        Insert: {
-          next_number?: number
-          organization_id: string
-          updated_at?: string
-        }
-        Update: {
-          next_number?: number
-          organization_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_employee_number_counters_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: true
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_memberships: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          invited_at: string | null
-          joined_at: string | null
-          organization_id: string
-          status: Database["public"]["Enums"]["membership_status"]
-          updated_at: string
-          updated_by: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          invited_at?: string | null
-          joined_at?: string | null
-          organization_id: string
-          status?: Database["public"]["Enums"]["membership_status"]
-          updated_at?: string
-          updated_by?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          invited_at?: string | null
-          joined_at?: string | null
-          organization_id?: string
-          status?: Database["public"]["Enums"]["membership_status"]
-          updated_at?: string
-          updated_by?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_memberships_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_memberships_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_memberships_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_memberships_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organizations: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          employee_number_prefix: string
-          id: string
-          name: string
-          scaffold_inspection_validity_days: number | null
-          slug: string
-          status: Database["public"]["Enums"]["organization_status"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          employee_number_prefix: string
-          id?: string
-          name: string
-          scaffold_inspection_validity_days?: number | null
-          slug: string
-          status?: Database["public"]["Enums"]["organization_status"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          employee_number_prefix?: string
-          id?: string
-          name?: string
-          scaffold_inspection_validity_days?: number | null
-          slug?: string
-          status?: Database["public"]["Enums"]["organization_status"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
-          active_organization_id: string | null
+          active_company_id: string | null
           created_at: string
           full_name: string
           id: string
@@ -865,7 +865,7 @@ export type Database = {
           user_number: string
         }
         Insert: {
-          active_organization_id?: string | null
+          active_company_id?: string | null
           created_at?: string
           full_name: string
           id: string
@@ -874,7 +874,7 @@ export type Database = {
           user_number: string
         }
         Update: {
-          active_organization_id?: string | null
+          active_company_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
@@ -884,10 +884,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_active_organization_id_fkey"
-            columns: ["active_organization_id"]
+            foreignKeyName: "profiles_active_company_id_fkey"
+            columns: ["active_company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -896,6 +896,7 @@ export type Database = {
         Row: {
           assigned_by: string | null
           assignment_role: Database["public"]["Enums"]["project_assignment_role"]
+          company_id: string
           created_at: string
           employee_id: string
           end_at: string | null
@@ -903,13 +904,13 @@ export type Database = {
           ended_by: string | null
           id: string
           notes: string | null
-          organization_id: string
           project_id: string
           start_at: string
         }
         Insert: {
           assigned_by?: string | null
           assignment_role: Database["public"]["Enums"]["project_assignment_role"]
+          company_id: string
           created_at?: string
           employee_id: string
           end_at?: string | null
@@ -917,13 +918,13 @@ export type Database = {
           ended_by?: string | null
           id?: string
           notes?: string | null
-          organization_id: string
           project_id: string
           start_at?: string
         }
         Update: {
           assigned_by?: string | null
           assignment_role?: Database["public"]["Enums"]["project_assignment_role"]
+          company_id?: string
           created_at?: string
           employee_id?: string
           end_at?: string | null
@@ -931,7 +932,6 @@ export type Database = {
           ended_by?: string | null
           id?: string
           notes?: string | null
-          organization_id?: string
           project_id?: string
           start_at?: string
         }
@@ -945,10 +945,10 @@ export type Database = {
           },
           {
             foreignKeyName: "project_assignments_employee_fk"
-            columns: ["employee_id", "organization_id"]
+            columns: ["employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "project_assignments_ended_by_fkey"
@@ -958,18 +958,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_assignments_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "project_assignments_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "project_assignments_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
         ]
       }
@@ -977,6 +977,7 @@ export type Database = {
         Row: {
           client_name: string | null
           code: string | null
+          company_id: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -984,7 +985,6 @@ export type Database = {
           id: string
           location: string | null
           name: string
-          organization_id: string
           scaffold_inspection_validity_days: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
@@ -994,6 +994,7 @@ export type Database = {
         Insert: {
           client_name?: string | null
           code?: string | null
+          company_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1001,7 +1002,6 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
-          organization_id: string
           scaffold_inspection_validity_days?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
@@ -1011,6 +1011,7 @@ export type Database = {
         Update: {
           client_name?: string | null
           code?: string | null
+          company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1018,7 +1019,6 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
-          organization_id?: string
           scaffold_inspection_validity_days?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
@@ -1034,10 +1034,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "projects_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -1078,11 +1078,11 @@ export type Database = {
       }
       safety_flash_file_replacements: {
         Row: {
+          company_id: string
           id: string
           new_original_filename: string
           new_storage_bucket: string
           new_storage_object_path: string
-          organization_id: string
           previous_original_filename: string
           previous_storage_bucket: string
           previous_storage_object_path: string
@@ -1092,11 +1092,11 @@ export type Database = {
           safety_flash_id: string
         }
         Insert: {
+          company_id: string
           id?: string
           new_original_filename: string
           new_storage_bucket: string
           new_storage_object_path: string
-          organization_id: string
           previous_original_filename: string
           previous_storage_bucket: string
           previous_storage_object_path: string
@@ -1106,11 +1106,11 @@ export type Database = {
           safety_flash_id: string
         }
         Update: {
+          company_id?: string
           id?: string
           new_original_filename?: string
           new_storage_bucket?: string
           new_storage_object_path?: string
-          organization_id?: string
           previous_original_filename?: string
           previous_storage_bucket?: string
           previous_storage_object_path?: string
@@ -1122,16 +1122,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "safety_flash_file_replacements_flash_fk"
-            columns: ["safety_flash_id", "organization_id"]
+            columns: ["safety_flash_id", "company_id"]
             isOneToOne: false
             referencedRelation: "safety_flashes"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "safety_flash_file_replacements_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "safety_flash_file_replacements_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -1145,26 +1145,26 @@ export type Database = {
       }
       safety_flash_number_counters: {
         Row: {
+          company_id: string
           next_number: number
-          organization_id: string
           updated_at: string
         }
         Insert: {
+          company_id: string
           next_number?: number
-          organization_id: string
           updated_at?: string
         }
         Update: {
+          company_id?: string
           next_number?: number
-          organization_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "safety_flash_number_counters_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "safety_flash_number_counters_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: true
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1172,6 +1172,7 @@ export type Database = {
       safety_flashes: {
         Row: {
           category: Database["public"]["Enums"]["hseq_document_category"]
+          company_id: string
           created_at: string
           created_by: string | null
           date_issued: string
@@ -1182,7 +1183,6 @@ export type Database = {
           issued_by_employee_id: string
           language: string
           mime_type: string
-          organization_id: string
           original_filename: string
           project_id: string | null
           status: Database["public"]["Enums"]["toolbox_document_status"]
@@ -1197,6 +1197,7 @@ export type Database = {
         }
         Insert: {
           category: Database["public"]["Enums"]["hseq_document_category"]
+          company_id: string
           created_at?: string
           created_by?: string | null
           date_issued: string
@@ -1207,7 +1208,6 @@ export type Database = {
           issued_by_employee_id: string
           language: string
           mime_type: string
-          organization_id: string
           original_filename: string
           project_id?: string | null
           status?: Database["public"]["Enums"]["toolbox_document_status"]
@@ -1222,6 +1222,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["hseq_document_category"]
+          company_id?: string
           created_at?: string
           created_by?: string | null
           date_issued?: string
@@ -1232,7 +1233,6 @@ export type Database = {
           issued_by_employee_id?: string
           language?: string
           mime_type?: string
-          organization_id?: string
           original_filename?: string
           project_id?: string | null
           status?: Database["public"]["Enums"]["toolbox_document_status"]
@@ -1255,24 +1255,24 @@ export type Database = {
           },
           {
             foreignKeyName: "safety_flashes_issued_by_fk"
-            columns: ["issued_by_employee_id", "organization_id"]
+            columns: ["issued_by_employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "safety_flashes_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "safety_flashes_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "safety_flashes_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "safety_flashes_updated_by_fkey"
@@ -1292,33 +1292,33 @@ export type Database = {
       }
       safety_observation_participants: {
         Row: {
+          company_id: string
           created_at: string
           employee_id: string
           id: string
           observation_id: string
-          organization_id: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           employee_id: string
           id?: string
           observation_id: string
-          organization_id: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           employee_id?: string
           id?: string
           observation_id?: string
-          organization_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "safety_observation_participants_employee_fk"
-            columns: ["employee_id", "organization_id"]
+            columns: ["employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "safety_observation_participants_observation_id_fkey"
@@ -1328,10 +1328,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "safety_observation_participants_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "safety_observation_participants_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -1341,6 +1341,7 @@ export type Database = {
           category: Database["public"]["Enums"]["observation_category"]
           closed_at: string | null
           closed_by: string | null
+          company_id: string
           created_at: string
           created_by: string | null
           description: string
@@ -1349,7 +1350,6 @@ export type Database = {
           is_stop_work: boolean
           observed_at: string
           observer_id: string
-          organization_id: string
           project_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1363,6 +1363,7 @@ export type Database = {
           category: Database["public"]["Enums"]["observation_category"]
           closed_at?: string | null
           closed_by?: string | null
+          company_id: string
           created_at?: string
           created_by?: string | null
           description: string
@@ -1371,7 +1372,6 @@ export type Database = {
           is_stop_work?: boolean
           observed_at?: string
           observer_id: string
-          organization_id: string
           project_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1385,6 +1385,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["observation_category"]
           closed_at?: string | null
           closed_by?: string | null
+          company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string
@@ -1393,7 +1394,6 @@ export type Database = {
           is_stop_work?: boolean
           observed_at?: string
           observer_id?: string
-          organization_id?: string
           project_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1420,24 +1420,24 @@ export type Database = {
           },
           {
             foreignKeyName: "safety_observations_observer_fk"
-            columns: ["observer_id", "organization_id"]
+            columns: ["observer_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "safety_observations_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "safety_observations_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "safety_observations_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "safety_observations_reviewed_by_fkey"
@@ -1457,6 +1457,7 @@ export type Database = {
       }
       scaffold_defects: {
         Row: {
+          company_id: string
           completion_notes: string | null
           created_at: string
           created_by: string | null
@@ -1465,7 +1466,6 @@ export type Database = {
           id: string
           immediate_control: string | null
           inspection_item_id: string | null
-          organization_id: string
           project_id: string
           reopen_reason: string | null
           responsible_person_id: string
@@ -1480,6 +1480,7 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          company_id: string
           completion_notes?: string | null
           created_at?: string
           created_by?: string | null
@@ -1488,7 +1489,6 @@ export type Database = {
           id?: string
           immediate_control?: string | null
           inspection_item_id?: string | null
-          organization_id: string
           project_id: string
           reopen_reason?: string | null
           responsible_person_id: string
@@ -1503,6 +1503,7 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          company_id?: string
           completion_notes?: string | null
           created_at?: string
           created_by?: string | null
@@ -1511,7 +1512,6 @@ export type Database = {
           id?: string
           immediate_control?: string | null
           inspection_item_id?: string | null
-          organization_id?: string
           project_id?: string
           reopen_reason?: string | null
           responsible_person_id?: string
@@ -1535,10 +1535,10 @@ export type Database = {
           },
           {
             foreignKeyName: "scaffold_defects_inspection_fk"
-            columns: ["scaffold_inspection_id", "organization_id"]
+            columns: ["scaffold_inspection_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffold_inspections"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_defects_inspection_item_fk"
@@ -1548,32 +1548,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scaffold_defects_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "scaffold_defects_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "scaffold_defects_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_defects_responsible_person_fk"
-            columns: ["responsible_person_id", "organization_id"]
+            columns: ["responsible_person_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_defects_scaffold_fk"
-            columns: ["scaffold_id", "organization_id"]
+            columns: ["scaffold_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffolds"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_defects_updated_by_fkey"
@@ -1594,10 +1594,10 @@ export type Database = {
       scaffold_inspection_items: {
         Row: {
           comment: string | null
+          company_id: string
           created_at: string
           id: string
           item_type: Database["public"]["Enums"]["scaffold_inspection_item_type"]
-          organization_id: string
           required_corrective_action: string | null
           result: Database["public"]["Enums"]["scaffold_inspection_item_result"]
           scaffold_inspection_id: string
@@ -1608,10 +1608,10 @@ export type Database = {
         }
         Insert: {
           comment?: string | null
+          company_id: string
           created_at?: string
           id?: string
           item_type: Database["public"]["Enums"]["scaffold_inspection_item_type"]
-          organization_id: string
           required_corrective_action?: string | null
           result?: Database["public"]["Enums"]["scaffold_inspection_item_result"]
           scaffold_inspection_id: string
@@ -1622,10 +1622,10 @@ export type Database = {
         }
         Update: {
           comment?: string | null
+          company_id?: string
           created_at?: string
           id?: string
           item_type?: Database["public"]["Enums"]["scaffold_inspection_item_type"]
-          organization_id?: string
           required_corrective_action?: string | null
           result?: Database["public"]["Enums"]["scaffold_inspection_item_result"]
           scaffold_inspection_id?: string
@@ -1636,10 +1636,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "scaffold_inspection_items_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "scaffold_inspection_items_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -1653,6 +1653,7 @@ export type Database = {
       }
       scaffold_inspections: {
         Row: {
+          company_id: string
           correction_reason: string | null
           corrects_inspection_id: string | null
           created_at: string
@@ -1665,7 +1666,6 @@ export type Database = {
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
           notes: string | null
-          organization_id: string
           outcome:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
             | null
@@ -1679,6 +1679,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          company_id: string
           correction_reason?: string | null
           corrects_inspection_id?: string | null
           created_at?: string
@@ -1691,7 +1692,6 @@ export type Database = {
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
           notes?: string | null
-          organization_id: string
           outcome?:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
             | null
@@ -1705,6 +1705,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          company_id?: string
           correction_reason?: string | null
           corrects_inspection_id?: string | null
           created_at?: string
@@ -1717,7 +1718,6 @@ export type Database = {
           inspection_reason?: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id?: string
           notes?: string | null
-          organization_id?: string
           outcome?:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
             | null
@@ -1733,10 +1733,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "scaffold_inspections_corrects_fk"
-            columns: ["corrects_inspection_id", "organization_id"]
+            columns: ["corrects_inspection_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffold_inspections"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_inspections_created_by_fkey"
@@ -1754,45 +1754,45 @@ export type Database = {
           },
           {
             foreignKeyName: "scaffold_inspections_inspector_fk"
-            columns: ["inspector_id", "organization_id"]
+            columns: ["inspector_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "scaffold_inspections_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "scaffold_inspections_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "scaffold_inspections_previous_fk"
-            columns: ["previous_inspection_id", "organization_id"]
+            columns: ["previous_inspection_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffold_inspections"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_inspections_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_inspections_scaffold_fk"
-            columns: ["scaffold_id", "organization_id"]
+            columns: ["scaffold_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffolds"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_inspections_superseded_by_fk"
-            columns: ["superseded_by_id", "organization_id"]
+            columns: ["superseded_by_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffold_inspections"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_inspections_updated_by_fkey"
@@ -1807,9 +1807,9 @@ export type Database = {
         Row: {
           added_at: string
           added_by: string | null
+          company_id: string
           employee_id: string
           id: string
-          organization_id: string
           project_id: string
           removed_at: string | null
           removed_by: string | null
@@ -1819,9 +1819,9 @@ export type Database = {
         Insert: {
           added_at?: string
           added_by?: string | null
+          company_id: string
           employee_id: string
           id?: string
-          organization_id: string
           project_id: string
           removed_at?: string | null
           removed_by?: string | null
@@ -1831,9 +1831,9 @@ export type Database = {
         Update: {
           added_at?: string
           added_by?: string | null
+          company_id?: string
           employee_id?: string
           id?: string
-          organization_id?: string
           project_id?: string
           removed_at?: string | null
           removed_by?: string | null
@@ -1850,24 +1850,24 @@ export type Database = {
           },
           {
             foreignKeyName: "scaffold_team_members_employee_fk"
-            columns: ["employee_id", "organization_id"]
+            columns: ["employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "scaffold_team_members_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "scaffold_team_members_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "scaffold_team_members_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffold_team_members_removed_by_fkey"
@@ -1878,15 +1878,16 @@ export type Database = {
           },
           {
             foreignKeyName: "scaffold_team_members_scaffold_fk"
-            columns: ["scaffold_id", "organization_id"]
+            columns: ["scaffold_id", "company_id"]
             isOneToOne: false
             referencedRelation: "scaffolds"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
         ]
       }
       scaffolds: {
         Row: {
+          company_id: string
           created_at: string
           created_by: string | null
           erected_at: string | null
@@ -1897,7 +1898,6 @@ export type Database = {
           length_metres: number | null
           max_load_class: string
           notes: string | null
-          organization_id: string
           project_id: string
           responsible_foreman_id: string
           scaffold_type: Database["public"]["Enums"]["scaffold_type"]
@@ -1910,6 +1910,7 @@ export type Database = {
           work_area: string
         }
         Insert: {
+          company_id: string
           created_at?: string
           created_by?: string | null
           erected_at?: string | null
@@ -1920,7 +1921,6 @@ export type Database = {
           length_metres?: number | null
           max_load_class: string
           notes?: string | null
-          organization_id: string
           project_id: string
           responsible_foreman_id: string
           scaffold_type: Database["public"]["Enums"]["scaffold_type"]
@@ -1933,6 +1933,7 @@ export type Database = {
           work_area: string
         }
         Update: {
+          company_id?: string
           created_at?: string
           created_by?: string | null
           erected_at?: string | null
@@ -1943,7 +1944,6 @@ export type Database = {
           length_metres?: number | null
           max_load_class?: string
           notes?: string | null
-          organization_id?: string
           project_id?: string
           responsible_foreman_id?: string
           scaffold_type?: Database["public"]["Enums"]["scaffold_type"]
@@ -1964,25 +1964,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scaffolds_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "scaffolds_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "scaffolds_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffolds_responsible_foreman_fk"
-            columns: ["responsible_foreman_id", "organization_id"]
+            columns: ["responsible_foreman_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "scaffolds_updated_by_fkey"
@@ -1997,6 +1997,7 @@ export type Database = {
         Row: {
           assigned_by: string | null
           assignment_role: Database["public"]["Enums"]["team_assignment_role"]
+          company_id: string
           created_at: string
           employee_id: string
           end_at: string | null
@@ -2004,7 +2005,6 @@ export type Database = {
           ended_by: string | null
           id: string
           notes: string | null
-          organization_id: string
           project_id: string
           start_at: string
           team_id: string
@@ -2012,6 +2012,7 @@ export type Database = {
         Insert: {
           assigned_by?: string | null
           assignment_role?: Database["public"]["Enums"]["team_assignment_role"]
+          company_id: string
           created_at?: string
           employee_id: string
           end_at?: string | null
@@ -2019,7 +2020,6 @@ export type Database = {
           ended_by?: string | null
           id?: string
           notes?: string | null
-          organization_id: string
           project_id: string
           start_at?: string
           team_id: string
@@ -2027,6 +2027,7 @@ export type Database = {
         Update: {
           assigned_by?: string | null
           assignment_role?: Database["public"]["Enums"]["team_assignment_role"]
+          company_id?: string
           created_at?: string
           employee_id?: string
           end_at?: string | null
@@ -2034,7 +2035,6 @@ export type Database = {
           ended_by?: string | null
           id?: string
           notes?: string | null
-          organization_id?: string
           project_id?: string
           start_at?: string
           team_id?: string
@@ -2049,10 +2049,10 @@ export type Database = {
           },
           {
             foreignKeyName: "team_assignments_employee_fk"
-            columns: ["employee_id", "organization_id"]
+            columns: ["employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "team_assignments_ended_by_fkey"
@@ -2062,18 +2062,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "team_assignments_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "team_assignments_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "team_assignments_team_fk"
-            columns: ["team_id", "project_id", "organization_id"]
+            columns: ["team_id", "project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "teams"
-            referencedColumns: ["id", "project_id", "organization_id"]
+            referencedColumns: ["id", "project_id", "company_id"]
           },
         ]
       }
@@ -2081,13 +2081,13 @@ export type Database = {
         Row: {
           code: string | null
           color: Database["public"]["Enums"]["team_color"]
+          company_id: string
           created_at: string
           created_by: string | null
           description: string | null
           display_order: number
           id: string
           name: string
-          organization_id: string
           project_id: string
           status: Database["public"]["Enums"]["team_status"]
           updated_at: string
@@ -2096,13 +2096,13 @@ export type Database = {
         Insert: {
           code?: string | null
           color?: Database["public"]["Enums"]["team_color"]
+          company_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           display_order?: number
           id?: string
           name: string
-          organization_id: string
           project_id: string
           status?: Database["public"]["Enums"]["team_status"]
           updated_at?: string
@@ -2111,13 +2111,13 @@ export type Database = {
         Update: {
           code?: string | null
           color?: Database["public"]["Enums"]["team_color"]
+          company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           display_order?: number
           id?: string
           name?: string
-          organization_id?: string
           project_id?: string
           status?: Database["public"]["Enums"]["team_status"]
           updated_at?: string
@@ -2132,18 +2132,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "teams_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "teams_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "teams_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "teams_updated_by_fkey"
@@ -2156,11 +2156,11 @@ export type Database = {
       }
       toolbox_meeting_file_replacements: {
         Row: {
+          company_id: string
           id: string
           new_original_filename: string
           new_storage_bucket: string
           new_storage_object_path: string
-          organization_id: string
           previous_original_filename: string
           previous_storage_bucket: string
           previous_storage_object_path: string
@@ -2170,11 +2170,11 @@ export type Database = {
           toolbox_meeting_id: string
         }
         Insert: {
+          company_id: string
           id?: string
           new_original_filename: string
           new_storage_bucket: string
           new_storage_object_path: string
-          organization_id: string
           previous_original_filename: string
           previous_storage_bucket: string
           previous_storage_object_path: string
@@ -2184,11 +2184,11 @@ export type Database = {
           toolbox_meeting_id: string
         }
         Update: {
+          company_id?: string
           id?: string
           new_original_filename?: string
           new_storage_bucket?: string
           new_storage_object_path?: string
-          organization_id?: string
           previous_original_filename?: string
           previous_storage_bucket?: string
           previous_storage_object_path?: string
@@ -2200,16 +2200,16 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "toolbox_meeting_file_replacements_meeting_fk"
-            columns: ["toolbox_meeting_id", "organization_id"]
+            columns: ["toolbox_meeting_id", "company_id"]
             isOneToOne: false
             referencedRelation: "toolbox_meetings"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "toolbox_meeting_file_replacements_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "toolbox_meeting_file_replacements_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -2223,35 +2223,36 @@ export type Database = {
       }
       toolbox_meeting_number_counters: {
         Row: {
+          company_id: string
           next_number: number
-          organization_id: string
           project_id: string
           updated_at: string
         }
         Insert: {
+          company_id: string
           next_number?: number
-          organization_id: string
           project_id: string
           updated_at?: string
         }
         Update: {
+          company_id?: string
           next_number?: number
-          organization_id?: string
           project_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "toolbox_meeting_number_counters_project_id_organization_id_fkey"
-            columns: ["project_id", "organization_id"]
+            foreignKeyName: "toolbox_meeting_number_counters_project_id_company_id_fkey"
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
         ]
       }
       toolbox_meetings: {
         Row: {
+          company_id: string
           created_at: string
           created_by: string | null
           file_checksum_sha256: string | null
@@ -2262,7 +2263,6 @@ export type Database = {
           meeting_number: number
           mime_type: string
           notes: string | null
-          organization_id: string
           original_filename: string
           project_id: string
           status: Database["public"]["Enums"]["toolbox_document_status"]
@@ -2276,6 +2276,7 @@ export type Database = {
           work_area: string | null
         }
         Insert: {
+          company_id: string
           created_at?: string
           created_by?: string | null
           file_checksum_sha256?: string | null
@@ -2286,7 +2287,6 @@ export type Database = {
           meeting_number?: number
           mime_type: string
           notes?: string | null
-          organization_id: string
           original_filename: string
           project_id: string
           status?: Database["public"]["Enums"]["toolbox_document_status"]
@@ -2300,6 +2300,7 @@ export type Database = {
           work_area?: string | null
         }
         Update: {
+          company_id?: string
           created_at?: string
           created_by?: string | null
           file_checksum_sha256?: string | null
@@ -2310,7 +2311,6 @@ export type Database = {
           meeting_number?: number
           mime_type?: string
           notes?: string | null
-          organization_id?: string
           original_filename?: string
           project_id?: string
           status?: Database["public"]["Enums"]["toolbox_document_status"]
@@ -2333,24 +2333,24 @@ export type Database = {
           },
           {
             foreignKeyName: "toolbox_meetings_held_by_fk"
-            columns: ["held_by_employee_id", "organization_id"]
+            columns: ["held_by_employee_id", "company_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "toolbox_meetings_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "toolbox_meetings_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "toolbox_meetings_project_fk"
-            columns: ["project_id", "organization_id"]
+            columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "toolbox_meetings_updated_by_fkey"
@@ -2370,11 +2370,11 @@ export type Database = {
       }
       toolbox_template_file_replacements: {
         Row: {
+          company_id: string
           id: string
           new_original_filename: string
           new_storage_bucket: string
           new_storage_object_path: string
-          organization_id: string
           previous_original_filename: string
           previous_storage_bucket: string
           previous_storage_object_path: string
@@ -2384,11 +2384,11 @@ export type Database = {
           toolbox_template_id: string
         }
         Insert: {
+          company_id: string
           id?: string
           new_original_filename: string
           new_storage_bucket: string
           new_storage_object_path: string
-          organization_id: string
           previous_original_filename: string
           previous_storage_bucket: string
           previous_storage_object_path: string
@@ -2398,11 +2398,11 @@ export type Database = {
           toolbox_template_id: string
         }
         Update: {
+          company_id?: string
           id?: string
           new_original_filename?: string
           new_storage_bucket?: string
           new_storage_object_path?: string
-          organization_id?: string
           previous_original_filename?: string
           previous_storage_bucket?: string
           previous_storage_object_path?: string
@@ -2413,10 +2413,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "toolbox_template_file_replacements_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "toolbox_template_file_replacements_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -2428,16 +2428,17 @@ export type Database = {
           },
           {
             foreignKeyName: "toolbox_template_file_replacements_template_fk"
-            columns: ["toolbox_template_id", "organization_id"]
+            columns: ["toolbox_template_id", "company_id"]
             isOneToOne: false
             referencedRelation: "toolbox_templates"
-            referencedColumns: ["id", "organization_id"]
+            referencedColumns: ["id", "company_id"]
           },
         ]
       }
       toolbox_templates: {
         Row: {
           category: Database["public"]["Enums"]["hseq_document_category"]
+          company_id: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -2446,7 +2447,6 @@ export type Database = {
           id: string
           language: string
           mime_type: string
-          organization_id: string
           original_filename: string
           status: Database["public"]["Enums"]["toolbox_document_status"]
           storage_bucket: string
@@ -2459,6 +2459,7 @@ export type Database = {
         }
         Insert: {
           category: Database["public"]["Enums"]["hseq_document_category"]
+          company_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2467,7 +2468,6 @@ export type Database = {
           id?: string
           language: string
           mime_type: string
-          organization_id: string
           original_filename: string
           status?: Database["public"]["Enums"]["toolbox_document_status"]
           storage_bucket: string
@@ -2480,6 +2480,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["hseq_document_category"]
+          company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2488,7 +2489,6 @@ export type Database = {
           id?: string
           language?: string
           mime_type?: string
-          organization_id?: string
           original_filename?: string
           status?: Database["public"]["Enums"]["toolbox_document_status"]
           storage_bucket?: string
@@ -2508,10 +2508,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "toolbox_templates_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "toolbox_templates_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -2564,22 +2564,22 @@ export type Database = {
         Returns: undefined
       }
       assert_toolbox_authorized_employee: {
-        Args: { target_employee_id: string; target_organization_id: string }
+        Args: { target_employee_id: string; target_company_id: string }
         Returns: undefined
       }
       bootstrap_first_owner: {
         Args: {
           notes?: string
-          target_organization_id: string
+          target_company_id: string
           target_user_id: string
         }
         Returns: {
+          company_id: string
           created_at: string
           created_by: string | null
           id: string
           invited_at: string | null
           joined_at: string | null
-          organization_id: string
           status: Database["public"]["Enums"]["membership_status"]
           updated_at: string
           updated_by: string | null
@@ -2587,7 +2587,7 @@ export type Database = {
         }
         SetofOptions: {
           from: "*"
-          to: "organization_memberships"
+          to: "company_memberships"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2595,7 +2595,7 @@ export type Database = {
       can_close_corrective_action: {
         Args: {
           target_created_by: string
-          target_organization_id: string
+          target_company_id: string
           target_project_id: string
           target_responsible_person_id: string
         }
@@ -2604,7 +2604,7 @@ export type Database = {
       can_close_scaffold_defect: {
         Args: {
           target_created_by: string
-          target_organization_id: string
+          target_company_id: string
           target_project_id: string
           target_responsible_person_id: string
         }
@@ -2620,11 +2620,11 @@ export type Database = {
         }
         Returns: number
       }
-      employee_has_any_organization_role: {
+      employee_has_any_company_role: {
         Args: {
           role_names: string[]
           target_employee_id: string
-          target_organization_id: string
+          target_company_id: string
         }
         Returns: boolean
       }
@@ -2650,6 +2650,7 @@ export type Database = {
           target_restrictions_notes?: string
         }
         Returns: {
+          company_id: string
           correction_reason: string | null
           corrects_inspection_id: string | null
           created_at: string
@@ -2662,7 +2663,6 @@ export type Database = {
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
           notes: string | null
-          organization_id: string
           outcome:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
             | null
@@ -2704,11 +2704,11 @@ export type Database = {
           profile_id: string
         }[]
       }
-      has_any_organization_role: {
+      has_any_company_role: {
         Args: { role_names: string[]; target_org_id: string }
         Returns: boolean
       }
-      has_organization_role: {
+      has_company_role: {
         Args: { role_name: string; target_org_id: string }
         Returns: boolean
       }
@@ -2716,10 +2716,11 @@ export type Database = {
         Args: { target_project_id: string }
         Returns: boolean
       }
+      is_company_member: { Args: { target_org_id: string }; Returns: boolean }
       is_eligible_scaffold_foreman: {
         Args: {
           target_employee_id: string
-          target_organization_id: string
+          target_company_id: string
           target_project_id: string
         }
         Returns: boolean
@@ -2727,13 +2728,9 @@ export type Database = {
       is_eligible_scaffold_team_member: {
         Args: {
           target_employee_id: string
-          target_organization_id: string
+          target_company_id: string
           target_project_id: string
         }
-        Returns: boolean
-      }
-      is_organization_member: {
-        Args: { target_org_id: string }
         Returns: boolean
       }
       is_project_foreman: {
@@ -2749,23 +2746,23 @@ export type Database = {
         Returns: boolean
       }
       is_safety_flash_manage_tier: {
-        Args: { target_organization_id: string; target_project_id: string }
+        Args: { target_company_id: string; target_project_id: string }
         Returns: boolean
       }
       is_scaffold_manage_tier: {
-        Args: { target_organization_id: string; target_project_id: string }
+        Args: { target_company_id: string; target_project_id: string }
         Returns: boolean
       }
       is_toolbox_manage_tier: {
-        Args: { target_organization_id: string; target_project_id: string }
+        Args: { target_company_id: string; target_project_id: string }
         Returns: boolean
       }
       is_toolbox_template_manage_tier: {
-        Args: { target_organization_id: string }
+        Args: { target_company_id: string }
         Returns: boolean
       }
       list_eligible_scaffold_foremen: {
-        Args: { target_organization_id: string; target_project_id: string }
+        Args: { target_company_id: string; target_project_id: string }
         Returns: {
           employee_number: string
           first_name: string
@@ -2774,7 +2771,7 @@ export type Database = {
         }[]
       }
       list_eligible_scaffold_team_members: {
-        Args: { target_organization_id: string; target_project_id: string }
+        Args: { target_company_id: string; target_project_id: string }
         Returns: {
           employee_number: string
           first_name: string
@@ -2784,7 +2781,7 @@ export type Database = {
         }[]
       }
       list_toolbox_authorized_employees: {
-        Args: { target_organization_id: string; target_project_id: string }
+        Args: { target_company_id: string; target_project_id: string }
         Returns: {
           employee_number: string
           first_name: string
@@ -2804,6 +2801,7 @@ export type Database = {
         Returns: {
           assigned_by: string | null
           assignment_role: Database["public"]["Enums"]["team_assignment_role"]
+          company_id: string
           created_at: string
           employee_id: string
           end_at: string | null
@@ -2811,7 +2809,6 @@ export type Database = {
           ended_by: string | null
           id: string
           notes: string | null
-          organization_id: string
           project_id: string
           start_at: string
           team_id: string
@@ -2840,6 +2837,7 @@ export type Database = {
         }
         Returns: {
           category: Database["public"]["Enums"]["hseq_document_category"]
+          company_id: string
           created_at: string
           created_by: string | null
           date_issued: string
@@ -2850,7 +2848,6 @@ export type Database = {
           issued_by_employee_id: string
           language: string
           mime_type: string
-          organization_id: string
           original_filename: string
           project_id: string | null
           status: Database["public"]["Enums"]["toolbox_document_status"]
@@ -2881,6 +2878,7 @@ export type Database = {
           target_meeting_id: string
         }
         Returns: {
+          company_id: string
           created_at: string
           created_by: string | null
           file_checksum_sha256: string | null
@@ -2891,7 +2889,6 @@ export type Database = {
           meeting_number: number
           mime_type: string
           notes: string | null
-          organization_id: string
           original_filename: string
           project_id: string
           status: Database["public"]["Enums"]["toolbox_document_status"]
@@ -2923,6 +2920,7 @@ export type Database = {
         }
         Returns: {
           category: Database["public"]["Enums"]["hseq_document_category"]
+          company_id: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -2931,7 +2929,6 @@ export type Database = {
           id: string
           language: string
           mime_type: string
-          organization_id: string
           original_filename: string
           status: Database["public"]["Enums"]["toolbox_document_status"]
           storage_bucket: string
@@ -2975,13 +2972,13 @@ export type Database = {
         Returns: {
           code: string | null
           color: Database["public"]["Enums"]["team_color"]
+          company_id: string
           created_at: string
           created_by: string | null
           description: string | null
           display_order: number
           id: string
           name: string
-          organization_id: string
           project_id: string
           status: Database["public"]["Enums"]["team_status"]
           updated_at: string
@@ -3032,6 +3029,7 @@ export type Database = {
         | "archive"
         | "end_employment"
         | "rehire"
+      company_status: "trial" | "active" | "suspended"
       corrective_action_priority: "low" | "medium" | "high" | "critical"
       corrective_action_status:
         | "open"
@@ -3104,7 +3102,6 @@ export type Database = {
         | "other"
       observation_risk_level: "low" | "medium" | "high" | "critical"
       observation_status: "open" | "closed"
-      organization_status: "trial" | "active" | "suspended"
       project_assignment_role:
         | "project_manager"
         | "hseq_manager"
@@ -3338,6 +3335,7 @@ export const Constants = {
         "end_employment",
         "rehire",
       ],
+      company_status: ["trial", "active", "suspended"],
       corrective_action_priority: ["low", "medium", "high", "critical"],
       corrective_action_status: [
         "open",
@@ -3416,7 +3414,6 @@ export const Constants = {
       ],
       observation_risk_level: ["low", "medium", "high", "critical"],
       observation_status: ["open", "closed"],
-      organization_status: ["trial", "active", "suspended"],
       project_assignment_role: [
         "project_manager",
         "hseq_manager",

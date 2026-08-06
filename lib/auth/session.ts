@@ -3,22 +3,22 @@ import { cache } from "react";
 import { forbidden, unauthorized } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Reusable server-side auth utilities (docs/ARCHITECTURE.md §4, "lib/auth/
  * session.ts — getSession(), requireUser(), requireRole()").
  *
- * SCOPE NOTE (database foundation milestone): `requireOrganizationMembership()`,
- * `requireRole()`, and `requireAnyRole()` take an explicit `organizationId`
- * parameter rather than resolving a single "current active organization"
+ * SCOPE NOTE (database foundation milestone): `requireCompanyMembership()`,
+ * `requireRole()`, and `requireAnyRole()` take an explicit `companyId`
+ * parameter rather than resolving a single "current active company"
  * from a session claim. docs/ARCHITECTURE.md §5 describes requireUser() as
- * also resolving that active organization automatically — doing so
+ * also resolving that active company automatically — doing so
  * requires a Custom Access Token Auth Hook configured at the Supabase
  * project/dashboard level (docs/ARCHITECTURE.md §3.2), which is out of
  * reach from a migration or application code change alone. Real tenant
  * isolation does not depend on that hook: every function below makes a
- * live database check for the SPECIFIC organization passed in, every
+ * live database check for the SPECIFIC company passed in, every
  * time — there is no cached or client-trusted membership/role state
  * anywhere in this file.
  *
@@ -64,23 +64,23 @@ export async function requireUser(): Promise<{ user: User }> {
 
 /**
  * Requires the signed-in user to have an ACTIVE membership in
- * `organizationId`, or calls `forbidden()` (renders app/forbidden.tsx,
+ * `companyId`, or calls `forbidden()` (renders app/forbidden.tsx,
  * HTTP 403). Calls `unauthorized()` first if there's no session at all.
  *
- * Delegates to the `is_organization_member()` SQL function (the same one
+ * Delegates to the `is_company_member()` SQL function (the same one
  * every relevant RLS policy uses — see
  * supabase/migrations/20260725090800_rls_helper_functions.sql) via `.rpc()`
  * rather than re-implementing the membership check in application code, so
  * there is exactly one place this logic lives.
  */
-export async function requireOrganizationMembership(
-  organizationId: string,
-): Promise<{ user: User; organizationId: string }> {
+export async function requireCompanyMembership(
+  companyId: string,
+): Promise<{ user: User; companyId: string }> {
   const { user } = await requireUser();
   const supabase = await createClient();
 
-  const { data: isMember, error } = await supabase.rpc("is_organization_member", {
-    target_org_id: organizationId,
+  const { data: isMember, error } = await supabase.rpc("is_company_member", {
+    target_org_id: companyId,
   });
 
   if (error) {
@@ -91,31 +91,31 @@ export async function requireOrganizationMembership(
     forbidden();
   }
 
-  return { user, organizationId };
+  return { user, companyId };
 }
 
 /**
  * Requires the signed-in user to have an ACTIVE membership in
- * `organizationId` AND hold `roleName` there, or calls `forbidden()`.
+ * `companyId` AND hold `roleName` there, or calls `forbidden()`.
  * Membership is checked first (and separately) so a non-member gets the
  * same 403 either way rather than the role check leaking whether the
- * organization exists.
+ * company exists.
  *
  * `roleName` is typed against the fixed v1 role catalogue
- * (modules/organizations/types.ts), but — per this module's scope note —
+ * (modules/companies/types.ts), but — per this module's scope note —
  * that type is a caller convenience only. The actual decision always comes
- * from `has_organization_role()`, a live query against the real `roles` /
+ * from `has_company_role()`, a live query against the real `roles` /
  * `membership_roles` tables.
  */
 export async function requireRole(
-  organizationId: string,
+  companyId: string,
   roleName: RoleName,
-): Promise<{ user: User; organizationId: string; role: RoleName }> {
-  const { user } = await requireOrganizationMembership(organizationId);
+): Promise<{ user: User; companyId: string; role: RoleName }> {
+  const { user } = await requireCompanyMembership(companyId);
   const supabase = await createClient();
 
-  const { data: hasRole, error } = await supabase.rpc("has_organization_role", {
-    target_org_id: organizationId,
+  const { data: hasRole, error } = await supabase.rpc("has_company_role", {
+    target_org_id: companyId,
     role_name: roleName,
   });
 
@@ -127,26 +127,26 @@ export async function requireRole(
     forbidden();
   }
 
-  return { user, organizationId, role: roleName };
+  return { user, companyId, role: roleName };
 }
 
 /**
  * Requires the signed-in user to have an ACTIVE membership in
- * `organizationId` AND hold at least one of `roleNames` there, or calls
- * `forbidden()`. Delegates to `has_any_organization_role()` — the same
+ * `companyId` AND hold at least one of `roleNames` there, or calls
+ * `forbidden()`. Delegates to `has_any_company_role()` — the same
  * function the database-level policies use (e.g. `employees`' insert/
  * update policies) — so the app-side gate and the RLS backstop can never
  * silently drift apart.
  */
 export async function requireAnyRole(
-  organizationId: string,
+  companyId: string,
   roleNames: RoleName[],
-): Promise<{ user: User; organizationId: string }> {
-  const { user } = await requireOrganizationMembership(organizationId);
+): Promise<{ user: User; companyId: string }> {
+  const { user } = await requireCompanyMembership(companyId);
   const supabase = await createClient();
 
-  const { data: hasAnyRole, error } = await supabase.rpc("has_any_organization_role", {
-    target_org_id: organizationId,
+  const { data: hasAnyRole, error } = await supabase.rpc("has_any_company_role", {
+    target_org_id: companyId,
     role_names: roleNames,
   });
 
@@ -158,12 +158,12 @@ export async function requireAnyRole(
     forbidden();
   }
 
-  return { user, organizationId };
+  return { user, companyId };
 }
 
 /**
  * Returns the full array of role names the signed-in user holds via their
- * ACTIVE membership in `organizationId` (empty array if none, including if
+ * ACTIVE membership in `companyId` (empty array if none, including if
  * they have no membership there at all — this never throws/redirects,
  * unlike the `require*` functions above, since it's meant for UI-only
  * "what should I show this user" decisions, not access control). The
@@ -173,16 +173,16 @@ export async function requireAnyRole(
  * button, never the thing that gates the Server Function it links to.
  *
  * Three plain queries rather than a PostgREST embed, for the same reason
- * as `modules/organizations/queries.ts` — see that file's header comment.
+ * as `modules/companies/queries.ts` — see that file's header comment.
  */
-export async function getUserRoleNames(organizationId: string): Promise<RoleName[]> {
+export async function getUserRoleNames(companyId: string): Promise<RoleName[]> {
   const { user } = await requireUser();
   const supabase = await createClient();
 
   const { data: membership, error: membershipError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("user_id", user.id)
     .eq("status", "active")
     .maybeSingle();

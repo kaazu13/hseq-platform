@@ -2,13 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, BasicEmployee, ScaffoldTeamMemberDetail } from "./types";
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
 import type { Project } from "@/modules/projects/types";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import type { EmployeeOption } from "@/modules/employees/employee-options";
 
 /**
  * Server-only data access for the Scaffolds/Scaffold Inspections domain —
  * see docs/API_CONVENTIONS.md §7. Plain queries filtered explicitly by
- * `organization_id` (RLS also enforces this — see
+ * `company_id` (RLS also enforces this — see
  * supabase/migrations/20260803120000_scaffold_inspections.sql — but
  * explicit scoping keeps index usage and intent readable). No PostgREST
  * embeds, same reason as modules/lmra/queries.ts's header comment.
@@ -29,10 +29,10 @@ export async function isCallerProjectAccessible(projectId: string): Promise<bool
   return data ?? false;
 }
 
-/** Scaffolds visible to the caller in `organizationId` — RLS (scaffolds_select) does the real scoping. */
-export async function listScaffolds(organizationId: string, filters: ScaffoldListFilters = {}): Promise<Scaffold[]> {
+/** Scaffolds visible to the caller in `companyId` — RLS (scaffolds_select) does the real scoping. */
+export async function listScaffolds(companyId: string, filters: ScaffoldListFilters = {}): Promise<Scaffold[]> {
   const supabase = await createClient();
-  let query = supabase.from("scaffolds").select("*").eq("organization_id", organizationId);
+  let query = supabase.from("scaffolds").select("*").eq("company_id", companyId);
 
   if (filters.projectId) query = query.eq("project_id", filters.projectId);
   if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
@@ -45,15 +45,15 @@ export async function listScaffolds(organizationId: string, filters: ScaffoldLis
 }
 
 /** Recent scaffolds for the Safety Overview's list section — same filters/ordering as listScaffolds, capped to `limit`. */
-export async function listRecentScaffoldsForOverview(organizationId: string, filters: ScaffoldListFilters, limit: number): Promise<Scaffold[]> {
-  const results = await listScaffolds(organizationId, filters);
+export async function listRecentScaffoldsForOverview(companyId: string, filters: ScaffoldListFilters, limit: number): Promise<Scaffold[]> {
+  const results = await listScaffolds(companyId, filters);
   return results.slice(0, limit);
 }
 
-/** A single scaffold scoped to `organizationId`, with its responsible foreman resolved. Null if it doesn't exist, belongs to another org, or RLS hides it. */
-export async function getScaffold(organizationId: string, scaffoldId: string): Promise<ScaffoldDetail | null> {
+/** A single scaffold scoped to `companyId`, with its responsible foreman resolved. Null if it doesn't exist, belongs to another company, or RLS hides it. */
+export async function getScaffold(companyId: string, scaffoldId: string): Promise<ScaffoldDetail | null> {
   const supabase = await createClient();
-  const { data: scaffold, error } = await supabase.from("scaffolds").select("*").eq("organization_id", organizationId).eq("id", scaffoldId).maybeSingle();
+  const { data: scaffold, error } = await supabase.from("scaffolds").select("*").eq("company_id", companyId).eq("id", scaffoldId).maybeSingle();
   if (error) throw error;
   if (!scaffold) return null;
 
@@ -87,7 +87,7 @@ export async function getScaffold(organizationId: string, scaffoldId: string): P
 }
 
 /** The current (finalized, not superseded) inspection's `expires_at` for each scaffold in `scaffoldIds` — the one query every "is this scaffold's status still valid right now" display needs (list badges, Safety Overview counts). Null entries mean no finalized inspection has ever applied (e.g. still pending_inspection). */
-export async function getCurrentInspectionExpiryByScaffold(organizationId: string, scaffoldIds: string[]): Promise<Map<string, string | null>> {
+export async function getCurrentInspectionExpiryByScaffold(companyId: string, scaffoldIds: string[]): Promise<Map<string, string | null>> {
   const result = new Map<string, string | null>();
   if (scaffoldIds.length === 0) return result;
 
@@ -95,7 +95,7 @@ export async function getCurrentInspectionExpiryByScaffold(organizationId: strin
   const { data, error } = await supabase
     .from("scaffold_inspections")
     .select("scaffold_id, expires_at, finalized_at")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .in("scaffold_id", scaffoldIds)
     .eq("status", "finalized")
     .is("superseded_by_id", null)
@@ -110,12 +110,12 @@ export async function getCurrentInspectionExpiryByScaffold(organizationId: strin
 }
 
 /** Employee ids currently rostered onto `projectId` — the candidate pool for the responsible-foreman/inspector pickers, same convention as every other module this session. */
-export async function listScaffoldCandidateEmployees(organizationId: string, projectId: string): Promise<BasicEmployee[]> {
+export async function listScaffoldCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_assignments")
     .select("employee_id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .is("end_at", null);
   if (error) throw error;
@@ -131,44 +131,44 @@ function toEmployeeOption(row: { id: string; first_name: string; last_name: stri
   return { value: row.id, label: `${row.first_name} ${row.last_name}`, employeeNumber: row.employee_number, roleLabel };
 }
 
-/** Candidate pool for the Responsible Foreman picker — active employees who hold the organization Foreman role AND an open Foreman team assignment on this project (list_eligible_scaffold_foremen(), the same eligibility the database itself enforces on insert/update — see 20260805090000_scaffold_team_and_dimensions.sql). */
-export async function listEligibleScaffoldForemen(organizationId: string, projectId: string): Promise<EmployeeOption[]> {
+/** Candidate pool for the Responsible Foreman picker — active employees who hold the company Foreman role AND an open Foreman team assignment on this project (list_eligible_scaffold_foremen(), the same eligibility the database itself enforces on insert/update — see 20260805090000_scaffold_team_and_dimensions.sql). */
+export async function listEligibleScaffoldForemen(companyId: string, projectId: string): Promise<EmployeeOption[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_eligible_scaffold_foremen", { target_organization_id: organizationId, target_project_id: projectId });
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_foremen", { target_company_id: companyId, target_project_id: projectId });
   if (error) throw error;
   return (data ?? []).map((row) => toEmployeeOption(row, "Foreman"));
 }
 
 /** Candidate pool for ordinary scaffold team-member slots — active project roster employees excluding specialist/management roles (list_eligible_scaffold_team_members()). `roleLabel` is deliberately left null: no reliable trade/job-title field exists on this platform yet — see the migration's header comment. */
-export async function listEligibleScaffoldTeamMembers(organizationId: string, projectId: string): Promise<EmployeeOption[]> {
+export async function listEligibleScaffoldTeamMembers(companyId: string, projectId: string): Promise<EmployeeOption[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_eligible_scaffold_team_members", { target_organization_id: organizationId, target_project_id: projectId });
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_team_members", { target_company_id: companyId, target_project_id: projectId });
   if (error) throw error;
   return (data ?? []).map((row) => ({ value: row.id, label: `${row.first_name} ${row.last_name}`, employeeNumber: row.employee_number, roleLabel: row.position_title }));
 }
 
 const SCAFFOLD_MANAGE_ELIGIBLE_ROLES: RoleName[] = ["hse_officer", "inspector"];
 
-/** Projects the caller can create a scaffold/inspection for — org-wide (every non-archived project) if hseq_manager, otherwise every project where they hold ANY current assignment AND also hold hse_officer/inspector (mirrors modules/observations/queries.ts's listObservationCreatableProjects — same "role-gated, not just any project_assignments row" fix). */
-export async function listScaffoldCreatableProjects(organizationId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
+/** Projects the caller can create a scaffold/inspection for — company-wide (every non-archived project) if hseq_manager, otherwise every project where they hold ANY current assignment AND also hold hse_officer/inspector (mirrors modules/observations/queries.ts's listObservationCreatableProjects — same "role-gated, not just any project_assignments row" fix). */
+export async function listScaffoldCreatableProjects(companyId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
   const supabase = await createClient();
   const isHseqManager = roleNames.includes("hseq_manager");
 
   if (isHseqManager) {
-    const { data, error } = await supabase.from("projects").select("*").eq("organization_id", organizationId).neq("status", "archived").order("name", { ascending: true });
+    const { data, error } = await supabase.from("projects").select("*").eq("company_id", companyId).neq("status", "archived").order("name", { ascending: true });
     if (error) throw error;
     return data ?? [];
   }
 
   if (!roleNames.some((role) => SCAFFOLD_MANAGE_ELIGIBLE_ROLES.includes(role))) return [];
 
-  const { data: employee, error: employeeError } = await supabase.from("employees").select("id").eq("organization_id", organizationId).eq("profile_id", userId).maybeSingle();
+  const { data: employee, error: employeeError } = await supabase.from("employees").select("id").eq("company_id", companyId).eq("profile_id", userId).maybeSingle();
   if (employeeError) throw employeeError;
   if (!employee) return [];
 
   const [{ data: projectAssignments, error: projectAssignmentsError }, { data: teamAssignments, error: teamAssignmentsError }] = await Promise.all([
-    supabase.from("project_assignments").select("project_id").eq("organization_id", organizationId).eq("employee_id", employee.id).is("end_at", null),
-    supabase.from("team_assignments").select("project_id").eq("organization_id", organizationId).eq("employee_id", employee.id).is("end_at", null),
+    supabase.from("project_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
+    supabase.from("team_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
   ]);
   if (projectAssignmentsError) throw projectAssignmentsError;
   if (teamAssignmentsError) throw teamAssignmentsError;
@@ -176,28 +176,28 @@ export async function listScaffoldCreatableProjects(organizationId: string, user
   const projectIds = [...new Set([...(projectAssignments ?? []).map((row) => row.project_id), ...(teamAssignments ?? []).map((row) => row.project_id)])];
   if (projectIds.length === 0) return [];
 
-  const { data: projects, error: projectsError } = await supabase.from("projects").select("*").eq("organization_id", organizationId).in("id", projectIds).order("name", { ascending: true });
+  const { data: projects, error: projectsError } = await supabase.from("projects").select("*").eq("company_id", companyId).in("id", projectIds).order("name", { ascending: true });
   if (projectsError) throw projectsError;
   return projects ?? [];
 }
 
 /** Every inspection for one scaffold, newest first — the complete chronological inspection history this milestone requires. */
-export async function listInspectionsForScaffold(organizationId: string, scaffoldId: string): Promise<ScaffoldInspection[]> {
+export async function listInspectionsForScaffold(companyId: string, scaffoldId: string): Promise<ScaffoldInspection[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("scaffold_inspections")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("scaffold_id", scaffoldId)
     .order("inspected_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
 
-/** A single inspection scoped to `organizationId`, with its checklist and inspector resolved. Null if it doesn't exist, belongs to another org, or RLS hides it. */
-export async function getInspection(organizationId: string, inspectionId: string): Promise<ScaffoldInspectionDetail | null> {
+/** A single inspection scoped to `companyId`, with its checklist and inspector resolved. Null if it doesn't exist, belongs to another company, or RLS hides it. */
+export async function getInspection(companyId: string, inspectionId: string): Promise<ScaffoldInspectionDetail | null> {
   const supabase = await createClient();
-  const { data: inspection, error } = await supabase.from("scaffold_inspections").select("*").eq("organization_id", organizationId).eq("id", inspectionId).maybeSingle();
+  const { data: inspection, error } = await supabase.from("scaffold_inspections").select("*").eq("company_id", companyId).eq("id", inspectionId).maybeSingle();
   if (error) throw error;
   if (!inspection) return null;
 
@@ -234,9 +234,9 @@ export type ScaffoldOverviewCounts = {
  * flag, and a scaffold already `unsafe` is not double-counted into either
  * expiry bucket (its status already says everything that matters).
  */
-export async function getScaffoldOverviewCounts(organizationId: string, projectId?: string): Promise<ScaffoldOverviewCounts> {
+export async function getScaffoldOverviewCounts(companyId: string, projectId?: string): Promise<ScaffoldOverviewCounts> {
   const supabase = await createClient();
-  let query = supabase.from("scaffolds").select("id, status").eq("organization_id", organizationId).neq("status", "closed");
+  let query = supabase.from("scaffolds").select("id, status").eq("company_id", companyId).neq("status", "closed");
   if (projectId) query = query.eq("project_id", projectId);
   const { data: scaffolds, error } = await query;
   if (error) throw error;
@@ -247,7 +247,7 @@ export async function getScaffoldOverviewCounts(organizationId: string, projectI
   const unsafe = active.filter((s) => s.status === "unsafe").length;
 
   const expiryCandidates = active.filter((s) => s.status === "safe" || s.status === "restricted" || s.status === "awaiting_corrective_action");
-  const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(organizationId, expiryCandidates.map((s) => s.id));
+  const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(companyId, expiryCandidates.map((s) => s.id));
 
   const now = Date.now();
   const soonThreshold = now + SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS * 24 * 60 * 60 * 1000;

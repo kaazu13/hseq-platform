@@ -44,7 +44,7 @@ function toRows(items: ScaffoldInspectionItem[]): ChecklistRow[] {
 }
 
 type InspectionChecklistProps = {
-  organizationId: string;
+  companyId: string;
   inspectionId: string;
   scaffoldId: string;
   projectId: string;
@@ -54,7 +54,7 @@ type InspectionChecklistProps = {
 };
 
 /** The fixed 24-item scaffold safety checklist — mobile-first, one row at a time, mirroring modules/lmra/components/lmra-hazard-checklist.tsx's shape. A "Raise defect" shortcut on a defect_found row opens the defect dialog pre-linked to that checklist item ("checklist reference"). */
-export function InspectionChecklist({ organizationId, inspectionId, scaffoldId, projectId, items, candidates, readOnly }: InspectionChecklistProps) {
+export function InspectionChecklist({ companyId, inspectionId, scaffoldId, projectId, items, candidates, readOnly }: InspectionChecklistProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function InspectionChecklist({ organizationId, inspectionId, scaffoldId, 
   function handleSave() {
     setFormError(null);
     startTransition(async () => {
-      const result = await updateInspectionItems(organizationId, inspectionId, scaffoldId, projectId, rows);
+      const result = await updateInspectionItems(companyId, inspectionId, scaffoldId, projectId, rows);
       if (!result.ok) {
         setFormError(result.error.message);
         return;
@@ -169,7 +169,7 @@ export function InspectionChecklist({ organizationId, inspectionId, scaffoldId, 
 
       {dialogItem && (
         <ScaffoldDefectFormDialog
-          organizationId={organizationId}
+          companyId={companyId}
           inspectionId={inspectionId}
           scaffoldId={scaffoldId}
           projectId={projectId}

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException, isUniqueViolation } from "@/lib/supabase/errors";
@@ -30,9 +30,9 @@ import {
  * why Foreman is view-only here, unlike every other HSEQ module so far.
  */
 
-async function requireScaffoldManageAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(organizationId), isCallerProjectAccessible(projectId)]);
+async function requireScaffoldManageAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess] = await Promise.all([getUserRoleNames(companyId), isCallerProjectAccessible(projectId)]);
 
   if (!canManageScaffold(roleNames, hasProjectAccess)) {
     forbidden();
@@ -41,19 +41,19 @@ async function requireScaffoldManageAccess(organizationId: string, projectId: st
   return { user, roleNames };
 }
 
-export async function createScaffold(organizationId: string, input: ScaffoldFormInput): Promise<ActionResult<{ scaffoldId: string }>> {
+export async function createScaffold(companyId: string, input: ScaffoldFormInput): Promise<ActionResult<{ scaffoldId: string }>> {
   const parsed = scaffoldFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(organizationId, parsed.data.projectId);
+  const { user } = await requireScaffoldManageAccess(companyId, parsed.data.projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("scaffolds")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       project_id: parsed.data.projectId,
       tag_number: parsed.data.tagNumber,
       work_area: parsed.data.workArea,
@@ -95,7 +95,7 @@ export async function createScaffold(organizationId: string, input: ScaffoldForm
   // rather than losing everything just entered.
   if (parsed.data.teamMemberIds.length > 0) {
     const teamRows = parsed.data.teamMemberIds.map((employeeId, index) => ({
-      organization_id: organizationId,
+      company_id: companyId,
       // project_id is re-derived and validated by
       // validate_scaffold_team_member_insert() regardless of what's sent
       // here (never client-trusted) — passed explicitly only because the
@@ -117,13 +117,13 @@ export async function createScaffold(organizationId: string, input: ScaffoldForm
   redirect(`/scaffolds/${data.id}`);
 }
 
-export async function updateScaffold(organizationId: string, scaffoldId: string, projectId: string, input: ScaffoldFormInput): Promise<ActionResult<null>> {
+export async function updateScaffold(companyId: string, scaffoldId: string, projectId: string, input: ScaffoldFormInput): Promise<ActionResult<null>> {
   const parsed = scaffoldFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(organizationId, projectId);
+  const { user } = await requireScaffoldManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -147,7 +147,7 @@ export async function updateScaffold(organizationId: string, scaffoldId: string,
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", scaffoldId);
 
   if (error) {
@@ -164,7 +164,7 @@ export async function updateScaffold(organizationId: string, scaffoldId: string,
     return { ok: false, error: { code: "not_found", message: "Scaffold not found." } };
   }
 
-  const teamResult = await reconcileScaffoldTeam(supabase, organizationId, projectId, scaffoldId, user.id, parsed.data.teamMemberIds);
+  const teamResult = await reconcileScaffoldTeam(supabase, companyId, projectId, scaffoldId, user.id, parsed.data.teamMemberIds);
   if (!teamResult.ok) {
     return teamResult;
   }
@@ -188,7 +188,7 @@ export async function updateScaffold(organizationId: string, scaffoldId: string,
  */
 async function reconcileScaffoldTeam(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  organizationId: string,
+  companyId: string,
   projectId: string,
   scaffoldId: string,
   actingUserId: string,
@@ -220,7 +220,7 @@ async function reconcileScaffoldTeam(
     const highestExistingPosition = (currentActive ?? []).reduce((max, row) => Math.max(max, row.team_position), 0);
     let nextPosition = highestExistingPosition + 1;
     const teamRows = toAdd.map((employeeId) => ({
-      organization_id: organizationId,
+      company_id: companyId,
       project_id: projectId,
       scaffold_id: scaffoldId,
       employee_id: employeeId,
@@ -240,7 +240,7 @@ async function reconcileScaffoldTeam(
 }
 
 export async function createInspection(
-  organizationId: string,
+  companyId: string,
   scaffoldId: string,
   projectId: string,
   input: InspectionFormInput,
@@ -250,13 +250,13 @@ export async function createInspection(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(organizationId, projectId);
+  const { user } = await requireScaffoldManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("scaffold_inspections")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       scaffold_id: scaffoldId,
       // project_id is re-derived and validated by
       // sync_scaffold_inspection_project_id() regardless of what's sent
@@ -288,7 +288,7 @@ export async function createInspection(
 
 /** Starts a correction to an already-finalized inspection — a new draft inspection with `corrects_inspection_id` set, requiring a reason. Goes through the exact same create path (and draft workflow) as any other inspection; finalizing it is what actually links it back to the original (see finalize_scaffold_inspection() in the migration). */
 export async function startInspectionCorrection(
-  organizationId: string,
+  companyId: string,
   scaffoldId: string,
   projectId: string,
   correctsInspectionId: string,
@@ -299,7 +299,7 @@ export async function startInspectionCorrection(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(organizationId, projectId);
+  const { user } = await requireScaffoldManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data: original, error: originalError } = await supabase.from("scaffold_inspections").select("inspection_reason, inspector_id, inspected_at, notes").eq("id", correctsInspectionId).single();
@@ -310,7 +310,7 @@ export async function startInspectionCorrection(
   const { data, error } = await supabase
     .from("scaffold_inspections")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       scaffold_id: scaffoldId,
       // project_id is re-derived and validated by
       // sync_scaffold_inspection_project_id() regardless of what's sent
@@ -342,7 +342,7 @@ export async function startInspectionCorrection(
 }
 
 export async function updateInspectionItems(
-  organizationId: string,
+  companyId: string,
   inspectionId: string,
   scaffoldId: string,
   projectId: string,
@@ -356,7 +356,7 @@ export async function updateInspectionItems(
     return { ok: false, error: { code: "validation_error", message: "Check the checklist — every field is required." } };
   }
 
-  await requireScaffoldManageAccess(organizationId, projectId);
+  await requireScaffoldManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("save_scaffold_inspection_items", {
@@ -383,7 +383,7 @@ export async function updateInspectionItems(
 }
 
 export async function finalizeInspection(
-  organizationId: string,
+  companyId: string,
   inspectionId: string,
   scaffoldId: string,
   projectId: string,
@@ -394,7 +394,7 @@ export async function finalizeInspection(
     return { ok: false, error: { code: "validation_error", message: "Check the outcome.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  await requireScaffoldManageAccess(organizationId, projectId);
+  await requireScaffoldManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("finalize_scaffold_inspection", {

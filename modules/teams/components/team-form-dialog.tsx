@@ -34,7 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 type RosterSelection = "none" | TeamAssignmentRole;
 
 type TeamFormDialogProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   /** Undefined = create mode. */
   team?: Team;
@@ -53,7 +53,7 @@ type TeamFormDialogProps = {
  * them (move_employee_to_team()'s close-then-open semantics), shown here
  * as a small "(in <team>)" note rather than left silent.
  */
-export function TeamFormDialog({ organizationId, projectId, team, rosterCandidates, open, onOpenChange }: TeamFormDialogProps) {
+export function TeamFormDialog({ companyId, projectId, team, rosterCandidates, open, onOpenChange }: TeamFormDialogProps) {
   const router = useRouter();
   const mode = team ? "edit" : "create";
   const [isPending, startTransition] = useTransition();
@@ -91,7 +91,7 @@ export function TeamFormDialog({ organizationId, projectId, team, rosterCandidat
       // supabase/migrations/20260728090000_projects_and_teams.sql §12), so
       // there is no partial-failure state (team saved but an assignment
       // rejected, or some members moved and others not).
-      const result = await saveTeamWithAssignments(organizationId, projectId, team?.id ?? null, input, assignmentChanges);
+      const result = await saveTeamWithAssignments(companyId, projectId, team?.id ?? null, input, assignmentChanges);
 
       if (!result.ok) {
         toast.error(result.error.message);

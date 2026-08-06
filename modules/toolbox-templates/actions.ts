@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -11,9 +11,9 @@ import { validatePdfFile, computeSha256Checksum, buildToolboxTemplateObjectPath,
 import { canManageToolboxTemplate } from "./permissions";
 import { toolboxTemplateMetadataSchema, toolboxTemplateEditFormSchema, replaceFileReasonSchema } from "./validation";
 
-async function requireToolboxTemplateManageAccess(organizationId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const roleNames = await getUserRoleNames(organizationId);
+async function requireToolboxTemplateManageAccess(companyId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const roleNames = await getUserRoleNames(companyId);
 
   if (!canManageToolboxTemplate(roleNames)) {
     forbidden();
@@ -22,7 +22,7 @@ async function requireToolboxTemplateManageAccess(organizationId: string) {
   return { user, roleNames };
 }
 
-export async function createToolboxTemplate(organizationId: string, formData: FormData): Promise<ActionResult<{ templateId: string }>> {
+export async function createToolboxTemplate(companyId: string, formData: FormData): Promise<ActionResult<{ templateId: string }>> {
   const metadata = {
     title: String(formData.get("title") ?? ""),
     category: String(formData.get("category") ?? ""),
@@ -43,11 +43,11 @@ export async function createToolboxTemplate(organizationId: string, formData: Fo
     return { ok: false, error: { code: "validation_error", message: pdfCheck.message, fieldErrors: { file: pdfCheck.message } } };
   }
 
-  const { user } = await requireToolboxTemplateManageAccess(organizationId);
+  const { user } = await requireToolboxTemplateManageAccess(companyId);
   const supabase = await createClient();
 
   const templateId = randomUUID();
-  const objectPath = buildToolboxTemplateObjectPath(organizationId, templateId, file.name);
+  const objectPath = buildToolboxTemplateObjectPath(companyId, templateId, file.name);
   const uploadResult = await uploadPdfToToolboxBucket(supabase, objectPath, file);
   if (!uploadResult.ok) {
     return { ok: false, error: { code: "server_error", message: uploadResult.message } };
@@ -58,7 +58,7 @@ export async function createToolboxTemplate(organizationId: string, formData: Fo
     .from("toolbox_templates")
     .insert({
       id: templateId,
-      organization_id: organizationId,
+      company_id: companyId,
       title: parsed.data.title,
       category: parsed.data.category,
       language: parsed.data.language,
@@ -88,13 +88,13 @@ export async function createToolboxTemplate(organizationId: string, formData: Fo
   redirect(`/toolbox-meetings/templates/${data.id}`);
 }
 
-export async function updateToolboxTemplateMetadata(organizationId: string, templateId: string, input: unknown): Promise<ActionResult<null>> {
+export async function updateToolboxTemplateMetadata(companyId: string, templateId: string, input: unknown): Promise<ActionResult<null>> {
   const parsed = toolboxTemplateEditFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireToolboxTemplateManageAccess(organizationId);
+  const { user } = await requireToolboxTemplateManageAccess(companyId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -109,7 +109,7 @@ export async function updateToolboxTemplateMetadata(organizationId: string, temp
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", templateId);
 
   if (error) {
@@ -124,11 +124,11 @@ export async function updateToolboxTemplateMetadata(organizationId: string, temp
   return { ok: true, data: null };
 }
 
-export async function setToolboxTemplateStatus(organizationId: string, templateId: string, status: "active" | "archived"): Promise<ActionResult<null>> {
-  const { user } = await requireToolboxTemplateManageAccess(organizationId);
+export async function setToolboxTemplateStatus(companyId: string, templateId: string, status: "active" | "archived"): Promise<ActionResult<null>> {
+  const { user } = await requireToolboxTemplateManageAccess(companyId);
   const supabase = await createClient();
 
-  const { error, count } = await supabase.from("toolbox_templates").update({ status, updated_by: user.id }, { count: "exact" }).eq("organization_id", organizationId).eq("id", templateId);
+  const { error, count } = await supabase.from("toolbox_templates").update({ status, updated_by: user.id }, { count: "exact" }).eq("company_id", companyId).eq("id", templateId);
 
   if (error) {
     if (isRlsViolation(error)) forbidden();
@@ -144,7 +144,7 @@ export async function setToolboxTemplateStatus(organizationId: string, templateI
 }
 
 /** Controlled "upload a replacement as a new controlled version" — mirrors modules/toolbox-meetings/actions.ts's replaceToolboxMeetingFile exactly. */
-export async function replaceToolboxTemplateFile(organizationId: string, templateId: string, formData: FormData): Promise<ActionResult<null>> {
+export async function replaceToolboxTemplateFile(companyId: string, templateId: string, formData: FormData): Promise<ActionResult<null>> {
   const reasonParsed = replaceFileReasonSchema.safeParse({ reason: String(formData.get("reason") ?? "") });
   if (!reasonParsed.success) {
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(reasonParsed.error) } };
@@ -159,10 +159,10 @@ export async function replaceToolboxTemplateFile(organizationId: string, templat
     return { ok: false, error: { code: "validation_error", message: pdfCheck.message, fieldErrors: { file: pdfCheck.message } } };
   }
 
-  await requireToolboxTemplateManageAccess(organizationId);
+  await requireToolboxTemplateManageAccess(companyId);
   const supabase = await createClient();
 
-  const objectPath = buildToolboxTemplateObjectPath(organizationId, templateId, file.name);
+  const objectPath = buildToolboxTemplateObjectPath(companyId, templateId, file.name);
   const uploadResult = await uploadPdfToToolboxBucket(supabase, objectPath, file);
   if (!uploadResult.ok) {
     return { ok: false, error: { code: "server_error", message: uploadResult.message } };

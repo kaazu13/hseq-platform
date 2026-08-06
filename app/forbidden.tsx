@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 /**
  * Rendered when `forbidden()` (next/navigation) is called anywhere in the
  * tree — "signed in but not permitted" (HTTP 403). See docs/ARCHITECTURE.md
- * §5. Triggered today by `requireOrganizationMembership()`/`requireRole()`
+ * §5. Triggered today by `requireCompanyMembership()`/`requireRole()`
  * (lib/auth/session.ts) when a user isn't an active member of the
- * organization a page/action targets.
+ * company a page/action targets.
  */
 export default function ForbiddenPage() {
   return (

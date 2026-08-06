@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SafetyObservation, SafetyObservationDetail, BasicEmployee } from "./types";
 import type { Project } from "@/modules/projects/types";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Server-only data access for the Safety Observations domain — see
  * docs/API_CONVENTIONS.md §7. Plain queries filtered explicitly by
- * `organization_id` (RLS also enforces this — see
+ * `company_id` (RLS also enforces this — see
  * supabase/migrations/20260802120000_safety_observations_and_corrective_actions.sql
  * — but explicit scoping keeps index usage and intent readable). No
  * PostgREST embeds, same reason as modules/lmra/queries.ts's header
@@ -37,13 +37,13 @@ export async function isCallerProjectAccessible(projectId: string): Promise<bool
 
 /** Observation ids with at least one corrective action matching the given cross-table filter — resolved first, then used to scope the main observations query via `.in("id", ...)`. */
 async function resolveObservationIdsByCorrectiveActionFilter(
-  organizationId: string,
+  companyId: string,
   filters: Pick<ObservationListFilters, "responsiblePersonId" | "overdueOnly">,
 ): Promise<string[] | null> {
   if (!filters.responsiblePersonId && !filters.overdueOnly) return null;
 
   const supabase = await createClient();
-  let query = supabase.from("corrective_actions").select("observation_id").eq("organization_id", organizationId);
+  let query = supabase.from("corrective_actions").select("observation_id").eq("company_id", companyId);
   if (filters.responsiblePersonId) query = query.eq("responsible_person_id", filters.responsiblePersonId);
   if (filters.overdueOnly) {
     const today = new Date().toISOString().slice(0, 10);
@@ -55,14 +55,14 @@ async function resolveObservationIdsByCorrectiveActionFilter(
   return [...new Set((data ?? []).map((row) => row.observation_id))];
 }
 
-/** Observations visible to the caller in `organizationId` — RLS (safety_observations_select) does the real scoping. Newest observed_at first. */
-export async function listObservations(organizationId: string, filters: ObservationListFilters = {}): Promise<SafetyObservation[]> {
+/** Observations visible to the caller in `companyId` — RLS (safety_observations_select) does the real scoping. Newest observed_at first. */
+export async function listObservations(companyId: string, filters: ObservationListFilters = {}): Promise<SafetyObservation[]> {
   const supabase = await createClient();
 
-  const correctiveActionObservationIds = await resolveObservationIdsByCorrectiveActionFilter(organizationId, filters);
+  const correctiveActionObservationIds = await resolveObservationIdsByCorrectiveActionFilter(companyId, filters);
   if (correctiveActionObservationIds !== null && correctiveActionObservationIds.length === 0) return [];
 
-  let query = supabase.from("safety_observations").select("*").eq("organization_id", organizationId);
+  let query = supabase.from("safety_observations").select("*").eq("company_id", companyId);
 
   if (filters.projectId) query = query.eq("project_id", filters.projectId);
   if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
@@ -78,14 +78,14 @@ export async function listObservations(organizationId: string, filters: Observat
   return data ?? [];
 }
 
-/** A single observation scoped to `organizationId`, with observer/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own org-scoped lookup). Null if it doesn't exist, belongs to another org, or RLS hides it. */
-export async function getObservation(organizationId: string, observationId: string): Promise<SafetyObservationDetail | null> {
+/** A single observation scoped to `companyId`, with observer/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own company-scoped lookup). Null if it doesn't exist, belongs to another company, or RLS hides it. */
+export async function getObservation(companyId: string, observationId: string): Promise<SafetyObservationDetail | null> {
   const supabase = await createClient();
 
   const { data: observation, error: observationError } = await supabase
     .from("safety_observations")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", observationId)
     .maybeSingle();
   if (observationError) throw observationError;
@@ -115,12 +115,12 @@ export async function getObservation(organizationId: string, observationId: stri
 }
 
 /** Employee ids currently rostered onto `projectId` — the candidate pool for the observer select and the "people involved" picker, same "only project-assigned employees are selectable" convention as modules/lmra/queries.ts's listLmraCandidateEmployeeIds. */
-export async function listObservationCandidateEmployees(organizationId: string, projectId: string): Promise<BasicEmployee[]> {
+export async function listObservationCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_assignments")
     .select("employee_id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .is("end_at", null);
   if (error) throw error;
@@ -138,7 +138,7 @@ export async function listObservationCandidateEmployees(organizationId: string, 
 const OBSERVATION_CREATE_ELIGIBLE_ROLES: RoleName[] = ["hse_officer", "foreman", "inspector", "employee"];
 
 /**
- * Projects the caller can create an observation for — org-wide (every
+ * Projects the caller can create an observation for — company-wide (every
  * non-archived project) if they hold `hseq_manager`, otherwise every
  * project where they currently hold ANY active project_assignments or
  * team_assignments row, AND ONLY if they also hold at least one of
@@ -153,7 +153,7 @@ const OBSERVATION_CREATE_ELIGIBLE_ROLES: RoleName[] = ["hse_officer", "foreman",
  * caveat as listLmraCreatableProjects: this is a "what should I show them"
  * read, not the real enforcement.
  */
-export async function listObservationCreatableProjects(organizationId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
+export async function listObservationCreatableProjects(companyId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
   const supabase = await createClient();
   const isHseqManager = roleNames.includes("hseq_manager");
 
@@ -161,7 +161,7 @@ export async function listObservationCreatableProjects(organizationId: string, u
     const { data, error } = await supabase
       .from("projects")
       .select("*")
-      .eq("organization_id", organizationId)
+      .eq("company_id", companyId)
       .neq("status", "archived")
       .order("name", { ascending: true });
     if (error) throw error;
@@ -173,15 +173,15 @@ export async function listObservationCreatableProjects(organizationId: string, u
   const { data: employee, error: employeeError } = await supabase
     .from("employees")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("profile_id", userId)
     .maybeSingle();
   if (employeeError) throw employeeError;
   if (!employee) return [];
 
   const [{ data: projectAssignments, error: projectAssignmentsError }, { data: teamAssignments, error: teamAssignmentsError }] = await Promise.all([
-    supabase.from("project_assignments").select("project_id").eq("organization_id", organizationId).eq("employee_id", employee.id).is("end_at", null),
-    supabase.from("team_assignments").select("project_id").eq("organization_id", organizationId).eq("employee_id", employee.id).is("end_at", null),
+    supabase.from("project_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
+    supabase.from("team_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
   ]);
   if (projectAssignmentsError) throw projectAssignmentsError;
   if (teamAssignmentsError) throw teamAssignmentsError;
@@ -192,7 +192,7 @@ export async function listObservationCreatableProjects(organizationId: string, u
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .in("id", projectIds)
     .order("name", { ascending: true });
   if (projectsError) throw projectsError;
@@ -208,12 +208,12 @@ export type ObservationOverviewCounts = {
 };
 
 /** Counts backing the Safety Overview's Safety Observations section. Every count is a real, scoped query — no fabricated numbers. */
-export async function getObservationOverviewCounts(organizationId: string, projectId?: string): Promise<ObservationOverviewCounts> {
+export async function getObservationOverviewCounts(companyId: string, projectId?: string): Promise<ObservationOverviewCounts> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 
   function scoped() {
-    let q = supabase.from("safety_observations").select("id", { count: "exact", head: true }).eq("organization_id", organizationId);
+    let q = supabase.from("safety_observations").select("id", { count: "exact", head: true }).eq("company_id", companyId);
     if (projectId) q = q.eq("project_id", projectId);
     return q;
   }
@@ -236,7 +236,7 @@ export async function getObservationOverviewCounts(organizationId: string, proje
 }
 
 /** Recent observation activity for the Safety Overview's list section — same filters/ordering as listObservations, capped to `limit`. */
-export async function listRecentObservationsForOverview(organizationId: string, filters: ObservationListFilters, limit: number): Promise<SafetyObservation[]> {
-  const results = await listObservations(organizationId, filters);
+export async function listRecentObservationsForOverview(companyId: string, filters: ObservationListFilters, limit: number): Promise<SafetyObservation[]> {
+  const results = await listObservations(companyId, filters);
   return results.slice(0, limit);
 }

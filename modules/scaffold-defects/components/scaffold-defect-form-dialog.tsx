@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type ScaffoldDefectFormDialogProps = {
-  organizationId: string;
+  companyId: string;
   inspectionId: string;
   scaffoldId: string;
   projectId: string;
@@ -29,7 +29,7 @@ type ScaffoldDefectFormDialogProps = {
 };
 
 /** Create/edit a scaffold defect's core fields — mirrors modules/corrective-actions/components/corrective-action-form-dialog.tsx's dialog shape. */
-export function ScaffoldDefectFormDialog({ organizationId, inspectionId, scaffoldId, projectId, candidates, inspectionItemId, defect, open, onOpenChange }: ScaffoldDefectFormDialogProps) {
+export function ScaffoldDefectFormDialog({ companyId, inspectionId, scaffoldId, projectId, candidates, inspectionItemId, defect, open, onOpenChange }: ScaffoldDefectFormDialogProps) {
   const router = useRouter();
   const mode = defect ? "edit" : "create";
   const [isPending, startTransition] = useTransition();
@@ -55,8 +55,8 @@ export function ScaffoldDefectFormDialog({ organizationId, inspectionId, scaffol
     startTransition(async () => {
       const result =
         mode === "create"
-          ? await createScaffoldDefect(organizationId, inspectionId, scaffoldId, projectId, input)
-          : await updateScaffoldDefectDetails(organizationId, defect!.id, inspectionId, scaffoldId, projectId, input);
+          ? await createScaffoldDefect(companyId, inspectionId, scaffoldId, projectId, input)
+          : await updateScaffoldDefectDetails(companyId, defect!.id, inspectionId, scaffoldId, projectId, input);
 
       if (!result.ok) {
         setFormError(result.error.message);

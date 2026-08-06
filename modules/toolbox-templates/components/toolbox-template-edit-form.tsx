@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ToolboxTemplateEditForm({ organizationId, template }: { organizationId: string; template: ToolboxTemplate }) {
+export function ToolboxTemplateEditForm({ companyId, template }: { companyId: string; template: ToolboxTemplate }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -33,7 +33,7 @@ export function ToolboxTemplateEditForm({ organizationId, template }: { organiza
     };
 
     startTransition(async () => {
-      const result = await updateToolboxTemplateMetadata(organizationId, template.id, input);
+      const result = await updateToolboxTemplateMetadata(companyId, template.id, input);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

@@ -1,12 +1,12 @@
 import type { Database } from "@/types/database";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import type { ProjectAssignmentRole } from "@/modules/projects/types";
 
 /**
- * Composed, read-only "who am I, in this organization" view for the
+ * Composed, read-only "who am I, in this company" view for the
  * /account page and (in bulk, for every member) the /admin/members
  * administration page. Deliberately its own module rather than living in
- * modules/organizations or modules/employees — this is a COMPOSITION of
+ * modules/companies or modules/employees — this is a COMPOSITION of
  * both (plus project_assignments), not a natural extension of either
  * one's existing scope.
  */
@@ -39,7 +39,7 @@ export type AccountOverview = {
     userNumber: string;
   };
   email: string;
-  organization: { id: string; name: string; slug: string };
+  company: { id: string; name: string; slug: string };
   membership: { id: string; status: MembershipStatus; joinedAt: string | null; invitedAt: string | null };
   roles: AccountRole[];
   employee: AccountEmployeeInfo | null;

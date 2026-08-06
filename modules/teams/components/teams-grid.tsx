@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 
 type TeamsGridProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   teams: TeamWithAssignments[];
   rosterCandidates: ProjectRosterCandidate[];
@@ -23,7 +23,7 @@ type TeamsGridProps = {
  * see teams.display_order's column comment); empty teams render normally,
  * with their own card, rather than being hidden.
  */
-export function TeamsGrid({ organizationId, projectId, teams, rosterCandidates, canManage }: TeamsGridProps) {
+export function TeamsGrid({ companyId, projectId, teams, rosterCandidates, canManage }: TeamsGridProps) {
   const [dialogState, setDialogState] = useState<{ open: boolean; team?: Team }>({ open: false });
   const orderedTeamIds = teams.map((team) => team.id);
 
@@ -57,7 +57,7 @@ export function TeamsGrid({ organizationId, projectId, teams, rosterCandidates, 
           {teams.map((team) => (
             <TeamCard
               key={team.id}
-              organizationId={organizationId}
+              companyId={companyId}
               projectId={projectId}
               team={team}
               canManage={canManage}
@@ -70,7 +70,7 @@ export function TeamsGrid({ organizationId, projectId, teams, rosterCandidates, 
 
       {canManage && (
         <TeamFormDialog
-          organizationId={organizationId}
+          companyId={companyId}
           projectId={projectId}
           team={dialogState.team}
           rosterCandidates={rosterCandidates}

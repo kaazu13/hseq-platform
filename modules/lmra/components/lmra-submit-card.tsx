@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type LmraSubmitCardProps = {
-  organizationId: string;
+  companyId: string;
   lmraId: string;
   projectId: string;
 };
@@ -33,7 +33,7 @@ type LmraSubmitCardProps = {
  * dialog that restates the decision — the actual write only happens from
  * the dialog's Confirm button, never the inline pick alone.
  */
-export function LmraSubmitCard({ organizationId, lmraId, projectId }: LmraSubmitCardProps) {
+export function LmraSubmitCard({ companyId, lmraId, projectId }: LmraSubmitCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function LmraSubmitCard({ organizationId, lmraId, projectId }: LmraSubmit
   function handleConfirm() {
     setFormError(null);
     startTransition(async () => {
-      const submitResult = await submitLmra(organizationId, lmraId, projectId, { result, stopWorkReason });
+      const submitResult = await submitLmra(companyId, lmraId, projectId, { result, stopWorkReason });
       if (!submitResult.ok) {
         setFormError(submitResult.error.message);
         setConfirmOpen(false);

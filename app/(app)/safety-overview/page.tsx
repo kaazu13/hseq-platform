@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { getLmraOverviewCounts, listRecentLmraForOverview, type LmraListFilters } from "@/modules/lmra/queries";
 import { LmraCard } from "@/modules/lmra/components/lmra-card";
@@ -50,8 +50,8 @@ type SafetyOverviewPageProps = {
  * filtering of *visibility* here, only the optional facets a viewer
  * chooses.
  *
- * "Organization" filtering is implicit. "Company" isn't a concept this
- * schema models separately from organization/project, so there's
+ * "Company" filtering is implicit. "Company" isn't a concept this
+ * schema models separately from company/project, so there's
  * deliberately no "company" filter here — see the milestone report.
  *
  * Every stat-card ROW (LMRA, Safety Observations, Corrective Actions) is a
@@ -77,15 +77,15 @@ type SafetyOverviewPageProps = {
 export default async function SafetyOverviewPage({ searchParams }: SafetyOverviewPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Safety Overview" description="Safety activity across your organization at a glance." />
+        <PageHeader title="Safety Overview" description="Safety activity across your company at a glance." />
         <EmptyState
           icon={Users}
-          title="You're not part of an organization yet"
+          title="You're not part of an company yet"
           description="Once an administrator adds your account to one, safety activity will appear here."
           className="flex-1"
         />
@@ -140,27 +140,27 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
     recentSafetyFlashes,
     projects,
   ] = await Promise.all([
-    getLmraOverviewCounts(currentOrganizationId, params.projectId),
-    listRecentLmraForOverview(currentOrganizationId, lmraListFilters, 12),
-    getObservationOverviewCounts(currentOrganizationId, params.projectId),
-    listRecentObservationsForOverview(currentOrganizationId, observationListFilters, 12),
-    getCorrectiveActionOverviewCounts(currentOrganizationId, params.projectId),
-    getScaffoldOverviewCounts(currentOrganizationId, params.projectId),
-    listRecentScaffoldsForOverview(currentOrganizationId, scaffoldListFilters, 12),
-    getScaffoldDefectOverviewCounts(currentOrganizationId, params.projectId),
-    getToolboxMeetingOverviewCounts(currentOrganizationId, params.projectId),
-    listRecentToolboxMeetingsForOverview(currentOrganizationId, toolboxMeetingListFilters, 12),
-    getToolboxTemplateOverviewCounts(currentOrganizationId),
-    getSafetyFlashOverviewCounts(currentOrganizationId, params.projectId),
-    listRecentSafetyFlashesForOverview(currentOrganizationId, safetyFlashListFilters, 12),
-    listProjects(currentOrganizationId),
+    getLmraOverviewCounts(currentCompanyId, params.projectId),
+    listRecentLmraForOverview(currentCompanyId, lmraListFilters, 12),
+    getObservationOverviewCounts(currentCompanyId, params.projectId),
+    listRecentObservationsForOverview(currentCompanyId, observationListFilters, 12),
+    getCorrectiveActionOverviewCounts(currentCompanyId, params.projectId),
+    getScaffoldOverviewCounts(currentCompanyId, params.projectId),
+    listRecentScaffoldsForOverview(currentCompanyId, scaffoldListFilters, 12),
+    getScaffoldDefectOverviewCounts(currentCompanyId, params.projectId),
+    getToolboxMeetingOverviewCounts(currentCompanyId, params.projectId),
+    listRecentToolboxMeetingsForOverview(currentCompanyId, toolboxMeetingListFilters, 12),
+    getToolboxTemplateOverviewCounts(currentCompanyId),
+    getSafetyFlashOverviewCounts(currentCompanyId, params.projectId),
+    listRecentSafetyFlashesForOverview(currentCompanyId, safetyFlashListFilters, 12),
+    listProjects(currentCompanyId),
   ]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
-  const recentScaffoldExpiryById = await getCurrentInspectionExpiryByScaffold(currentOrganizationId, recentScaffolds.map((s) => s.id));
+  const recentScaffoldExpiryById = await getCurrentInspectionExpiryByScaffold(currentCompanyId, recentScaffolds.map((s) => s.id));
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
-      <PageHeader title="Safety Overview" description="Safety activity across your organization at a glance." />
+      <PageHeader title="Safety Overview" description="Safety activity across your company at a glance." />
 
       <div>
         <SectionHeader title="LMRA" description="Last Minute Risk Assessments" className="mb-3" />
@@ -320,7 +320,7 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {recentSafetyFlashes.map((flash) => (
-              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? "Unknown project") : "Organization-wide"} />
+              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? "Unknown project") : "Company-wide"} />
             ))}
           </div>
         )}

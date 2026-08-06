@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 /** "Upload a replacement as a new controlled version" — always requires a reason; never a silent overwrite. */
-export function ToolboxTemplateReplaceFileForm({ organizationId, templateId }: { organizationId: string; templateId: string }) {
+export function ToolboxTemplateReplaceFileForm({ companyId, templateId }: { companyId: string; templateId: string }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -24,7 +24,7 @@ export function ToolboxTemplateReplaceFileForm({ organizationId, templateId }: {
 
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
-      const result = await replaceToolboxTemplateFile(organizationId, templateId, formData);
+      const result = await replaceToolboxTemplateFile(companyId, templateId, formData);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

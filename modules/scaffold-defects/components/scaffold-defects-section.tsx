@@ -4,14 +4,14 @@ import { useState } from "react";
 import { ListChecks, Plus } from "lucide-react";
 import type { ScaffoldDefectDetail } from "@/modules/scaffold-defects/types";
 import type { EmployeeOption } from "@/components/shared/employee-combobox";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { ScaffoldDefectItem } from "@/modules/scaffold-defects/components/scaffold-defect-item";
 import { ScaffoldDefectFormDialog } from "@/modules/scaffold-defects/components/scaffold-defect-form-dialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 
 type ScaffoldDefectsSectionProps = {
-  organizationId: string;
+  companyId: string;
   inspectionId: string;
   scaffoldId: string;
   projectId: string;
@@ -26,7 +26,7 @@ type ScaffoldDefectsSectionProps = {
 
 /** Defect management, embedded on the inspection edit/detail page — mirrors modules/corrective-actions/components/corrective-actions-section.tsx. */
 export function ScaffoldDefectsSection({
-  organizationId,
+  companyId,
   inspectionId,
   scaffoldId,
   projectId,
@@ -58,7 +58,7 @@ export function ScaffoldDefectsSection({
           {defects.map((defect) => (
             <ScaffoldDefectItem
               key={defect.id}
-              organizationId={organizationId}
+              companyId={companyId}
               inspectionId={inspectionId}
               scaffoldId={scaffoldId}
               projectId={projectId}
@@ -74,7 +74,7 @@ export function ScaffoldDefectsSection({
       )}
 
       {canCreate && (
-        <ScaffoldDefectFormDialog organizationId={organizationId} inspectionId={inspectionId} scaffoldId={scaffoldId} projectId={projectId} candidates={candidates} open={createOpen} onOpenChange={setCreateOpen} />
+        <ScaffoldDefectFormDialog companyId={companyId} inspectionId={inspectionId} scaffoldId={scaffoldId} projectId={projectId} candidates={candidates} open={createOpen} onOpenChange={setCreateOpen} />
       )}
     </div>
   );

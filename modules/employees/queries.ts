@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PageSize } from "@/lib/pagination";
-import type { Role, RoleName } from "@/modules/organizations/types";
+import type { Role, RoleName } from "@/modules/companies/types";
 import type {
   Employee,
   EmployeeAccountStatus,
@@ -13,11 +13,11 @@ import type {
 /**
  * Server-only data access for the employees domain — see
  * docs/API_CONVENTIONS.md §7. Plain queries filtered explicitly by
- * `organization_id` (RLS also enforces this — see
+ * `company_id` (RLS also enforces this — see
  * supabase/migrations/20260725091100_role_helper_and_employees_rls.sql —
  * but explicit scoping keeps index usage and intent readable, per
  * docs/API_CONVENTIONS.md §7). No PostgREST embeds, for the same reason
- * documented in modules/organizations/queries.ts: this project's
+ * documented in modules/companies/queries.ts: this project's
  * hand-written types/database.ts doesn't model relationships.
  */
 
@@ -42,9 +42,9 @@ type SearchRpcArgs = {
 // now hold us to that distinction. `undefined` here serializes to "not
 // sent," which is what the SQL functions' own `default null` parameters
 // expect for "no filter."
-function buildSearchArgs(organizationId: string, filters: EmployeeListFilters): SearchRpcArgs {
+function buildSearchArgs(companyId: string, filters: EmployeeListFilters): SearchRpcArgs {
   return {
-    target_org_id: organizationId,
+    target_org_id: companyId,
     search_term: filters.search?.trim() || undefined,
     p_employment_status: filters.employmentStatus && filters.employmentStatus !== "all" ? filters.employmentStatus : undefined,
     p_account_status: filters.accountStatus && filters.accountStatus !== "all" ? filters.accountStatus : undefined,
@@ -58,7 +58,7 @@ function buildSearchArgs(organizationId: string, filters: EmployeeListFilters): 
 }
 
 /**
- * A single page of employees visible to the caller in `organizationId`,
+ * A single page of employees visible to the caller in `companyId`,
  * via the `search_employees` SQL function
  * (supabase/migrations/20260726100000_employee_search.sql) rather than a
  * client-composed PostgREST filter — see that migration's comment for
@@ -78,7 +78,7 @@ function buildSearchArgs(organizationId: string, filters: EmployeeListFilters): 
  * confirm `page` is in range.
  */
 export async function listEmployees(
-  organizationId: string,
+  companyId: string,
   filters: EmployeeListFilters,
   page: number,
   pageSize: PageSize,
@@ -86,7 +86,7 @@ export async function listEmployees(
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("search_employees", {
-    ...buildSearchArgs(organizationId, filters),
+    ...buildSearchArgs(companyId, filters),
     page_limit: pageSize,
     page_offset: (page - 1) * pageSize,
   });
@@ -106,22 +106,22 @@ export async function listEmployees(
  * count information too). Call this first to clamp `page` before fetching
  * rows for it.
  */
-export async function countEmployees(organizationId: string, filters: EmployeeListFilters): Promise<number> {
+export async function countEmployees(companyId: string, filters: EmployeeListFilters): Promise<number> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("count_employees", buildSearchArgs(organizationId, filters));
+  const { data, error } = await supabase.rpc("count_employees", buildSearchArgs(companyId, filters));
 
   if (error) throw error;
   return data ?? 0;
 }
 
-/** A single employee scoped to `organizationId` — null if it doesn't exist, belongs to another organization, or RLS hides it from the caller (all three look identical from here, which is deliberate: see docs/API_CONVENTIONS.md §6 on not leaking cross-tenant existence). */
-export async function getEmployee(organizationId: string, employeeId: string): Promise<Employee | null> {
+/** A single employee scoped to `companyId` — null if it doesn't exist, belongs to another company, or RLS hides it from the caller (all three look identical from here, which is deliberate: see docs/API_CONVENTIONS.md §6 on not leaking cross-tenant existence). */
+export async function getEmployee(companyId: string, employeeId: string): Promise<Employee | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("employees")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", employeeId)
     .maybeSingle();
 
@@ -138,13 +138,13 @@ export async function getEmployee(organizationId: string, employeeId: string): P
  * `next_employee_number()`), so `/employees/valutris-00001` resolves the
  * same record as `/employees/VALUTRIS-00001`.
  */
-export async function getEmployeeByNumber(organizationId: string, employeeNumber: string): Promise<Employee | null> {
+export async function getEmployeeByNumber(companyId: string, employeeNumber: string): Promise<Employee | null> {
   const supabase = await createClient();
   const normalized = employeeNumber.trim().toUpperCase();
   const { data, error } = await supabase
     .from("employees")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("employee_number", normalized)
     .maybeSingle();
 
@@ -153,25 +153,25 @@ export async function getEmployeeByNumber(organizationId: string, employeeNumber
 }
 
 /**
- * The organization roles held by a linked employee, resolved via
- * `organization_memberships`/`membership_roles`/`roles` — never a second
+ * The company roles held by a linked employee, resolved via
+ * `company_memberships`/`membership_roles`/`roles` — never a second
  * role system, per this milestone's explicit constraint. Returns an empty
  * result (not an error) when `profileId` is null or has no active
- * membership in this organization yet — an employee record can exist before
+ * membership in this company yet — an employee record can exist before
  * account activation, and the Roles tab renders that state explicitly
  * rather than treating it as a query failure.
  */
 export async function getEmployeeRoleInfo(
-  organizationId: string,
+  companyId: string,
   profileId: string | null,
 ): Promise<EmployeeRoleInfo> {
   if (!profileId) return { membershipId: null, roles: [] };
 
   const supabase = await createClient();
   const { data: membership, error: membershipError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("user_id", profileId)
     .eq("status", "active")
     .maybeSingle();
@@ -218,7 +218,7 @@ export async function getEmployeeRoleInfo(
  * every row at once.
  */
 export async function getEmployeeRoleInfoBulk(
-  organizationId: string,
+  companyId: string,
   employees: Pick<Employee, "id" | "profile_id">[],
 ): Promise<Map<string, EmployeeRoleInfo>> {
   const result = new Map<string, EmployeeRoleInfo>(
@@ -232,9 +232,9 @@ export async function getEmployeeRoleInfoBulk(
 
   const supabase = await createClient();
   const { data: memberships, error: membershipsError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id, user_id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("status", "active")
     .in("user_id", profileIds);
 
@@ -293,12 +293,12 @@ export async function getEmployeeRoleInfoBulk(
  * decision belonging to a future milestone, not something to take on as a
  * side effect of this one.
  */
-export async function listEmploymentPeriods(organizationId: string, employeeId: string): Promise<EmploymentPeriod[]> {
+export async function listEmploymentPeriods(companyId: string, employeeId: string): Promise<EmploymentPeriod[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("employee_employment_periods")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("employee_id", employeeId)
     .order("start_date", { ascending: false })
     .order("created_at", { ascending: false });
@@ -309,23 +309,23 @@ export async function listEmploymentPeriods(organizationId: string, employeeId: 
 
 /**
  * A lightweight, unpaginated employee picker list (id/name/position only)
- * for organization-wide "assign this employee to..." UIs — the Project
+ * for company-wide "assign this employee to..." UIs — the Project
  * Assignments tab's roster picker (modules/projects), reused rather than
  * duplicated wherever a future module needs the same "pick an employee"
  * control. Deliberately excludes archived employees (archiving an employee
  * should not leave them selectable for new project/team work) but is not
- * search_employees()-style paginated — expected picker scale (an org's
+ * search_employees()-style paginated — expected picker scale (an company's
  * active roster) is far smaller than the full historical employee list
  * search_employees() has to handle.
  */
 export async function listActiveEmployeesForPicker(
-  organizationId: string,
+  companyId: string,
 ): Promise<Pick<Employee, "id" | "first_name" | "last_name" | "position_title">[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("employees")
     .select("id, first_name, last_name, position_title")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .is("archived_at", null)
     .order("last_name", { ascending: true })
     .order("first_name", { ascending: true });
@@ -334,7 +334,7 @@ export async function listActiveEmployeesForPicker(
   return data ?? [];
 }
 
-/** The fixed v1 role catalogue (global, not per-organization — see `roles` in docs/DATABASE_SCHEMA.md) for populating the Roles tab's assignment control. Ordered by `display_label` — the human-facing name — rather than the machine key, so the selector reads alphabetically the way a person would expect. */
+/** The fixed v1 role catalogue (global, not per-company — see `roles` in docs/DATABASE_SCHEMA.md) for populating the Roles tab's assignment control. Ordered by `display_label` — the human-facing name — rather than the machine key, so the selector reads alphabetically the way a person would expect. */
 export async function listAllRoles(): Promise<Pick<Role, "id" | "name" | "display_label">[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

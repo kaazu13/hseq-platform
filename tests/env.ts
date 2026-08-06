@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 /**
  * Loads .env.test.local manually (same technique already used by
- * scripts/seed-test-org.ts) rather than relying on Vite/Vitest's implicit
+ * scripts/seed-test-company.ts) rather than relying on Vite/Vitest's implicit
  * .env-file mode conventions, which this repo doesn't otherwise depend on
  * anywhere and isn't worth introducing a new implicit-behavior dependency
  * on for two test config files. Never overwrites an already-set env var

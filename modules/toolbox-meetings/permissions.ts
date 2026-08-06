@@ -1,10 +1,10 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Permission checks for Toolbox Meetings — see
  * docs/ROLES_AND_PERMISSIONS.md §5's Toolbox Meetings row (— | V | V | V⁴ |
  * F | M⁴ | V⁴ | V⁴ | — | — | V⁴) and footnote 19. HSE Manager is
- * unrestricted org-wide ("F"). HSE Officer gets "M⁴" (project-scoped
+ * unrestricted company-wide ("F"). HSE Officer gets "M⁴" (project-scoped
  * manage — create/edit/archive/replace within their assigned project).
  * Foreman/Project Manager/Inspector/Employee are all view-only — this
  * module has no digital delivery workflow for a Foreman to run, unlike

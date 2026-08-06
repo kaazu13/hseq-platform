@@ -14,7 +14,7 @@ import type { Database } from "@/types/database";
  * Unlike lib/supabase/server.ts, this has no cookie-based session — every
  * request made with this client is unconditionally the service role, not
  * "whoever is currently logged in." Callers stay responsible for scoping
- * every query themselves (e.g. `.eq("organization_id", ...)`), the same
+ * every query themselves (e.g. `.eq("company_id", ...)`), the same
  * discipline RLS would otherwise provide.
  */
 export function createAdminClient() {

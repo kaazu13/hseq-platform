@@ -67,20 +67,20 @@ function sanitizeFilenameSegment(originalFilename: string): string {
   return base.length > 0 ? base : "document.pdf";
 }
 
-/** {organization_id}/meetings/{project_id}/{meeting_id}/{uuid}-{filename} — see the storage migration's path-convention comment. */
-export function buildToolboxMeetingObjectPath(organizationId: string, projectId: string, meetingId: string, originalFilename: string): string {
-  return `${organizationId}/meetings/${projectId}/${meetingId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
+/** {company_id}/meetings/{project_id}/{meeting_id}/{uuid}-{filename} — see the storage migration's path-convention comment. */
+export function buildToolboxMeetingObjectPath(companyId: string, projectId: string, meetingId: string, originalFilename: string): string {
+  return `${companyId}/meetings/${projectId}/${meetingId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
 }
 
-/** {organization_id}/templates/{template_id}/{uuid}-{filename} */
-export function buildToolboxTemplateObjectPath(organizationId: string, templateId: string, originalFilename: string): string {
-  return `${organizationId}/templates/${templateId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
+/** {company_id}/templates/{template_id}/{uuid}-{filename} */
+export function buildToolboxTemplateObjectPath(companyId: string, templateId: string, originalFilename: string): string {
+  return `${companyId}/templates/${templateId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
 }
 
-/** {organization_id}/safety-flash/{project_id|'org'}/{flash_id}/{uuid}-{filename} — literal 'org' segment when no project, matching the storage RLS policy's path parsing. */
-export function buildSafetyFlashObjectPath(organizationId: string, projectId: string | null, flashId: string, originalFilename: string): string {
-  const scopeSegment = projectId ?? "org";
-  return `${organizationId}/safety-flash/${scopeSegment}/${flashId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
+/** {company_id}/safety-flash/{project_id|'company'}/{flash_id}/{uuid}-{filename} — literal 'company' segment when no project, matching the storage RLS policy's path parsing. */
+export function buildSafetyFlashObjectPath(companyId: string, projectId: string | null, flashId: string, originalFilename: string): string {
+  const scopeSegment = projectId ?? "company";
+  return `${companyId}/safety-flash/${scopeSegment}/${flashId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
 }
 
 /** Uploads a validated PDF to a freshly-built path. Never upserts — every upload (including a replacement) is a brand-new object, per the bucket's INSERT-only (no UPDATE) storage RLS policy. */

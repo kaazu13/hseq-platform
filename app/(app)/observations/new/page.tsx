@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { listObservationCreatableProjects, listObservationCandidateEmployees } from "@/modules/observations/queries";
 import { ObservationForm } from "@/modules/observations/components/observation-form";
@@ -27,14 +27,14 @@ type NewObservationPageProps = {
 export default async function NewObservationPage({ searchParams }: NewObservationPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
-  const creatableProjects = await listObservationCreatableProjects(currentOrganizationId, user.id, roleNames);
+  const roleNames = await getUserRoleNames(currentCompanyId);
+  const creatableProjects = await listObservationCreatableProjects(currentCompanyId, user.id, roleNames);
 
   if (!params.projectId) {
     return (
@@ -66,7 +66,7 @@ export default async function NewObservationPage({ searchParams }: NewObservatio
     );
   }
 
-  const project = await getProject(currentOrganizationId, params.projectId);
+  const project = await getProject(currentCompanyId, params.projectId);
   if (!project) {
     notFound();
   }
@@ -74,13 +74,13 @@ export default async function NewObservationPage({ searchParams }: NewObservatio
     forbidden();
   }
 
-  const candidates = toEmployeeOptions(await listObservationCandidateEmployees(currentOrganizationId, project.id));
+  const candidates = toEmployeeOptions(await listObservationCandidateEmployees(currentCompanyId, project.id));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="New observation" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <ObservationForm mode="create" organizationId={currentOrganizationId} projectId={project.id} projectName={project.name} candidates={candidates} />
+        <ObservationForm mode="create" companyId={currentCompanyId} projectId={project.id} projectName={project.name} candidates={candidates} />
       </div>
     </div>
   );

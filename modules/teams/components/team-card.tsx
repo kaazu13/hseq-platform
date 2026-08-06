@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 
 type TeamCardProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   team: TeamWithAssignments;
   canManage: boolean;
@@ -51,7 +51,7 @@ function TeamMemberRow({
  * excludes closed/historical assignments — this component never has to
  * reason about history itself.
  */
-export function TeamCard({ organizationId, projectId, team, canManage, orderedTeamIds, onEdit }: TeamCardProps) {
+export function TeamCard({ companyId, projectId, team, canManage, orderedTeamIds, onEdit }: TeamCardProps) {
   const [isPending, startTransition] = useTransition();
   const totalCount = team.foremen.length + team.members.length;
   const isEmpty = totalCount === 0;
@@ -67,7 +67,7 @@ export function TeamCard({ organizationId, projectId, team, canManage, orderedTe
     [next[from], next[to]] = [next[to], next[from]];
 
     startTransition(async () => {
-      const result = await reorderTeams(organizationId, projectId, next);
+      const result = await reorderTeams(companyId, projectId, next);
       if (!result.ok) toast.error(result.error.message);
     });
   }

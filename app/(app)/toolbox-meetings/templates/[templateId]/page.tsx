@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getToolboxTemplate, getToolboxTemplatePreviewUrl, listToolboxTemplateFileReplacements } from "@/modules/toolbox-templates/queries";
 import { canManageToolboxTemplate, canViewToolboxTemplate } from "@/modules/toolbox-templates/permissions";
 import { HSEQ_DOCUMENT_CATEGORY_LABELS } from "@/modules/toolbox-templates/types";
@@ -20,18 +20,18 @@ type ToolboxTemplateDetailPageProps = {
 export default async function ToolboxTemplateDetailPage({ params }: ToolboxTemplateDetailPageProps) {
   const { templateId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   if (!canViewToolboxTemplate(roleNames)) {
     forbidden();
   }
 
-  const template = await getToolboxTemplate(currentOrganizationId, templateId);
+  const template = await getToolboxTemplate(currentCompanyId, templateId);
   if (!template) {
     notFound();
   }
@@ -69,17 +69,17 @@ export default async function ToolboxTemplateDetailPage({ params }: ToolboxTempl
         <>
           <div className="flex flex-col gap-3">
             <SectionHeader title="Edit details" />
-            <ToolboxTemplateEditForm organizationId={currentOrganizationId} template={template} />
+            <ToolboxTemplateEditForm companyId={currentCompanyId} template={template} />
           </div>
 
           <div className="flex flex-col gap-3">
             <SectionHeader title="Status" />
-            <ToolboxTemplateStatusToggle organizationId={currentOrganizationId} templateId={template.id} status={template.status} />
+            <ToolboxTemplateStatusToggle companyId={currentCompanyId} templateId={template.id} status={template.status} />
           </div>
 
           <div className="flex flex-col gap-3">
             <SectionHeader title="Upload a new version" description="Replaces the current PDF with a controlled new version. The previous version is retained, never overwritten." />
-            <ToolboxTemplateReplaceFileForm organizationId={currentOrganizationId} templateId={template.id} />
+            <ToolboxTemplateReplaceFileForm companyId={currentCompanyId} templateId={template.id} />
           </div>
         </>
       )}

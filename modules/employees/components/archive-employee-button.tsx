@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 
 type ArchiveEmployeeButtonProps = {
-  organizationId: string;
+  companyId: string;
   employeeId: string;
   employeeName: string;
 };
@@ -23,11 +23,11 @@ type ArchiveEmployeeButtonProps = {
  * components/shared/confirm-dialog.tsx) since this button is a standalone
  * trigger, not nested inside another overlay.
  */
-export function ArchiveEmployeeButton({ organizationId, employeeId, employeeName }: ArchiveEmployeeButtonProps) {
+export function ArchiveEmployeeButton({ companyId, employeeId, employeeName }: ArchiveEmployeeButtonProps) {
   const router = useRouter();
 
   async function handleConfirm() {
-    const result = await archiveEmployee(organizationId, employeeId);
+    const result = await archiveEmployee(companyId, employeeId);
     if (!result.ok) {
       toast.error(result.error.message);
       return;

@@ -1,10 +1,10 @@
 import type { Database, Enums } from "@/types/database";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Employees — company employment records. See docs/DATABASE_SCHEMA.md's
  * `employees` section and docs/PRODUCT_REQUIREMENTS.md for how this
- * relates to `profiles` (login identity) and `organization_memberships`
+ * relates to `profiles` (login identity) and `company_memberships`
  * (tenant access). This module supports EMPLOYEES ONLY — no generic
  * people/visitor/contractor/external-company concept.
  */
@@ -65,9 +65,9 @@ export const EMPLOYMENT_END_REASON_LABELS: Record<EmploymentEndReason, string> =
   other: "Other",
 };
 
-/** Roles a linked employee holds in this organization, resolved via organization_memberships/membership_roles/roles — never fabricated, empty when there's no linked/active membership. */
+/** Roles a linked employee holds in this company, resolved via company_memberships/membership_roles/roles — never fabricated, empty when there's no linked/active membership. */
 export type EmployeeRoleInfo = {
-  /** Null when the employee has no `profile_id`, or the linked profile has no membership in this organization yet. */
+  /** Null when the employee has no `profile_id`, or the linked profile has no membership in this company yet. */
   membershipId: string | null;
   /** `label` is `roles.display_label` — the human-facing name (e.g. "Workforce Coordinator") — always rendered instead of formatting `name` (the stable machine key, e.g. `operations_manager`) for display. */
   roles: { membershipRoleId: string; roleId: string; name: RoleName; label: string }[];

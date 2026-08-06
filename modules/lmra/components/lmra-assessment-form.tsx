@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type LmraAssessmentFormProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   projectName: string;
   candidates: EmployeeOption[];
@@ -28,7 +28,7 @@ type LmraAssessmentFormProps = {
  * modules/projects/components/project-form.tsx, for the same React 19
  * form-reset reason.
  */
-export function LmraAssessmentForm({ organizationId, projectId, projectName, candidates, mode, assessment }: LmraAssessmentFormProps) {
+export function LmraAssessmentForm({ companyId, projectId, projectName, candidates, mode, assessment }: LmraAssessmentFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function LmraAssessmentForm({ organizationId, projectId, projectName, can
     };
 
     startTransition(async () => {
-      const result = mode === "create" ? await createLmra(organizationId, input) : await updateLmra(organizationId, assessment.id, input);
+      const result = mode === "create" ? await createLmra(companyId, input) : await updateLmra(companyId, assessment.id, input);
 
       if (!result.ok) {
         setFormError(result.error.message);

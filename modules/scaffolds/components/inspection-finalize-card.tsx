@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type InspectionFinalizeCardProps = {
-  organizationId: string;
+  companyId: string;
   inspectionId: string;
   scaffoldId: string;
   projectId: string;
@@ -31,7 +31,7 @@ type InspectionFinalizeCardProps = {
  * pattern as modules/observations/components/observation-review-close-card.tsx),
  * but the database is what actually enforces it.
  */
-export function InspectionFinalizeCard({ organizationId, inspectionId, scaffoldId, projectId, hasUnresolvedDefects }: InspectionFinalizeCardProps) {
+export function InspectionFinalizeCard({ companyId, inspectionId, scaffoldId, projectId, hasUnresolvedDefects }: InspectionFinalizeCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export function InspectionFinalizeCard({ organizationId, inspectionId, scaffoldI
   function handleFinalize() {
     setFormError(null);
     startTransition(async () => {
-      const result = await finalizeInspection(organizationId, inspectionId, scaffoldId, projectId, { outcome, restrictionsNotes });
+      const result = await finalizeInspection(companyId, inspectionId, scaffoldId, projectId, { outcome, restrictionsNotes });
       if (!result.ok) {
         setFormError(result.error.message);
         setConfirmOpen(false);

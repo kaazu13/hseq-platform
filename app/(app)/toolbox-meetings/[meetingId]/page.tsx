@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getToolboxMeeting, getToolboxMeetingPreviewUrl, listToolboxMeetingFileReplacements, listToolboxAuthorizedEmployees, isCallerProjectAccessible } from "@/modules/toolbox-meetings/queries";
 import { canManageToolboxMeeting } from "@/modules/toolbox-meetings/permissions";
@@ -23,24 +23,24 @@ type ToolboxMeetingDetailPageProps = {
 export default async function ToolboxMeetingDetailPage({ params }: ToolboxMeetingDetailPageProps) {
   const { meetingId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const meeting = await getToolboxMeeting(currentOrganizationId, meetingId);
+  const meeting = await getToolboxMeeting(currentCompanyId, meetingId);
   if (!meeting) {
     notFound();
   }
 
   const [roleNames, hasProjectAccess, project, previewUrl, replacements, candidateRows] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     isCallerProjectAccessible(meeting.project_id),
-    getProject(currentOrganizationId, meeting.project_id),
+    getProject(currentCompanyId, meeting.project_id),
     getToolboxMeetingPreviewUrl(meeting.storage_object_path),
     listToolboxMeetingFileReplacements(meeting.id),
-    listToolboxAuthorizedEmployees(currentOrganizationId, meeting.project_id),
+    listToolboxAuthorizedEmployees(currentCompanyId, meeting.project_id),
   ]);
 
   const candidates = toEmployeeOptions(candidateRows);
@@ -90,17 +90,17 @@ export default async function ToolboxMeetingDetailPage({ params }: ToolboxMeetin
         <>
           <div className="flex flex-col gap-3">
             <SectionHeader title="Edit details" />
-            <ToolboxMeetingEditForm organizationId={currentOrganizationId} meeting={meeting} candidates={candidates} />
+            <ToolboxMeetingEditForm companyId={currentCompanyId} meeting={meeting} candidates={candidates} />
           </div>
 
           <div className="flex flex-col gap-3">
             <SectionHeader title="Status" />
-            <ToolboxMeetingStatusToggle organizationId={currentOrganizationId} meetingId={meeting.id} projectId={meeting.project_id} status={meeting.status} />
+            <ToolboxMeetingStatusToggle companyId={currentCompanyId} meetingId={meeting.id} projectId={meeting.project_id} status={meeting.status} />
           </div>
 
           <div className="flex flex-col gap-3">
             <SectionHeader title="Replace PDF" description="If an incorrect PDF was uploaded, replace it here. The previous file is retained, never overwritten." />
-            <ToolboxMeetingReplaceFileForm organizationId={currentOrganizationId} meetingId={meeting.id} projectId={meeting.project_id} />
+            <ToolboxMeetingReplaceFileForm companyId={currentCompanyId} meetingId={meeting.id} projectId={meeting.project_id} />
           </div>
         </>
       )}

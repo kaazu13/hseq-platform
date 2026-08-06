@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type LmraDetailActionsProps = {
-  organizationId: string;
+  companyId: string;
   lmraId: string;
   projectId: string;
   canReopen: boolean;
@@ -23,21 +23,21 @@ type LmraDetailActionsProps = {
 };
 
 /** Print (always available — the printable detail page is this same route, styled for print via globals.css), Reopen (approved/rejected → draft, for corrections), and Archive (HSE Manager only, confirmed — terminal, no un-archive path). */
-export function LmraDetailActions({ organizationId, lmraId, projectId, canReopen, canArchive }: LmraDetailActionsProps) {
+export function LmraDetailActions({ companyId, lmraId, projectId, canReopen, canArchive }: LmraDetailActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   function handleReopen() {
     startTransition(async () => {
-      await reopenLmra(organizationId, lmraId, projectId);
+      await reopenLmra(companyId, lmraId, projectId);
       router.refresh();
     });
   }
 
   function handleArchive() {
     startTransition(async () => {
-      await archiveLmra(organizationId, lmraId);
+      await archiveLmra(companyId, lmraId);
       setArchiveOpen(false);
       router.refresh();
     });

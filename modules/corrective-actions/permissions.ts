@@ -1,4 +1,4 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Corrective Actions role gates — mirror the RLS and
@@ -9,7 +9,7 @@ import type { RoleName } from "@/modules/organizations/types";
  *
  * docs/ROLES_AND_PERMISSIONS.md §5's Corrective Actions row:
  * — | V | V | M⁴ | F | M⁴¹⁰ | M⁴¹⁰ | M⁴¹⁰ | — | — | O¹¹. HSE Manager is
- * unrestricted org-wide ("F"). Project Manager gets a clean, unrestricted-
+ * unrestricted company-wide ("F"). Project Manager gets a clean, unrestricted-
  * within-project "M⁴" (footnote 10 doesn't apply to PM). HSE Officer/
  * Foreman/Inspector get "M⁴" WITH footnote 10's carve-out: can create/
  * manage actions raised from their own findings and progress an action

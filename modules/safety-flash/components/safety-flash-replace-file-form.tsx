@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function SafetyFlashReplaceFileForm({ organizationId, flashId, projectId }: { organizationId: string; flashId: string; projectId: string | null }) {
+export function SafetyFlashReplaceFileForm({ companyId, flashId, projectId }: { companyId: string; flashId: string; projectId: string | null }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -23,7 +23,7 @@ export function SafetyFlashReplaceFileForm({ organizationId, flashId, projectId 
 
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
-      const result = await replaceSafetyFlashFile(organizationId, flashId, projectId, formData);
+      const result = await replaceSafetyFlashFile(companyId, flashId, projectId, formData);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

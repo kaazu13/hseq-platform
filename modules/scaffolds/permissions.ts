@@ -1,4 +1,4 @@
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Scaffolds/Scaffold Inspections role gates — mirror the RLS/
@@ -10,7 +10,7 @@ import type { RoleName } from "@/modules/organizations/types";
  * docs/ROLES_AND_PERMISSIONS.md §5's Scaffold Inspections row:
  * — | V | V | V⁴ | F | M⁴ | V⁴ | M⁴ | — | — | V⁴
  * (PSA|CM|WC|PM|HM|HO|FM|IN|RC|PL|EM). HSE Manager is unrestricted
- * org-wide ("F"). HSE Officer AND Inspector both get "M⁴" (project-scoped
+ * company-wide ("F"). HSE Officer AND Inspector both get "M⁴" (project-scoped
  * manage — create/edit/finalize). Foreman is "V⁴" here — VIEW ONLY, a
  * genuine departure from LMRA (Foreman "M⁴") and Safety Observations
  * (Foreman can create/edit their own) — scaffold inspection is a

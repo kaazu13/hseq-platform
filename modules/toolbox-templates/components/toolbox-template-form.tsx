@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ToolboxTemplateForm({ organizationId }: { organizationId: string }) {
+export function ToolboxTemplateForm({ companyId }: { companyId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ export function ToolboxTemplateForm({ organizationId }: { organizationId: string
     formData.set("file", file);
 
     startTransition(async () => {
-      const result = await createToolboxTemplate(organizationId, formData);
+      const result = await createToolboxTemplate(companyId, formData);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

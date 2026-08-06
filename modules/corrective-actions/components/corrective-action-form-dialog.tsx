@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type CorrectiveActionFormDialogProps = {
-  organizationId: string;
+  companyId: string;
   observationId: string;
   projectId: string;
   candidates: EmployeeOption[];
@@ -26,7 +26,7 @@ type CorrectiveActionFormDialogProps = {
 };
 
 /** Create/edit a corrective action's core fields — mirrors modules/teams/components/team-form-dialog.tsx's dialog shape. */
-export function CorrectiveActionFormDialog({ organizationId, observationId, projectId, candidates, action, open, onOpenChange }: CorrectiveActionFormDialogProps) {
+export function CorrectiveActionFormDialog({ companyId, observationId, projectId, candidates, action, open, onOpenChange }: CorrectiveActionFormDialogProps) {
   const router = useRouter();
   const mode = action ? "edit" : "create";
   const [isPending, startTransition] = useTransition();
@@ -50,8 +50,8 @@ export function CorrectiveActionFormDialog({ organizationId, observationId, proj
     startTransition(async () => {
       const result =
         mode === "create"
-          ? await createCorrectiveAction(organizationId, observationId, projectId, input)
-          : await updateCorrectiveActionDetails(organizationId, action!.id, observationId, projectId, input);
+          ? await createCorrectiveAction(companyId, observationId, projectId, input)
+          : await updateCorrectiveActionDetails(companyId, action!.id, observationId, projectId, input);
 
       if (!result.ok) {
         setFormError(result.error.message);

@@ -1,14 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import type { ProjectAssignmentRole } from "@/modules/projects/types";
 import type { AccountOverview, AccountRole, AccountProjectAssignment } from "./types";
 
 /**
  * Server-only data access for the composed account-overview view — see
  * modules/account/types.ts's header comment for why this is its own
- * module. RLS (`profiles_select_own`, `organization_memberships_select_own_or_active_member`,
+ * module. RLS (`profiles_select_own`, `company_memberships_select_own_or_active_member`,
  * `employees_select_managers_or_own_record`, `project_assignments_select`)
- * is the real scoping; every query below is explicitly organization- and
+ * is the real scoping; every query below is explicitly company- and
  * user-scoped on top of that for readability/index usage, same convention
  * as every other module's queries.ts this session.
  *
@@ -18,7 +18,7 @@ import type { AccountOverview, AccountRole, AccountProjectAssignment } from "./t
  * themselves. `lib/supabase/admin.ts`'s service-role client CAN read it,
  * but its own header comment explicitly forbids using it from any Server
  * Function reachable by a regular user request — an admin-page load is
- * exactly that. So `listOrganizationMembersOverview` below surfaces the
+ * exactly that. So `listCompanyMembersOverview` below surfaces the
  * linked employee's `work_email` column instead (a real, legitimately
  * RLS-readable field for company_admin/operations_manager) — labelled as
  * such in the UI, never presented as if it were the login email.
@@ -27,26 +27,26 @@ import type { AccountOverview, AccountRole, AccountProjectAssignment } from "./t
 type AccountOverviewCore = Omit<AccountOverview, "email" | "lastSignInAt">;
 
 /**
- * Everything about `userId`'s standing in `organizationId` EXCEPT email and
+ * Everything about `userId`'s standing in `companyId` EXCEPT email and
  * last-sign-in — those live on the Supabase Auth `User` object
  * (`supabase.auth.getUser()`), not any table this function can query, so
  * the caller (a Server Component that already called `requireUser()`)
- * merges them in. Returns null only if `organizationId` doesn't resolve to
- * an organizations row at all (RLS/missing-org look identical here, same
- * as every other "get one thing scoped to an org" query this session).
+ * merges them in. Returns null only if `companyId` doesn't resolve to
+ * an companies row at all (RLS/missing-company look identical here, same
+ * as every other "get one thing scoped to an company" query this session).
  */
-export async function getAccountOverview(organizationId: string, userId: string): Promise<AccountOverviewCore | null> {
+export async function getAccountOverview(companyId: string, userId: string): Promise<AccountOverviewCore | null> {
   const supabase = await createClient();
 
-  const [{ data: org, error: orgError }, { data: profile, error: profileError }, { data: membership, error: membershipError }] = await Promise.all([
-    supabase.from("organizations").select("id, name, slug").eq("id", organizationId).maybeSingle(),
+  const [{ data: company, error: orgError }, { data: profile, error: profileError }, { data: membership, error: membershipError }] = await Promise.all([
+    supabase.from("companies").select("id, name, slug").eq("id", companyId).maybeSingle(),
     supabase.from("profiles").select("id, full_name, phone, user_number").eq("id", userId).maybeSingle(),
-    supabase.from("organization_memberships").select("id, status, joined_at, invited_at").eq("organization_id", organizationId).eq("user_id", userId).maybeSingle(),
+    supabase.from("company_memberships").select("id, status, joined_at, invited_at").eq("company_id", companyId).eq("user_id", userId).maybeSingle(),
   ]);
   if (orgError) throw orgError;
   if (profileError) throw profileError;
   if (membershipError) throw membershipError;
-  if (!org || !profile || !membership) return null;
+  if (!company || !profile || !membership) return null;
 
   const { data: roleAssignments, error: roleAssignmentsError } = await supabase.from("membership_roles").select("id, role_id").eq("membership_id", membership.id);
   if (roleAssignmentsError) throw roleAssignmentsError;
@@ -73,7 +73,7 @@ export async function getAccountOverview(organizationId: string, userId: string)
   const { data: employeeRow, error: employeeError } = await supabase
     .from("employees")
     .select("id, employee_number, first_name, last_name, work_email, position_title, employment_status, archived_at")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("profile_id", userId)
     .maybeSingle();
   if (employeeError) throw employeeError;
@@ -83,7 +83,7 @@ export async function getAccountOverview(organizationId: string, userId: string)
     const { data: assignments, error: assignmentsError } = await supabase
       .from("project_assignments")
       .select("project_id, assignment_role, end_at")
-      .eq("organization_id", organizationId)
+      .eq("company_id", companyId)
       .eq("employee_id", employeeRow.id)
       .is("end_at", null);
     if (assignmentsError) throw assignmentsError;
@@ -109,7 +109,7 @@ export async function getAccountOverview(organizationId: string, userId: string)
 
   return {
     profile: { id: profile.id, fullName: profile.full_name, phone: profile.phone, userNumber: profile.user_number },
-    organization: org,
+    company: company,
     membership: { id: membership.id, status: membership.status, joinedAt: membership.joined_at, invitedAt: membership.invited_at },
     roles,
     employee: employeeRow
@@ -128,7 +128,7 @@ export async function getAccountOverview(organizationId: string, userId: string)
   };
 }
 
-export type OrganizationMemberOverview = {
+export type CompanyMemberOverview = {
   membershipId: string;
   userId: string;
   status: AccountOverviewCore["membership"]["status"];
@@ -146,13 +146,13 @@ export type OrganizationMemberOverview = {
  * linked employee's `work_email`, NOT the login email — see this file's
  * header comment for why the login email can't be shown here at all.
  */
-export async function listOrganizationMembersOverview(organizationId: string): Promise<OrganizationMemberOverview[]> {
+export async function listCompanyMembersOverview(companyId: string): Promise<CompanyMemberOverview[]> {
   const supabase = await createClient();
 
   const { data: memberships, error: membershipsError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id, user_id, status")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .order("created_at", { ascending: true });
   if (membershipsError) throw membershipsError;
   if (!memberships || memberships.length === 0) return [];
@@ -160,7 +160,7 @@ export async function listOrganizationMembersOverview(organizationId: string): P
   const { data: employees, error: employeesError } = await supabase
     .from("employees")
     .select("id, profile_id, employee_number, first_name, last_name, work_email, position_title, employment_status, archived_at")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .in(
       "profile_id",
       memberships.map((m) => m.user_id),
@@ -196,7 +196,7 @@ export async function listOrganizationMembersOverview(organizationId: string): P
     const { data: assignments, error: assignmentsError } = await supabase
       .from("project_assignments")
       .select("employee_id, project_id, assignment_role, end_at")
-      .eq("organization_id", organizationId)
+      .eq("company_id", companyId)
       .in("employee_id", employeeIds)
       .is("end_at", null);
     if (assignmentsError) throw assignmentsError;

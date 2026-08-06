@@ -7,7 +7,7 @@ describe("canManageLmra", () => {
     expect(canManageLmra(["hseq_manager"], true)).toBe(true);
   });
 
-  it("allows the caller's own foreman standing on this project, even without any org-wide role", () => {
+  it("allows the caller's own foreman standing on this project, even without any company-wide role", () => {
     expect(canManageLmra(["employee"], true)).toBe(true);
   });
 

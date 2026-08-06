@@ -26,7 +26,7 @@ Every Server Function follows the same shape:
 'use server'
 
 export async function approveTimesheet(input: ApproveTimesheetInput): Promise<ActionResult<Timesheet>> {
-  const { user, organizationId, roles } = await requireUser()
+  const { user, companyId, roles } = await requireUser()
   requireRole(roles, ['company_admin', 'operations_manager', 'foreman']) // true if roles has ANY of these — a role union check, not equality
 
   const parsed = approveTimesheetSchema.safeParse(input)
@@ -35,7 +35,7 @@ export async function approveTimesheet(input: ApproveTimesheetInput): Promise<Ac
   }
 
   // domain-specific authorization beyond role (e.g., "foreman must be assigned to this project")
-  const timesheet = await getTimesheetById(parsed.data.timesheetId, organizationId)
+  const timesheet = await getTimesheetById(parsed.data.timesheetId, companyId)
   if (!timesheet) {
     return { ok: false, error: { code: 'not_found', message: 'Timesheet not found' } }
   }
@@ -44,7 +44,7 @@ export async function approveTimesheet(input: ApproveTimesheetInput): Promise<Ac
   }
 
   const updated = await updateTimesheetStatus(timesheet.id, 'approved', user.id)
-  await writeAuditLog({ organizationId, actorUserId: user.id, action: 'approve', entityType: 'timesheet', entityId: timesheet.id })
+  await writeAuditLog({ companyId, actorUserId: user.id, action: 'approve', entityType: 'timesheet', entityId: timesheet.id })
   revalidatePath(`/timesheets/${timesheet.id}`)
 
   return { ok: true, data: updated }
@@ -52,11 +52,11 @@ export async function approveTimesheet(input: ApproveTimesheetInput): Promise<Ac
 ```
 
 Fixed steps, in order, for every mutating Server Function:
-1. **Authenticate** — `requireUser()` (throws/redirects via `unauthorized()` if no session), resolving the user's validated active organization and their **full role array** for it (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)).
+1. **Authenticate** — `requireUser()` (throws/redirects via `unauthorized()` if no session), resolving the user's validated active company and their **full role array** for it (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-company-membership-model)).
 2. **Coarse authorize** — `requireRole(roles, [...])` for roles that can never perform this action at all; this is a union/overlap check ("does `roles` contain any of these"), not equality against a single role, since a user may hold several roles at once (see [ARCHITECTURE.md §6](./ARCHITECTURE.md#6-authorization-model)).
 3. **Validate input** — shared `zod` schema (see [§5](#5-validation)); return a structured error, don't throw, for validation failures.
-4. **Fetch + fine-grained authorize** — load the target record scoped to `organizationId` (relying on RLS as the backstop, but querying scoped explicitly too) and check record-level permission (e.g., "assigned to this project") via the module's `permissions.ts`, calling `forbidden()` on failure.
-5. **Validate cross-references** — if the input sets a reference to another row (a `profiles.id`, or a polymorphic `entity_type`/`entity_id` or `source_type`/`source_id` pair), run it through the [cross-reference validation rule](./ARCHITECTURE.md#34-cross-reference-validation-rule): confirm the target exists, belongs to this organization (or is a legitimate global/system reference), and that the caller may reference it. See [§6](#6-server-side-authorization).
+4. **Fetch + fine-grained authorize** — load the target record scoped to `companyId` (relying on RLS as the backstop, but querying scoped explicitly too) and check record-level permission (e.g., "assigned to this project") via the module's `permissions.ts`, calling `forbidden()` on failure.
+5. **Validate cross-references** — if the input sets a reference to another row (a `profiles.id`, or a polymorphic `entity_type`/`entity_id` or `source_type`/`source_id` pair), run it through the [cross-reference validation rule](./ARCHITECTURE.md#34-cross-reference-validation-rule): confirm the target exists, belongs to this company (or is a legitimate global/system reference), and that the caller may reference it. See [§6](#6-server-side-authorization).
 6. **Mutate**.
 7. **Audit log** — for anything in the audit-required list per [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging). Corrections to a finalized/closed record are written as a new record referencing the original (`action: 'amend'`) rather than an in-place edit — see [ARCHITECTURE.md §8](./ARCHITECTURE.md#8-audit-logging).
 8. **Revalidate** (`revalidatePath`/`revalidateTag`) so the UI reflects the change.
@@ -98,17 +98,17 @@ using the same `ActionErrorCode` vocabulary, so error handling logic on the clie
 
 ## 6. Server-Side Authorization
 
-Restating the non-negotiable rule from [ARCHITECTURE.md §2](./ARCHITECTURE.md#2-guiding-principles): **every Server Function and Route Handler re-derives the user's identity, organization, and role from the authenticated session — never from a client-supplied value.** Concretely:
+Restating the non-negotiable rule from [ARCHITECTURE.md §2](./ARCHITECTURE.md#2-guiding-principles): **every Server Function and Route Handler re-derives the user's identity, company, and role from the authenticated session — never from a client-supplied value.** Concretely:
 
-- Never accept `organizationId` as an input parameter to a Server Function for the purpose of scoping a query — derive it from `requireUser()`'s resolved active organization. If a Route Handler must accept an org identifier (e.g., a webhook keyed by an external id), it is resolved to an internal `organization_id` server-side and cross-checked, never trusted directly.
-- Never accept a `role`/`roles` or "isAdmin" flag from client input to gate behavior — roles are always resolved server-side from `membership_roles` for the caller's active organization (see [ARCHITECTURE.md §6](./ARCHITECTURE.md#6-authorization-model)), never passed in.
+- Never accept `companyId` as an input parameter to a Server Function for the purpose of scoping a query — derive it from `requireUser()`'s resolved active company. If a Route Handler must accept an company identifier (e.g., a webhook keyed by an external id), it is resolved to an internal `company_id` server-side and cross-checked, never trusted directly.
+- Never accept a `role`/`roles` or "isAdmin" flag from client input to gate behavior — roles are always resolved server-side from `membership_roles` for the caller's active company (see [ARCHITECTURE.md §6](./ARCHITECTURE.md#6-authorization-model)), never passed in.
 - RLS is the backstop, not the only check — a Server Function's own authorization check should fail *before* a query would even need RLS to reject it, so users get a proper `forbidden()`/error response instead of a confusing empty-result silent failure.
-- **Every reference to another row is validated, not just the row being written.** A foreign key to `profiles(id)` (e.g., `assigned_to`, `approved_by`, `project_manager_id`) only proves that *some* person with that id exists — not that they belong to the organization the record is being written into, since `profiles` is a global identity table (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-organization-membership-model)). Polymorphic references (`corrective_actions.source_id`, `attachments.entity_id`, `digital_signatures.entity_id`) have no database-level FK at all. Before writing any of these, a Server Function must confirm: (1) the referenced row exists, (2) its effective organization matches this record's organization — or the reference is a legitimate exception, like a system-level `event_categories` row — and (3) the caller is actually permitted to reference it, not merely permitted to write this table in general. This is the [Cross-Reference Validation Rule](./ARCHITECTURE.md#34-cross-reference-validation-rule); implement it once as a shared helper (see [IMPLEMENTATION_PLAN.md — M7](./IMPLEMENTATION_PLAN.md#m7--cross-reference-validation-helper)) and call it from every module that needs it, rather than re-deriving the check per Server Function.
+- **Every reference to another row is validated, not just the row being written.** A foreign key to `profiles(id)` (e.g., `assigned_to`, `approved_by`, `project_manager_id`) only proves that *some* person with that id exists — not that they belong to the company the record is being written into, since `profiles` is a global identity table (see [ARCHITECTURE.md §3.2](./ARCHITECTURE.md#32-company-membership-model)). Polymorphic references (`corrective_actions.source_id`, `attachments.entity_id`, `digital_signatures.entity_id`) have no database-level FK at all. Before writing any of these, a Server Function must confirm: (1) the referenced row exists, (2) its effective company matches this record's company — or the reference is a legitimate exception, like a system-level `event_categories` row — and (3) the caller is actually permitted to reference it, not merely permitted to write this table in general. This is the [Cross-Reference Validation Rule](./ARCHITECTURE.md#34-cross-reference-validation-rule); implement it once as a shared helper (see [IMPLEMENTATION_PLAN.md — M7](./IMPLEMENTATION_PLAN.md#m7--cross-reference-validation-helper)) and call it from every module that needs it, rather than re-deriving the check per Server Function.
 
 ## 7. Reads (Server Components & Query Functions)
 
 - Page-level data fetching happens in Server Components calling `modules/<domain>/queries.ts` functions directly — no client-side `fetch` to an internal API for data that's known at render time.
-- Query functions accept an already-authenticated context (or call `requireUser()` themselves if used standalone) and always filter by the caller's `organization_id`, even though RLS would also enforce it — explicit scoping keeps queries fast (index usage) and keeps intent readable in the code, rather than relying on RLS silently doing the filtering.
+- Query functions accept an already-authenticated context (or call `requireUser()` themselves if used standalone) and always filter by the caller's `company_id`, even though RLS would also enforce it — explicit scoping keeps queries fast (index usage) and keeps intent readable in the code, rather than relying on RLS silently doing the filtering.
 - Client-side data fetching (`useEffect`/SWR/etc.) is reserved for genuinely dynamic client-only needs (e.g., live notification count) — prefer Server Components + `revalidatePath`/Supabase Realtime over building a parallel client-fetched API for data that could just be rendered server-side.
 
 ## 8. Pagination & Filtering
@@ -124,7 +124,7 @@ Restating the non-negotiable rule from [ARCHITECTURE.md §2](./ARCHITECTURE.md#2
 ## 10. Revalidation & Caching
 
 - After a mutation, call `revalidatePath` for the specific path(s) whose data changed (or `revalidateTag` if a tag-based cache strategy is adopted later) — don't over-invalidate the whole app's cache for a narrow change.
-- Given the multi-tenant nature of the app, any use of Next.js `fetch` caching or `unstable_cache`/`use cache` **must** include `organization_id` (and typically the acting user's role, where the result is role-dependent) as part of the cache key — never cache a per-tenant or per-role result under a key that could be shared across tenants/roles.
+- Given the multi-tenant nature of the app, any use of Next.js `fetch` caching or `unstable_cache`/`use cache` **must** include `company_id` (and typically the acting user's role, where the result is role-dependent) as part of the cache key — never cache a per-tenant or per-role result under a key that could be shared across tenants/roles.
 
 ## 11. Consistency With Other Docs
 

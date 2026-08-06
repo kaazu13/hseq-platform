@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getScaffold, listInspectionsForScaffold, isCallerProjectAccessible, getCurrentInspectionExpiryByScaffold } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
@@ -37,27 +37,27 @@ function formatDate(value: string | null): string {
 export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageProps) {
   const { scaffoldId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const scaffold = await getScaffold(currentOrganizationId, scaffoldId);
+  const scaffold = await getScaffold(currentCompanyId, scaffoldId);
   if (!scaffold) {
     notFound();
   }
 
   const [roleNames, hasProjectAccess, project, inspections] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     isCallerProjectAccessible(scaffold.project_id),
-    getProject(currentOrganizationId, scaffold.project_id),
-    listInspectionsForScaffold(currentOrganizationId, scaffoldId),
+    getProject(currentCompanyId, scaffold.project_id),
+    listInspectionsForScaffold(currentCompanyId, scaffoldId),
   ]);
 
   const projectName = project?.name ?? "Project unavailable";
   const canManage = canManageScaffold(roleNames, hasProjectAccess);
-  const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(currentOrganizationId, [scaffoldId]);
+  const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(currentCompanyId, [scaffoldId]);
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">

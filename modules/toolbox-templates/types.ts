@@ -1,7 +1,7 @@
 import type { Database } from "@/types/database";
 
 /**
- * Types for the Toolbox Templates domain — an organization-wide reusable
+ * Types for the Toolbox Templates domain — an company-wide reusable
  * PDF library, no project dimension, no sequential number. See
  * supabase/migrations/20260803160000_toolbox_meetings_and_safety_flash.sql.
  */

@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getInspection, getScaffold, isCallerProjectAccessible, listScaffoldCandidateEmployees } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
@@ -38,23 +38,23 @@ function formatDateTime(value: string | null): string {
 export default async function InspectionDetailPage({ params }: InspectionDetailPageProps) {
   const { scaffoldId, inspectionId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const inspection = await getInspection(currentOrganizationId, inspectionId);
+  const inspection = await getInspection(currentCompanyId, inspectionId);
   if (!inspection || inspection.scaffold_id !== scaffoldId) {
     notFound();
   }
 
   const [roleNames, hasProjectAccess, scaffold, project, defects] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     isCallerProjectAccessible(inspection.project_id),
-    getScaffold(currentOrganizationId, scaffoldId),
-    getProject(currentOrganizationId, inspection.project_id),
-    listDefectsForInspection(currentOrganizationId, inspectionId),
+    getScaffold(currentCompanyId, scaffoldId),
+    getProject(currentCompanyId, inspection.project_id),
+    listDefectsForInspection(currentCompanyId, inspectionId),
   ]);
 
   if (!scaffold) {
@@ -64,7 +64,7 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
   const projectName = project?.name ?? "Project unavailable";
   const canManage = canManageScaffold(roleNames, hasProjectAccess);
   const canManageDefects = canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
-  const candidates = toEmployeeOptions(await listScaffoldCandidateEmployees(currentOrganizationId, inspection.project_id));
+  const candidates = toEmployeeOptions(await listScaffoldCandidateEmployees(currentCompanyId, inspection.project_id));
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
@@ -135,13 +135,13 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Checklist" />
-        <InspectionChecklist organizationId={currentOrganizationId} inspectionId={inspection.id} scaffoldId={scaffoldId} projectId={inspection.project_id} items={inspection.items} candidates={candidates} readOnly />
+        <InspectionChecklist companyId={currentCompanyId} inspectionId={inspection.id} scaffoldId={scaffoldId} projectId={inspection.project_id} items={inspection.items} candidates={candidates} readOnly />
       </div>
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Defects" />
         <ScaffoldDefectsSection
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           inspectionId={inspection.id}
           scaffoldId={scaffoldId}
           projectId={inspection.project_id}
@@ -157,7 +157,7 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
 
       {canManage && inspection.status === "finalized" && !inspection.superseded_by_id && (
         <div className="print:hidden">
-          <InspectionCorrectionCard organizationId={currentOrganizationId} scaffoldId={scaffoldId} projectId={inspection.project_id} inspectionId={inspection.id} />
+          <InspectionCorrectionCard companyId={currentCompanyId} scaffoldId={scaffoldId} projectId={inspection.project_id} inspectionId={inspection.id} />
         </div>
       )}
     </div>

@@ -4,40 +4,40 @@ import type { Project, ProjectAssignment, ProjectAssignmentRole, ProjectAssignme
 /**
  * Server-only data access for the projects domain — see
  * docs/API_CONVENTIONS.md §7. Plain queries filtered explicitly by
- * `organization_id`/`project_id` (RLS also enforces this — see
+ * `company_id`/`project_id` (RLS also enforces this — see
  * supabase/migrations/20260728090000_projects_and_teams.sql — but explicit
  * scoping keeps index usage and intent readable). No PostgREST embeds, same
  * reason as modules/employees/queries.ts's header comment.
  */
 
 /**
- * Every project visible to the caller in `organizationId` — RLS
- * (projects_select) does the real scoping (org-wide roles see everything;
+ * Every project visible to the caller in `companyId` — RLS
+ * (projects_select) does the real scoping (company-wide roles see everything;
  * everyone else only their explicitly assigned projects). Ordered newest
  * first; this milestone doesn't paginate the project list (expected scale
- * is tens, not thousands, per organization — see
+ * is tens, not thousands, per company — see
  * docs/DATABASE_SCHEMA.md's Projects section for the same reasoning
  * employees search/pagination already documents at a different scale).
  */
-export async function listProjects(organizationId: string): Promise<Project[]> {
+export async function listProjects(companyId: string): Promise<Project[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
   return data ?? [];
 }
 
-/** A single project scoped to `organizationId` — null if it doesn't exist, belongs to another organization, or RLS hides it (indistinguishable by design, see docs/API_CONVENTIONS.md §6). */
-export async function getProject(organizationId: string, projectId: string): Promise<Project | null> {
+/** A single project scoped to `companyId` — null if it doesn't exist, belongs to another company, or RLS hides it (indistinguishable by design, see docs/API_CONVENTIONS.md §6). */
+export async function getProject(companyId: string, projectId: string): Promise<Project | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", projectId)
     .maybeSingle();
 
@@ -53,7 +53,7 @@ export async function getProject(organizationId: string, projectId: string): Pro
  * no linked employee record, or no active assignment on this project.
  */
 export async function getMyProjectAssignmentRoles(
-  organizationId: string,
+  companyId: string,
   projectId: string,
   userId: string,
 ): Promise<ProjectAssignmentRole[]> {
@@ -62,7 +62,7 @@ export async function getMyProjectAssignmentRoles(
   const { data: employee, error: employeeError } = await supabase
     .from("employees")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("profile_id", userId)
     .maybeSingle();
 
@@ -94,13 +94,13 @@ export async function getMyProjectAssignmentRoles(
  * `employees` row access to teammates. See
  * supabase/migrations/20260728090000_projects_and_teams.sql §15.
  */
-export async function listProjectAssignments(organizationId: string, projectId: string): Promise<ProjectAssignmentWithEmployee[]> {
+export async function listProjectAssignments(companyId: string, projectId: string): Promise<ProjectAssignmentWithEmployee[]> {
   const supabase = await createClient();
 
   const { data: assignments, error: assignmentsError } = await supabase
     .from("project_assignments")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .is("end_at", null)
     .order("created_at", { ascending: true });
@@ -129,12 +129,12 @@ export async function listProjectAssignments(organizationId: string, projectId: 
  * `Set` rather than full rows since callers already have (or will fetch)
  * full employee data elsewhere.
  */
-export async function listProjectRosterEmployeeIds(organizationId: string, projectId: string): Promise<Set<string>> {
+export async function listProjectRosterEmployeeIds(companyId: string, projectId: string): Promise<Set<string>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_assignments")
     .select("employee_id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .is("end_at", null);
 

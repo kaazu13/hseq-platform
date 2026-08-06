@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { updateOwnProfile } from "@/modules/organizations/actions";
+import { updateOwnProfile } from "@/modules/companies/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type LmraHazardChecklistProps = {
-  organizationId: string;
+  companyId: string;
   lmraId: string;
   projectId: string;
   hazards: LmraHazard[];
@@ -43,7 +43,7 @@ function toInputs(hazards: LmraHazard[]): LmraHazardInput[] {
  * bulk call (save_lmra_hazards RPC via updateLmraHazards), not per-row, so a
  * half-edited checklist is never partially persisted.
  */
-export function LmraHazardChecklist({ organizationId, lmraId, projectId, hazards, candidates, readOnly }: LmraHazardChecklistProps) {
+export function LmraHazardChecklist({ companyId, lmraId, projectId, hazards, candidates, readOnly }: LmraHazardChecklistProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function LmraHazardChecklist({ organizationId, lmraId, projectId, hazards
   function handleSave() {
     setFormError(null);
     startTransition(async () => {
-      const result = await updateLmraHazards(organizationId, lmraId, projectId, rows);
+      const result = await updateLmraHazards(companyId, lmraId, projectId, rows);
       if (!result.ok) {
         setFormError(result.error.message);
         return;

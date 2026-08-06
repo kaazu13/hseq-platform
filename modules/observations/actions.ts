@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -26,10 +26,10 @@ import {
  * check.
  */
 
-async function requireObservationCreateAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireObservationCreateAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, hasProjectAccess] = await Promise.all([
-    getUserRoleNames(organizationId),
+    getUserRoleNames(companyId),
     isCallerProjectAccessible(projectId),
   ]);
 
@@ -40,10 +40,10 @@ async function requireObservationCreateAccess(organizationId: string, projectId:
   return { user, roleNames };
 }
 
-async function requireObservationEditAccess(organizationId: string, projectId: string, createdBy: string | null) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireObservationEditAccess(companyId: string, projectId: string, createdBy: string | null) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, hasProjectAccess] = await Promise.all([
-    getUserRoleNames(organizationId),
+    getUserRoleNames(companyId),
     isCallerProjectAccessible(projectId),
   ]);
 
@@ -54,9 +54,9 @@ async function requireObservationEditAccess(organizationId: string, projectId: s
   return { user, roleNames };
 }
 
-async function requireObservationReviewAccess(organizationId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const roleNames = await getUserRoleNames(organizationId);
+async function requireObservationReviewAccess(companyId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const roleNames = await getUserRoleNames(companyId);
 
   if (!canReviewOrCloseObservation(roleNames)) {
     forbidden();
@@ -65,19 +65,19 @@ async function requireObservationReviewAccess(organizationId: string) {
   return { user, roleNames };
 }
 
-export async function createObservation(organizationId: string, input: ObservationFormInput): Promise<ActionResult<{ observationId: string }>> {
+export async function createObservation(companyId: string, input: ObservationFormInput): Promise<ActionResult<{ observationId: string }>> {
   const parsed = observationFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireObservationCreateAccess(organizationId, parsed.data.projectId);
+  const { user } = await requireObservationCreateAccess(companyId, parsed.data.projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("safety_observations")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       project_id: parsed.data.projectId,
       work_area: parsed.data.workArea,
       observed_at: new Date(parsed.data.observedAt).toISOString(),
@@ -106,7 +106,7 @@ export async function createObservation(organizationId: string, input: Observati
 }
 
 export async function updateObservation(
-  organizationId: string,
+  companyId: string,
   observationId: string,
   projectId: string,
   createdBy: string | null,
@@ -117,7 +117,7 @@ export async function updateObservation(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireObservationEditAccess(organizationId, projectId, createdBy);
+  const { user } = await requireObservationEditAccess(companyId, projectId, createdBy);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -136,7 +136,7 @@ export async function updateObservation(
       },
       { count: "exact" },
     )
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", observationId);
 
   if (error) {
@@ -156,7 +156,7 @@ export async function updateObservation(
 }
 
 export async function updateObservationParticipants(
-  organizationId: string,
+  companyId: string,
   observationId: string,
   projectId: string,
   createdBy: string | null,
@@ -167,7 +167,7 @@ export async function updateObservationParticipants(
     return { ok: false, error: { code: "validation_error", message: "Check the selected people." } };
   }
 
-  await requireObservationEditAccess(organizationId, projectId, createdBy);
+  await requireObservationEditAccess(companyId, projectId, createdBy);
   const supabase = await createClient();
 
   const { data: current, error: currentError } = await supabase
@@ -184,7 +184,7 @@ export async function updateObservationParticipants(
   if (toAdd.length > 0) {
     const { error } = await supabase
       .from("safety_observation_participants")
-      .insert(toAdd.map((employeeId) => ({ organization_id: organizationId, observation_id: observationId, employee_id: employeeId })));
+      .insert(toAdd.map((employeeId) => ({ company_id: companyId, observation_id: observationId, employee_id: employeeId })));
     if (error) {
       if (isRlsViolation(error)) forbidden();
       if (isRaisedException(error)) {
@@ -211,14 +211,14 @@ export async function updateObservationParticipants(
 }
 
 /** HSE-Manager-only — mirrors modules/lmra/actions.ts's archiveLmra shape: RLS admits the attempt broadly, the trigger (validate_safety_observation_update) is the real gate. */
-export async function reviewObservation(organizationId: string, observationId: string): Promise<ActionResult<null>> {
-  const { user } = await requireObservationReviewAccess(organizationId);
+export async function reviewObservation(companyId: string, observationId: string): Promise<ActionResult<null>> {
+  const { user } = await requireObservationReviewAccess(companyId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
     .from("safety_observations")
     .update({ reviewed_by: user.id, reviewed_at: new Date().toISOString() }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", observationId)
     .eq("status", "open");
 
@@ -243,14 +243,14 @@ export async function reviewObservation(organizationId: string, observationId: s
  * exception's message is surfaced directly (isRaisedException()), same
  * pattern as every other business-rule rejection in this codebase.
  */
-export async function closeObservation(organizationId: string, observationId: string): Promise<ActionResult<null>> {
-  const { user } = await requireObservationReviewAccess(organizationId);
+export async function closeObservation(companyId: string, observationId: string): Promise<ActionResult<null>> {
+  const { user } = await requireObservationReviewAccess(companyId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
     .from("safety_observations")
     .update({ status: "closed", closed_by: user.id, closed_at: new Date().toISOString() }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", observationId)
     .eq("status", "open");
 

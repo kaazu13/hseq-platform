@@ -59,29 +59,29 @@ describe("computeSha256Checksum", () => {
 });
 
 describe("storage path builders", () => {
-  it("buildToolboxMeetingObjectPath nests organization/meetings/project/record with a fresh uuid filename", () => {
-    const path = buildToolboxMeetingObjectPath("org-1", "project-1", "meeting-1", "Meeting Notes.pdf");
-    expect(path).toMatch(/^org-1\/meetings\/project-1\/meeting-1\/[0-9a-f-]{36}-Meeting_Notes\.pdf$/);
+  it("buildToolboxMeetingObjectPath nests company/meetings/project/record with a fresh uuid filename", () => {
+    const path = buildToolboxMeetingObjectPath("company-1", "project-1", "meeting-1", "Meeting Notes.pdf");
+    expect(path).toMatch(/^company-1\/meetings\/project-1\/meeting-1\/[0-9a-f-]{36}-Meeting_Notes\.pdf$/);
   });
 
-  it("buildToolboxTemplateObjectPath has no project segment — organization-wide", () => {
-    const path = buildToolboxTemplateObjectPath("org-1", "template-1", "Template.pdf");
-    expect(path).toMatch(/^org-1\/templates\/template-1\/[0-9a-f-]{36}-Template\.pdf$/);
+  it("buildToolboxTemplateObjectPath has no project segment — company-wide", () => {
+    const path = buildToolboxTemplateObjectPath("company-1", "template-1", "Template.pdf");
+    expect(path).toMatch(/^company-1\/templates\/template-1\/[0-9a-f-]{36}-Template\.pdf$/);
   });
 
   it("buildSafetyFlashObjectPath uses the project id when one is set", () => {
-    const path = buildSafetyFlashObjectPath("org-1", "project-1", "flash-1", "Flash.pdf");
-    expect(path).toMatch(/^org-1\/safety-flash\/project-1\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
+    const path = buildSafetyFlashObjectPath("company-1", "project-1", "flash-1", "Flash.pdf");
+    expect(path).toMatch(/^company-1\/safety-flash\/project-1\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
   });
 
-  it("buildSafetyFlashObjectPath uses the literal 'org' segment when there is no project", () => {
-    const path = buildSafetyFlashObjectPath("org-1", null, "flash-1", "Flash.pdf");
-    expect(path).toMatch(/^org-1\/safety-flash\/org\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
+  it("buildSafetyFlashObjectPath uses the literal 'company' segment when there is no project", () => {
+    const path = buildSafetyFlashObjectPath("company-1", null, "flash-1", "Flash.pdf");
+    expect(path).toMatch(/^company-1\/safety-flash\/company\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
   });
 
   it("two builds of the same inputs never collide — each upload gets a fresh uuid", () => {
-    const first = buildToolboxMeetingObjectPath("org-1", "project-1", "meeting-1", "same.pdf");
-    const second = buildToolboxMeetingObjectPath("org-1", "project-1", "meeting-1", "same.pdf");
+    const first = buildToolboxMeetingObjectPath("company-1", "project-1", "meeting-1", "same.pdf");
+    const second = buildToolboxMeetingObjectPath("company-1", "project-1", "meeting-1", "same.pdf");
     expect(first).not.toBe(second);
   });
 });

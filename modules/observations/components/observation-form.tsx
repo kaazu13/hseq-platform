@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type ObservationFormProps = {
-  organizationId: string;
+  companyId: string;
   projectId: string;
   projectName: string;
   candidates: EmployeeOption[];
@@ -43,7 +43,7 @@ function toLocalDateTimeInputValue(isoString: string | undefined): string {
  * before this form ever renders, on /observations/new's project-picker
  * step; project_id is an immutable identity column once created).
  */
-export function ObservationForm({ organizationId, projectId, projectName, candidates, mode, observation }: ObservationFormProps) {
+export function ObservationForm({ companyId, projectId, projectName, candidates, mode, observation }: ObservationFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -74,8 +74,8 @@ export function ObservationForm({ organizationId, projectId, projectName, candid
     startTransition(async () => {
       const result =
         mode === "create"
-          ? await createObservation(organizationId, input)
-          : await updateObservation(organizationId, observation.id, projectId, observation.created_by, input);
+          ? await createObservation(companyId, input)
+          : await updateObservation(companyId, observation.id, projectId, observation.created_by, input);
 
       if (!result.ok) {
         setFormError(result.error.message);

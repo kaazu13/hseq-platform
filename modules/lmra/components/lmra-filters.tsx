@@ -17,9 +17,9 @@ const FILTER_KEYS = ["workArea", "status", "projectId", "dateFrom", "dateTo"] as
  * modules/employees/components/employee-filters.tsx (see that file's
  * header comment for the controlled-input rationale). Covers the
  * milestone's "filtering by ... project, work area, date, and status"
- * requirement; organization is implicit (the current organization context,
+ * requirement; company is implicit (the current company context,
  * same as every other list in this app), and "company" isn't a concept this
- * schema models separately from organization/project — see the milestone
+ * schema models separately from company/project — see the milestone
  * report for that disclosure.
  */
 export function LmraFilters({ projects }: { projects: Project[] }) {

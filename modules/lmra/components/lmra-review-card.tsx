@@ -11,13 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type LmraReviewCardProps = {
-  organizationId: string;
+  companyId: string;
   lmraId: string;
   projectId: string;
 };
 
 /** Review + approve/reject in one step (submitted → approved/rejected) — see modules/lmra/actions.ts's reviewLmra comment for why both decisions share one Server Function and one auth gate. */
-export function LmraReviewCard({ organizationId, lmraId, projectId }: LmraReviewCardProps) {
+export function LmraReviewCard({ companyId, lmraId, projectId }: LmraReviewCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export function LmraReviewCard({ organizationId, lmraId, projectId }: LmraReview
   function handleDecision(decision: "approved" | "rejected") {
     setFormError(null);
     startTransition(async () => {
-      const result = await reviewLmra(organizationId, lmraId, projectId, { decision, reviewNotes });
+      const result = await reviewLmra(companyId, lmraId, projectId, { decision, reviewNotes });
       if (!result.ok) {
         setFormError(result.error.message);
         return;

@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 
 type EndEmploymentDialogProps = {
-  organizationId: string;
+  companyId: string;
   employeeId: string;
   employeeName: string;
 };
@@ -36,7 +36,7 @@ const TODAY = () => new Date().toISOString().slice(0, 10);
  * milestone needs an end date, a reason, and an optional note collected at
  * the point of action, not just a yes/no confirmation.
  */
-export function EndEmploymentDialog({ organizationId, employeeId, employeeName }: EndEmploymentDialogProps) {
+export function EndEmploymentDialog({ companyId, employeeId, employeeName }: EndEmploymentDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -52,7 +52,7 @@ export function EndEmploymentDialog({ organizationId, employeeId, employeeName }
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await endEmployment(organizationId, employeeId, {
+      const result = await endEmployment(companyId, employeeId, {
         endDate: String(formData.get("endDate") ?? ""),
         endReason,
         endNote: String(formData.get("endNote") ?? ""),

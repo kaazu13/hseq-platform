@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createToolboxDocumentSignedUrl } from "@/lib/storage/toolbox-documents";
 import type { SafetyFlash, SafetyFlashDetail, SafetyFlashFileReplacement } from "./types";
 import type { Project } from "@/modules/projects/types";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /** Server-only data access for Safety Flash — see docs/API_CONVENTIONS.md §7. */
 
@@ -25,9 +25,9 @@ export async function isCallerProjectAccessible(projectId: string): Promise<bool
   return data ?? false;
 }
 
-export async function listSafetyFlashes(organizationId: string, filters: SafetyFlashListFilters = {}): Promise<SafetyFlash[]> {
+export async function listSafetyFlashes(companyId: string, filters: SafetyFlashListFilters = {}): Promise<SafetyFlash[]> {
   const supabase = await createClient();
-  let query = supabase.from("safety_flashes").select("*").eq("organization_id", organizationId);
+  let query = supabase.from("safety_flashes").select("*").eq("company_id", companyId);
 
   if (filters.projectId) query = query.eq("project_id", filters.projectId);
   if (filters.category) query = query.eq("category", filters.category as SafetyFlash["category"]);
@@ -42,14 +42,14 @@ export async function listSafetyFlashes(organizationId: string, filters: SafetyF
   return data ?? [];
 }
 
-export async function listRecentSafetyFlashesForOverview(organizationId: string, filters: SafetyFlashListFilters, limit: number): Promise<SafetyFlash[]> {
-  const results = await listSafetyFlashes(organizationId, filters);
+export async function listRecentSafetyFlashesForOverview(companyId: string, filters: SafetyFlashListFilters, limit: number): Promise<SafetyFlash[]> {
+  const results = await listSafetyFlashes(companyId, filters);
   return results.slice(0, limit);
 }
 
-export async function getSafetyFlash(organizationId: string, flashId: string): Promise<SafetyFlashDetail | null> {
+export async function getSafetyFlash(companyId: string, flashId: string): Promise<SafetyFlashDetail | null> {
   const supabase = await createClient();
-  const { data: flash, error } = await supabase.from("safety_flashes").select("*").eq("organization_id", organizationId).eq("id", flashId).maybeSingle();
+  const { data: flash, error } = await supabase.from("safety_flashes").select("*").eq("company_id", companyId).eq("id", flashId).maybeSingle();
   if (error) throw error;
   if (!flash) return null;
 
@@ -71,38 +71,38 @@ export async function getSafetyFlashPreviewUrl(objectPath: string): Promise<stri
   return createToolboxDocumentSignedUrl(supabase, objectPath);
 }
 
-/** Employees eligible to be "issued by" — hseq_manager org-wide, or hse_officer (assigned to `projectId`, or any hse_officer at all when projectId is null). */
-export async function listSafetyFlashAuthorizedEmployees(organizationId: string, projectId: string | null): Promise<{ id: string; first_name: string; last_name: string; employee_number: string; profile_id: string | null }[]> {
+/** Employees eligible to be "issued by" — hseq_manager company-wide, or hse_officer (assigned to `projectId`, or any hse_officer at all when projectId is null). */
+export async function listSafetyFlashAuthorizedEmployees(companyId: string, projectId: string | null): Promise<{ id: string; first_name: string; last_name: string; employee_number: string; profile_id: string | null }[]> {
   const supabase = await createClient();
   // Supabase's generated Args type doesn't know this uuid parameter
   // accepts SQL NULL (list_toolbox_authorized_employees treats it as
   // "any hse_officer, not project-scoped" — see the migration) — the cast
   // reflects that gap, not an actual runtime constraint.
-  const { data, error } = await supabase.rpc("list_toolbox_authorized_employees", { target_organization_id: organizationId, target_project_id: projectId as string });
+  const { data, error } = await supabase.rpc("list_toolbox_authorized_employees", { target_company_id: companyId, target_project_id: projectId as string });
   if (error) throw error;
   return data ?? [];
 }
 
 /** Projects the caller may attach a Safety Flash to — same eligibility as listToolboxMeetingCreatableProjects. An empty/no-project flash is always an option regardless of this list (handled in the UI, not here). */
-export async function listSafetyFlashCreatableProjects(organizationId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
+export async function listSafetyFlashCreatableProjects(companyId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
   const supabase = await createClient();
   const isHseqManager = roleNames.includes("hseq_manager");
 
   if (isHseqManager) {
-    const { data, error } = await supabase.from("projects").select("*").eq("organization_id", organizationId).neq("status", "archived").order("name", { ascending: true });
+    const { data, error } = await supabase.from("projects").select("*").eq("company_id", companyId).neq("status", "archived").order("name", { ascending: true });
     if (error) throw error;
     return data ?? [];
   }
 
   if (!roleNames.some((role) => MANAGE_ELIGIBLE_ROLES.includes(role))) return [];
 
-  const { data: employee, error: employeeError } = await supabase.from("employees").select("id").eq("organization_id", organizationId).eq("profile_id", userId).maybeSingle();
+  const { data: employee, error: employeeError } = await supabase.from("employees").select("id").eq("company_id", companyId).eq("profile_id", userId).maybeSingle();
   if (employeeError) throw employeeError;
   if (!employee) return [];
 
   const [{ data: projectAssignments, error: projectAssignmentsError }, { data: teamAssignments, error: teamAssignmentsError }] = await Promise.all([
-    supabase.from("project_assignments").select("project_id").eq("organization_id", organizationId).eq("employee_id", employee.id).is("end_at", null),
-    supabase.from("team_assignments").select("project_id").eq("organization_id", organizationId).eq("employee_id", employee.id).is("end_at", null),
+    supabase.from("project_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
+    supabase.from("team_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
   ]);
   if (projectAssignmentsError) throw projectAssignmentsError;
   if (teamAssignmentsError) throw teamAssignmentsError;
@@ -110,7 +110,7 @@ export async function listSafetyFlashCreatableProjects(organizationId: string, u
   const projectIds = [...new Set([...(projectAssignments ?? []).map((row) => row.project_id), ...(teamAssignments ?? []).map((row) => row.project_id)])];
   if (projectIds.length === 0) return [];
 
-  const { data: projects, error: projectsError } = await supabase.from("projects").select("*").eq("organization_id", organizationId).in("id", projectIds).order("name", { ascending: true });
+  const { data: projects, error: projectsError } = await supabase.from("projects").select("*").eq("company_id", companyId).in("id", projectIds).order("name", { ascending: true });
   if (projectsError) throw projectsError;
   return projects ?? [];
 }
@@ -123,9 +123,9 @@ export type SafetyFlashOverviewCounts = {
   latest: SafetyFlash | null;
 };
 
-export async function getSafetyFlashOverviewCounts(organizationId: string, projectId?: string): Promise<SafetyFlashOverviewCounts> {
+export async function getSafetyFlashOverviewCounts(companyId: string, projectId?: string): Promise<SafetyFlashOverviewCounts> {
   const supabase = await createClient();
-  let query = supabase.from("safety_flashes").select("*").eq("organization_id", organizationId);
+  let query = supabase.from("safety_flashes").select("*").eq("company_id", companyId);
   if (projectId) query = query.eq("project_id", projectId);
 
   const { data, error } = await query.order("uploaded_at", { ascending: false });

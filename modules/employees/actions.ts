@@ -6,7 +6,7 @@ import { requireAnyRole, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isUniqueViolation, isRlsViolation } from "@/lib/supabase/errors";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { EMPLOYEE_WRITE_ROLES, assignableRoleNamesFor } from "./permissions";
 import {
   createEmployeeFormSchema,
@@ -23,11 +23,11 @@ import type { Employee } from "./types";
 
 /**
  * Server Functions for the employees domain — follow the fixed recipe in
- * docs/API_CONVENTIONS.md §3. `organizationId` is an explicit parameter
+ * docs/API_CONVENTIONS.md §3. `companyId` is an explicit parameter
  * (not derived from a session claim) per the deviation documented in
  * lib/auth/session.ts's header comment: there is no Custom Access Token
  * Auth Hook configured yet, so every one of these re-verifies membership
- * and role for the SPECIFIC organization passed in, live, every call.
+ * and role for the SPECIFIC company passed in, live, every call.
  */
 
 /**
@@ -39,9 +39,9 @@ import type { Employee } from "./types";
  */
 async function allocateEmployeeNumber(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  organizationId: string,
+  companyId: string,
 ): Promise<ActionResult<string>> {
-  const { data, error } = await supabase.rpc("next_employee_number", { target_org_id: organizationId });
+  const { data, error } = await supabase.rpc("next_employee_number", { target_org_id: companyId });
 
   if (error || !data) {
     if (error && isRlsViolation(error)) {
@@ -54,10 +54,10 @@ async function allocateEmployeeNumber(
 }
 
 export async function createEmployee(
-  organizationId: string,
+  companyId: string,
   input: CreateEmployeeFormInput,
 ): Promise<ActionResult<{ employeeId: string; employeeNumber: string }>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
   const parsed = createEmployeeFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -69,7 +69,7 @@ export async function createEmployee(
 
   const supabase = await createClient();
 
-  const numberResult = await allocateEmployeeNumber(supabase, organizationId);
+  const numberResult = await allocateEmployeeNumber(supabase, companyId);
   if (!numberResult.ok) {
     return numberResult;
   }
@@ -78,7 +78,7 @@ export async function createEmployee(
   const { data, error } = await supabase
     .from("employees")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       employee_number: employeeNumber,
       first_name: parsed.data.firstName,
       last_name: parsed.data.lastName,
@@ -111,7 +111,7 @@ export async function createEmployee(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "create",
     entity_type: "employee",
@@ -128,18 +128,18 @@ export async function createEmployee(
 }
 
 /**
- * Creates an employee record AND links it to an existing organization
+ * Creates an employee record AND links it to an existing company
  * member's login account in one step (`profile_id` set at insert time,
  * rather than the separate create-then-`linkEmployeeToProfile` sequence)
  * — used by the /admin/members page for a member who is an active
- * organization member but has no employee record yet (a real onboarding
+ * company member but has no employee record yet (a real onboarding
  * gap this milestone found: a membership/role can exist with zero linked
  * employee record, which is exactly why that member showed up with no
  * assignable projects anywhere in the app). Unlike `createEmployee`, this
  * does NOT redirect — the admin page stays on its own list.
  */
-export async function createEmployeeForMember(organizationId: string, profileId: string, input: CreateEmployeeFormInput): Promise<ActionResult<{ employeeId: string; employeeNumber: string }>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+export async function createEmployeeForMember(companyId: string, profileId: string, input: CreateEmployeeFormInput): Promise<ActionResult<{ employeeId: string; employeeNumber: string }>> {
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
   const parsed = createEmployeeFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -149,24 +149,24 @@ export async function createEmployeeForMember(organizationId: string, profileId:
   const supabase = await createClient();
 
   const { data: membership, error: membershipError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("user_id", profileId)
     .eq("status", "active")
     .maybeSingle();
   if (membershipError) throw membershipError;
   if (!membership) {
-    return { ok: false, error: { code: "validation_error", message: "That account has no active membership in this organization." } };
+    return { ok: false, error: { code: "validation_error", message: "That account has no active membership in this company." } };
   }
 
-  const { data: alreadyLinked, error: alreadyLinkedError } = await supabase.from("employees").select("id").eq("organization_id", organizationId).eq("profile_id", profileId).maybeSingle();
+  const { data: alreadyLinked, error: alreadyLinkedError } = await supabase.from("employees").select("id").eq("company_id", companyId).eq("profile_id", profileId).maybeSingle();
   if (alreadyLinkedError) throw alreadyLinkedError;
   if (alreadyLinked) {
     return { ok: false, error: { code: "conflict", message: "This account already has a linked employee record." } };
   }
 
-  const numberResult = await allocateEmployeeNumber(supabase, organizationId);
+  const numberResult = await allocateEmployeeNumber(supabase, companyId);
   if (!numberResult.ok) {
     return numberResult;
   }
@@ -175,7 +175,7 @@ export async function createEmployeeForMember(organizationId: string, profileId:
   const { data, error } = await supabase
     .from("employees")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       profile_id: profileId,
       employee_number: employeeNumber,
       first_name: parsed.data.firstName,
@@ -203,7 +203,7 @@ export async function createEmployeeForMember(organizationId: string, profileId:
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "create",
     entity_type: "employee",
@@ -217,11 +217,11 @@ export async function createEmployeeForMember(organizationId: string, profileId:
 }
 
 export async function updateEmployee(
-  organizationId: string,
+  companyId: string,
   employeeId: string,
   input: EmployeeFormInput,
 ): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
   const parsed = employeeFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -231,7 +231,7 @@ export async function updateEmployee(
     };
   }
 
-  const existing = await getEmployee(organizationId, employeeId);
+  const existing = await getEmployee(companyId, employeeId);
   if (!existing) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -269,7 +269,7 @@ export async function updateEmployee(
   const { error } = await supabase
     .from("employees")
     .update({ ...updatePayload, updated_by: user.id })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", employeeId);
 
   if (error) {
@@ -278,7 +278,7 @@ export async function updateEmployee(
 
   if (Object.keys(changes).length > 0) {
     await supabase.from("audit_events").insert({
-      organization_id: organizationId,
+      company_id: companyId,
       actor_user_id: user.id,
       action: "update",
       entity_type: "employee",
@@ -308,12 +308,12 @@ export async function updateEmployee(
  * assignment — those are explicitly out of scope for this milestone. See
  * docs/PRODUCT_REQUIREMENTS.md §11 for the documented (not implemented)
  * future rule that archiving a linked employee should only affect this
- * organization's access, never the person's global login.
+ * company's access, never the person's global login.
  */
-export async function archiveEmployee(organizationId: string, employeeId: string): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+export async function archiveEmployee(companyId: string, employeeId: string): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
-  const existing = await getEmployee(organizationId, employeeId);
+  const existing = await getEmployee(companyId, employeeId);
   if (!existing) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -334,7 +334,7 @@ export async function archiveEmployee(organizationId: string, employeeId: string
   const { error } = await supabase
     .from("employees")
     .update({ account_status: "archived", archived_at: archivedAt, updated_by: user.id })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", employeeId);
 
   if (error) {
@@ -342,7 +342,7 @@ export async function archiveEmployee(organizationId: string, employeeId: string
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "archive",
     entity_type: "employee",
@@ -369,10 +369,10 @@ export async function archiveEmployee(organizationId: string, employeeId: string
  * an invitation — account activation remains entirely out of scope for
  * this milestone, restored or not.
  */
-export async function restoreEmployee(organizationId: string, employeeId: string): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+export async function restoreEmployee(companyId: string, employeeId: string): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
-  const existing = await getEmployee(organizationId, employeeId);
+  const existing = await getEmployee(companyId, employeeId);
   if (!existing) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -385,7 +385,7 @@ export async function restoreEmployee(organizationId: string, employeeId: string
   const { error } = await supabase
     .from("employees")
     .update({ account_status: "draft", archived_at: null, updated_by: user.id })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", employeeId);
 
   if (error) {
@@ -393,7 +393,7 @@ export async function restoreEmployee(organizationId: string, employeeId: string
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "restore",
     entity_type: "employee",
@@ -421,11 +421,11 @@ export async function restoreEmployee(organizationId: string, employeeId: string
  * function only ever writes to `employee_employment_periods`.
  */
 export async function endEmployment(
-  organizationId: string,
+  companyId: string,
   employeeId: string,
   input: EndEmploymentFormInput,
 ): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
   const parsed = endEmploymentFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -435,7 +435,7 @@ export async function endEmployment(
     };
   }
 
-  const employee = await getEmployee(organizationId, employeeId);
+  const employee = await getEmployee(companyId, employeeId);
   if (!employee) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -452,7 +452,7 @@ export async function endEmployment(
   const { data: openPeriod, error: openPeriodError } = await supabase
     .from("employee_employment_periods")
     .select("id, start_date")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("employee_id", employeeId)
     .is("end_date", null)
     .maybeSingle();
@@ -486,7 +486,7 @@ export async function endEmployment(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "end_employment",
     entity_type: "employee",
@@ -514,11 +514,11 @@ export async function endEmployment(
  * why those stay independent.
  */
 export async function rehireEmployee(
-  organizationId: string,
+  companyId: string,
   employeeId: string,
   input: RehireFormInput,
 ): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
   const parsed = rehireFormSchema.safeParse(input);
   if (!parsed.success) {
@@ -528,7 +528,7 @@ export async function rehireEmployee(
     };
   }
 
-  const employee = await getEmployee(organizationId, employeeId);
+  const employee = await getEmployee(companyId, employeeId);
   if (!employee) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -538,7 +538,7 @@ export async function rehireEmployee(
   const { data: openPeriod, error: openPeriodError } = await supabase
     .from("employee_employment_periods")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("employee_id", employeeId)
     .is("end_date", null)
     .maybeSingle();
@@ -551,7 +551,7 @@ export async function rehireEmployee(
   const { data: newPeriod, error } = await supabase
     .from("employee_employment_periods")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       employee_id: employeeId,
       start_date: parsed.data.startDate,
       created_by: user.id,
@@ -573,7 +573,7 @@ export async function rehireEmployee(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "rehire",
     entity_type: "employee",
@@ -587,7 +587,7 @@ export async function rehireEmployee(
 }
 
 /**
- * Assigns an existing organization role to the membership backing a linked
+ * Assigns an existing company role to the membership backing a linked
  * employee. `roleId` must belong to the fixed v1 catalogue and its NAME
  * must be within `assignableRoleNamesFor()` for the caller (permissions.ts)
  * — checked explicitly below (not just relied on via the UI's `<Select>`
@@ -601,14 +601,14 @@ export async function rehireEmployee(
  * `forbidden()` here rather than depending solely on the RLS insert failing.
  */
 export async function assignEmployeeRole(
-  organizationId: string,
+  companyId: string,
   employeeId: string,
   membershipId: string,
   roleId: string,
 ): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
-  const employee = await getEmployee(organizationId, employeeId);
+  const employee = await getEmployee(companyId, employeeId);
   if (!employee) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -616,15 +616,15 @@ export async function assignEmployeeRole(
   const supabase = await createClient();
 
   const { data: membership, error: membershipError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id, user_id")
     .eq("id", membershipId)
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .maybeSingle();
 
   if (membershipError) throw membershipError;
   if (!membership || membership.user_id !== employee.profile_id) {
-    return { ok: false, error: { code: "not_found", message: "This employee has no matching organization membership." } };
+    return { ok: false, error: { code: "not_found", message: "This employee has no matching company membership." } };
   }
 
   const { data: role, error: roleError } = await supabase.from("roles").select("id, name").eq("id", roleId).maybeSingle();
@@ -633,13 +633,13 @@ export async function assignEmployeeRole(
     return { ok: false, error: { code: "not_found", message: "That role doesn't exist." } };
   }
 
-  const actorRoleNames = await getUserRoleNames(organizationId);
+  const actorRoleNames = await getUserRoleNames(companyId);
   if (!assignableRoleNamesFor(actorRoleNames, [role.name as RoleName]).includes(role.name as RoleName)) {
     forbidden();
   }
 
   const { error: insertError } = await supabase.from("membership_roles").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     membership_id: membershipId,
     role_id: roleId,
     created_by: user.id,
@@ -656,7 +656,7 @@ export async function assignEmployeeRole(
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "update",
     entity_type: "employee",
@@ -673,8 +673,8 @@ export async function assignEmployeeRole(
  * — the gap noted in that column's own comment
  * (supabase/migrations/20260725091000_employees.sql: "if this is ever set
  * by a future activation flow, that flow must validate the referenced
- * profile has an ACTIVE organization_memberships row for this same
- * organization_id"). This is that flow's first implementation. Column-level
+ * profile has an ACTIVE company_memberships row for this same
+ * company_id"). This is that flow's first implementation. Column-level
  * grants already permit this write today (no REVOKE targets `profile_id`),
  * so this is a normal RLS-enforced Server Function, not a privileged
  * bypass — gated by the same EMPLOYEE_WRITE_ROLES as every other employee
@@ -684,17 +684,17 @@ export async function assignEmployeeRole(
  * first — no unlink action exists yet, deliberately: this milestone only
  * needs to ADD the first link for an owner-account onboarding gap, not a
  * general re-linking workflow) and refuses to link a profile with no
- * ACTIVE membership in this organization (the exact validation the
+ * ACTIVE membership in this company (the exact validation the
  * column's original comment called for). The partial unique index
- * `employees_organization_id_profile_id_key`
+ * `employees_company_id_profile_id_key`
  * (20260804092000_employee_profile_link_uniqueness.sql) is the database-level
  * backstop against linking the same profile to two employee rows in one
- * organization.
+ * company.
  */
-export async function linkEmployeeToProfile(organizationId: string, employeeId: string, profileId: string): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+export async function linkEmployeeToProfile(companyId: string, employeeId: string, profileId: string): Promise<ActionResult<null>> {
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
-  const employee = await getEmployee(organizationId, employeeId);
+  const employee = await getEmployee(companyId, employeeId);
   if (!employee) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -705,22 +705,22 @@ export async function linkEmployeeToProfile(organizationId: string, employeeId: 
   const supabase = await createClient();
 
   const { data: membership, error: membershipError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("user_id", profileId)
     .eq("status", "active")
     .maybeSingle();
   if (membershipError) throw membershipError;
   if (!membership) {
-    return { ok: false, error: { code: "validation_error", message: "That account has no active membership in this organization yet." } };
+    return { ok: false, error: { code: "validation_error", message: "That account has no active membership in this company yet." } };
   }
 
-  const { error } = await supabase.from("employees").update({ profile_id: profileId, updated_by: user.id }).eq("organization_id", organizationId).eq("id", employeeId);
+  const { error } = await supabase.from("employees").update({ profile_id: profileId, updated_by: user.id }).eq("company_id", companyId).eq("id", employeeId);
 
   if (error) {
     if (isUniqueViolation(error)) {
-      return { ok: false, error: { code: "conflict", message: "That account is already linked to a different employee record in this organization." } };
+      return { ok: false, error: { code: "conflict", message: "That account is already linked to a different employee record in this company." } };
     }
     if (isRlsViolation(error)) {
       forbidden();
@@ -729,7 +729,7 @@ export async function linkEmployeeToProfile(organizationId: string, employeeId: 
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "update",
     entity_type: "employee",
@@ -756,17 +756,17 @@ export async function linkEmployeeToProfile(organizationId: string, employeeId: 
  * this, any caller with EMPLOYEE_WRITE_ROLES could remove a role belonging
  * to a DIFFERENT employee while the audit log (and revalidated page) still
  * attributed the change to `employeeId`. Not a privilege escalation (the
- * caller already has org-wide role-management authority either way), but a
+ * caller already has company-wide role-management authority either way), but a
  * real audit-attribution gap — see engineering review finding F1.
  */
 export async function removeEmployeeRole(
-  organizationId: string,
+  companyId: string,
   employeeId: string,
   membershipRoleId: string,
 ): Promise<ActionResult<null>> {
-  const { user } = await requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES);
+  const { user } = await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
 
-  const employee = await getEmployee(organizationId, employeeId);
+  const employee = await getEmployee(companyId, employeeId);
   if (!employee) {
     return { ok: false, error: { code: "not_found", message: "Employee not found." } };
   }
@@ -774,22 +774,22 @@ export async function removeEmployeeRole(
   const supabase = await createClient();
 
   const { data: membership, error: membershipError } = await supabase
-    .from("organization_memberships")
+    .from("company_memberships")
     .select("id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("user_id", employee.profile_id ?? "")
     .maybeSingle();
 
   if (membershipError) throw membershipError;
   if (!membership) {
-    return { ok: false, error: { code: "not_found", message: "This employee has no matching organization membership." } };
+    return { ok: false, error: { code: "not_found", message: "This employee has no matching company membership." } };
   }
 
   const { data: removed, error } = await supabase
     .from("membership_roles")
     .delete()
     .eq("id", membershipRoleId)
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("membership_id", membership.id)
     .select("id, role_id");
 
@@ -803,13 +803,13 @@ export async function removeEmployeeRole(
       error: {
         code: "conflict",
         message:
-          "That role can't be removed — it may be this organization's last company_admin, which must always keep at least one.",
+          "That role can't be removed — it may be this company's last company_admin, which must always keep at least one.",
       },
     };
   }
 
   await supabase.from("audit_events").insert({
-    organization_id: organizationId,
+    company_id: companyId,
     actor_user_id: user.id,
     action: "update",
     entity_type: "employee",

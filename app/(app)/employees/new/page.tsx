@@ -1,6 +1,6 @@
 import { forbidden } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { canManageEmployees } from "@/modules/employees/permissions";
 import { EmployeeForm } from "@/modules/employees/components/employee-form";
 import { PageHeader } from "@/components/shared/page-header";
@@ -15,22 +15,22 @@ import { PageHeader } from "@/components/shared/page-header";
  */
 export default async function NewEmployeePage() {
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   if (!canManageEmployees(roleNames)) {
     forbidden();
   }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Add employee" description="Create a new employee record for this organization." />
+      <PageHeader title="Add employee" description="Create a new employee record for this company." />
       <div className="max-w-2xl">
-        <EmployeeForm mode="create" organizationId={currentOrganizationId} />
+        <EmployeeForm mode="create" companyId={currentCompanyId} />
       </div>
     </div>
   );

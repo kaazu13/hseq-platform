@@ -187,7 +187,7 @@ export const SCAFFOLD_DEFECT_SEVERITY_LABELS: Record<ScaffoldDefectSeverity, str
 /**
  * The number of days before expiry a valid inspection starts showing as
  * "expiring soon" — this milestone asked for the VALIDITY PERIOD itself
- * to be configurable (project -> organization -> system default, resolved
+ * to be configurable (project -> company -> system default, resolved
  * in the database — see resolve_scaffold_inspection_validity_days() in
  * the migration), but said nothing about the WARNING THRESHOLD being
  * configurable too. A fixed, documented default here, not a hidden

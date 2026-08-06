@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 /** Controlled PDF replacement — "if an incorrect PDF was uploaded" workflow. Always requires a reason; never a silent overwrite (see replace_toolbox_meeting_file() in the migration). */
-export function ToolboxMeetingReplaceFileForm({ organizationId, meetingId, projectId }: { organizationId: string; meetingId: string; projectId: string }) {
+export function ToolboxMeetingReplaceFileForm({ companyId, meetingId, projectId }: { companyId: string; meetingId: string; projectId: string }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -24,7 +24,7 @@ export function ToolboxMeetingReplaceFileForm({ organizationId, meetingId, proje
 
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
-      const result = await replaceToolboxMeetingFile(organizationId, meetingId, projectId, formData);
+      const result = await replaceToolboxMeetingFile(companyId, meetingId, projectId, formData);
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});

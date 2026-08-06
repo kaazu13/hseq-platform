@@ -130,7 +130,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
         open={confirmSignOutOpen}
         onOpenChange={setConfirmSignOutOpen}
         title="Sign out?"
-        description="You'll need to sign in again to access your organizations."
+        description="You'll need to sign in again to access your companies."
         confirmLabel="Sign out"
         variant="destructive"
         onConfirm={handleSignOut}

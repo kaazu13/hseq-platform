@@ -26,13 +26,13 @@ function sortByName<T extends { employee: { last_name: string; first_name: strin
  * a raw `.from("employees").select(...)` — see this file's header comment
  * and supabase/migrations/20260728090000_projects_and_teams.sql §15.
  */
-export async function listTeamsWithAssignments(organizationId: string, projectId: string): Promise<TeamWithAssignments[]> {
+export async function listTeamsWithAssignments(companyId: string, projectId: string): Promise<TeamWithAssignments[]> {
   const supabase = await createClient();
 
   const { data: teams, error: teamsError } = await supabase
     .from("teams")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .order("display_order", { ascending: true })
     .order("created_at", { ascending: true });
@@ -79,13 +79,13 @@ export async function listTeamsWithAssignments(organizationId: string, projectId
   });
 }
 
-/** A single team scoped to `organizationId`/`projectId` — null if it doesn't exist, belongs elsewhere, or RLS hides it. */
-export async function getTeam(organizationId: string, projectId: string, teamId: string): Promise<Team | null> {
+/** A single team scoped to `companyId`/`projectId` — null if it doesn't exist, belongs elsewhere, or RLS hides it. */
+export async function getTeam(companyId: string, projectId: string, teamId: string): Promise<Team | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("teams")
     .select("*")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .eq("id", teamId)
     .maybeSingle();
@@ -103,13 +103,13 @@ export async function getTeam(organizationId: string, projectId: string, teamId:
  * employee already on a different team shows where, since selecting them
  * here moves them per move_employee_to_team()'s close-then-open semantics).
  */
-export async function listProjectRosterCandidates(organizationId: string, projectId: string): Promise<ProjectRosterCandidate[]> {
+export async function listProjectRosterCandidates(companyId: string, projectId: string): Promise<ProjectRosterCandidate[]> {
   const supabase = await createClient();
 
   const { data: roster, error: rosterError } = await supabase
     .from("project_assignments")
     .select("employee_id")
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("project_id", projectId)
     .is("end_at", null);
 
@@ -123,11 +123,11 @@ export async function listProjectRosterCandidates(organizationId: string, projec
       supabase
         .from("team_assignments")
         .select("employee_id, team_id, assignment_role")
-        .eq("organization_id", organizationId)
+        .eq("company_id", companyId)
         .eq("project_id", projectId)
         .is("end_at", null)
         .in("employee_id", employeeIds),
-      supabase.from("teams").select("id, name").eq("organization_id", organizationId).eq("project_id", projectId),
+      supabase.from("teams").select("id, name").eq("company_id", companyId).eq("project_id", projectId),
     ]);
 
   if (employeesError) throw employeesError;

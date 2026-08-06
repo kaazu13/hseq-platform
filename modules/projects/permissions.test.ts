@@ -15,16 +15,16 @@ describe("canCreateProjects", () => {
 });
 
 describe("canManageProject", () => {
-  it("allows an org-wide manager regardless of project-specific roles", () => {
+  it("allows an company-wide manager regardless of project-specific roles", () => {
     expect(canManageProject(["company_admin"], [])).toBe(true);
     expect(canManageProject(["operations_manager"], [])).toBe(true);
   });
 
-  it("allows this project's own assigned Project Manager, even without any org-wide role", () => {
+  it("allows this project's own assigned Project Manager, even without any company-wide role", () => {
     expect(canManageProject(["employee"], ["project_manager"])).toBe(true);
   });
 
-  it("denies someone with neither an org-wide manager role nor a project_manager assignment on this project", () => {
+  it("denies someone with neither an company-wide manager role nor a project_manager assignment on this project", () => {
     expect(canManageProject(["hseq_manager"], [])).toBe(false);
     expect(canManageProject(["employee"], [])).toBe(false);
   });

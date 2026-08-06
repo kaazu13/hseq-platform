@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileText, History, Pencil, Wrench } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject, getMyProjectAssignmentRoles, listProjectAssignments } from "@/modules/projects/queries";
 import { canManageProject } from "@/modules/projects/permissions";
 import { listActiveEmployeesForPicker } from "@/modules/employees/queries";
@@ -36,28 +36,28 @@ type ProjectDetailPageProps = {
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { projectId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     notFound();
   }
 
-  const project = await getProject(currentOrganizationId, projectId);
+  const project = await getProject(currentCompanyId, projectId);
   if (!project) {
     notFound();
   }
 
   const [roleNames, myProjectRoles] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
-    getMyProjectAssignmentRoles(currentOrganizationId, projectId, user.id),
+    getUserRoleNames(currentCompanyId),
+    getMyProjectAssignmentRoles(currentCompanyId, projectId, user.id),
   ]);
   const canManage = canManageProject(roleNames, myProjectRoles);
 
   const [teams, rosterCandidates, projectAssignments, pickerEmployeeRows] = await Promise.all([
-    listTeamsWithAssignments(currentOrganizationId, projectId),
-    listProjectRosterCandidates(currentOrganizationId, projectId),
-    listProjectAssignments(currentOrganizationId, projectId),
-    listActiveEmployeesForPicker(currentOrganizationId),
+    listTeamsWithAssignments(currentCompanyId, projectId),
+    listProjectRosterCandidates(currentCompanyId, projectId),
+    listProjectAssignments(currentCompanyId, projectId),
+    listActiveEmployeesForPicker(currentCompanyId),
   ]);
 
   const pickerEmployees: EmployeeOption[] = pickerEmployeeRows.map((employee) => ({
@@ -109,7 +109,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
         <TabsContent value="teams" className="pt-4">
           <TeamsGrid
-            organizationId={currentOrganizationId}
+            companyId={currentCompanyId}
             projectId={projectId}
             teams={teams}
             rosterCandidates={rosterCandidates}
@@ -119,7 +119,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
         <TabsContent value="assignments" className="pt-4">
           <ProjectAssignmentsTab
-            organizationId={currentOrganizationId}
+            companyId={currentCompanyId}
             projectId={projectId}
             assignments={projectAssignments}
             pickerEmployees={pickerEmployees}

@@ -6,7 +6,7 @@ import { RehireEmployeeDialog } from "@/modules/employees/components/rehire-empl
 import { EmptyState } from "@/components/shared/empty-state";
 
 type EmploymentHistoryTabProps = {
-  organizationId: string;
+  companyId: string;
   employeeId: string;
   employeeName: string;
   periods: EmploymentPeriod[];
@@ -32,7 +32,7 @@ function formatDate(value: string | null): string {
  * (supabase/migrations/20260727090000_employment_periods.sql), never to
  * `employees` directly — see that migration's header for why.
  */
-export function EmploymentHistoryTab({ organizationId, employeeId, employeeName, periods, canManage }: EmploymentHistoryTabProps) {
+export function EmploymentHistoryTab({ companyId, employeeId, employeeName, periods, canManage }: EmploymentHistoryTabProps) {
   const openPeriod = periods.find((period) => period.end_date === null) ?? null;
 
   return (
@@ -40,9 +40,9 @@ export function EmploymentHistoryTab({ organizationId, employeeId, employeeName,
       {canManage && (
         <div className="flex justify-start">
           {openPeriod ? (
-            <EndEmploymentDialog organizationId={organizationId} employeeId={employeeId} employeeName={employeeName} />
+            <EndEmploymentDialog companyId={companyId} employeeId={employeeId} employeeName={employeeName} />
           ) : (
-            <RehireEmployeeDialog organizationId={organizationId} employeeId={employeeId} employeeName={employeeName} />
+            <RehireEmployeeDialog companyId={companyId} employeeId={employeeId} employeeName={employeeName} />
           )}
         </div>
       )}

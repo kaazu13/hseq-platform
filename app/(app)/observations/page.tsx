@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listObservations, type ObservationListFilters } from "@/modules/observations/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { listActiveEmployeesForPicker } from "@/modules/employees/queries";
@@ -19,7 +19,7 @@ type ObservationsPageProps = {
  * Safety Observations list — see
  * supabase/migrations/20260802120000_safety_observations_and_corrective_actions.sql
  * and modules/observations/. RLS (safety_observations_select) is the real
- * scoping — org-wide roles see every observation in the organization,
+ * scoping — company-wide roles see every observation in the company,
  * project-scoped roles see everything on their assigned project(s), and an
  * Employee sees only what they authored (docs/ROLES_AND_PERMISSIONS.md §5
  * footnote 12) — this page never filters visibility client-side, only the
@@ -29,15 +29,15 @@ type ObservationsPageProps = {
 export default async function ObservationsPage({ searchParams }: ObservationsPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Safety Observations" description="Site safety observations — positive recognition and safety issues." />
         <EmptyState
           icon={Eye}
-          title="You're not part of an organization yet"
+          title="You're not part of an company yet"
           description="Once an administrator adds your account to one, observations will appear here."
           className="flex-1"
         />
@@ -58,9 +58,9 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
   };
 
   const [observations, projects, responsiblePersons] = await Promise.all([
-    listObservations(currentOrganizationId, filters),
-    listProjects(currentOrganizationId),
-    listActiveEmployeesForPicker(currentOrganizationId),
+    listObservations(currentCompanyId, filters),
+    listProjects(currentCompanyId),
+    listActiveEmployeesForPicker(currentCompanyId),
   ]);
   const projectNameById = new Map(projects.map((project) => [project.id, project.name]));
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { ToolboxDocumentStatus } from "@/modules/toolbox-templates/types";
 
-export function ToolboxTemplateStatusToggle({ organizationId, templateId, status }: { organizationId: string; templateId: string; status: ToolboxDocumentStatus }) {
+export function ToolboxTemplateStatusToggle({ companyId, templateId, status }: { companyId: string; templateId: string; status: ToolboxDocumentStatus }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -15,7 +15,7 @@ export function ToolboxTemplateStatusToggle({ organizationId, templateId, status
     setError(null);
     const nextStatus = status === "active" ? "archived" : "active";
     startTransition(async () => {
-      const result = await setToolboxTemplateStatus(organizationId, templateId, nextStatus);
+      const result = await setToolboxTemplateStatus(companyId, templateId, nextStatus);
       if (!result.ok) setError(result.error.message);
     });
   }

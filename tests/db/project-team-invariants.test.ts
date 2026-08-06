@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   sql,
   asUser,
-  createTestOrg,
-  deleteTestOrg,
+  createTestCompany,
+  deleteTestCompany,
   createTestUser,
   deleteTestUser,
   addMembership,
@@ -22,71 +22,71 @@ import {
  * close_orphaned_team_assignment() mechanisms directly.
  */
 describe("project and team invariants", () => {
-  let orgA: Awaited<ReturnType<typeof createTestOrg>>;
-  let orgB: Awaited<ReturnType<typeof createTestOrg>>;
-  let admin: Awaited<ReturnType<typeof createTestUser>>; // company_admin in Org A
+  let companyA: Awaited<ReturnType<typeof createTestCompany>>;
+  let companyB: Awaited<ReturnType<typeof createTestCompany>>;
+  let admin: Awaited<ReturnType<typeof createTestUser>>; // company_admin in Company A
 
   beforeAll(async () => {
-    orgA = await createTestOrg("proj-team-a");
-    orgB = await createTestOrg("proj-team-b");
+    companyA = await createTestCompany("proj-team-a");
+    companyB = await createTestCompany("proj-team-b");
     admin = await createTestUser("Project Team Admin");
-    await addMembership(orgA.orgId, admin.userId, ["company_admin"]);
+    await addMembership(companyA.companyId, admin.userId, ["company_admin"]);
   });
 
   afterAll(async () => {
-    await deleteTestOrg(orgA.orgId);
-    await deleteTestOrg(orgB.orgId);
+    await deleteTestCompany(companyA.companyId);
+    await deleteTestCompany(companyB.companyId);
     await deleteTestUser(admin.userId);
     await sql.end();
   });
 
-  it("cross-organization project/team relationships fail at the database level (composite FK)", async () => {
-    const projectInA = await createTestProject(orgA.orgId, "Project In A");
-    // A team claiming organization_id = Org B but project_id from Org A must fail —
-    // teams_project_fk is FOREIGN KEY (project_id, organization_id) REFERENCES projects (id, organization_id).
+  it("cross-company project/team relationships fail at the database level (composite FK)", async () => {
+    const projectInA = await createTestProject(companyA.companyId, "Project In A");
+    // A team claiming company_id = Company B but project_id from Company A must fail —
+    // teams_project_fk is FOREIGN KEY (project_id, company_id) REFERENCES projects (id, company_id).
     await expect(
-      sql`insert into teams (organization_id, project_id, name) values (${orgB.orgId}, ${projectInA}, 'Cross-org team')`,
+      sql`insert into teams (company_id, project_id, name) values (${companyB.companyId}, ${projectInA}, 'Cross-company team')`,
     ).rejects.toMatchObject(FK_VIOLATION);
   });
 
-  it("cross-organization project_assignments fail at the database level (composite FK)", async () => {
-    const projectInA = await createTestProject(orgA.orgId, "Project For Assignment");
-    const employeeInB = await createTestEmployee(orgB.orgId, null, "Employee", "InOrgB");
-    // employee_id belongs to Org B but organization_id claims Org A —
-    // project_assignments_employee_fk is FOREIGN KEY (employee_id, organization_id)
-    // REFERENCES employees (id, organization_id).
+  it("cross-company project_assignments fail at the database level (composite FK)", async () => {
+    const projectInA = await createTestProject(companyA.companyId, "Project For Assignment");
+    const employeeInB = await createTestEmployee(companyB.companyId, null, "Employee", "InOrgB");
+    // employee_id belongs to Company B but company_id claims Company A —
+    // project_assignments_employee_fk is FOREIGN KEY (employee_id, company_id)
+    // REFERENCES employees (id, company_id).
     await expect(
-      sql`insert into project_assignments (organization_id, project_id, employee_id, assignment_role) values (${orgA.orgId}, ${projectInA}, ${employeeInB}, 'member')`,
+      sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectInA}, ${employeeInB}, 'member')`,
     ).rejects.toMatchObject(FK_VIOLATION);
   });
 
   it("only one active team assignment per project — a second open team assignment (different team, same project) is rejected", async () => {
-    const projectId = await createTestProject(orgA.orgId, "One Team Project");
-    const teamAlpha = await createTestTeam(orgA.orgId, projectId, "Alpha");
-    const teamBravo = await createTestTeam(orgA.orgId, projectId, "Bravo");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "One", "Team");
-    await sql`insert into project_assignments (organization_id, project_id, employee_id, assignment_role) values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member')`;
+    const projectId = await createTestProject(companyA.companyId, "One Team Project");
+    const teamAlpha = await createTestTeam(companyA.companyId, projectId, "Alpha");
+    const teamBravo = await createTestTeam(companyA.companyId, projectId, "Bravo");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "One", "Team");
+    await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')`;
 
     await asUser(admin.userId, (tx) =>
-      tx`insert into team_assignments (organization_id, project_id, team_id, employee_id) values (${orgA.orgId}, ${projectId}, ${teamAlpha}, ${employeeId})`,
+      tx`insert into team_assignments (company_id, project_id, team_id, employee_id) values (${companyA.companyId}, ${projectId}, ${teamAlpha}, ${employeeId})`,
     );
 
     await expect(
       asUser(admin.userId, (tx) =>
-        tx`insert into team_assignments (organization_id, project_id, team_id, employee_id) values (${orgA.orgId}, ${projectId}, ${teamBravo}, ${employeeId})`,
+        tx`insert into team_assignments (company_id, project_id, team_id, employee_id) values (${companyA.companyId}, ${projectId}, ${teamBravo}, ${employeeId})`,
       ),
     ).rejects.toMatchObject(UNIQUE_VIOLATION);
   });
 
   it("historical team movement: move_employee_to_team() closes the previous assignment and opens the new one", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Move Project");
-    const teamAlpha = await createTestTeam(orgA.orgId, projectId, "Move Alpha");
-    const teamBravo = await createTestTeam(orgA.orgId, projectId, "Move Bravo");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "Move", "Employee");
-    await sql`insert into project_assignments (organization_id, project_id, employee_id, assignment_role) values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member')`;
+    const projectId = await createTestProject(companyA.companyId, "Move Project");
+    const teamAlpha = await createTestTeam(companyA.companyId, projectId, "Move Alpha");
+    const teamBravo = await createTestTeam(companyA.companyId, projectId, "Move Bravo");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Move", "Employee");
+    await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')`;
 
     await asUser(admin.userId, (tx) =>
-      tx`insert into team_assignments (organization_id, project_id, team_id, employee_id) values (${orgA.orgId}, ${projectId}, ${teamAlpha}, ${employeeId})`,
+      tx`insert into team_assignments (company_id, project_id, team_id, employee_id) values (${companyA.companyId}, ${projectId}, ${teamAlpha}, ${employeeId})`,
     );
 
     await asUser(admin.userId, (tx) => tx`select * from move_employee_to_team(${projectId}, ${teamBravo}, ${employeeId})`);
@@ -100,50 +100,50 @@ describe("project and team invariants", () => {
   });
 
   it("overlapping project assignments fail: a new row for the same (project, employee, role) starting before the prior one closed is rejected", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Overlap Project");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "Overlap", "Assignment");
+    const projectId = await createTestProject(companyA.companyId, "Overlap Project");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Overlap", "Assignment");
     const [firstAssignment] = await sql`
-      insert into project_assignments (organization_id, project_id, employee_id, assignment_role, start_at)
-      values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member', '2026-01-01T00:00:00Z')
+      insert into project_assignments (company_id, project_id, employee_id, assignment_role, start_at)
+      values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member', '2026-01-01T00:00:00Z')
       returning id
     `;
     await sql`update project_assignments set end_at = '2026-02-01T00:00:00Z' where id = ${firstAssignment.id}`;
 
     await expect(
       asUser(admin.userId, (tx) =>
-        tx`insert into project_assignments (organization_id, project_id, employee_id, assignment_role, start_at) values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member', '2026-01-15T00:00:00Z')`,
+        tx`insert into project_assignments (company_id, project_id, employee_id, assignment_role, start_at) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member', '2026-01-15T00:00:00Z')`,
       ),
     ).rejects.toMatchObject(RAISED_EXCEPTION);
   });
 
   it("a terminated employee cannot receive a new project assignment", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Terminated Employee Project");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "Terminated", "Employee");
+    const projectId = await createTestProject(companyA.companyId, "Terminated Employee Project");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Terminated", "Employee");
     const [period] = await sql`select id from employee_employment_periods where employee_id = ${employeeId} and end_date is null`;
     await sql`update employee_employment_periods set end_date = current_date, end_reason = 'resigned' where id = ${period.id}`;
     // sync trigger has now set employees.employment_status = 'terminated'
 
     await expect(
       asUser(admin.userId, (tx) =>
-        tx`insert into project_assignments (organization_id, project_id, employee_id, assignment_role) values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member')`,
+        tx`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')`,
       ),
     ).rejects.toMatchObject(RAISED_EXCEPTION);
   });
 
   it("an archived project rejects new teams", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Will Be Archived", "archived");
+    const projectId = await createTestProject(companyA.companyId, "Will Be Archived", "archived");
     await expect(
-      asUser(admin.userId, (tx) => tx`insert into teams (organization_id, project_id, name) values (${orgA.orgId}, ${projectId}, 'Team In Archived Project')`),
+      asUser(admin.userId, (tx) => tx`insert into teams (company_id, project_id, name) values (${companyA.companyId}, ${projectId}, 'Team In Archived Project')`),
     ).rejects.toMatchObject(RAISED_EXCEPTION);
   });
 
   it("a team with active members cannot be archived", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Archive Guard Project");
-    const teamId = await createTestTeam(orgA.orgId, projectId, "Has Members");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "Team", "Member");
-    await sql`insert into project_assignments (organization_id, project_id, employee_id, assignment_role) values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member')`;
+    const projectId = await createTestProject(companyA.companyId, "Archive Guard Project");
+    const teamId = await createTestTeam(companyA.companyId, projectId, "Has Members");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Team", "Member");
+    await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')`;
     await asUser(admin.userId, (tx) =>
-      tx`insert into team_assignments (organization_id, project_id, team_id, employee_id) values (${orgA.orgId}, ${projectId}, ${teamId}, ${employeeId})`,
+      tx`insert into team_assignments (company_id, project_id, team_id, employee_id) values (${companyA.companyId}, ${projectId}, ${teamId}, ${employeeId})`,
     );
 
     await expect(
@@ -152,16 +152,16 @@ describe("project and team invariants", () => {
   });
 
   it("orphan cleanup: closing an employee's last project assignment auto-closes their open team assignment in that project", async () => {
-    const projectId = await createTestProject(orgA.orgId, "Orphan Cleanup Project");
-    const teamId = await createTestTeam(orgA.orgId, projectId, "Orphan Team");
-    const employeeId = await createTestEmployee(orgA.orgId, null, "Orphan", "Cleanup");
+    const projectId = await createTestProject(companyA.companyId, "Orphan Cleanup Project");
+    const teamId = await createTestTeam(companyA.companyId, projectId, "Orphan Team");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Orphan", "Cleanup");
     const [projectAssignment] = await sql`
-      insert into project_assignments (organization_id, project_id, employee_id, assignment_role)
-      values (${orgA.orgId}, ${projectId}, ${employeeId}, 'member')
+      insert into project_assignments (company_id, project_id, employee_id, assignment_role)
+      values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')
       returning id
     `;
     await asUser(admin.userId, (tx) =>
-      tx`insert into team_assignments (organization_id, project_id, team_id, employee_id) values (${orgA.orgId}, ${projectId}, ${teamId}, ${employeeId})`,
+      tx`insert into team_assignments (company_id, project_id, team_id, employee_id) values (${companyA.companyId}, ${projectId}, ${teamId}, ${employeeId})`,
     );
 
     // Close the employee's ONLY project_assignments row for this project — this

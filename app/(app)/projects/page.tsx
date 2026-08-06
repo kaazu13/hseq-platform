@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FolderKanban, Plus } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { canCreateProjects } from "@/modules/projects/permissions";
 import { ProjectCard } from "@/modules/projects/components/project-card";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 /**
  * Real project list, replacing the `ComingSoonPage` placeholder — see
  * docs/PRODUCT_REQUIREMENTS.md's Projects section. RLS
- * (projects_select) is the real scoping: org-wide managers see every
+ * (projects_select) is the real scoping: company-wide managers see every
  * project; everyone else sees only projects they're explicitly assigned to
  * (project- or team-level) — this page never has to filter client-side.
  * Cards, not a table, per this milestone's UI requirement — unpaginated
@@ -20,15 +20,15 @@ import { Button } from "@/components/ui/button";
  */
 export default async function ProjectsPage() {
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Projects" description="The contracted jobs and sites your organization is executing." />
+        <PageHeader title="Projects" description="The contracted jobs and sites your company is executing." />
         <EmptyState
           icon={FolderKanban}
-          title="You're not part of an organization yet"
+          title="You're not part of an company yet"
           description="Once an administrator adds your account to one, projects will appear here."
           className="flex-1"
         />
@@ -36,15 +36,15 @@ export default async function ProjectsPage() {
     );
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   const canCreate = canCreateProjects(roleNames);
-  const projects = await listProjects(currentOrganizationId);
+  const projects = await listProjects(currentCompanyId);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
         title="Projects"
-        description="The contracted jobs and sites your organization is executing."
+        description="The contracted jobs and sites your company is executing."
         actions={
           canCreate ? (
             <Button size="sm" nativeButton={false} render={<Link href="/projects/new" />}>

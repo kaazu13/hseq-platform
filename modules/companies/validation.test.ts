@@ -17,7 +17,7 @@ describe("updateOwnProfileFormSchema", () => {
     expect(updateOwnProfileFormSchema.safeParse({ fullName: "   ", phone: "" }).success).toBe(false);
   });
 
-  it("has no field for role, organization, or status — those stay read-only by construction, not just by convention", () => {
+  it("has no field for role, company, or status — those stay read-only by construction, not just by convention", () => {
     const shape = updateOwnProfileFormSchema.shape;
     expect(Object.keys(shape)).toEqual(["fullName", "phone"]);
   });

@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getObservation, isCallerProjectAccessible, listObservationCandidateEmployees } from "@/modules/observations/queries";
 import { canEditObservation } from "@/modules/observations/permissions";
@@ -23,13 +23,13 @@ type EditObservationPageProps = {
 export default async function EditObservationPage({ params }: EditObservationPageProps) {
   const { observationId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const observation = await getObservation(currentOrganizationId, observationId);
+  const observation = await getObservation(currentCompanyId, observationId);
   if (!observation) {
     notFound();
   }
@@ -38,9 +38,9 @@ export default async function EditObservationPage({ params }: EditObservationPag
   }
 
   const [roleNames, hasProjectAccess, project] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     isCallerProjectAccessible(observation.project_id),
-    getProject(currentOrganizationId, observation.project_id),
+    getProject(currentCompanyId, observation.project_id),
   ]);
 
   if (!canEditObservation(roleNames, hasProjectAccess, observation.created_by === user.id)) {
@@ -48,7 +48,7 @@ export default async function EditObservationPage({ params }: EditObservationPag
   }
 
   const projectName = project?.name ?? "Project unavailable";
-  const candidates = await listObservationCandidateEmployees(currentOrganizationId, observation.project_id);
+  const candidates = await listObservationCandidateEmployees(currentCompanyId, observation.project_id);
   const employeeOptions = toEmployeeOptions(candidates);
 
   return (
@@ -56,13 +56,13 @@ export default async function EditObservationPage({ params }: EditObservationPag
       <PageHeader title="Edit observation" description={`${projectName} · ${observation.work_area}`} />
 
       <div className="max-w-3xl">
-        <ObservationForm mode="edit" organizationId={currentOrganizationId} projectId={observation.project_id} projectName={projectName} candidates={employeeOptions} observation={observation} />
+        <ObservationForm mode="edit" companyId={currentCompanyId} projectId={observation.project_id} projectName={projectName} candidates={employeeOptions} observation={observation} />
       </div>
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="People involved" description="Optional — anyone directly involved in this observation." />
         <ObservationParticipantsPicker
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           observationId={observation.id}
           projectId={observation.project_id}
           createdBy={observation.created_by}

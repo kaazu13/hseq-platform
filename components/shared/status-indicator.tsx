@@ -24,7 +24,7 @@ type StatusIndicatorProps = {
  * domain-specific and belong with those modules when they're built — see
  * that section's guidance not to invent status colors ad hoc). This is the
  * generic five-tone version for cross-cutting, non-HSEQ statuses (e.g. an
- * organization's `trial`/`active`/`suspended` status, used on the
+ * company's `trial`/`active`/`suspended` status, used on the
  * dashboard today).
  */
 export function StatusIndicator({ tone, label, className }: StatusIndicatorProps) {

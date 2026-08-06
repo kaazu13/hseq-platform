@@ -16,7 +16,7 @@ import {
 import { NAV_GROUPS, isNavItemActive } from "@/components/app-shell/nav-config";
 import { parseCollapsedGroups, serializeCollapsedGroups, isGroupOpen } from "@/components/app-shell/nav-state";
 import { subscribeToCollapsedGroups, getCollapsedGroupsSnapshot, getCollapsedGroupsServerSnapshot, writeCollapsedGroups } from "@/components/app-shell/nav-storage";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { cn } from "@/lib/utils";
 
 /**

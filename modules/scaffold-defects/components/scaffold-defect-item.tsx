@@ -7,7 +7,7 @@ import { closeScaffoldDefect, rejectScaffoldDefect, reopenScaffoldDefect, update
 import { canCloseScaffoldDefect, canUpdateScaffoldDefectProgress } from "@/modules/scaffold-defects/permissions";
 import { SCAFFOLD_DEFECT_STATUS_LABELS, type ScaffoldDefectDetail } from "@/modules/scaffold-defects/types";
 import type { EmployeeOption } from "@/components/shared/employee-combobox";
-import type { RoleName } from "@/modules/organizations/types";
+import type { RoleName } from "@/modules/companies/types";
 import { ScaffoldDefectStatusBadge } from "@/modules/scaffold-defects/components/scaffold-defect-status-badge";
 import { ScaffoldDefectSeverityBadge } from "@/modules/scaffold-defects/components/scaffold-defect-severity-badge";
 import { ScaffoldDefectFormDialog } from "@/modules/scaffold-defects/components/scaffold-defect-form-dialog";
@@ -23,7 +23,7 @@ const PROGRESS_STATUSES = ["open", "in_progress", "awaiting_verification"] as co
 type ProgressStatus = (typeof PROGRESS_STATUSES)[number];
 
 type ScaffoldDefectItemProps = {
-  organizationId: string;
+  companyId: string;
   inspectionId: string;
   scaffoldId: string;
   projectId: string;
@@ -40,7 +40,7 @@ function formatDate(value: string): string {
 }
 
 /** One scaffold defect's card — mirrors modules/corrective-actions/components/corrective-action-item.tsx exactly, with this domain's field names (immediate_control, verification_notes, verified_by/verified_at). */
-export function ScaffoldDefectItem({ organizationId, inspectionId, scaffoldId, projectId, defect, candidates, canManageDetails, roleNames, hasProjectAccess, currentUserProfileId }: ScaffoldDefectItemProps) {
+export function ScaffoldDefectItem({ companyId, inspectionId, scaffoldId, projectId, defect, candidates, canManageDetails, roleNames, hasProjectAccess, currentUserProfileId }: ScaffoldDefectItemProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -72,12 +72,12 @@ export function ScaffoldDefectItem({ organizationId, inspectionId, scaffoldId, p
   }
 
   function handleUpdateProgress() {
-    runAction(() => updateScaffoldDefectProgress(organizationId, defect.id, inspectionId, scaffoldId, projectId, defect.responsible_person_id, { status: progressStatus, completionNotes }));
+    runAction(() => updateScaffoldDefectProgress(companyId, defect.id, inspectionId, scaffoldId, projectId, defect.responsible_person_id, { status: progressStatus, completionNotes }));
   }
 
   function handleClose() {
     runAction(
-      () => closeScaffoldDefect(organizationId, defect.id, inspectionId, scaffoldId, projectId, defect.created_by, defect.responsible_person_id, { verificationNotes }),
+      () => closeScaffoldDefect(companyId, defect.id, inspectionId, scaffoldId, projectId, defect.created_by, defect.responsible_person_id, { verificationNotes }),
       () => setCloseConfirmOpen(false),
     );
   }
@@ -87,8 +87,8 @@ export function ScaffoldDefectItem({ organizationId, inspectionId, scaffoldId, p
     runAction(
       () =>
         kind === "reject"
-          ? rejectScaffoldDefect(organizationId, defect.id, inspectionId, scaffoldId, projectId, defect.created_by, defect.responsible_person_id, { reason })
-          : reopenScaffoldDefect(organizationId, defect.id, inspectionId, scaffoldId, projectId, defect.created_by, defect.responsible_person_id, { reason }),
+          ? rejectScaffoldDefect(companyId, defect.id, inspectionId, scaffoldId, projectId, defect.created_by, defect.responsible_person_id, { reason })
+          : reopenScaffoldDefect(companyId, defect.id, inspectionId, scaffoldId, projectId, defect.created_by, defect.responsible_person_id, { reason }),
       () => {
         setReasonDialog(null);
         setReason("");
@@ -200,7 +200,7 @@ export function ScaffoldDefectItem({ organizationId, inspectionId, scaffoldId, p
       </CardContent>
 
       {canManageDetails && (
-        <ScaffoldDefectFormDialog organizationId={organizationId} inspectionId={inspectionId} scaffoldId={scaffoldId} projectId={projectId} candidates={candidates} defect={defect} open={editOpen} onOpenChange={setEditOpen} />
+        <ScaffoldDefectFormDialog companyId={companyId} inspectionId={inspectionId} scaffoldId={scaffoldId} projectId={projectId} candidates={candidates} defect={defect} open={editOpen} onOpenChange={setEditOpen} />
       )}
 
       <AlertDialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>

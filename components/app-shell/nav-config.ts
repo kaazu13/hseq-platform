@@ -22,8 +22,8 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import type { RoleName } from "@/modules/organizations/types";
-import { ORGANIZATION_ADMIN_ROLES } from "@/modules/admin/permissions";
+import type { RoleName } from "@/modules/companies/types";
+import { COMPANY_ADMIN_ROLES } from "@/modules/admin/permissions";
 
 /**
  * Single source of truth for the primary navigation — see
@@ -78,7 +78,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/dashboard",
         icon: LayoutDashboard,
         status: "available",
-        description: "Your organization at a glance.",
+        description: "Your company at a glance.",
       },
       {
         label: "Safety Overview",
@@ -86,7 +86,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: ShieldAlert,
         status: "available",
         description:
-          "LMRA activity, open safety items, and expiring qualifications across your organization, filterable by project, work area, date, and status.",
+          "LMRA activity, open safety items, and expiring qualifications across your company, filterable by project, work area, date, and status.",
       },
     ],
   },
@@ -99,7 +99,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Users,
         status: "available",
         description:
-          "Company employment records for your organization — name, position, employment status, and (once activated) organization roles.",
+          "Company employment records for your company — name, position, employment status, and (once activated) company roles.",
       },
       {
         label: "Timesheets",
@@ -120,7 +120,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: FolderKanban,
         status: "available",
         description:
-          "The contracted jobs and sites your organization is executing, with Team management and status tracking from planning through archived.",
+          "The contracted jobs and sites your company is executing, with Team management and status tracking from planning through archived.",
       },
       {
         label: "Equipment",
@@ -157,7 +157,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/toolbox-meetings?section=templates",
         icon: BookOpen,
         status: "available",
-        description: "A reusable, organization-wide library of toolbox meeting PDF templates.",
+        description: "A reusable, company-wide library of toolbox meeting PDF templates.",
         matchQueryParam: { key: "section", value: "templates" },
       },
       {
@@ -165,7 +165,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/toolbox-meetings?section=safety-flash",
         icon: Siren,
         status: "available",
-        description: "Short, one-page safety bulletins shared organization-wide or on a specific project.",
+        description: "Short, one-page safety bulletins shared company-wide or on a specific project.",
         matchQueryParam: { key: "section", value: "safety-flash" },
       },
     ],
@@ -187,7 +187,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: ListChecks,
         status: "planned",
         description:
-          "An organization-wide register of tracked remediation tasks — today, corrective actions are managed inline within the Safety Observation that raised them.",
+          "An company-wide register of tracked remediation tasks — today, corrective actions are managed inline within the Safety Observation that raised them.",
       },
       {
         label: "Safety Walks",
@@ -224,7 +224,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: ClipboardList,
         status: "planned",
         description:
-          "An organization-wide register of scaffold inspections across every scaffold — today, an individual scaffold's inspection history is reached from its own register entry.",
+          "An company-wide register of scaffold inspections across every scaffold — today, an individual scaffold's inspection history is reached from its own register entry.",
       },
       {
         label: "Scaffold Defects",
@@ -232,7 +232,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: AlertTriangle,
         status: "planned",
         description:
-          "An organization-wide register of open scaffold defects across every scaffold — today, a scaffold's defects are reached from its own inspection record.",
+          "An company-wide register of open scaffold defects across every scaffold — today, a scaffold's defects are reached from its own inspection record.",
       },
     ],
   },
@@ -245,7 +245,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: FileText,
         status: "planned",
         description:
-          "General organization and project documents, separate from individual employee certificates.",
+          "General company and project documents, separate from individual employee certificates.",
       },
       {
         label: "Reports",
@@ -273,22 +273,22 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/account",
         icon: User,
         status: "available",
-        description: "Your profile, organization, roles, and project assignments.",
+        description: "Your profile, company, roles, and project assignments.",
       },
       {
         label: "Members",
         href: "/admin/members",
         icon: Users,
         status: "available",
-        description: "Organization member status, roles, and project assignments.",
-        roles: ORGANIZATION_ADMIN_ROLES,
+        description: "Company member status, roles, and project assignments.",
+        roles: COMPANY_ADMIN_ROLES,
       },
       {
         label: "Settings",
         href: "/settings",
         icon: Settings,
         status: "planned",
-        description: "Organization settings, membership, and role management.",
+        description: "Company settings, membership, and role management.",
       },
     ],
   },

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireOrganizationMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -27,17 +27,17 @@ import {
  * different from every other module built so far: docs/
  * ROLES_AND_PERMISSIONS.md §5's LMRA row gives Company Manager/Workforce
  * Coordinator View only, not Full — so `requireLmraManageAccess` below is
- * NOT `requireAnyRole(organizationId, EMPLOYEE_WRITE_ROLES)`-shaped; it
+ * NOT `requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES)`-shaped; it
  * checks hseq_manager OR the caller's own foreman standing on the specific
  * project, mirroring modules/projects/actions.ts's
  * `requireProjectManageAccess` in spirit but against different roles.
  */
 
-async function requireLmraManageAccess(organizationId: string, projectId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
+async function requireLmraManageAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
   const [roleNames, isForeman] = await Promise.all([
-    getUserRoleNames(organizationId),
-    isCallerProjectForeman(organizationId, projectId, user.id),
+    getUserRoleNames(companyId),
+    isCallerProjectForeman(companyId, projectId, user.id),
   ]);
 
   if (!canManageLmra(roleNames, isForeman)) {
@@ -47,19 +47,19 @@ async function requireLmraManageAccess(organizationId: string, projectId: string
   return { user, roleNames };
 }
 
-export async function createLmra(organizationId: string, input: LmraAssessmentFormInput): Promise<ActionResult<{ lmraId: string }>> {
+export async function createLmra(companyId: string, input: LmraAssessmentFormInput): Promise<ActionResult<{ lmraId: string }>> {
   const parsed = lmraAssessmentFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireLmraManageAccess(organizationId, parsed.data.projectId);
+  const { user } = await requireLmraManageAccess(companyId, parsed.data.projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("lmra_assessments")
     .insert({
-      organization_id: organizationId,
+      company_id: companyId,
       project_id: parsed.data.projectId,
       work_area: parsed.data.workArea,
       work_activity: parsed.data.workActivity,
@@ -85,13 +85,13 @@ export async function createLmra(organizationId: string, input: LmraAssessmentFo
   redirect(`/lmra/${data.id}/edit`);
 }
 
-export async function updateLmra(organizationId: string, lmraId: string, input: LmraAssessmentFormInput): Promise<ActionResult<null>> {
+export async function updateLmra(companyId: string, lmraId: string, input: LmraAssessmentFormInput): Promise<ActionResult<null>> {
   const parsed = lmraAssessmentFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireLmraManageAccess(organizationId, parsed.data.projectId);
+  const { user } = await requireLmraManageAccess(companyId, parsed.data.projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -105,7 +105,7 @@ export async function updateLmra(organizationId: string, lmraId: string, input: 
       notes: parsed.data.notes ?? null,
       updated_by: user.id,
     }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", lmraId);
 
   if (error) {
@@ -124,7 +124,7 @@ export async function updateLmra(organizationId: string, lmraId: string, input: 
   return { ok: true, data: null };
 }
 
-export async function updateLmraHazards(organizationId: string, lmraId: string, projectId: string, input: LmraHazardsFormInput): Promise<ActionResult<null>> {
+export async function updateLmraHazards(companyId: string, lmraId: string, projectId: string, input: LmraHazardsFormInput): Promise<ActionResult<null>> {
   const parsed = lmraHazardsFormSchema.safeParse(input);
   if (!parsed.success) {
     // Array schema — flattenFieldErrors() expects an object schema's
@@ -135,7 +135,7 @@ export async function updateLmraHazards(organizationId: string, lmraId: string, 
     return { ok: false, error: { code: "validation_error", message: "Check the hazard checklist — every field is required." } };
   }
 
-  await requireLmraManageAccess(organizationId, projectId);
+  await requireLmraManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("save_lmra_hazards", {
@@ -162,13 +162,13 @@ export async function updateLmraHazards(organizationId: string, lmraId: string, 
   return { ok: true, data: null };
 }
 
-export async function updateLmraParticipants(organizationId: string, lmraId: string, projectId: string, input: LmraParticipantsFormInput): Promise<ActionResult<null>> {
+export async function updateLmraParticipants(companyId: string, lmraId: string, projectId: string, input: LmraParticipantsFormInput): Promise<ActionResult<null>> {
   const parsed = lmraParticipantsFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the selected workers." } };
   }
 
-  await requireLmraManageAccess(organizationId, projectId);
+  await requireLmraManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data: current, error: currentError } = await supabase
@@ -185,7 +185,7 @@ export async function updateLmraParticipants(organizationId: string, lmraId: str
   if (toAdd.length > 0) {
     const { error } = await supabase
       .from("lmra_participants")
-      .insert(toAdd.map((employeeId) => ({ organization_id: organizationId, lmra_assessment_id: lmraId, employee_id: employeeId })));
+      .insert(toAdd.map((employeeId) => ({ company_id: companyId, lmra_assessment_id: lmraId, employee_id: employeeId })));
     if (error) {
       if (isRlsViolation(error)) forbidden();
       if (isUniqueViolation(error)) {
@@ -215,13 +215,13 @@ export async function updateLmraParticipants(organizationId: string, lmraId: str
 }
 
 /** Requires explicit confirmation before submission (docs/UI_GUIDELINES.md §5) — the calling UI shows a ConfirmDialog; this is the point where the go/no-go decision and, if stopping work, the reason, are actually recorded. */
-export async function submitLmra(organizationId: string, lmraId: string, projectId: string, input: LmraSubmitFormInput): Promise<ActionResult<null>> {
+export async function submitLmra(companyId: string, lmraId: string, projectId: string, input: LmraSubmitFormInput): Promise<ActionResult<null>> {
   const parsed = lmraSubmitFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the go/no-go decision.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireLmraManageAccess(organizationId, projectId);
+  const { user } = await requireLmraManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
@@ -234,7 +234,7 @@ export async function submitLmra(organizationId: string, lmraId: string, project
       submitted_at: new Date().toISOString(),
       updated_by: user.id,
     }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", lmraId)
     .eq("status", "draft");
 
@@ -255,13 +255,13 @@ export async function submitLmra(organizationId: string, lmraId: string, project
 }
 
 /** Review + approve/reject in one step — docs/ROLES_AND_PERMISSIONS.md §5's "M"/"F" legend both include "approve" as part of the same write capability, not a separate role tier. */
-export async function reviewLmra(organizationId: string, lmraId: string, projectId: string, input: LmraReviewFormInput): Promise<ActionResult<null>> {
+export async function reviewLmra(companyId: string, lmraId: string, projectId: string, input: LmraReviewFormInput): Promise<ActionResult<null>> {
   const parsed = lmraReviewFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the review decision.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireLmraManageAccess(organizationId, projectId);
+  const { user } = await requireLmraManageAccess(companyId, projectId);
   const supabase = await createClient();
   const now = new Date().toISOString();
 
@@ -275,7 +275,7 @@ export async function reviewLmra(organizationId: string, lmraId: string, project
       approved_at: parsed.data.decision === "approved" ? now : null,
       updated_by: user.id,
     }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", lmraId)
     .eq("status", "submitted");
 
@@ -296,14 +296,14 @@ export async function reviewLmra(organizationId: string, lmraId: string, project
 }
 
 /** Reopens an approved/rejected assessment for correction — back to draft, editable again. */
-export async function reopenLmra(organizationId: string, lmraId: string, projectId: string): Promise<ActionResult<null>> {
-  await requireLmraManageAccess(organizationId, projectId);
+export async function reopenLmra(companyId: string, lmraId: string, projectId: string): Promise<ActionResult<null>> {
+  await requireLmraManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase
     .from("lmra_assessments")
     .update({ status: "draft" }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", lmraId)
     .in("status", ["approved", "rejected"]);
 
@@ -328,8 +328,8 @@ export async function reopenLmra(organizationId: string, lmraId: string, project
  * that distinction; `canArchiveLmra` here is UI-gating only, same
  * discipline as every other permissions.ts check in this codebase.
  */
-export async function archiveLmra(organizationId: string, lmraId: string): Promise<ActionResult<null>> {
-  const { user, roleNames } = await requireOrganizationMembershipAndRoles(organizationId);
+export async function archiveLmra(companyId: string, lmraId: string): Promise<ActionResult<null>> {
+  const { user, roleNames } = await requireCompanyMembershipAndRoles(companyId);
   if (!canArchiveLmra(roleNames)) {
     forbidden();
   }
@@ -338,7 +338,7 @@ export async function archiveLmra(organizationId: string, lmraId: string): Promi
   const { error, count } = await supabase
     .from("lmra_assessments")
     .update({ status: "archived", archived_by: user.id, archived_at: new Date().toISOString() }, { count: "exact" })
-    .eq("organization_id", organizationId)
+    .eq("company_id", companyId)
     .eq("id", lmraId)
     .neq("status", "archived");
 
@@ -358,8 +358,8 @@ export async function archiveLmra(organizationId: string, lmraId: string): Promi
   return { ok: true, data: null };
 }
 
-async function requireOrganizationMembershipAndRoles(organizationId: string) {
-  const { user } = await requireOrganizationMembership(organizationId);
-  const roleNames = await getUserRoleNames(organizationId);
+async function requireCompanyMembershipAndRoles(companyId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const roleNames = await getUserRoleNames(companyId);
   return { user, roleNames };
 }

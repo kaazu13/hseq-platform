@@ -1,6 +1,6 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getLmraAssessment, isCallerProjectForeman, listLmraCandidateEmployees } from "@/modules/lmra/queries";
 import { canManageLmra } from "@/modules/lmra/permissions";
@@ -32,13 +32,13 @@ type EditLmraPageProps = {
 export default async function EditLmraPage({ params }: EditLmraPageProps) {
   const { lmraId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const assessment = await getLmraAssessment(currentOrganizationId, lmraId);
+  const assessment = await getLmraAssessment(currentCompanyId, lmraId);
   if (!assessment) {
     notFound();
   }
@@ -47,9 +47,9 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
   }
 
   const [roleNames, isForeman, project] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
-    isCallerProjectForeman(currentOrganizationId, assessment.project_id, user.id),
-    getProject(currentOrganizationId, assessment.project_id),
+    getUserRoleNames(currentCompanyId),
+    isCallerProjectForeman(currentCompanyId, assessment.project_id, user.id),
+    getProject(currentCompanyId, assessment.project_id),
   ]);
 
   if (!canManageLmra(roleNames, isForeman)) {
@@ -58,13 +58,13 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
 
   // `project` can legitimately be null even though the caller can manage
   // this assessment — see app/(app)/lmra/[lmraId]/page.tsx's comment on the
-  // same lookup: projects_select doesn't grant hseq_manager org-wide
+  // same lookup: projects_select doesn't grant hseq_manager company-wide
   // visibility the way lmra_assessments_select does. Degrade gracefully
   // rather than 404ing a record this HSE Manager is genuinely allowed to
   // edit.
   const projectName = project?.name ?? "Project unavailable";
 
-  const candidates = await listLmraCandidateEmployees(currentOrganizationId, assessment.project_id);
+  const candidates = await listLmraCandidateEmployees(currentCompanyId, assessment.project_id);
   const employeeOptions = toEmployeeOptions(candidates);
   const hazardsEditable = assessment.status === "draft";
 
@@ -73,13 +73,13 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
       <PageHeader title="Edit LMRA" description={`${projectName} · ${assessment.work_activity}`} />
 
       <div className="max-w-3xl">
-        <LmraAssessmentForm mode="edit" organizationId={currentOrganizationId} projectId={assessment.project_id} projectName={projectName} candidates={employeeOptions} assessment={assessment} />
+        <LmraAssessmentForm mode="edit" companyId={currentCompanyId} projectId={assessment.project_id} projectName={projectName} candidates={employeeOptions} assessment={assessment} />
       </div>
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Hazard checklist" description={hazardsEditable ? undefined : "Read-only — reopen this LMRA to a draft to make changes."} />
         <LmraHazardChecklist
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           lmraId={assessment.id}
           projectId={assessment.project_id}
           hazards={assessment.hazards}
@@ -91,7 +91,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
       <div className="flex flex-col gap-3">
         <SectionHeader title="Workers involved" description={hazardsEditable ? undefined : "Read-only — reopen this LMRA to a draft to make changes."} />
         <LmraParticipantsPicker
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           lmraId={assessment.id}
           projectId={assessment.project_id}
           candidates={candidates}

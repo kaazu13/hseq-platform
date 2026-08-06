@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type ObservationReviewCloseCardProps = {
-  organizationId: string;
+  companyId: string;
   observationId: string;
   reviewedAt: string | null;
   /** From modules/corrective-actions/types.ts's hasUnresolvedCorrectiveActions() — proactively disables Close and explains why, rather than only surfacing the database's rejection after the fact. The database (validate_safety_observation_update()) remains the actual authority; this is UX only. */
@@ -32,7 +32,7 @@ type ObservationReviewCloseCardProps = {
  * the error alert if it somehow gets past the proactive `hasUnresolvedActions`
  * disable (e.g. a concurrent action was raised after this page loaded).
  */
-export function ObservationReviewCloseCard({ organizationId, observationId, reviewedAt, hasUnresolvedActions }: ObservationReviewCloseCardProps) {
+export function ObservationReviewCloseCard({ companyId, observationId, reviewedAt, hasUnresolvedActions }: ObservationReviewCloseCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function ObservationReviewCloseCard({ organizationId, observationId, revi
   function handleReview() {
     setFormError(null);
     startTransition(async () => {
-      const result = await reviewObservation(organizationId, observationId);
+      const result = await reviewObservation(companyId, observationId);
       if (!result.ok) {
         setFormError(result.error.message);
         return;
@@ -53,7 +53,7 @@ export function ObservationReviewCloseCard({ organizationId, observationId, revi
   function handleClose() {
     setFormError(null);
     startTransition(async () => {
-      const result = await closeObservation(organizationId, observationId);
+      const result = await closeObservation(companyId, observationId);
       if (!result.ok) {
         setFormError(result.error.message);
         setConfirmOpen(false);

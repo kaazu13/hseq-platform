@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { UserPlus, Users } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listEmployees, countEmployees, getEmployeeRoleInfoBulk } from "@/modules/employees/queries";
 import { canManageEmployees } from "@/modules/employees/permissions";
 import type { EmployeeAccountStatus, EmploymentStatus } from "@/modules/employees/types";
@@ -38,15 +38,15 @@ type EmployeesPageProps = {
 export default async function EmployeesPage({ searchParams }: EmployeesPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Employees" description="Company employment records for your organization." />
+        <PageHeader title="Employees" description="Company employment records for your company." />
         <EmptyState
           icon={Users}
-          title="You're not part of an organization yet"
+          title="You're not part of an company yet"
           description="Once an administrator adds your account to one, employee records will appear here."
           className="flex-1"
         />
@@ -54,7 +54,7 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
     );
   }
 
-  const roleNames = await getUserRoleNames(currentOrganizationId);
+  const roleNames = await getUserRoleNames(currentCompanyId);
   const canManage = canManageEmployees(roleNames);
 
   const filters = {
@@ -67,7 +67,7 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
   const requestedPage = parsePageParam(params.page);
   const pageSize = parsePageSizeParam(params.pageSize);
 
-  const totalCount = await countEmployees(currentOrganizationId, filters);
+  const totalCount = await countEmployees(currentCompanyId, filters);
   const totalPages = totalPagesFor(totalCount, pageSize);
   const page = clampPage(requestedPage, totalPages);
 
@@ -80,14 +80,14 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
     redirect(`/employees?${corrected.toString()}`);
   }
 
-  const employees = await listEmployees(currentOrganizationId, filters, page, pageSize);
-  const roleInfoById = await getEmployeeRoleInfoBulk(currentOrganizationId, employees);
+  const employees = await listEmployees(currentCompanyId, filters, page, pageSize);
+  const roleInfoById = await getEmployeeRoleInfoBulk(currentCompanyId, employees);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
         title="Employees"
-        description="Company employment records for your organization."
+        description="Company employment records for your company."
         actions={
           canManage ? (
             <Button size="sm" nativeButton={false} render={<Link href="/employees/new" />}>
@@ -122,7 +122,7 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
       ) : (
         <>
           <EmployeeTable
-            organizationId={currentOrganizationId}
+            companyId={currentCompanyId}
             employees={employees}
             roleInfoById={roleInfoById}
             canManage={canManage}

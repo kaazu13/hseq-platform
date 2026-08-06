@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getLmraAssessment, isCallerProjectForeman, listLmraCandidateEmployees } from "@/modules/lmra/queries";
 import { canManageLmra, canArchiveLmra } from "@/modules/lmra/permissions";
@@ -48,27 +48,27 @@ function formatDate(value: string): string {
 export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
   const { lmraId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const assessment = await getLmraAssessment(currentOrganizationId, lmraId);
+  const assessment = await getLmraAssessment(currentCompanyId, lmraId);
   if (!assessment) {
     notFound();
   }
 
   const [roleNames, isForeman, project] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
-    isCallerProjectForeman(currentOrganizationId, assessment.project_id, user.id),
-    getProject(currentOrganizationId, assessment.project_id),
+    getUserRoleNames(currentCompanyId),
+    isCallerProjectForeman(currentCompanyId, assessment.project_id, user.id),
+    getProject(currentCompanyId, assessment.project_id),
   ]);
 
   // `project` can legitimately be null here even though the assessment
   // itself is visible: lmra_assessments_select grants hseq_manager
-  // org-wide read access, but projects_select does NOT extend the same
-  // org-wide grant to hseq_manager (only company_admin/operations_manager
+  // company-wide read access, but projects_select does NOT extend the same
+  // company-wide grant to hseq_manager (only company_admin/operations_manager
   // — see supabase/migrations/20260728090000_projects_and_teams.sql's
   // projects_select policy) — an HSE Manager with no direct assignment on
   // THIS project can see the LMRA but not the project row it belongs to.
@@ -78,7 +78,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
 
   const canManage = canManageLmra(roleNames, isForeman);
   const canArchive = canArchiveLmra(roleNames);
-  const candidates = await listLmraCandidateEmployees(currentOrganizationId, assessment.project_id);
+  const candidates = await listLmraCandidateEmployees(currentCompanyId, assessment.project_id);
   const employeeOptions = toEmployeeOptions(candidates);
 
   return (
@@ -95,7 +95,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
               </Button>
             )}
             <LmraDetailActions
-              organizationId={currentOrganizationId}
+              companyId={currentCompanyId}
               lmraId={assessment.id}
               projectId={assessment.project_id}
               canReopen={canManage && (assessment.status === "approved" || assessment.status === "rejected")}
@@ -164,7 +164,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
       <div className="flex flex-col gap-3">
         <SectionHeader title="Hazard checklist" />
         <LmraHazardChecklist
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           lmraId={assessment.id}
           projectId={assessment.project_id}
           hazards={assessment.hazards}
@@ -176,7 +176,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
       <div className="flex flex-col gap-3">
         <SectionHeader title="Workers involved" />
         <LmraParticipantsPicker
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           lmraId={assessment.id}
           projectId={assessment.project_id}
           candidates={candidates}
@@ -187,13 +187,13 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
 
       {canManage && assessment.status === "draft" && (
         <div className="print:hidden">
-          <LmraSubmitCard organizationId={currentOrganizationId} lmraId={assessment.id} projectId={assessment.project_id} />
+          <LmraSubmitCard companyId={currentCompanyId} lmraId={assessment.id} projectId={assessment.project_id} />
         </div>
       )}
 
       {canManage && assessment.status === "submitted" && (
         <div className="print:hidden">
-          <LmraReviewCard organizationId={currentOrganizationId} lmraId={assessment.id} projectId={assessment.project_id} />
+          <LmraReviewCard companyId={currentCompanyId} lmraId={assessment.id} projectId={assessment.project_id} />
         </div>
       )}
     </div>

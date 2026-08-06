@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
-import { resolveCurrentOrganization } from "@/modules/organizations/queries";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getObservation, isCallerProjectAccessible, listObservationCandidateEmployees } from "@/modules/observations/queries";
 import { canEditObservation, canReviewOrCloseObservation } from "@/modules/observations/permissions";
@@ -48,23 +48,23 @@ function formatDateTime(value: string | null): string {
 export default async function ObservationDetailPage({ params }: ObservationDetailPageProps) {
   const { observationId } = await params;
   const { user } = await requireUser();
-  const { currentOrganizationId } = await resolveCurrentOrganization(user.id);
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
-  if (!currentOrganizationId) {
+  if (!currentCompanyId) {
     forbidden();
   }
 
-  const observation = await getObservation(currentOrganizationId, observationId);
+  const observation = await getObservation(currentCompanyId, observationId);
   if (!observation) {
     notFound();
   }
 
   const [roleNames, hasProjectAccess, isProjectManager, project, correctiveActions] = await Promise.all([
-    getUserRoleNames(currentOrganizationId),
+    getUserRoleNames(currentCompanyId),
     isCallerProjectAccessible(observation.project_id),
     isCallerProjectManager(observation.project_id),
-    getProject(currentOrganizationId, observation.project_id),
-    listCorrectiveActionsForObservation(currentOrganizationId, observation.id),
+    getProject(currentCompanyId, observation.project_id),
+    listCorrectiveActionsForObservation(currentCompanyId, observation.id),
   ]);
 
   // `project` can legitimately be null even though the observation itself
@@ -77,8 +77,8 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
   const canCreateAction = canCreateCorrectiveAction(roleNames, isProjectManager, hasProjectAccess) && observation.status === "open";
   const canManageActionDetails = canManageCorrectiveActionDetails(roleNames, isProjectManager, hasProjectAccess);
 
-  const candidates = await listObservationCandidateEmployees(currentOrganizationId, observation.project_id);
-  const actionCandidates = toEmployeeOptions(await listCorrectiveActionCandidateEmployees(currentOrganizationId, observation.project_id));
+  const candidates = await listObservationCandidateEmployees(currentCompanyId, observation.project_id);
+  const actionCandidates = toEmployeeOptions(await listCorrectiveActionCandidateEmployees(currentCompanyId, observation.project_id));
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
@@ -144,7 +144,7 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
       <div className="flex flex-col gap-3">
         <SectionHeader title="People involved" />
         <ObservationParticipantsPicker
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           observationId={observation.id}
           projectId={observation.project_id}
           createdBy={observation.created_by}
@@ -157,7 +157,7 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
       <div className="flex flex-col gap-3">
         <SectionHeader title="Corrective actions" />
         <CorrectiveActionsSection
-          organizationId={currentOrganizationId}
+          companyId={currentCompanyId}
           observationId={observation.id}
           projectId={observation.project_id}
           actions={correctiveActions}
@@ -174,7 +174,7 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
       {canReviewOrClose && observation.status === "open" && (
         <div className="print:hidden">
           <ObservationReviewCloseCard
-            organizationId={currentOrganizationId}
+            companyId={currentCompanyId}
             observationId={observation.id}
             reviewedAt={observation.reviewed_at}
             hasUnresolvedActions={hasUnresolvedCorrectiveActions(correctiveActions)}
