@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getScaffoldDisplayStatus, SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS, formatScaffoldDimensions, SCAFFOLD_TEAM_MIN_SIZE, SCAFFOLD_TEAM_MAX_SIZE } from "./types";
+import { getScaffoldDisplayStatus, SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS, formatScaffoldDimensions, formatInspectionReference, SCAFFOLD_TEAM_MIN_SIZE, SCAFFOLD_TEAM_MAX_SIZE } from "./types";
 
 const NOW = new Date("2026-08-10T12:00:00.000Z");
 
@@ -68,5 +68,21 @@ describe("scaffold team size bounds", () => {
   it("documents the suggested minimum and maximum team size", () => {
     expect(SCAFFOLD_TEAM_MIN_SIZE).toBe(1);
     expect(SCAFFOLD_TEAM_MAX_SIZE).toBe(50);
+  });
+});
+
+describe("formatInspectionReference", () => {
+  it("formats as SI-{scaffold_number}-{sequence_number}, zero-padded to 3 digits", () => {
+    expect(formatInspectionReference({ scaffold_number: 7723 }, { sequence_number: 3 })).toBe("SI-7723-003");
+    expect(formatInspectionReference({ scaffold_number: 1 }, { sequence_number: 1 })).toBe("SI-1-001");
+  });
+
+  it("does not truncate a sequence number that grows beyond 3 digits", () => {
+    expect(formatInspectionReference({ scaffold_number: 42 }, { sequence_number: 1000 })).toBe("SI-42-1000");
+  });
+
+  it("never embeds a date — the sequence is lifetime-continuous, not per-day", () => {
+    const reference = formatInspectionReference({ scaffold_number: 7723 }, { sequence_number: 3 });
+    expect(reference).not.toMatch(/\d{8}/);
   });
 });

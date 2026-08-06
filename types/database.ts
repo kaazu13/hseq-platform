@@ -1661,6 +1661,32 @@ export type Database = {
           },
         ]
       }
+      scaffold_inspection_sequence_counters: {
+        Row: {
+          next_sequence: number
+          scaffold_id: string
+          updated_at: string
+        }
+        Insert: {
+          next_sequence?: number
+          scaffold_id: string
+          updated_at?: string
+        }
+        Update: {
+          next_sequence?: number
+          scaffold_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_inspection_sequence_counters_scaffold_id_fkey"
+            columns: ["scaffold_id"]
+            isOneToOne: true
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scaffold_inspections: {
         Row: {
           company_id: string
@@ -1683,6 +1709,7 @@ export type Database = {
           project_id: string
           restrictions_notes: string | null
           scaffold_id: string
+          sequence_number: number
           status: Database["public"]["Enums"]["scaffold_inspection_status"]
           superseded_by_id: string | null
           updated_at: string
@@ -1709,6 +1736,7 @@ export type Database = {
           project_id: string
           restrictions_notes?: string | null
           scaffold_id: string
+          sequence_number?: number
           status?: Database["public"]["Enums"]["scaffold_inspection_status"]
           superseded_by_id?: string | null
           updated_at?: string
@@ -1735,6 +1763,7 @@ export type Database = {
           project_id?: string
           restrictions_notes?: string | null
           scaffold_id?: string
+          sequence_number?: number
           status?: Database["public"]["Enums"]["scaffold_inspection_status"]
           superseded_by_id?: string | null
           updated_at?: string
@@ -1809,6 +1838,32 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scaffold_number_counters: {
+        Row: {
+          next_number: number
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          next_number?: number
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          next_number?: number
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_number_counters_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1910,6 +1965,7 @@ export type Database = {
           notes: string | null
           project_id: string
           responsible_foreman_id: string
+          scaffold_number: number
           scaffold_type: Database["public"]["Enums"]["scaffold_type"]
           status: Database["public"]["Enums"]["scaffold_status"]
           structure_reference: string | null
@@ -1933,6 +1989,7 @@ export type Database = {
           notes?: string | null
           project_id: string
           responsible_foreman_id: string
+          scaffold_number?: number
           scaffold_type: Database["public"]["Enums"]["scaffold_type"]
           status?: Database["public"]["Enums"]["scaffold_status"]
           structure_reference?: string | null
@@ -1956,6 +2013,7 @@ export type Database = {
           notes?: string | null
           project_id?: string
           responsible_foreman_id?: string
+          scaffold_number?: number
           scaffold_type?: Database["public"]["Enums"]["scaffold_type"]
           status?: Database["public"]["Enums"]["scaffold_status"]
           structure_reference?: string | null
@@ -2549,6 +2607,14 @@ export type Database = {
         Args: { target_org_id: string }
         Returns: string
       }
+      allocate_scaffold_inspection_sequence: {
+        Args: { target_scaffold_id: string }
+        Returns: number
+      }
+      allocate_scaffold_number: {
+        Args: { target_project_id: string }
+        Returns: number
+      }
       assert_employee_eligible_for_assignment: {
         Args: { target_employee_id: string }
         Returns: undefined
@@ -2680,6 +2746,7 @@ export type Database = {
           project_id: string
           restrictions_notes: string | null
           scaffold_id: string
+          sequence_number: number
           status: Database["public"]["Enums"]["scaffold_inspection_status"]
           superseded_by_id: string | null
           updated_at: string

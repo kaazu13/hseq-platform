@@ -17,7 +17,7 @@ export function ScaffoldCard({ scaffold, projectName, currentInspectionExpiresAt
                 <Tag className="size-3.5 shrink-0 text-muted-foreground" />
                 {scaffold.tag_number}
               </span>
-              <span className="text-sm text-muted-foreground">{projectName}</span>
+              <span className="text-sm text-muted-foreground">Scaffold #{scaffold.scaffold_number} · {projectName}</span>
             </div>
             <ScaffoldStatusBadge status={scaffold.status} currentInspectionExpiresAt={currentInspectionExpiresAt} />
           </div>

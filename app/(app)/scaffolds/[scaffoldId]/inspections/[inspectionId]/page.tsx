@@ -4,7 +4,7 @@ import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getInspection, getScaffold, isCallerProjectAccessible, listScaffoldCandidateEmployees } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
-import { SCAFFOLD_INSPECTION_REASON_LABELS } from "@/modules/scaffolds/types";
+import { SCAFFOLD_INSPECTION_REASON_LABELS, formatInspectionReference } from "@/modules/scaffolds/types";
 import { ScaffoldInspectionStatusBadge } from "@/modules/scaffolds/components/scaffold-inspection-status-badge";
 import { ScaffoldInspectionOutcomeBadge } from "@/modules/scaffolds/components/scaffold-inspection-outcome-badge";
 import { InspectionChecklist } from "@/modules/scaffolds/components/inspection-checklist";
@@ -69,8 +69,8 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
       <PageHeader
-        title={`${scaffold.tag_number} — inspection`}
-        description={`${projectName} · ${scaffold.work_area} · ${SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]}`}
+        title={formatInspectionReference(scaffold, inspection)}
+        description={`${scaffold.tag_number} · ${projectName} · ${scaffold.work_area} · ${SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]}`}
         actions={<ScaffoldPrintButton />}
       />
 

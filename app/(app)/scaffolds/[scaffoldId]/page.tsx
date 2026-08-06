@@ -63,7 +63,7 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
       <PageHeader
         title={scaffold.tag_number}
-        description={`${projectName} · ${scaffold.work_area}`}
+        description={`Scaffold #${scaffold.scaffold_number} · ${projectName} · ${scaffold.work_area}`}
         actions={
           <>
             {canManage && (
@@ -169,7 +169,7 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
         {inspections.length === 0 ? (
           <EmptyState icon={HardHat} title="No inspections yet" description="This scaffold has not been inspected yet." />
         ) : (
-          <InspectionHistoryList scaffoldId={scaffold.id} inspections={inspections} />
+          <InspectionHistoryList scaffoldId={scaffold.id} scaffoldNumber={scaffold.scaffold_number} inspections={inspections} />
         )}
       </div>
     </div>

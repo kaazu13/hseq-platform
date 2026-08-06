@@ -283,6 +283,26 @@ export function formatScaffoldDimensions(scaffold: Pick<Scaffold, "height_metres
 }
 
 /**
+ * The human-readable scaffold-inspection reference — "SI-{scaffold_number}-
+ * {sequence_number}" (e.g. "SI-7723-001"), zero-padded to at least 3
+ * digits. Purely derived, never stored (matches formatScaffoldDimensions()/
+ * getScaffoldDisplayStatus()'s "derive, don't duplicate-store a formatted
+ * string" convention) — the durable, uniqueness-bearing values are
+ * scaffold_number (unique per project) and sequence_number (lifetime-
+ * continuous per scaffold, allocated by the database — see
+ * supabase/migrations/20260808090000_scaffold_numbering_and_inspection_reference.sql),
+ * both immutable after creation. Deliberately does NOT embed the
+ * inspection date — inspected_at is its own separate, independently
+ * displayed field; the sequence itself never resets by date.
+ */
+export function formatInspectionReference(
+  scaffold: Pick<Scaffold, "scaffold_number">,
+  inspection: Pick<ScaffoldInspection, "sequence_number">,
+): string {
+  return `SI-${scaffold.scaffold_number}-${String(inspection.sequence_number).padStart(3, "0")}`;
+}
+
+/**
  * Suggested, documented scaffold-team-size bound — the milestone's own
  * suggested range (minimum 1, maximum 50). Enforced both here (zod) and
  * loosely backstopped by the database's own generous `team_position`

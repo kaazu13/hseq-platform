@@ -4,7 +4,7 @@ import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getInspection, getScaffold, isCallerProjectAccessible } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
-import { SCAFFOLD_INSPECTION_REASON_LABELS } from "@/modules/scaffolds/types";
+import { SCAFFOLD_INSPECTION_REASON_LABELS, formatInspectionReference } from "@/modules/scaffolds/types";
 import { InspectionChecklist } from "@/modules/scaffolds/components/inspection-checklist";
 import { InspectionFinalizeCard } from "@/modules/scaffolds/components/inspection-finalize-card";
 import { listDefectsForInspection, listScaffoldDefectCandidateEmployees } from "@/modules/scaffold-defects/queries";
@@ -69,7 +69,7 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
       <PageHeader
-        title={`Inspecting ${scaffold.tag_number}`}
+        title={`Inspecting ${scaffold.tag_number} — ${formatInspectionReference(scaffold, inspection)}`}
         description={`${projectName} · ${scaffold.work_area} · ${SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]}`}
       />
 
