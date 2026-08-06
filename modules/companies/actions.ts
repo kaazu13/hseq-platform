@@ -22,6 +22,13 @@ import type { Database } from "@/types/database";
  * note) before this function ever touches `profiles`, so a user can only
  * ever set their active company to one they actually, currently,
  * belong to.
+ *
+ * Also clears `active_project_id` in the SAME update — switching company
+ * must never leave a project from the previous company silently active
+ * (this milestone's explicit "clear the previous active-project context"
+ * requirement). `app/(app)/dashboard/page.tsx`'s post-login resolution
+ * re-picks a fresh project for the new company on the next render (auto-
+ * selecting if there's exactly one accessible, otherwise prompting).
  */
 export async function setActiveCompany(companyId: string): Promise<ActionResult<null>> {
   const { user } = await requireCompanyMembership(companyId);
@@ -29,7 +36,7 @@ export async function setActiveCompany(companyId: string): Promise<ActionResult<
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ active_company_id: companyId })
+    .update({ active_company_id: companyId, active_project_id: null })
     .eq("id", user.id);
 
   if (error) {

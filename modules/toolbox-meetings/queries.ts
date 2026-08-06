@@ -76,7 +76,7 @@ export async function getToolboxMeetingPreviewUrl(objectPath: string): Promise<s
 /** Employees eligible to be "the HSE person who held the meeting" for `projectId` — hseq_manager company-wide, or hse_officer assigned to that project. */
 export async function listToolboxAuthorizedEmployees(companyId: string, projectId: string): Promise<{ id: string; first_name: string; last_name: string; employee_number: string; profile_id: string | null }[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_toolbox_authorized_employees", { target_company_id: companyId, target_project_id: projectId });
+  const { data, error } = await supabase.rpc("list_toolbox_authorized_employees", { target_organization_id: companyId, target_project_id: projectId });
   if (error) throw error;
   return data ?? [];
 }

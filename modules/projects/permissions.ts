@@ -20,7 +20,7 @@ export function canCreateProjects(roleNames: RoleName[]): boolean {
   return roleNames.some((role) => PROJECT_CREATE_ROLES.includes(role));
 }
 
-const PROJECT_ORG_WIDE_MANAGE_ROLES: RoleName[] = ["company_admin", "operations_manager"];
+const PROJECT_COMPANY_WIDE_MANAGE_ROLES: RoleName[] = ["company_admin", "operations_manager"];
 
 /**
  * Editing a project's core fields, managing its Teams, or managing its
@@ -30,5 +30,5 @@ const PROJECT_ORG_WIDE_MANAGE_ROLES: RoleName[] = ["company_admin", "operations_
  * roles for THIS specific project, from `getMyProjectAssignmentRoles()`.
  */
 export function canManageProject(roleNames: RoleName[], myProjectAssignmentRoles: string[]): boolean {
-  return roleNames.some((role) => PROJECT_ORG_WIDE_MANAGE_ROLES.includes(role)) || myProjectAssignmentRoles.includes("project_manager");
+  return roleNames.some((role) => PROJECT_COMPANY_WIDE_MANAGE_ROLES.includes(role)) || myProjectAssignmentRoles.includes("project_manager");
 }

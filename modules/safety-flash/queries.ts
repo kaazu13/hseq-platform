@@ -78,7 +78,7 @@ export async function listSafetyFlashAuthorizedEmployees(companyId: string, proj
   // accepts SQL NULL (list_toolbox_authorized_employees treats it as
   // "any hse_officer, not project-scoped" — see the migration) — the cast
   // reflects that gap, not an actual runtime constraint.
-  const { data, error } = await supabase.rpc("list_toolbox_authorized_employees", { target_company_id: companyId, target_project_id: projectId as string });
+  const { data, error } = await supabase.rpc("list_toolbox_authorized_employees", { target_organization_id: companyId, target_project_id: projectId as string });
   if (error) throw error;
   return data ?? [];
 }

@@ -82,7 +82,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "audit_events_company_id_fkey"
+            foreignKeyName: "audit_events_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -117,7 +117,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "bootstrap_audit_log_company_id_fkey"
+            foreignKeyName: "bootstrap_audit_log_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -186,7 +186,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "company_employee_number_counters_company_id_fkey"
+            foreignKeyName: "organization_employee_number_counters_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
@@ -233,28 +233,28 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "company_memberships_created_by_fkey"
+            foreignKeyName: "organization_memberships_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_memberships_company_id_fkey"
+            foreignKeyName: "organization_memberships_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_memberships_updated_by_fkey"
+            foreignKeyName: "organization_memberships_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "company_memberships_user_id_fkey"
+            foreignKeyName: "organization_memberships_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -339,7 +339,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "corrective_actions_company_id_fkey"
+            foreignKeyName: "corrective_actions_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -447,7 +447,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employee_employment_periods_company_id_fkey"
+            foreignKeyName: "employee_employment_periods_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -528,7 +528,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "employees_company_id_fkey"
+            foreignKeyName: "employees_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -652,7 +652,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "lmra_assessments_company_id_fkey"
+            foreignKeyName: "lmra_assessments_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -737,7 +737,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lmra_hazards_company_id_fkey"
+            foreignKeyName: "lmra_hazards_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -790,7 +790,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lmra_participants_company_id_fkey"
+            foreignKeyName: "lmra_participants_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -839,7 +839,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "membership_roles_company_id_fkey"
+            foreignKeyName: "membership_roles_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -857,6 +857,7 @@ export type Database = {
       profiles: {
         Row: {
           active_company_id: string | null
+          active_project_id: string | null
           created_at: string
           full_name: string
           id: string
@@ -866,6 +867,7 @@ export type Database = {
         }
         Insert: {
           active_company_id?: string | null
+          active_project_id?: string | null
           created_at?: string
           full_name: string
           id: string
@@ -875,6 +877,7 @@ export type Database = {
         }
         Update: {
           active_company_id?: string | null
+          active_project_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
@@ -884,10 +887,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_active_company_id_fkey"
+            foreignKeyName: "profiles_active_organization_id_fkey"
             columns: ["active_company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_active_project_id_fkey"
+            columns: ["active_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -958,7 +968,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_assignments_company_id_fkey"
+            foreignKeyName: "project_assignments_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1034,7 +1044,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "projects_company_id_fkey"
+            foreignKeyName: "projects_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1128,7 +1138,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "safety_flash_file_replacements_company_id_fkey"
+            foreignKeyName: "safety_flash_file_replacements_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1161,7 +1171,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "safety_flash_number_counters_company_id_fkey"
+            foreignKeyName: "safety_flash_number_counters_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
@@ -1261,7 +1271,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "safety_flashes_company_id_fkey"
+            foreignKeyName: "safety_flashes_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1328,7 +1338,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "safety_observation_participants_company_id_fkey"
+            foreignKeyName: "safety_observation_participants_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1426,7 +1436,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "safety_observations_company_id_fkey"
+            foreignKeyName: "safety_observations_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1548,7 +1558,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scaffold_defects_company_id_fkey"
+            foreignKeyName: "scaffold_defects_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1636,7 +1646,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "scaffold_inspection_items_company_id_fkey"
+            foreignKeyName: "scaffold_inspection_items_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1760,7 +1770,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "scaffold_inspections_company_id_fkey"
+            foreignKeyName: "scaffold_inspections_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1856,7 +1866,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "scaffold_team_members_company_id_fkey"
+            foreignKeyName: "scaffold_team_members_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -1964,7 +1974,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scaffolds_company_id_fkey"
+            foreignKeyName: "scaffolds_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2062,7 +2072,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "team_assignments_company_id_fkey"
+            foreignKeyName: "team_assignments_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2132,7 +2142,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "teams_company_id_fkey"
+            foreignKeyName: "teams_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2206,7 +2216,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "toolbox_meeting_file_replacements_company_id_fkey"
+            foreignKeyName: "toolbox_meeting_file_replacements_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2242,7 +2252,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "toolbox_meeting_number_counters_project_id_company_id_fkey"
+            foreignKeyName: "toolbox_meeting_number_counters_project_id_organization_id_fkey"
             columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2339,7 +2349,7 @@ export type Database = {
             referencedColumns: ["id", "company_id"]
           },
           {
-            foreignKeyName: "toolbox_meetings_company_id_fkey"
+            foreignKeyName: "toolbox_meetings_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2413,7 +2423,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "toolbox_template_file_replacements_company_id_fkey"
+            foreignKeyName: "toolbox_template_file_replacements_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2508,7 +2518,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "toolbox_templates_company_id_fkey"
+            foreignKeyName: "toolbox_templates_organization_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2564,13 +2574,13 @@ export type Database = {
         Returns: undefined
       }
       assert_toolbox_authorized_employee: {
-        Args: { target_employee_id: string; target_company_id: string }
+        Args: { target_employee_id: string; target_organization_id: string }
         Returns: undefined
       }
       bootstrap_first_owner: {
         Args: {
           notes?: string
-          target_company_id: string
+          target_organization_id: string
           target_user_id: string
         }
         Returns: {
@@ -2595,7 +2605,7 @@ export type Database = {
       can_close_corrective_action: {
         Args: {
           target_created_by: string
-          target_company_id: string
+          target_organization_id: string
           target_project_id: string
           target_responsible_person_id: string
         }
@@ -2604,7 +2614,7 @@ export type Database = {
       can_close_scaffold_defect: {
         Args: {
           target_created_by: string
-          target_company_id: string
+          target_organization_id: string
           target_project_id: string
           target_responsible_person_id: string
         }
@@ -2624,7 +2634,7 @@ export type Database = {
         Args: {
           role_names: string[]
           target_employee_id: string
-          target_company_id: string
+          target_organization_id: string
         }
         Returns: boolean
       }
@@ -2720,7 +2730,7 @@ export type Database = {
       is_eligible_scaffold_foreman: {
         Args: {
           target_employee_id: string
-          target_company_id: string
+          target_organization_id: string
           target_project_id: string
         }
         Returns: boolean
@@ -2728,7 +2738,7 @@ export type Database = {
       is_eligible_scaffold_team_member: {
         Args: {
           target_employee_id: string
-          target_company_id: string
+          target_organization_id: string
           target_project_id: string
         }
         Returns: boolean
@@ -2746,23 +2756,23 @@ export type Database = {
         Returns: boolean
       }
       is_safety_flash_manage_tier: {
-        Args: { target_company_id: string; target_project_id: string }
+        Args: { target_organization_id: string; target_project_id: string }
         Returns: boolean
       }
       is_scaffold_manage_tier: {
-        Args: { target_company_id: string; target_project_id: string }
+        Args: { target_organization_id: string; target_project_id: string }
         Returns: boolean
       }
       is_toolbox_manage_tier: {
-        Args: { target_company_id: string; target_project_id: string }
+        Args: { target_organization_id: string; target_project_id: string }
         Returns: boolean
       }
       is_toolbox_template_manage_tier: {
-        Args: { target_company_id: string }
+        Args: { target_organization_id: string }
         Returns: boolean
       }
       list_eligible_scaffold_foremen: {
-        Args: { target_company_id: string; target_project_id: string }
+        Args: { target_organization_id: string; target_project_id: string }
         Returns: {
           employee_number: string
           first_name: string
@@ -2771,7 +2781,7 @@ export type Database = {
         }[]
       }
       list_eligible_scaffold_team_members: {
-        Args: { target_company_id: string; target_project_id: string }
+        Args: { target_organization_id: string; target_project_id: string }
         Returns: {
           employee_number: string
           first_name: string
@@ -2781,7 +2791,7 @@ export type Database = {
         }[]
       }
       list_toolbox_authorized_employees: {
-        Args: { target_company_id: string; target_project_id: string }
+        Args: { target_organization_id: string; target_project_id: string }
         Returns: {
           employee_number: string
           first_name: string

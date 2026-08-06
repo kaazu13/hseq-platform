@@ -162,6 +162,47 @@ export async function requireAnyRole(
 }
 
 /**
+ * Requires the signed-in user to have project access to `projectId` (any
+ * current `project_assignments` or `team_assignments` row, OR a
+ * company-wide manager role — see `has_project_access()`'s own comment in
+ * supabase/migrations/20260728090000_projects_and_teams.sql), or calls
+ * `forbidden()`. Calls `unauthorized()` first if there's no session at
+ * all.
+ *
+ * Delegates to the `has_project_access()` SQL function — the SAME one
+ * every project-scoped RLS policy already uses — via `.rpc()`, mirroring
+ * `requireCompanyMembership()`'s shape exactly. This is the guard every
+ * project-scoped page/action should call for its URL's `projectId`
+ * segment; it does NOT check that the project belongs to any particular
+ * company — callers that also have a `companyId` in scope (e.g. the new
+ * canonical `/companies/[companyId]/projects/[projectId]/...` routes)
+ * must additionally verify the resolved project's `company_id` matches,
+ * since `has_project_access()` alone only answers "can this user reach
+ * this project at all," never "does this project belong to the company
+ * named in this specific URL."
+ */
+export async function requireProjectAccess(
+  projectId: string,
+): Promise<{ user: User; projectId: string }> {
+  const { user } = await requireUser();
+  const supabase = await createClient();
+
+  const { data: hasAccess, error } = await supabase.rpc("has_project_access", {
+    target_project_id: projectId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!hasAccess) {
+    forbidden();
+  }
+
+  return { user, projectId };
+}
+
+/**
  * Returns the full array of role names the signed-in user holds via their
  * ACTIVE membership in `companyId` (empty array if none, including if
  * they have no membership there at all — this never throws/redirects,

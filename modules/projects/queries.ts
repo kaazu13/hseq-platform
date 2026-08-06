@@ -1,4 +1,6 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/modules/companies/queries";
 import type { Project, ProjectAssignment, ProjectAssignmentRole, ProjectAssignmentWithEmployee } from "./types";
 
 /**
@@ -141,5 +143,50 @@ export async function listProjectRosterEmployeeIds(companyId: string, projectId:
   if (error) throw error;
   return new Set((data ?? []).map((row) => row.employee_id));
 }
+
+export type CurrentProjectResolution = {
+  /** Every project the caller can access WITHIN `companyId` — relies on `projects_select` RLS (company-wide roles see every project in the company; everyone else only their explicitly assigned ones), exactly like `listProjects()`. */
+  projects: Project[];
+  currentProjectId: string | null;
+};
+
+/**
+ * Resolves the signed-in user's accessible-project list AND which one to
+ * treat as "current" WITHIN `companyId`. Deliberately NOT a straight
+ * mirror of `resolveCurrentCompany()`'s "always fall back to the first
+ * one" resolution — the explicit requirement here is different: a stored
+ * `profile.active_project_id` wins if it still points at one of the
+ * caller's accessible projects in this company; failing that, auto-select
+ * ONLY when there's exactly one accessible project (no real ambiguity to
+ * ask about); with zero or two-or-more accessible projects and no valid
+ * stored preference, `currentProjectId` is `null` — zero means "nothing to
+ * pick," two-or-more means "ambiguous, the caller must show an explicit
+ * selector" (see app/(app)/dashboard/page.tsx's post-login resolution),
+ * never a silent guess.
+ *
+ * Purely a display/UX concern, same as its company-level counterpart — no
+ * authorization decision anywhere reads this; every project-scoped page/
+ * action still calls `requireProjectAccess()` (lib/auth/session.ts)
+ * independently for whichever `projectId` it actually operates on. A
+ * stale/foreign `active_project_id` (e.g. left over from a since-changed
+ * company) is simply never selected here, never trusted as "this project
+ * is accessible" — `listProjects()`'s RLS-scoped result is the only thing
+ * that decides membership of the candidate list.
+ *
+ * Wrapped in React's `cache()` (per-request memoization only), mirroring
+ * `resolveCurrentCompany()`.
+ */
+export const resolveCurrentProject = cache(async (userId: string, companyId: string): Promise<CurrentProjectResolution> => {
+  const [projects, profile] = await Promise.all([listProjects(companyId), getCurrentUserProfile(userId)]);
+
+  const storedProjectId =
+    profile?.active_project_id && projects.some((project) => project.id === profile.active_project_id)
+      ? profile.active_project_id
+      : null;
+
+  const currentProjectId = storedProjectId ?? (projects.length === 1 ? projects[0].id : null);
+
+  return { projects, currentProjectId };
+});
 
 export type { ProjectAssignment };

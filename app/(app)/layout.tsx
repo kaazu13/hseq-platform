@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany, getCurrentUserProfile } from "@/modules/companies/queries";
+import { resolveCurrentProject } from "@/modules/projects/queries";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { TopBar } from "@/components/app-shell/top-bar";
@@ -27,7 +28,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     getCurrentUserProfile(user.id),
     cookies(),
   ]);
-  const roleNames = currentCompanyId ? await getUserRoleNames(currentCompanyId) : [];
+  const [roleNames, { projects, currentProjectId }] = await Promise.all([
+    currentCompanyId ? getUserRoleNames(currentCompanyId) : Promise.resolve([]),
+    currentCompanyId ? resolveCurrentProject(user.id, currentCompanyId) : Promise.resolve({ projects: [], currentProjectId: null }),
+  ]);
 
   const sidebarOpenCookie = cookieStore.get("sidebar_state")?.value;
   const defaultSidebarOpen = sidebarOpenCookie !== "false";
@@ -39,6 +43,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <AppSidebar
         companies={companies}
         currentCompanyId={currentCompanyId}
+        projects={projects}
+        currentProjectId={currentProjectId}
         user={{ name: displayName, email: user.email ?? "" }}
         roleNames={roleNames}
       />

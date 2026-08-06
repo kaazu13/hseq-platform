@@ -134,7 +134,7 @@ function toEmployeeOption(row: { id: string; first_name: string; last_name: stri
 /** Candidate pool for the Responsible Foreman picker — active employees who hold the company Foreman role AND an open Foreman team assignment on this project (list_eligible_scaffold_foremen(), the same eligibility the database itself enforces on insert/update — see 20260805090000_scaffold_team_and_dimensions.sql). */
 export async function listEligibleScaffoldForemen(companyId: string, projectId: string): Promise<EmployeeOption[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_eligible_scaffold_foremen", { target_company_id: companyId, target_project_id: projectId });
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_foremen", { target_organization_id: companyId, target_project_id: projectId });
   if (error) throw error;
   return (data ?? []).map((row) => toEmployeeOption(row, "Foreman"));
 }
@@ -142,7 +142,7 @@ export async function listEligibleScaffoldForemen(companyId: string, projectId: 
 /** Candidate pool for ordinary scaffold team-member slots — active project roster employees excluding specialist/management roles (list_eligible_scaffold_team_members()). `roleLabel` is deliberately left null: no reliable trade/job-title field exists on this platform yet — see the migration's header comment. */
 export async function listEligibleScaffoldTeamMembers(companyId: string, projectId: string): Promise<EmployeeOption[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_eligible_scaffold_team_members", { target_company_id: companyId, target_project_id: projectId });
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_team_members", { target_organization_id: companyId, target_project_id: projectId });
   if (error) throw error;
   return (data ?? []).map((row) => ({ value: row.id, label: `${row.first_name} ${row.last_name}`, employeeNumber: row.employee_number, roleLabel: row.position_title }));
 }

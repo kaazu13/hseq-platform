@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, forbidden } from "next/navigation";
-import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -204,6 +204,38 @@ export async function assignProjectRole(
   });
 
   revalidatePath(`/projects/${projectId}`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Server Function backing the project switcher — the project-level
+ * mirror of `setActiveCompany()` (modules/companies/actions.ts). Two live
+ * checks before ever touching `profiles`, both required: `requireProjectAccess()`
+ * (the caller must actually be able to reach this project — the same
+ * `has_project_access()` RPC every project-scoped RLS policy uses) AND an
+ * explicit re-fetch of the project's own `company_id`, cross-checked
+ * against `companyId`, rejecting a project that exists and is accessible
+ * but belongs to a DIFFERENT company than the one currently active — the
+ * exact "never retain/select a project from another company" requirement.
+ * `profiles.active_project_id` remains a UX preference only; see that
+ * column's own migration comment.
+ */
+export async function setActiveProject(companyId: string, projectId: string): Promise<ActionResult<null>> {
+  const { user } = await requireProjectAccess(projectId);
+
+  const project = await getProject(companyId, projectId);
+  if (!project) {
+    return { ok: false, error: { code: "not_found", message: "That project isn't part of the current company." } };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ active_project_id: projectId }).eq("id", user.id);
+
+  if (error) {
+    return { ok: false, error: { code: "server_error", message: "Couldn't switch projects. Try again." } };
+  }
+
+  revalidatePath("/", "layout");
   return { ok: true, data: null };
 }
 

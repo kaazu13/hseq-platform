@@ -16,6 +16,8 @@ import {
   getCurrentUserProfile,
   resolveCurrentCompany,
 } from "@/modules/companies/queries";
+import { resolveCurrentProject } from "@/modules/projects/queries";
+import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
@@ -23,8 +25,9 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusIndicator, type StatusTone } from "@/components/shared/status-indicator";
+import { ProjectSelectorCard } from "@/modules/projects/components/project-selector-card";
 
-const ORG_STATUS_TONE: Record<string, StatusTone> = {
+const COMPANY_STATUS_TONE: Record<string, StatusTone> = {
   trial: "info",
   active: "success",
   suspended: "danger",
@@ -52,10 +55,10 @@ export default async function DashboardPage() {
   if (companies.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into an company." />
+        <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into a company." />
         <EmptyState
           icon={Users}
-          title="You're not part of an company yet"
+          title="You're not part of a company yet"
           description="Companies are set up manually for now. Once an administrator adds your account to one, it will appear here automatically — no action needed on your end."
           className="flex-1"
         />
@@ -65,7 +68,26 @@ export default async function DashboardPage() {
 
   const current = companies.find((company) => company.id === currentCompanyId) ?? companies[0];
   const memberCount = await countActiveMembers(current.id);
-  const orgTone = ORG_STATUS_TONE[current.status] ?? "neutral";
+  const companyTone = COMPANY_STATUS_TONE[current.status] ?? "neutral";
+
+  // Post-login/post-company-switch project resolution: exactly one
+  // accessible project auto-selects (persisted directly here — idempotent,
+  // RLS-protected via profiles_update_own — so every other project-scoped
+  // page reads a real active_project_id on its very next load, not just
+  // this render); more than one, with none currently active, prompts an
+  // explicit choice instead of guessing.
+  const { projects, currentProjectId } = await resolveCurrentProject(user.id, current.id);
+  if (!currentProjectId && projects.length === 1) {
+    const supabase = await createClient();
+    await supabase.from("profiles").update({ active_project_id: projects[0].id }).eq("id", user.id);
+  } else if (!currentProjectId && projects.length > 1) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title={`Welcome back, ${displayName}`} description={`Choose which ${current.name} project to work in.`} />
+        <ProjectSelectorCard companyId={current.id} projects={projects} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
@@ -94,7 +116,7 @@ export default async function DashboardPage() {
             </span>
             <span className="text-lg font-semibold">{current.name}</span>
           </div>
-          <StatusIndicator tone={orgTone} label={current.status} className="capitalize" />
+          <StatusIndicator tone={companyTone} label={current.status} className="capitalize" />
         </CardContent>
       </Card>
 

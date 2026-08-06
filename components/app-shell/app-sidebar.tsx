@@ -9,13 +9,17 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { CompanySwitcher } from "@/components/app-shell/company-switcher";
+import { ProjectSwitcher } from "@/components/app-shell/project-switcher";
 import { NavMain } from "@/components/app-shell/nav-main";
 import { UserMenu } from "@/components/app-shell/user-menu";
 import type { CompanySummary, RoleName } from "@/modules/companies/types";
+import type { Project } from "@/modules/projects/types";
 
 type AppSidebarProps = {
   companies: CompanySummary[];
   currentCompanyId: string | null;
+  projects: Project[];
+  currentProjectId: string | null;
   user: { name: string; email: string };
   roleNames: RoleName[];
 };
@@ -30,7 +34,7 @@ type AppSidebarProps = {
  * everything interactive (company switching, the user menu, active nav state)
  * is pushed down into the small client components it renders.
  */
-export function AppSidebar({ companies, currentCompanyId, user, roleNames }: AppSidebarProps) {
+export function AppSidebar({ companies, currentCompanyId, projects, currentProjectId, user, roleNames }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -43,6 +47,9 @@ export function AppSidebar({ companies, currentCompanyId, user, roleNames }: App
         </Link>
         <SidebarSeparator className="mx-0" />
         <CompanySwitcher companies={companies} currentCompanyId={currentCompanyId} />
+        {currentCompanyId && (
+          <ProjectSwitcher companyId={currentCompanyId} projects={projects} currentProjectId={currentProjectId} />
+        )}
       </SidebarHeader>
 
       <SidebarContent>
