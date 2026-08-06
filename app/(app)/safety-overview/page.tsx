@@ -290,7 +290,13 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {recentScaffolds.map((scaffold) => (
-              <ScaffoldCard key={scaffold.id} scaffold={scaffold} projectName={projectNameById.get(scaffold.project_id) ?? "Unknown project"} currentInspectionExpiresAt={recentScaffoldExpiryById.get(scaffold.id) ?? null} />
+              <ScaffoldCard
+                key={scaffold.id}
+                scaffold={scaffold}
+                projectName={projectNameById.get(scaffold.project_id) ?? "Unknown project"}
+                currentInspectionExpiresAt={recentScaffoldExpiryById.get(scaffold.id) ?? null}
+                href={`/companies/${currentCompanyId}/projects/${scaffold.project_id}/scaffolds/${scaffold.id}`}
+              />
             ))}
           </div>
         )}

@@ -108,13 +108,13 @@ export async function createScaffold(companyId: string, input: ScaffoldFormInput
     }));
     const { error: teamError } = await supabase.from("scaffold_team_members").insert(teamRows);
     if (teamError) {
-      revalidatePath("/scaffolds");
-      redirect(`/scaffolds/${data.id}/edit?teamError=1`);
+      revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
+      redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}/edit?teamError=1`);
     }
   }
 
-  revalidatePath("/scaffolds");
-  redirect(`/scaffolds/${data.id}`);
+  revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
+  redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}`);
 }
 
 export async function updateScaffold(companyId: string, scaffoldId: string, projectId: string, input: ScaffoldFormInput): Promise<ActionResult<null>> {
@@ -169,8 +169,8 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
     return teamResult;
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}`);
-  revalidatePath(`/scaffolds/${scaffoldId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/edit`);
   return { ok: true, data: null };
 }
 
@@ -282,8 +282,8 @@ export async function createInspection(
     return { ok: false, error: { code: "server_error", message: "Couldn't start the inspection. Try again." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}`);
-  redirect(`/scaffolds/${scaffoldId}/inspections/${data.id}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
+  redirect(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${data.id}/edit`);
 }
 
 /** Starts a correction to an already-finalized inspection — a new draft inspection with `corrects_inspection_id` set, requiring a reason. Goes through the exact same create path (and draft workflow) as any other inspection; finalizing it is what actually links it back to the original (see finalize_scaffold_inspection() in the migration). */
@@ -337,8 +337,8 @@ export async function startInspectionCorrection(
     return { ok: false, error: { code: "server_error", message: "Couldn't start the correction. Try again." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}`);
-  redirect(`/scaffolds/${scaffoldId}/inspections/${data.id}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
+  redirect(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${data.id}/edit`);
 }
 
 export async function updateInspectionItems(
@@ -378,7 +378,7 @@ export async function updateInspectionItems(
     return { ok: false, error: { code: "server_error", message: "Couldn't save the checklist. Try again." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
   return { ok: true, data: null };
 }
 
@@ -411,8 +411,9 @@ export async function finalizeInspection(
     return { ok: false, error: { code: "server_error", message: "Couldn't finalize the inspection. Try again." } };
   }
 
-  revalidatePath("/scaffolds");
-  revalidatePath(`/scaffolds/${scaffoldId}`);
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-inspections`);
   return { ok: true, data: null };
 }

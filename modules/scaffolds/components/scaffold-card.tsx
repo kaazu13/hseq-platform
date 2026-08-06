@@ -6,9 +6,9 @@ import { ScaffoldStatusBadge } from "@/modules/scaffolds/components/scaffold-sta
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /** Scaffold register list card — same visual shape as every other list card this session. */
-export function ScaffoldCard({ scaffold, projectName, currentInspectionExpiresAt }: { scaffold: Scaffold; projectName: string; currentInspectionExpiresAt: string | null }) {
+export function ScaffoldCard({ scaffold, projectName, currentInspectionExpiresAt, href }: { scaffold: Scaffold; projectName: string; currentInspectionExpiresAt: string | null; href: string }) {
   return (
-    <Link href={`/scaffolds/${scaffold.id}`} className="block rounded-xl focus-visible:outline-2 focus-visible:outline-ring">
+    <Link href={href} className="block rounded-xl focus-visible:outline-2 focus-visible:outline-ring">
       <Card className="gap-0 py-0 transition-shadow hover:shadow-md">
         <CardHeader className="gap-2 px-4 py-3">
           <div className="flex items-start justify-between gap-2">

@@ -92,6 +92,30 @@ export type TeamWithAssignments = Team & {
   members: TeamAssignmentWithEmployee[];
 };
 
+function formatTeamDate(value: string): string {
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+/**
+ * "Day shift · North wing · 12 Aug – 30 Sep" style summary line for the
+ * Team Card — shift/work_area/active date range are all optional and
+ * independently displayed, same "omit whichever parts aren't recorded"
+ * convention as modules/scaffolds/types.ts's formatScaffoldDimensions.
+ * Returns null when nothing is set, so callers render nothing instead of
+ * an empty line.
+ */
+export function formatTeamScheduleSummary(team: Pick<Team, "shift" | "work_area" | "active_from" | "active_until">): string | null {
+  const parts: string[] = [];
+  if (team.shift) parts.push(team.shift);
+  if (team.work_area) parts.push(team.work_area);
+
+  if (team.active_from && team.active_until) parts.push(`${formatTeamDate(team.active_from)} – ${formatTeamDate(team.active_until)}`);
+  else if (team.active_from) parts.push(`From ${formatTeamDate(team.active_from)}`);
+  else if (team.active_until) parts.push(`Until ${formatTeamDate(team.active_until)}`);
+
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 /**
  * Where a project roster employee currently stands with respect to ONE
  * team being edited — feeds the Team dialog's assignment picker. `null`

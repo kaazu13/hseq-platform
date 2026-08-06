@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, BasicEmployee, ScaffoldTeamMemberDetail } from "./types";
+import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, ScaffoldInspectionWithScaffold, BasicEmployee, ScaffoldTeamMemberDetail } from "./types";
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
 import type { Project } from "@/modules/projects/types";
 import type { RoleName } from "@/modules/companies/types";
@@ -213,6 +213,48 @@ export async function getInspection(companyId: string, inspectionId: string): Pr
     inspector: employees?.[0] ?? null,
     items: (items ?? []).sort((a, b) => a.item_type.localeCompare(b.item_type)),
   };
+}
+
+export type ScaffoldInspectionListFilters = {
+  status?: string;
+  outcome?: string;
+};
+
+/**
+ * Every inspection across a project's scaffolds, newest first — backs the
+ * project-wide Scaffold Inspections list (Planning & Daily nav). Two
+ * queries, no PostgREST embeds (see header comment); each inspection
+ * carries its parent scaffold's tag_number/scaffold_number/work_area so
+ * rows can render and link (to the SAME canonical inspection-detail route
+ * a scaffold's own history list links to) without an extra round trip per
+ * row.
+ */
+export async function listInspectionsForProject(
+  companyId: string,
+  projectId: string,
+  filters: ScaffoldInspectionListFilters = {},
+): Promise<ScaffoldInspectionWithScaffold[]> {
+  const supabase = await createClient();
+  let query = supabase.from("scaffold_inspections").select("*").eq("company_id", companyId).eq("project_id", projectId);
+  if (filters.status) query = query.eq("status", filters.status as ScaffoldInspection["status"]);
+  if (filters.outcome) query = query.eq("outcome", filters.outcome as NonNullable<ScaffoldInspection["outcome"]>);
+
+  const { data: inspections, error } = await query.order("inspected_at", { ascending: false });
+  if (error) throw error;
+  if (!inspections || inspections.length === 0) return [];
+
+  const scaffoldIds = [...new Set(inspections.map((inspection) => inspection.scaffold_id))];
+  const { data: scaffolds, error: scaffoldsError } = await supabase
+    .from("scaffolds")
+    .select("id, tag_number, scaffold_number, work_area")
+    .eq("company_id", companyId)
+    .in("id", scaffoldIds);
+  if (scaffoldsError) throw scaffoldsError;
+  const scaffoldById = new Map((scaffolds ?? []).map((scaffold) => [scaffold.id, scaffold]));
+
+  return inspections
+    .filter((inspection) => scaffoldById.has(inspection.scaffold_id))
+    .map((inspection) => ({ ...inspection, scaffold: scaffoldById.get(inspection.scaffold_id)! }));
 }
 
 // ── Safety Overview aggregations ─────────────────────────────────────

@@ -65,6 +65,10 @@ export async function saveTeamWithAssignments(
     target_description: (parsed.data.description ?? null) as string,
     target_status: parsed.data.status,
     target_assignments: assignmentChanges.map((change) => ({ employee_id: change.employeeId, role: change.role })),
+    target_shift: (parsed.data.shift ?? null) as string,
+    target_work_area: (parsed.data.workArea ?? null) as string,
+    target_active_from: (parsed.data.activeFrom ?? null) as string,
+    target_active_until: (parsed.data.activeUntil ?? null) as string,
   });
 
   if (error || !data) {
@@ -93,6 +97,7 @@ export async function saveTeamWithAssignments(
   });
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
   return { ok: true, data: { teamId: data.id } };
 }
 
@@ -122,6 +127,7 @@ export async function reorderTeams(companyId: string, projectId: string, ordered
   }
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
   return { ok: true, data: null };
 }
 
@@ -182,6 +188,7 @@ export async function setTeamAssignment(
   });
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
   return { ok: true, data: null };
 }
 
@@ -212,5 +219,6 @@ export async function removeTeamAssignment(companyId: string, projectId: string,
   });
 
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
   return { ok: true, data: null };
 }

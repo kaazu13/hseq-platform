@@ -2147,6 +2147,8 @@ export type Database = {
       }
       teams: {
         Row: {
+          active_from: string | null
+          active_until: string | null
           code: string | null
           color: Database["public"]["Enums"]["team_color"]
           company_id: string
@@ -2157,11 +2159,15 @@ export type Database = {
           id: string
           name: string
           project_id: string
+          shift: string | null
           status: Database["public"]["Enums"]["team_status"]
           updated_at: string
           updated_by: string | null
+          work_area: string | null
         }
         Insert: {
+          active_from?: string | null
+          active_until?: string | null
           code?: string | null
           color?: Database["public"]["Enums"]["team_color"]
           company_id: string
@@ -2172,11 +2178,15 @@ export type Database = {
           id?: string
           name: string
           project_id: string
+          shift?: string | null
           status?: Database["public"]["Enums"]["team_status"]
           updated_at?: string
           updated_by?: string | null
+          work_area?: string | null
         }
         Update: {
+          active_from?: string | null
+          active_until?: string | null
           code?: string | null
           color?: Database["public"]["Enums"]["team_color"]
           company_id?: string
@@ -2187,9 +2197,11 @@ export type Database = {
           id?: string
           name?: string
           project_id?: string
+          shift?: string | null
           status?: Database["public"]["Enums"]["team_status"]
           updated_at?: string
           updated_by?: string | null
+          work_area?: string | null
         }
         Relationships: [
           {
@@ -3037,16 +3049,22 @@ export type Database = {
       }
       save_team_with_assignments: {
         Args: {
+          target_active_from?: string
+          target_active_until?: string
           target_assignments?: Json
           target_code: string
           target_color: Database["public"]["Enums"]["team_color"]
           target_description: string
           target_name: string
           target_project_id: string
+          target_shift?: string
           target_status: Database["public"]["Enums"]["team_status"]
           target_team_id: string
+          target_work_area?: string
         }
         Returns: {
+          active_from: string | null
+          active_until: string | null
           code: string | null
           color: Database["public"]["Enums"]["team_color"]
           company_id: string
@@ -3057,9 +3075,11 @@ export type Database = {
           id: string
           name: string
           project_id: string
+          shift: string | null
           status: Database["public"]["Enums"]["team_status"]
           updated_at: string
           updated_by: string | null
+          work_area: string | null
         }
         SetofOptions: {
           from: "*"

@@ -46,6 +46,13 @@ export type NavStatus = "available" | "planned";
 
 export type NavItem = {
   label: string;
+  /**
+   * For most items, the real link. For project-scoped items (`buildHref`
+   * is set), this is never linked to directly — it exists only as a
+   * stable, unique key for ALL_NAV_ITEMS/breadcrumbs.tsx; the actual URL
+   * depends on the caller's active company+project and is computed by
+   * `buildHref` instead.
+   */
   href: string;
   icon: LucideIcon;
   status: NavStatus;
@@ -62,6 +69,23 @@ export type NavItem = {
    * identically since they all share one `pathname`.
    */
   matchQueryParam?: { key: string; value: string | null };
+  /**
+   * Set for items whose real URL depends on the caller's active company+
+   * project (Scaffold Register, Scaffold Inspections, Teams) — nav-main.tsx
+   * calls this to build the actual Link href once both are known. When no
+   * project is currently selected, nav-main.tsx renders the item disabled
+   * rather than linking to a broken/ambiguous URL.
+   */
+  buildHref?: (ctx: { companyId: string; projectId: string }) => string;
+  /**
+   * The path segment immediately after `/companies/:companyId/projects/:projectId/`
+   * that this item's real route lives under. Required alongside
+   * `buildHref` — isNavItemActive can't compare against `href` for these
+   * items (it's a stable placeholder key, not the real URL, and the real
+   * URL contains two opaque UUID segments a literal prefix match can't
+   * see through).
+   */
+  matchSegment?: string;
 };
 
 export type NavGroup = {
@@ -133,8 +157,38 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Planning and Daily Safety",
+    label: "Planning & Daily",
     items: [
+      {
+        label: "Teams",
+        href: "/teams",
+        icon: Users,
+        status: "available",
+        description:
+          "Project crews — name, Foreman, workers, shift, work area, and active dates. Scoped to your currently selected project.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/teams`,
+        matchSegment: "teams",
+      },
+      {
+        label: "Scaffold Register",
+        href: "/scaffolds",
+        icon: HardHat,
+        status: "available",
+        description:
+          "The scaffold register — tag numbers, type, dimensions, load class, responsible Foreman and team, and a complete chronological inspection history. Scoped to your currently selected project.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffolds`,
+        matchSegment: "scaffolds",
+      },
+      {
+        label: "Scaffold Inspections",
+        href: "/scaffolds/inspections",
+        icon: ClipboardList,
+        status: "available",
+        description:
+          "Every scaffold inspection recorded across your currently selected project's scaffolds, in one list — each entry opens the same canonical inspection view reached from the Scaffold Register.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffold-inspections`,
+        matchSegment: "scaffold-inspections",
+      },
       {
         label: "LMRA",
         href: "/lmra",
@@ -143,6 +197,11 @@ export const NAV_GROUPS: NavGroup[] = [
         description:
           "A short, structured go/no-go risk check completed by a crew immediately before starting a task.",
       },
+    ],
+  },
+  {
+    label: "Safety Management",
+    items: [
       {
         label: "Toolbox Meetings",
         href: "/toolbox-meetings",
@@ -168,11 +227,6 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Short, one-page safety bulletins shared company-wide or on a specific project.",
         matchQueryParam: { key: "section", value: "safety-flash" },
       },
-    ],
-  },
-  {
-    label: "Safety Management",
-    items: [
       {
         label: "Safety Observations",
         href: "/observations",
@@ -204,35 +258,6 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "Formal records of incidents and near-misses, with severity classification, investigation, and follow-up.",
-      },
-    ],
-  },
-  {
-    label: "Scaffolding",
-    items: [
-      {
-        label: "Scaffold Register",
-        href: "/scaffolds",
-        icon: HardHat,
-        status: "available",
-        description:
-          "The scaffold register — tag numbers, type, dimensions, load class, responsible Foreman and team, and a complete chronological inspection history.",
-      },
-      {
-        label: "Scaffold Inspections",
-        href: "/scaffolds/inspections",
-        icon: ClipboardList,
-        status: "planned",
-        description:
-          "An company-wide register of scaffold inspections across every scaffold — today, an individual scaffold's inspection history is reached from its own register entry.",
-      },
-      {
-        label: "Scaffold Defects",
-        href: "/scaffolds/defects",
-        icon: AlertTriangle,
-        status: "planned",
-        description:
-          "An company-wide register of open scaffold defects across every scaffold — today, a scaffold's defects are reached from its own inspection record.",
       },
     ],
   },
@@ -306,6 +331,9 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.item
  * alone can't tell them apart since they share one route.
  */
 export function isNavItemActive(item: NavItem, pathname: string, searchParams: URLSearchParams): boolean {
+  if (item.matchSegment) {
+    return new RegExp(`^/companies/[^/]+/projects/[^/]+/${item.matchSegment}(/|$)`).test(pathname);
+  }
   const hrefPath = item.href.split("?")[0];
   if (pathname !== hrefPath && !pathname.startsWith(`${hrefPath}/`)) return false;
   if (!item.matchQueryParam) return true;

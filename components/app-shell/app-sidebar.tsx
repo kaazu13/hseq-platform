@@ -53,7 +53,7 @@ export function AppSidebar({ companies, currentCompanyId, projects, currentProje
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain roleNames={roleNames} />
+        <NavMain roleNames={roleNames} companyId={currentCompanyId} projectId={currentProjectId} />
       </SidebarContent>
 
       <SidebarFooter>

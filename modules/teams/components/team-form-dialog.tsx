@@ -80,6 +80,10 @@ export function TeamFormDialog({ companyId, projectId, team, rosterCandidates, o
       color,
       description: String(formData.get("description") ?? ""),
       status,
+      shift: String(formData.get("shift") ?? ""),
+      workArea: String(formData.get("workArea") ?? ""),
+      activeFrom: String(formData.get("activeFrom") ?? ""),
+      activeUntil: String(formData.get("activeUntil") ?? ""),
     };
 
     const changedEmployeeIds = Object.keys(selections).filter((employeeId) => selections[employeeId] !== initialSelections[employeeId]);
@@ -161,6 +165,29 @@ export function TeamFormDialog({ companyId, projectId, team, rosterCandidates, o
                     )}
                   />
                 ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="shift">Shift (optional)</Label>
+                <Input id="shift" name="shift" defaultValue={team?.shift ?? ""} aria-invalid={Boolean(fieldErrors.shift)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="workArea">Work area (optional)</Label>
+                <Input id="workArea" name="workArea" defaultValue={team?.work_area ?? ""} aria-invalid={Boolean(fieldErrors.workArea)} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="activeFrom">Active from (optional)</Label>
+                <Input id="activeFrom" name="activeFrom" type="date" defaultValue={team?.active_from ?? ""} aria-invalid={Boolean(fieldErrors.activeFrom)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="activeUntil">Active until (optional)</Label>
+                <Input id="activeUntil" name="activeUntil" type="date" defaultValue={team?.active_until ?? ""} aria-invalid={Boolean(fieldErrors.activeUntil)} />
+                {fieldErrors.activeUntil && <p className="text-sm text-destructive">{fieldErrors.activeUntil}</p>}
               </div>
             </div>
 

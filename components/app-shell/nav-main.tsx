@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
  * remembered per-browser via localStorage (never anything sensitive — just
  * which labels are collapsed).
  */
-export function NavMain({ roleNames }: { roleNames: RoleName[] }) {
+export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleName[]; companyId: string | null; projectId: string | null }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -95,6 +95,26 @@ export function NavMain({ roleNames }: { roleNames: RoleName[] }) {
                   <SidebarMenu>
                     {group.items.map((item) => {
                       const isActive = isNavItemActive(item, pathname, searchParams);
+
+                      if (item.buildHref) {
+                        const resolvedHref = companyId && projectId ? item.buildHref({ companyId, projectId }) : null;
+                        return (
+                          <SidebarMenuItem key={item.href}>
+                            {resolvedHref ? (
+                              <SidebarMenuButton isActive={isActive} tooltip={item.label} render={<Link href={resolvedHref} onClick={handleNavigate} />}>
+                                <item.icon />
+                                <span>{item.label}</span>
+                              </SidebarMenuButton>
+                            ) : (
+                              <SidebarMenuButton disabled aria-disabled tooltip="Select a project first">
+                                <item.icon />
+                                <span>{item.label}</span>
+                              </SidebarMenuButton>
+                            )}
+                          </SidebarMenuItem>
+                        );
+                      }
+
                       return (
                         <SidebarMenuItem key={item.href}>
                           <SidebarMenuButton

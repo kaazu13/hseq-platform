@@ -4,15 +4,22 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { SCAFFOLD_TYPES, SCAFFOLD_TYPE_LABELS, SCAFFOLD_STATUSES, SCAFFOLD_STATUS_LABELS } from "@/modules/scaffolds/types";
-import type { Project } from "@/modules/projects/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const FILTER_KEYS = ["workArea", "projectId", "scaffoldType", "status"] as const;
+const FILTER_KEYS = ["workArea", "scaffoldType", "status"] as const;
 
-/** URL-search-param-driven filters for the Scaffold register — same pattern as every other list filter this session (see modules/lmra/components/lmra-filters.tsx's header comment for the controlled-input rationale). */
-export function ScaffoldFilters({ projects }: { projects: Project[] }) {
+/**
+ * URL-search-param-driven filters for the Scaffold register — same pattern
+ * as every other list filter this session (see
+ * modules/lmra/components/lmra-filters.tsx's header comment for the
+ * controlled-input rationale). No project filter: the canonical scaffold
+ * register route (/companies/[companyId]/projects/[projectId]/scaffolds)
+ * is itself project-scoped — there is exactly one project's scaffolds to
+ * browse here, not a cross-project list to narrow down.
+ */
+export function ScaffoldFilters({ basePath }: { basePath: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -34,7 +41,7 @@ export function ScaffoldFilters({ projects }: { projects: Project[] }) {
       params.set(key, value);
     }
     startTransition(() => {
-      router.push(`/scaffolds?${params.toString()}`);
+      router.push(`${basePath}?${params.toString()}`);
     });
   }
 
@@ -52,7 +59,7 @@ export function ScaffoldFilters({ projects }: { projects: Project[] }) {
     const params = new URLSearchParams(searchParams.toString());
     for (const key of FILTER_KEYS) params.delete(key);
     startTransition(() => {
-      router.push(`/scaffolds?${params.toString()}`);
+      router.push(`${basePath}?${params.toString()}`);
     });
   }
 
@@ -62,20 +69,6 @@ export function ScaffoldFilters({ projects }: { projects: Project[] }) {
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search work area…" value={workAreaValue} className="pl-8" onChange={(event) => onWorkAreaChange(event.target.value)} aria-label="Search work area" />
       </div>
-
-      <Select value={searchParams.get("projectId") ?? "all"} onValueChange={(value) => setParam("projectId", value)}>
-        <SelectTrigger className="w-full sm:w-44" aria-label="Filter by project">
-          <SelectValue placeholder="All projects" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All projects</SelectItem>
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
 
       <Select value={searchParams.get("scaffoldType") ?? "all"} onValueChange={(value) => setParam("scaffoldType", value)}>
         <SelectTrigger className="w-full sm:w-48" aria-label="Filter by scaffold type">

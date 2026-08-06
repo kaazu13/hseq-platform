@@ -6,12 +6,10 @@ import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject, getMyProjectAssignmentRoles, listProjectAssignments } from "@/modules/projects/queries";
 import { canManageProject } from "@/modules/projects/permissions";
 import { listActiveEmployeesForPicker } from "@/modules/employees/queries";
-import { listTeamsWithAssignments, listProjectRosterCandidates } from "@/modules/teams/queries";
 import type { EmployeeOption } from "@/modules/employees/employee-options";
 import { ProjectOverviewTab } from "@/modules/projects/components/project-overview-tab";
 import { ProjectAssignmentsTab } from "@/modules/projects/components/project-assignments-tab";
 import { ProjectStatusBadge } from "@/modules/projects/components/project-status-badge";
-import { TeamsGrid } from "@/modules/teams/components/teams-grid";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -22,11 +20,14 @@ type ProjectDetailPageProps = {
 };
 
 /**
- * Project profile page — Overview / Teams / Assignments tabs, mirroring
+ * Project profile page — Overview / Assignments tabs, mirroring
  * app/(app)/employees/[employeeNumber]/page.tsx's tab structure for
  * consistency. Equipment/Documents/Audit are explicit placeholders (not
  * hidden tabs), same reasoning as the employee page: the information
- * architecture is visible before every module behind it exists.
+ * architecture is visible before every module behind it exists. Teams has
+ * its own promoted, project-scoped route now
+ * (/companies/[companyId]/projects/[projectId]/teams) — no Teams tab lives
+ * here anymore, so the same data is never rendered by two different pages.
  *
  * Routed by the raw `id` (not a human code) — see
  * modules/projects/components/project-card.tsx's comment for why
@@ -53,9 +54,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
   ]);
   const canManage = canManageProject(roleNames, myProjectRoles);
 
-  const [teams, rosterCandidates, projectAssignments, pickerEmployeeRows] = await Promise.all([
-    listTeamsWithAssignments(currentCompanyId, projectId),
-    listProjectRosterCandidates(currentCompanyId, projectId),
+  const [projectAssignments, pickerEmployeeRows] = await Promise.all([
     listProjectAssignments(currentCompanyId, projectId),
     listActiveEmployeesForPicker(currentCompanyId),
   ]);
@@ -93,10 +92,9 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         {project.location ? <span className="text-sm text-muted-foreground">{project.location}</span> : null}
       </div>
 
-      <Tabs defaultValue="teams">
+      <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="equipment">Equipment</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -105,16 +103,6 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
 
         <TabsContent value="overview" className="pt-4">
           <ProjectOverviewTab project={project} />
-        </TabsContent>
-
-        <TabsContent value="teams" className="pt-4">
-          <TeamsGrid
-            companyId={currentCompanyId}
-            projectId={projectId}
-            teams={teams}
-            rosterCandidates={rosterCandidates}
-            canManage={canManage}
-          />
         </TabsContent>
 
         <TabsContent value="assignments" className="pt-4">

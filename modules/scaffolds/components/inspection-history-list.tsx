@@ -9,12 +9,12 @@ function formatDateTime(value: string): string {
   return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-/** The complete chronological inspection history for a scaffold — this milestone's explicit requirement. Newest first (matches modules/scaffolds/queries.ts's listInspectionsForScaffold ordering). Superseded/corrected inspections stay visible, clearly marked, never removed. Each row links to the SAME canonical inspection-detail route the Scaffold Inspections list page also links to — one inspection view, reached from two entry points, never duplicated. */
-export function InspectionHistoryList({ scaffoldId, scaffoldNumber, inspections }: { scaffoldId: string; scaffoldNumber: number; inspections: ScaffoldInspection[] }) {
+/** The complete chronological inspection history for a scaffold — this milestone's explicit requirement. Newest first (matches modules/scaffolds/queries.ts's listInspectionsForScaffold ordering). Superseded/corrected inspections stay visible, clearly marked, never removed. Each row links to the SAME canonical inspection-detail route the Scaffold Inspections list page also links to — one inspection view, reached from two entry points, never duplicated. `basePath` is the scaffold's own canonical URL (e.g. `/companies/:companyId/projects/:projectId/scaffolds/:scaffoldId`). */
+export function InspectionHistoryList({ basePath, scaffoldNumber, inspections }: { basePath: string; scaffoldNumber: number; inspections: ScaffoldInspection[] }) {
   return (
     <div className="flex flex-col gap-3">
       {inspections.map((inspection) => (
-        <Link key={inspection.id} href={`/scaffolds/${scaffoldId}/inspections/${inspection.id}`} className="block rounded-xl focus-visible:outline-2 focus-visible:outline-ring">
+        <Link key={inspection.id} href={`${basePath}/inspections/${inspection.id}`} className="block rounded-xl focus-visible:outline-2 focus-visible:outline-ring">
           <Card className="transition-shadow hover:shadow-md">
             <CardContent className="flex flex-col gap-2 pt-4">
               <div className="flex flex-wrap items-center justify-between gap-2">

@@ -4,14 +4,29 @@ import { optionalText } from "@/lib/validation";
 const TEAM_COLOR_VALUES = ["gray", "blue", "green", "yellow", "orange", "red", "purple", "cyan", "brown"] as const;
 const TEAM_STATUS_VALUES = ["active", "archived"] as const;
 
+const optionalDate = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value ? value : undefined));
+
 /** Create/edit — General section only. Assignments (Foreman(s)/Members) are a separate, per-employee action (see setTeamAssignmentSchema below), not one big form field. */
-export const teamFormSchema = z.object({
-  name: z.string().trim().min(1, "Team name is required"),
-  code: optionalText,
-  color: z.enum(TEAM_COLOR_VALUES),
-  description: optionalText,
-  status: z.enum(TEAM_STATUS_VALUES),
-});
+export const teamFormSchema = z
+  .object({
+    name: z.string().trim().min(1, "Team name is required"),
+    code: optionalText,
+    color: z.enum(TEAM_COLOR_VALUES),
+    description: optionalText,
+    status: z.enum(TEAM_STATUS_VALUES),
+    shift: optionalText,
+    workArea: optionalText,
+    activeFrom: optionalDate,
+    activeUntil: optionalDate,
+  })
+  .refine((data) => !data.activeFrom || !data.activeUntil || data.activeUntil >= data.activeFrom, {
+    message: "Active until must be on or after active from.",
+    path: ["activeUntil"],
+  });
 export type TeamFormInput = z.infer<typeof teamFormSchema>;
 
 const TEAM_ASSIGNMENT_ROLE_VALUES = ["member", "foreman"] as const;

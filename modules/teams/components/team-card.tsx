@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { ChevronDown, ChevronUp, Pencil, Users } from "lucide-react";
 import { toast } from "sonner";
 import { reorderTeams } from "@/modules/teams/actions";
-import { TEAM_COLOR_HEADER_CLASSES, TEAM_COLOR_SWATCH_CLASSES, type TeamWithAssignments } from "@/modules/teams/types";
+import { TEAM_COLOR_HEADER_CLASSES, TEAM_COLOR_SWATCH_CLASSES, formatTeamScheduleSummary, type TeamWithAssignments } from "@/modules/teams/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -89,6 +89,7 @@ export function TeamCard({ companyId, projectId, team, canManage, orderedTeamIds
                 </Badge>
               ) : null}
             </div>
+            {formatTeamScheduleSummary(team) ? <p className="text-xs opacity-90">{formatTeamScheduleSummary(team)}</p> : null}
             {team.description ? <p className="text-xs opacity-90">{team.description}</p> : null}
           </div>
           {canManage && (

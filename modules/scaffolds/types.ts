@@ -251,6 +251,11 @@ export type ScaffoldInspectionDetail = ScaffoldInspection & {
   items: ScaffoldInspectionItem[];
 };
 
+/** One inspection with its parent scaffold's display fields resolved — backs the project-wide Scaffold Inspections list, where each row must show and link to its scaffold without a separate lookup per row. */
+export type ScaffoldInspectionWithScaffold = ScaffoldInspection & {
+  scaffold: Pick<Scaffold, "id" | "tag_number" | "scaffold_number" | "work_area">;
+};
+
 /** One resolved scaffold team member — the employee fields a display list/print view needs, never more (see get_basic_employee_info()'s own narrow column set). */
 export type ScaffoldTeamMemberDetail = {
   id: string;
