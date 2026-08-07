@@ -113,7 +113,8 @@ export async function createScaffoldDefect(
     return { ok: false, error: { code: "server_error", message: "Couldn't record the defect. Try again." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   return { ok: true, data: { defectId: data.id } };
 }
 
@@ -160,7 +161,8 @@ export async function updateScaffoldDefectDetails(
     return { ok: false, error: { code: "not_found", message: "Defect not found." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   return { ok: true, data: null };
 }
 
@@ -199,7 +201,8 @@ export async function updateScaffoldDefectProgress(
     return { ok: false, error: { code: "not_found", message: "Defect not found, or it's already closed/rejected." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   return { ok: true, data: null };
 }
 
@@ -242,7 +245,8 @@ export async function closeScaffoldDefect(
     return { ok: false, error: { code: "not_found", message: "Defect not found, or it isn't awaiting verification." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   return { ok: true, data: null };
 }
 
@@ -285,7 +289,8 @@ export async function rejectScaffoldDefect(
     return { ok: false, error: { code: "not_found", message: "Defect not found, or it isn't awaiting verification." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   return { ok: true, data: null };
 }
 
@@ -325,6 +330,7 @@ export async function reopenScaffoldDefect(
     return { ok: false, error: { code: "not_found", message: "Defect not found, or it isn't closed/rejected." } };
   }
 
-  revalidatePath(`/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   return { ok: true, data: null };
 }
