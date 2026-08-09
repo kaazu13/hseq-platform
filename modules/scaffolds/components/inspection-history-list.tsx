@@ -4,6 +4,7 @@ import { SCAFFOLD_INSPECTION_REASON_LABELS, formatInspectionReference } from "@/
 import { ScaffoldInspectionStatusBadge } from "@/modules/scaffolds/components/scaffold-inspection-status-badge";
 import { ScaffoldInspectionOutcomeBadge } from "@/modules/scaffolds/components/scaffold-inspection-outcome-badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 function formatDateTime(value: string): string {
   return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -21,12 +22,14 @@ export function InspectionHistoryList({ basePath, scaffoldNumber, inspections }:
                 <span className="font-mono text-sm font-medium">{formatInspectionReference({ scaffold_number: scaffoldNumber }, inspection)}</span>
                 <div className="flex items-center gap-2">
                   <ScaffoldInspectionStatusBadge status={inspection.status} />
+                  {inspection.voided_at && <Badge variant="destructive">Voided</Badge>}
                   {inspection.outcome && <ScaffoldInspectionOutcomeBadge outcome={inspection.outcome} />}
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">{SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]} · {formatDateTime(inspection.inspected_at)}</p>
               {inspection.superseded_by_id && <p className="text-xs text-muted-foreground">Superseded by a correction</p>}
               {inspection.corrects_inspection_id && <p className="text-xs text-muted-foreground">Corrects an earlier inspection</p>}
+              {inspection.voided_at && <p className="text-xs text-muted-foreground">Voided: {inspection.void_reason}</p>}
             </CardContent>
           </Card>
         </Link>

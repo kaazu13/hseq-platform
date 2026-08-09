@@ -14,11 +14,13 @@ import {
   inspectionItemsFormSchema,
   finalizeInspectionFormSchema,
   correctionReasonFormSchema,
+  voidInspectionFormSchema,
   type ScaffoldFormInput,
   type InspectionFormInput,
   type InspectionItemsFormInput,
   type FinalizeInspectionFormInput,
   type CorrectionReasonFormInput,
+  type VoidInspectionFormInput,
 } from "./validation";
 
 /**
@@ -414,6 +416,51 @@ export async function finalizeInspection(
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-inspections`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Voids a mistaken/abandoned DRAFT inspection — the soft-delete path for
+ * this table (no DELETE grant exists; see void_scaffold_inspection() and
+ * validate_scaffold_inspection_update()'s void branch in the migration
+ * for where the real rules live: draft-only, one-way, a reason required,
+ * and immutable afterward). The record stays in the scaffold's inspection
+ * history, clearly marked — never removed, matching how a superseded
+ * inspection is already handled.
+ */
+export async function voidInspection(
+  companyId: string,
+  inspectionId: string,
+  scaffoldId: string,
+  projectId: string,
+  input: VoidInspectionFormInput,
+): Promise<ActionResult<null>> {
+  const parsed = voidInspectionFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireScaffoldManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("void_scaffold_inspection", {
+    target_inspection_id: inspectionId,
+    target_void_reason: parsed.data.voidReason,
+  });
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) {
+      return { ok: false, error: { code: "validation_error", message: error.message } };
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't void the inspection. Try again." } };
+  }
+
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/edit`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-inspections`);
   return { ok: true, data: null };
 }

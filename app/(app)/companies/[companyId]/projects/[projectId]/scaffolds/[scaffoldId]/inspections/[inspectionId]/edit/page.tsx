@@ -6,6 +6,7 @@ import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { SCAFFOLD_INSPECTION_REASON_LABELS, formatInspectionReference } from "@/modules/scaffolds/types";
 import { InspectionChecklist } from "@/modules/scaffolds/components/inspection-checklist";
 import { InspectionFinalizeCard } from "@/modules/scaffolds/components/inspection-finalize-card";
+import { InspectionVoidCard } from "@/modules/scaffolds/components/inspection-void-card";
 import { listDefectsForInspection, listScaffoldDefectCandidateEmployees } from "@/modules/scaffold-defects/queries";
 import { hasUnresolvedScaffoldDefects } from "@/modules/scaffold-defects/types";
 import { canManageScaffoldDefectDetails } from "@/modules/scaffold-defects/permissions";
@@ -39,7 +40,7 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
   if (!inspection || inspection.scaffold_id !== scaffoldId || inspection.project_id !== projectId) {
     notFound();
   }
-  if (inspection.status === "finalized") {
+  if (inspection.status === "finalized" || inspection.voided_at) {
     redirect(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   }
 
@@ -101,6 +102,8 @@ export default async function EditInspectionPage({ params }: EditInspectionPageP
         projectId={inspection.project_id}
         hasUnresolvedDefects={hasUnresolvedScaffoldDefects(defects)}
       />
+
+      <InspectionVoidCard companyId={companyId} scaffoldId={scaffoldId} projectId={inspection.project_id} inspectionId={inspection.id} />
     </div>
   );
 }

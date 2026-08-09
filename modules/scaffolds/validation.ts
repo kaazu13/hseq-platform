@@ -194,3 +194,9 @@ export const correctionReasonFormSchema = z.object({
   correctionReason: z.string().trim().min(1, "A reason is required"),
 });
 export type CorrectionReasonFormInput = z.infer<typeof correctionReasonFormSchema>;
+
+/** Voiding a mistaken/abandoned draft inspection — a reason is required (void_scaffold_inspection() in the migration enforces this too; same "catch it earlier" reasoning as finalizeInspectionFormSchema). */
+export const voidInspectionFormSchema = z.object({
+  voidReason: z.string().trim().min(1, "A reason is required"),
+});
+export type VoidInspectionFormInput = z.infer<typeof voidInspectionFormSchema>;

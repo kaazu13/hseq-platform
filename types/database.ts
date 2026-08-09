@@ -1714,6 +1714,9 @@ export type Database = {
           superseded_by_id: string | null
           updated_at: string
           updated_by: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           company_id: string
@@ -1741,6 +1744,9 @@ export type Database = {
           superseded_by_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           company_id?: string
@@ -1768,6 +1774,9 @@ export type Database = {
           superseded_by_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
@@ -1836,6 +1845,13 @@ export type Database = {
           {
             foreignKeyName: "scaffold_inspections_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_inspections_voided_by_fkey"
+            columns: ["voided_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2763,6 +2779,9 @@ export type Database = {
           superseded_by_id: string | null
           updated_at: string
           updated_by: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3110,6 +3129,45 @@ export type Database = {
           profile_id: string
           work_email: string
         }[]
+      }
+      void_scaffold_inspection: {
+        Args: { target_inspection_id: string; target_void_reason: string }
+        Returns: {
+          company_id: string
+          correction_reason: string | null
+          corrects_inspection_id: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          inspected_at: string
+          inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
+          inspector_id: string
+          notes: string | null
+          outcome:
+            | Database["public"]["Enums"]["scaffold_inspection_outcome"]
+            | null
+          previous_inspection_id: string | null
+          project_id: string
+          restrictions_notes: string | null
+          scaffold_id: string
+          sequence_number: number
+          status: Database["public"]["Enums"]["scaffold_inspection_status"]
+          superseded_by_id: string | null
+          updated_at: string
+          updated_by: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scaffold_inspections"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

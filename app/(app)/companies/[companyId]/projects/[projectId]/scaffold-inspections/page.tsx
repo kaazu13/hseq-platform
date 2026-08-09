@@ -11,6 +11,7 @@ import { ScaffoldInspectionFilters } from "@/modules/scaffolds/components/scaffo
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type ScaffoldInspectionsPageProps = {
   params: Promise<{ companyId: string; projectId: string }>;
@@ -72,6 +73,7 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
                     <span className="font-mono text-sm font-medium">{formatInspectionReference(inspection.scaffold, inspection)}</span>
                     <div className="flex items-center gap-2">
                       <ScaffoldInspectionStatusBadge status={inspection.status} />
+                      {inspection.voided_at && <Badge variant="destructive">Voided</Badge>}
                       {inspection.outcome && <ScaffoldInspectionOutcomeBadge outcome={inspection.outcome} />}
                     </div>
                   </div>
@@ -83,6 +85,7 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
                   </p>
                   {inspection.superseded_by_id && <p className="text-xs text-muted-foreground">Superseded by a correction</p>}
                   {inspection.corrects_inspection_id && <p className="text-xs text-muted-foreground">Corrects an earlier inspection</p>}
+                  {inspection.voided_at && <p className="text-xs text-muted-foreground">Voided: {inspection.void_reason}</p>}
                 </CardContent>
               </Card>
             </Link>

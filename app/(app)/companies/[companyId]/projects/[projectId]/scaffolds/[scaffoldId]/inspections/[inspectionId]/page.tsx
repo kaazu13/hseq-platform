@@ -16,6 +16,7 @@ import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type InspectionDetailPageProps = {
   params: Promise<{ companyId: string; projectId: string; scaffoldId: string; inspectionId: string }>;
@@ -82,9 +83,19 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
         <ScaffoldInspectionStatusBadge status={inspection.status} />
+        {inspection.voided_at && <Badge variant="destructive">Voided</Badge>}
         {inspection.outcome && <ScaffoldInspectionOutcomeBadge outcome={inspection.outcome} />}
         <span className="text-sm text-muted-foreground">{formatDateTime(inspection.inspected_at)}</span>
       </div>
+
+      {inspection.voided_at && (
+        <Card className="border-destructive/40">
+          <CardContent className="pt-4">
+            <p className="text-sm font-medium text-destructive">This draft inspection was voided</p>
+            <p className="text-sm text-muted-foreground">{inspection.void_reason}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {inspection.outcome === "safe_with_restrictions" && inspection.restrictions_notes && (
         <Card className="border-amber-500/40">
