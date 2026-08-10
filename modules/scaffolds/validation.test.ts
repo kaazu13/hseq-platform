@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scaffoldFormSchema, inspectionFormSchema, inspectionItemsFormSchema, finalizeInspectionFormSchema, correctionReasonFormSchema } from "./validation";
+import { scaffoldFormSchema, inspectionFormSchema, inspectionItemsFormSchema, finalizeInspectionFormSchema, correctionReasonFormSchema, voidInspectionFormSchema } from "./validation";
 import { SCAFFOLD_INSPECTION_ITEM_TYPES } from "./types";
 
 const TEAM_MEMBER_A = "123e4567-e89b-42d3-a456-426614174010";
@@ -209,5 +209,16 @@ describe("correctionReasonFormSchema", () => {
   it("rejects a blank or whitespace-only reason", () => {
     expect(correctionReasonFormSchema.safeParse({ correctionReason: "" }).success).toBe(false);
     expect(correctionReasonFormSchema.safeParse({ correctionReason: "   " }).success).toBe(false);
+  });
+});
+
+describe("voidInspectionFormSchema", () => {
+  it("accepts a populated reason", () => {
+    expect(voidInspectionFormSchema.safeParse({ voidReason: "Inspected the wrong scaffold by mistake" }).success).toBe(true);
+  });
+
+  it("rejects a blank or whitespace-only reason — void_scaffold_inspection() requires one too", () => {
+    expect(voidInspectionFormSchema.safeParse({ voidReason: "" }).success).toBe(false);
+    expect(voidInspectionFormSchema.safeParse({ voidReason: "   " }).success).toBe(false);
   });
 });
