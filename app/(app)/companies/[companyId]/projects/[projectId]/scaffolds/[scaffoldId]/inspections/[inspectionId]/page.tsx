@@ -70,7 +70,11 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
 
   const projectName = project?.name ?? "Project unavailable";
   const canManage = canManageScaffold(roleNames, hasProjectAccess);
-  const canManageDefects = canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
+  // A voided inspection is a terminal, frozen record — its defects don't
+  // grow or change after the fact either (validate_scaffold_defect_insert/
+  // _update() enforce this at the database level regardless; this just
+  // keeps the UI from offering a control the write would then reject).
+  const canManageDefects = !inspection.voided_at && canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
   const candidates = toEmployeeOptions(await listScaffoldCandidateEmployees(companyId, inspection.project_id));
 
   return (

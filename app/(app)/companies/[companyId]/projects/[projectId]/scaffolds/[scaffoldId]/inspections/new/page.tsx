@@ -25,6 +25,13 @@ export default async function NewInspectionPage({ params }: NewInspectionPagePro
   if (!canManageScaffold(roleNames, hasProjectAccess)) {
     forbidden();
   }
+  // A closed/dismantled scaffold is retired — validate_scaffold_inspection_insert()
+  // is the authoritative guard (also exempts corrections, which have no UI
+  // entry point here anyway), this just avoids rendering a form whose
+  // submit would always fail.
+  if (scaffold.status === "closed") {
+    forbidden();
+  }
 
   const [candidates, priorInspections] = await Promise.all([
     listScaffoldCandidateEmployees(companyId, scaffold.project_id),

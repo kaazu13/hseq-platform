@@ -166,7 +166,7 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
         <SectionHeader
           title="Inspection history"
           actions={
-            canManage ? (
+            canManage && scaffold.status !== "closed" ? (
               <Button size="sm" nativeButton={false} render={<Link href={`${basePath}/inspections/new`} />} className="print:hidden">
                 <Plus />
                 New inspection
