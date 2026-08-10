@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { listDailyTeamsForDate } from "./queries";
+import type { DailyTeamWithMembers } from "./types";
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F2937" } };
 const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -11,10 +12,19 @@ const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFF
  * identically for both the current day and any archived (locked) day —
  * the query itself already returns exactly what that day's teams looked
  * like, whether still open or locked.
+ *
+ * Split into a thin DB-fetching wrapper (this function) and a pure
+ * formatter (formatDailyTeamsWorkbook below) purely so the formatting
+ * logic — the part actually worth asserting on — is unit-testable without
+ * a live database, same reasoning as every other "derive a display value
+ * from already-fetched data" pure function in this codebase.
  */
 export async function buildDailyTeamsWorkbook(companyId: string, projectId: string, companyName: string, projectName: string, workDate: string): Promise<ExcelJS.Buffer> {
   const teams = await listDailyTeamsForDate(companyId, projectId, workDate);
+  return formatDailyTeamsWorkbook(companyName, projectName, workDate, teams);
+}
 
+export async function formatDailyTeamsWorkbook(companyName: string, projectName: string, workDate: string, teams: DailyTeamWithMembers[]): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "HSEQ Platform";
   workbook.created = new Date();
