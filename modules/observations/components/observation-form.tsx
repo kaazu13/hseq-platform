@@ -9,9 +9,18 @@ import {
   OBSERVATION_CATEGORY_LABELS,
   OBSERVATION_RISK_LEVELS,
   OBSERVATION_RISK_LEVEL_LABELS,
+  OBSERVATION_TYPES,
+  OBSERVATION_TYPE_LABELS,
+  OBSERVATION_TARGET_TYPES,
+  OBSERVATION_TARGET_TYPE_LABELS,
+  OBSERVATION_NEGATIVE_DISPOSITIONS,
+  OBSERVATION_NEGATIVE_DISPOSITION_LABELS,
   type SafetyObservation,
   type ObservationCategory,
   type ObservationRiskLevel,
+  type ObservationType,
+  type ObservationTargetType,
+  type ObservationNegativeDisposition,
 } from "@/modules/observations/types";
 import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,12 +31,21 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+type DailyTeamOption = { id: string; name: string; work_date: string };
+
 type ObservationFormProps = {
   companyId: string;
   projectId: string;
   projectName: string;
   candidates: EmployeeOption[];
+  /** Recent Today's Teams for this project (any date) — the "target a Today's Team" picker's candidate list, see modules/daily-workforce/queries.ts's listRecentDailyTeamsForProject(). */
+  dailyTeamOptions: DailyTeamOption[];
 } & ({ mode: "create"; observation?: undefined } | { mode: "edit"; observation: SafetyObservation });
+
+function formatDailyTeamOptionLabel(option: DailyTeamOption): string {
+  const date = new Date(`${option.work_date}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  return `${option.name} — ${date}`;
+}
 
 /** Converts a stored timestamptz to the `datetime-local` input's expected local-time value — no timezone conversion beyond what the browser's Date object already does for display. */
 function toLocalDateTimeInputValue(isoString: string | undefined): string {
@@ -43,7 +61,7 @@ function toLocalDateTimeInputValue(isoString: string | undefined): string {
  * before this form ever renders, on /observations/new's project-picker
  * step; project_id is an immutable identity column once created).
  */
-export function ObservationForm({ companyId, projectId, projectName, candidates, mode, observation }: ObservationFormProps) {
+export function ObservationForm({ companyId, projectId, projectName, candidates, dailyTeamOptions, mode, observation }: ObservationFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -52,6 +70,11 @@ export function ObservationForm({ companyId, projectId, projectName, candidates,
   const [category, setCategory] = useState<ObservationCategory>(observation?.category ?? "positive_observation");
   const [riskLevel, setRiskLevel] = useState<ObservationRiskLevel>(observation?.risk_level ?? "low");
   const [isStopWork, setIsStopWork] = useState(observation?.is_stop_work ?? false);
+  const [observationType, setObservationType] = useState<ObservationType>(observation?.observation_type ?? "negative");
+  const [targetType, setTargetType] = useState<ObservationTargetType>(observation?.target_type ?? "general");
+  const [targetEmployeeId, setTargetEmployeeId] = useState(observation?.target_employee_id ?? "");
+  const [targetDailyTeamId, setTargetDailyTeamId] = useState(observation?.target_daily_team_id ?? "");
+  const [disposition, setDisposition] = useState<ObservationNegativeDisposition | "">(observation?.disposition ?? "");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,6 +92,11 @@ export function ObservationForm({ companyId, projectId, projectName, candidates,
       immediateActionTaken: String(formData.get("immediateActionTaken") ?? ""),
       riskLevel,
       isStopWork,
+      observationType,
+      targetType,
+      targetEmployeeId: targetType === "employee" ? targetEmployeeId : "",
+      targetDailyTeamId: targetType === "daily_team" ? targetDailyTeamId : "",
+      disposition: observationType === "negative" ? disposition || undefined : undefined,
     };
 
     startTransition(async () => {
@@ -184,6 +212,111 @@ export function ObservationForm({ companyId, projectId, projectName, candidates,
           <Label htmlFor="immediateActionTaken">Immediate action taken (optional)</Label>
           <Textarea id="immediateActionTaken" name="immediateActionTaken" rows={2} defaultValue={observation?.immediate_action_taken ?? ""} />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-4 border-t pt-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="observationType">Observation type</Label>
+            <Select
+              value={observationType}
+              onValueChange={(value) => {
+                const next = value as ObservationType;
+                setObservationType(next);
+                if (next !== "negative") setDisposition("");
+              }}
+            >
+              <SelectTrigger id="observationType" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OBSERVATION_TYPES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {OBSERVATION_TYPE_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {observationType === "negative" && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="disposition">Disposition (optional)</Label>
+              <Select value={disposition || "__none"} onValueChange={(value) => setDisposition(value === "__none" ? "" : (value as ObservationNegativeDisposition))}>
+                <SelectTrigger id="disposition" className="w-full">
+                  <SelectValue placeholder="Not yet decided" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Not yet decided</SelectItem>
+                  {OBSERVATION_NEGATIVE_DISPOSITIONS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {OBSERVATION_NEGATIVE_DISPOSITION_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="targetType">Relates to</Label>
+          <Select
+            value={targetType}
+            onValueChange={(value) => {
+              const next = value as ObservationTargetType;
+              setTargetType(next);
+              if (next !== "employee") setTargetEmployeeId("");
+              if (next !== "daily_team") setTargetDailyTeamId("");
+            }}
+          >
+            <SelectTrigger id="targetType" className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OBSERVATION_TARGET_TYPES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {OBSERVATION_TARGET_TYPE_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {targetType === "employee" && (
+          <EmployeeComboboxField
+            label="Employee"
+            htmlFor="targetEmployeeId"
+            value={targetEmployeeId || null}
+            onValueChange={(id) => setTargetEmployeeId(id ?? "")}
+            options={candidates}
+            placeholder="Search employee"
+            error={fieldError("targetEmployeeId")}
+          />
+        )}
+
+        {targetType === "daily_team" && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="targetDailyTeamId">Today&apos;s Team</Label>
+            <Select value={targetDailyTeamId || "__none"} onValueChange={(value) => setTargetDailyTeamId(!value || value === "__none" ? "" : value)}>
+              <SelectTrigger id="targetDailyTeamId" className="w-full sm:w-96" aria-invalid={Boolean(fieldError("targetDailyTeamId"))}>
+                <SelectValue placeholder="Choose a Today's Team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none" disabled>
+                  Choose a Today&apos;s Team
+                </SelectItem>
+                {dailyTeamOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {formatDailyTeamOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {fieldError("targetDailyTeamId") && <p className="text-sm text-destructive">{fieldError("targetDailyTeamId")}</p>}
+            {dailyTeamOptions.length === 0 && <p className="text-xs text-muted-foreground">No Today&apos;s Teams recorded yet for this project.</p>}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

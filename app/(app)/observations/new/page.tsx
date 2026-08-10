@@ -3,6 +3,7 @@ import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { listObservationCreatableProjects, listObservationCandidateEmployees } from "@/modules/observations/queries";
+import { listRecentDailyTeamsForProject } from "@/modules/daily-workforce/queries";
 import { ObservationForm } from "@/modules/observations/components/observation-form";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
@@ -74,13 +75,17 @@ export default async function NewObservationPage({ searchParams }: NewObservatio
     forbidden();
   }
 
-  const candidates = toEmployeeOptions(await listObservationCandidateEmployees(currentCompanyId, project.id));
+  const [candidateRows, dailyTeamOptions] = await Promise.all([
+    listObservationCandidateEmployees(currentCompanyId, project.id),
+    listRecentDailyTeamsForProject(currentCompanyId, project.id),
+  ]);
+  const candidates = toEmployeeOptions(candidateRows);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="New observation" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <ObservationForm mode="create" companyId={currentCompanyId} projectId={project.id} projectName={project.name} candidates={candidates} />
+        <ObservationForm mode="create" companyId={currentCompanyId} projectId={project.id} projectName={project.name} candidates={candidates} dailyTeamOptions={dailyTeamOptions} />
       </div>
     </div>
   );

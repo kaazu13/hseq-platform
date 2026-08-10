@@ -12,6 +12,8 @@ import { hasUnresolvedCorrectiveActions } from "@/modules/corrective-actions/typ
 import { ObservationStatusBadge } from "@/modules/observations/components/observation-status-badge";
 import { ObservationCategoryBadge } from "@/modules/observations/components/observation-category-badge";
 import { ObservationRiskBadge } from "@/modules/observations/components/observation-risk-badge";
+import { OBSERVATION_TYPE_LABELS, OBSERVATION_NEGATIVE_DISPOSITION_LABELS } from "@/modules/observations/types";
+import { Badge } from "@/components/ui/badge";
 import { ObservationParticipantsPicker } from "@/modules/observations/components/observation-participants-picker";
 import { ObservationReviewCloseCard } from "@/modules/observations/components/observation-review-close-card";
 import { ObservationPrintButton } from "@/modules/observations/components/observation-print-button";
@@ -29,6 +31,10 @@ type ObservationDetailPageProps = {
 function formatDateTime(value: string | null): string {
   if (!value) return "—";
   return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function formatWorkDate(value: string): string {
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /**
@@ -100,6 +106,9 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
         <ObservationStatusBadge status={observation.status} />
+        <Badge variant={observation.observation_type === "positive" ? "default" : observation.observation_type === "negative" ? "destructive" : "secondary"}>
+          {OBSERVATION_TYPE_LABELS[observation.observation_type]}
+        </Badge>
         <ObservationCategoryBadge category={observation.category} />
         <ObservationRiskBadge riskLevel={observation.risk_level} />
         {observation.is_stop_work && <span className="text-sm font-medium text-destructive">Work was stopped</span>}
@@ -115,6 +124,19 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
           <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Observer</p>
             <p className="text-sm">{observation.observer ? `${observation.observer.first_name} ${observation.observer.last_name}` : "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Relates to</p>
+            <p className="text-sm">
+              {observation.target_type === "employee" && observation.targetEmployee
+                ? `${observation.targetEmployee.first_name} ${observation.targetEmployee.last_name}`
+                : observation.target_type === "daily_team" && observation.targetDailyTeam
+                  ? `${observation.targetDailyTeam.name} — ${formatWorkDate(observation.targetDailyTeam.work_date)}`
+                  : "General / no individual"}
+            </p>
+            {observation.observation_type === "negative" && observation.disposition && (
+              <p className="text-xs text-muted-foreground">{OBSERVATION_NEGATIVE_DISPOSITION_LABELS[observation.disposition]}</p>
+            )}
           </div>
           <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Created</p>

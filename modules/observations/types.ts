@@ -14,6 +14,9 @@ export type SafetyObservationParticipant = Database["public"]["Tables"]["safety_
 export type ObservationCategory = Enums<"observation_category">;
 export type ObservationRiskLevel = Enums<"observation_risk_level">;
 export type ObservationStatus = Enums<"observation_status">;
+export type ObservationTargetType = Enums<"observation_target_type">;
+export type ObservationType = Enums<"observation_type">;
+export type ObservationNegativeDisposition = Enums<"observation_negative_disposition">;
 
 export const OBSERVATION_STATUSES: ObservationStatus[] = ["open", "closed"];
 
@@ -77,6 +80,40 @@ export function isPositiveObservationCategory(category: ObservationCategory): bo
   return category === "positive_observation";
 }
 
+export const OBSERVATION_TARGET_TYPES: ObservationTargetType[] = ["employee", "daily_team", "general"];
+
+export const OBSERVATION_TARGET_TYPE_LABELS: Record<ObservationTargetType, string> = {
+  employee: "Individual employee",
+  daily_team: "Today's Team",
+  general: "General / no individual",
+};
+
+/**
+ * positive / negative / general — INDEPENDENT of `category` above (see
+ * supabase/migrations/20260814090000_observation_targeting.sql's header
+ * comment for why: category is WHAT was observed, this is the INTENT/
+ * TONE, and the two can genuinely disagree — e.g. a `category=
+ * unsafe_condition` observation reporting a hazard can itself be
+ * `observation_type=positive` when praising the reporter's vigilance).
+ */
+export const OBSERVATION_TYPES: ObservationType[] = ["positive", "negative", "general"];
+
+export const OBSERVATION_TYPE_LABELS: Record<ObservationType, string> = {
+  positive: "Positive",
+  negative: "Negative",
+  general: "General",
+};
+
+/** For a NEGATIVE observation only — a plain classification label for what, if anything, followed. Never auto-creates a corrective action or a disciplinary record — see the migration's column comment. */
+export const OBSERVATION_NEGATIVE_DISPOSITIONS: ObservationNegativeDisposition[] = ["no_action", "coaching", "corrective_action", "formal_warning"];
+
+export const OBSERVATION_NEGATIVE_DISPOSITION_LABELS: Record<ObservationNegativeDisposition, string> = {
+  no_action: "No further action",
+  coaching: "Coaching",
+  corrective_action: "Corrective action",
+  formal_warning: "Formal warning",
+};
+
 /**
  * The narrow, approved column set `get_basic_employee_info()` returns —
  * see modules/lmra/types.ts's identical comment for why this is derived
@@ -88,4 +125,6 @@ export type BasicEmployee = Database["public"]["Functions"]["get_basic_employee_
 export type SafetyObservationDetail = SafetyObservation & {
   observer: BasicEmployee | null;
   participants: (SafetyObservationParticipant & { employee: BasicEmployee })[];
+  targetEmployee: BasicEmployee | null;
+  targetDailyTeam: { id: string; name: string; work_date: string } | null;
 };

@@ -97,12 +97,18 @@ export async function getObservation(companyId: string, observationId: string): 
     .eq("observation_id", observationId);
   if (participantsError) throw participantsError;
 
-  const employeeIds = [...new Set([observation.observer_id, ...(participants ?? []).map((p) => p.employee_id)])];
+  const employeeIds = [
+    ...new Set([observation.observer_id, ...(participants ?? []).map((p) => p.employee_id), ...(observation.target_employee_id ? [observation.target_employee_id] : [])]),
+  ];
 
-  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", {
-    target_employee_ids: employeeIds,
-  });
+  const [{ data: employees, error: employeesError }, { data: targetDailyTeam, error: targetDailyTeamError }] = await Promise.all([
+    supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds }),
+    observation.target_daily_team_id
+      ? supabase.from("daily_teams").select("id, name, work_date").eq("id", observation.target_daily_team_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
   if (employeesError) throw employeesError;
+  if (targetDailyTeamError) throw targetDailyTeamError;
   const employeeById = new Map((employees ?? []).map((e) => [e.id, e]));
 
   return {
@@ -111,6 +117,8 @@ export async function getObservation(companyId: string, observationId: string): 
     participants: (participants ?? [])
       .filter((p) => employeeById.has(p.employee_id))
       .map((p) => ({ ...p, employee: employeeById.get(p.employee_id) as BasicEmployee })),
+    targetEmployee: observation.target_employee_id ? (employeeById.get(observation.target_employee_id) ?? null) : null,
+    targetDailyTeam: targetDailyTeam ?? null,
   };
 }
 

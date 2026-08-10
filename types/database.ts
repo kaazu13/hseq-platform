@@ -375,6 +375,274 @@ export type Database = {
           },
         ]
       }
+      daily_attendance: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          note: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["daily_attendance_status"]
+          updated_at: string
+          updated_by: string | null
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          note?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["daily_attendance_status"]
+          updated_at?: string
+          updated_by?: string | null
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          note?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["daily_attendance_status"]
+          updated_at?: string
+          updated_by?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_attendance_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_team_members: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          daily_team_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          removed_at: string | null
+          removed_by: string | null
+          role: Database["public"]["Enums"]["team_assignment_role"]
+          shift: string | null
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          daily_team_id: string
+          employee_id: string
+          id?: string
+          project_id: string
+          removed_at?: string | null
+          removed_by?: string | null
+          role?: Database["public"]["Enums"]["team_assignment_role"]
+          shift?: string | null
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          daily_team_id?: string
+          employee_id?: string
+          id?: string
+          project_id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          role?: Database["public"]["Enums"]["team_assignment_role"]
+          shift?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_team_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_team_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_team_members_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "daily_team_members_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_team_members_team_fk"
+            columns: ["daily_team_id", "project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "daily_teams"
+            referencedColumns: ["id", "project_id", "company_id"]
+          },
+        ]
+      }
+      daily_teams: {
+        Row: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: string | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }
+        Insert: {
+          activity?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          name: string
+          project_id: string
+          shift?: string | null
+          status?: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          work_area?: string | null
+          work_date: string
+        }
+        Update: {
+          activity?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          name?: string
+          project_id?: string
+          shift?: string | null
+          status?: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          work_area?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_teams_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teams_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teams_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "daily_teams_unlocked_by_fkey"
+            columns: ["unlocked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teams_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_employment_periods: {
         Row: {
           company_id: string
@@ -850,6 +1118,57 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          company_id: string
+          created_at: string
+          id: string
+          link_path: string | null
+          read_at: string | null
+          recipient_user_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          body?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          link_path?: string | null
+          read_at?: string | null
+          recipient_user_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          body?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          link_path?: string | null
+          read_at?: string | null
+          recipient_user_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1355,9 +1674,13 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string
+          disposition:
+            | Database["public"]["Enums"]["observation_negative_disposition"]
+            | null
           id: string
           immediate_action_taken: string | null
           is_stop_work: boolean
+          observation_type: Database["public"]["Enums"]["observation_type"]
           observed_at: string
           observer_id: string
           project_id: string
@@ -1365,6 +1688,9 @@ export type Database = {
           reviewed_by: string | null
           risk_level: Database["public"]["Enums"]["observation_risk_level"]
           status: Database["public"]["Enums"]["observation_status"]
+          target_daily_team_id: string | null
+          target_employee_id: string | null
+          target_type: Database["public"]["Enums"]["observation_target_type"]
           updated_at: string
           updated_by: string | null
           work_area: string
@@ -1377,9 +1703,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description: string
+          disposition?:
+            | Database["public"]["Enums"]["observation_negative_disposition"]
+            | null
           id?: string
           immediate_action_taken?: string | null
           is_stop_work?: boolean
+          observation_type: Database["public"]["Enums"]["observation_type"]
           observed_at?: string
           observer_id: string
           project_id: string
@@ -1387,6 +1717,9 @@ export type Database = {
           reviewed_by?: string | null
           risk_level?: Database["public"]["Enums"]["observation_risk_level"]
           status?: Database["public"]["Enums"]["observation_status"]
+          target_daily_team_id?: string | null
+          target_employee_id?: string | null
+          target_type?: Database["public"]["Enums"]["observation_target_type"]
           updated_at?: string
           updated_by?: string | null
           work_area: string
@@ -1399,9 +1732,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          disposition?:
+            | Database["public"]["Enums"]["observation_negative_disposition"]
+            | null
           id?: string
           immediate_action_taken?: string | null
           is_stop_work?: boolean
+          observation_type?: Database["public"]["Enums"]["observation_type"]
           observed_at?: string
           observer_id?: string
           project_id?: string
@@ -1409,6 +1746,9 @@ export type Database = {
           reviewed_by?: string | null
           risk_level?: Database["public"]["Enums"]["observation_risk_level"]
           status?: Database["public"]["Enums"]["observation_status"]
+          target_daily_team_id?: string | null
+          target_employee_id?: string | null
+          target_type?: Database["public"]["Enums"]["observation_target_type"]
           updated_at?: string
           updated_by?: string | null
           work_area?: string
@@ -1455,6 +1795,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_observations_target_daily_team_fk"
+            columns: ["target_daily_team_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "daily_teams"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "safety_observations_target_employee_fk"
+            columns: ["target_employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "safety_observations_updated_by_fkey"
@@ -2626,6 +2980,238 @@ export type Database = {
           },
         ]
       }
+      worked_hours: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          note: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          hours: number
+          id?: string
+          note?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          hours?: number
+          id?: string
+          note?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worked_hours_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "worked_hours_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "worked_hours_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worked_hours_corrections: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          company_id: string
+          employee_id: string
+          id: string
+          new_hours: number
+          previous_hours: number
+          project_id: string
+          reason: string
+          worked_hours_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          company_id: string
+          employee_id: string
+          id?: string
+          new_hours: number
+          previous_hours: number
+          project_id: string
+          reason: string
+          worked_hours_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          company_id?: string
+          employee_id?: string
+          id?: string
+          new_hours?: number
+          previous_hours?: number
+          project_id?: string
+          reason?: string
+          worked_hours_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worked_hours_corrections_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_corrections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_corrections_worked_hours_fk"
+            columns: ["worked_hours_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "worked_hours"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
+      worked_hours_discrepancies: {
+        Row: {
+          comment: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          project_id: string
+          reported_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resulting_hours: number | null
+          status: Database["public"]["Enums"]["worked_hours_discrepancy_status"]
+          worked_hours_id: string
+        }
+        Insert: {
+          comment: string
+          company_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          project_id: string
+          reported_by: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resulting_hours?: number | null
+          status?: Database["public"]["Enums"]["worked_hours_discrepancy_status"]
+          worked_hours_id: string
+        }
+        Update: {
+          comment?: string
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          project_id?: string
+          reported_by?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resulting_hours?: number | null
+          status?: Database["public"]["Enums"]["worked_hours_discrepancy_status"]
+          worked_hours_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worked_hours_discrepancies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_discrepancies_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_discrepancies_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_discrepancies_worked_hours_fk"
+            columns: ["worked_hours_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "worked_hours"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2696,6 +3282,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bulk_apply_worked_hours: {
+        Args: {
+          target_employee_ids: string[]
+          target_hours: number
+          target_project_id: string
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          note: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_date: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "worked_hours"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       can_close_corrective_action: {
         Args: {
           target_created_by: string
@@ -2723,6 +3339,12 @@ export type Database = {
           target_org_id: string
         }
         Returns: number
+      }
+      daily_attendance_permits_work: {
+        Args: {
+          target_status: Database["public"]["Enums"]["daily_attendance_status"]
+        }
+        Returns: boolean
       }
       employee_has_any_company_role: {
         Args: {
@@ -2825,6 +3447,10 @@ export type Database = {
         Returns: boolean
       }
       is_company_member: { Args: { target_org_id: string }; Returns: boolean }
+      is_daily_team_foreman: {
+        Args: { target_daily_team_id: string }
+        Returns: boolean
+      }
       is_eligible_scaffold_foreman: {
         Args: {
           target_employee_id: string
@@ -2897,6 +3523,65 @@ export type Database = {
           last_name: string
           profile_id: string
         }[]
+      }
+      lock_daily_teams: {
+        Args: { target_project_id: string; target_work_date: string }
+        Returns: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: string | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "daily_teams"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      move_daily_team_member: {
+        Args: {
+          target_daily_team_id: string
+          target_employee_id: string
+          target_project_id: string
+          target_role?: Database["public"]["Enums"]["team_assignment_role"]
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          daily_team_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          removed_at: string | null
+          removed_by: string | null
+          role: Database["public"]["Enums"]["team_assignment_role"]
+          shift: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_team_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       move_employee_to_team: {
         Args: {
@@ -3054,9 +3739,100 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      report_worked_hours_discrepancy: {
+        Args: { target_comment: string; target_worked_hours_id: string }
+        Returns: {
+          comment: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          project_id: string
+          reported_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resulting_hours: number | null
+          status: Database["public"]["Enums"]["worked_hours_discrepancy_status"]
+          worked_hours_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worked_hours_discrepancies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resolve_scaffold_inspection_validity_days: {
         Args: { target_project_id: string }
         Returns: number
+      }
+      resolve_worked_hours_discrepancy: {
+        Args: {
+          target_discrepancy_id: string
+          target_resolution_note: string
+          target_resulting_hours?: number
+          target_status: Database["public"]["Enums"]["worked_hours_discrepancy_status"]
+        }
+        Returns: {
+          comment: string
+          company_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          project_id: string
+          reported_by: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resulting_hours: number | null
+          status: Database["public"]["Enums"]["worked_hours_discrepancy_status"]
+          worked_hours_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worked_hours_discrepancies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_daily_team: {
+        Args: {
+          target_activity?: string
+          target_daily_team_id: string
+          target_name: string
+          target_project_id: string
+          target_shift?: string
+          target_work_area?: string
+          target_work_date: string
+        }
+        Returns: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: string | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       save_lmra_hazards: {
         Args: { target_hazards: Json; target_lmra_id: string }
@@ -3130,6 +3906,110 @@ export type Database = {
           work_email: string
         }[]
       }
+      set_daily_attendance_status: {
+        Args: {
+          target_employee_id: string
+          target_note?: string
+          target_project_id: string
+          target_status: Database["public"]["Enums"]["daily_attendance_status"]
+          target_work_date: string
+        }
+        Returns: {
+          attendance: Database["public"]["Tables"]["daily_attendance"]["Row"]
+          removed_from_team_id: string
+        }[]
+      }
+      submit_worked_hours: {
+        Args: { target_project_id: string; target_work_date: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          note: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_date: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "worked_hours"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      unlock_daily_teams: {
+        Args: {
+          target_project_id: string
+          target_reason: string
+          target_work_date: string
+        }
+        Returns: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: string | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "daily_teams"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      upsert_worked_hours: {
+        Args: {
+          target_employee_id: string
+          target_hours: number
+          target_note?: string
+          target_project_id: string
+          target_reason?: string
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          note: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worked_hours"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       void_scaffold_inspection: {
         Args: { target_inspection_id: string; target_void_reason: string }
         Returns: {
@@ -3192,6 +4072,15 @@ export type Database = {
         | "awaiting_verification"
         | "closed"
         | "rejected"
+      daily_attendance_status:
+        | "not_set"
+        | "present"
+        | "absent"
+        | "sick"
+        | "leave"
+        | "training"
+        | "off_site"
+      daily_team_status: "open" | "locked"
       employee_account_status:
         | "draft"
         | "invited"
@@ -3255,8 +4144,15 @@ export type Database = {
         | "access_egress"
         | "ppe"
         | "other"
+      observation_negative_disposition:
+        | "no_action"
+        | "coaching"
+        | "corrective_action"
+        | "formal_warning"
       observation_risk_level: "low" | "medium" | "high" | "critical"
       observation_status: "open" | "closed"
+      observation_target_type: "employee" | "daily_team" | "general"
+      observation_type: "positive" | "negative" | "general"
       project_assignment_role:
         | "project_manager"
         | "hseq_manager"
@@ -3346,6 +4242,8 @@ export type Database = {
         | "brown"
       team_status: "active" | "archived"
       toolbox_document_status: "active" | "archived"
+      worked_hours_discrepancy_status: "open" | "accepted" | "rejected"
+      worked_hours_status: "draft" | "submitted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3499,6 +4397,16 @@ export const Constants = {
         "closed",
         "rejected",
       ],
+      daily_attendance_status: [
+        "not_set",
+        "present",
+        "absent",
+        "sick",
+        "leave",
+        "training",
+        "off_site",
+      ],
+      daily_team_status: ["open", "locked"],
       employee_account_status: [
         "draft",
         "invited",
@@ -3567,8 +4475,16 @@ export const Constants = {
         "ppe",
         "other",
       ],
+      observation_negative_disposition: [
+        "no_action",
+        "coaching",
+        "corrective_action",
+        "formal_warning",
+      ],
       observation_risk_level: ["low", "medium", "high", "critical"],
       observation_status: ["open", "closed"],
+      observation_target_type: ["employee", "daily_team", "general"],
+      observation_type: ["positive", "negative", "general"],
       project_assignment_role: [
         "project_manager",
         "hseq_manager",
@@ -3667,6 +4583,8 @@ export const Constants = {
       ],
       team_status: ["active", "archived"],
       toolbox_document_status: ["active", "archived"],
+      worked_hours_discrepancy_status: ["open", "accepted", "rejected"],
+      worked_hours_status: ["draft", "submitted"],
     },
   },
 } as const

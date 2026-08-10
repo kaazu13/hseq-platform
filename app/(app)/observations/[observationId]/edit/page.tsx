@@ -3,6 +3,7 @@ import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getObservation, isCallerProjectAccessible, listObservationCandidateEmployees } from "@/modules/observations/queries";
+import { listRecentDailyTeamsForProject } from "@/modules/daily-workforce/queries";
 import { canEditObservation } from "@/modules/observations/permissions";
 import { ObservationForm } from "@/modules/observations/components/observation-form";
 import { ObservationParticipantsPicker } from "@/modules/observations/components/observation-participants-picker";
@@ -48,7 +49,10 @@ export default async function EditObservationPage({ params }: EditObservationPag
   }
 
   const projectName = project?.name ?? "Project unavailable";
-  const candidates = await listObservationCandidateEmployees(currentCompanyId, observation.project_id);
+  const [candidates, dailyTeamOptions] = await Promise.all([
+    listObservationCandidateEmployees(currentCompanyId, observation.project_id),
+    listRecentDailyTeamsForProject(currentCompanyId, observation.project_id),
+  ]);
   const employeeOptions = toEmployeeOptions(candidates);
 
   return (
@@ -56,7 +60,15 @@ export default async function EditObservationPage({ params }: EditObservationPag
       <PageHeader title="Edit observation" description={`${projectName} · ${observation.work_area}`} />
 
       <div className="max-w-3xl">
-        <ObservationForm mode="edit" companyId={currentCompanyId} projectId={observation.project_id} projectName={projectName} candidates={employeeOptions} observation={observation} />
+        <ObservationForm
+          mode="edit"
+          companyId={currentCompanyId}
+          projectId={observation.project_id}
+          projectName={projectName}
+          candidates={employeeOptions}
+          dailyTeamOptions={dailyTeamOptions}
+          observation={observation}
+        />
       </div>
 
       <div className="flex flex-col gap-3">
