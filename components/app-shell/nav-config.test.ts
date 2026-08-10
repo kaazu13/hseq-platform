@@ -107,11 +107,11 @@ describe("NAV_GROUPS structure", () => {
     expect(ALL_NAV_ITEMS.some((item) => item.label === "Scaffold Defects")).toBe(false);
   });
 
-  it("groups Teams, Scaffold Register, Scaffold Inspections, and LMRA under 'Planning & Daily'", () => {
+  it("groups Today's Teams, Worked Hours, Scaffold Register, Scaffold Inspections, and LMRA under 'Planning & Daily'", () => {
     const group = NAV_GROUPS.find((g) => g.label === "Planning & Daily");
     expect(group).toBeDefined();
     const labels = group!.items.map((item) => item.label);
-    expect(labels).toEqual(expect.arrayContaining(["Teams", "Scaffold Register", "Scaffold Inspections", "LMRA"]));
+    expect(labels).toEqual(expect.arrayContaining(["Today's Teams", "Worked Hours", "Scaffold Register", "Scaffold Inspections", "LMRA"]));
   });
 
   it("groups Toolbox Meetings, Toolbox Templates, Safety Flash, Safety Observations, and Corrective Actions under 'Safety Management'", () => {
@@ -121,8 +121,8 @@ describe("NAV_GROUPS structure", () => {
     expect(labels).toEqual(expect.arrayContaining(["Toolbox Meetings", "Toolbox Templates", "Safety Flash", "Safety Observations", "Corrective Actions"]));
   });
 
-  it("Scaffold Register, Scaffold Inspections, and Teams are project-scoped (buildHref + matchSegment), not fixed hrefs", () => {
-    for (const label of ["Scaffold Register", "Scaffold Inspections", "Teams"]) {
+  it("Scaffold Register, Scaffold Inspections, Today's Teams, and Worked Hours are project-scoped (buildHref + matchSegment), not fixed hrefs", () => {
+    for (const label of ["Scaffold Register", "Scaffold Inspections", "Today's Teams", "Worked Hours"]) {
       const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
       expect(item).toBeDefined();
       expect(item.buildHref).toBeTypeOf("function");

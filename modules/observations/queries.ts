@@ -78,6 +78,22 @@ export async function listObservations(companyId: string, filters: ObservationLi
   return data ?? [];
 }
 
+/**
+ * Observations the caller either AUTHORED or is personally TARGETED by —
+ * "My Observations" on the Employee Dashboard (Phase G). Explicitly
+ * filtered here (never relying on RLS's incidental narrowing for a plain
+ * "employee" role) so this always means "mine," even for a manager-tier
+ * caller whose RLS visibility is much broader than their own observations.
+ */
+export async function listMyObservations(companyId: string, userId: string, employeeId: string | null, limit = 20): Promise<SafetyObservation[]> {
+  const supabase = await createClient();
+  let query = supabase.from("safety_observations").select("*").eq("company_id", companyId);
+  query = employeeId ? query.or(`created_by.eq.${userId},target_employee_id.eq.${employeeId}`) : query.eq("created_by", userId);
+  const { data, error } = await query.order("observed_at", { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** A single observation scoped to `companyId`, with observer/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own company-scoped lookup). Null if it doesn't exist, belongs to another company, or RLS hides it. */
 export async function getObservation(companyId: string, observationId: string): Promise<SafetyObservationDetail | null> {
   const supabase = await createClient();

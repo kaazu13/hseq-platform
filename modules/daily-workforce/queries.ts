@@ -18,6 +18,14 @@ function sortByName<T extends { employee: { last_name: string; first_name: strin
   });
 }
 
+/** The caller's own linked employee id for `companyId`, or null if they have none — same inline pattern used across every module this session (modules/scaffolds/queries.ts, modules/toolbox-meetings/queries.ts, etc.), extracted here since the Employee Dashboard needs it as its first resolution step. */
+export async function getMyEmployeeId(companyId: string, userId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("employees").select("id").eq("company_id", companyId).eq("profile_id", userId).maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 /** True if the calling user has ANY current project/team assignment on `projectId` — same convention as every other module this session. */
 export async function isCallerProjectAccessible(projectId: string): Promise<boolean> {
   const supabase = await createClient();
@@ -222,6 +230,61 @@ export async function listRecentDailyTeamsForProject(companyId: string, projectI
     .limit(limit);
   if (error) throw error;
   return data ?? [];
+}
+
+export type EmployeeTodayCard = {
+  attendanceStatus: import("./types").DailyAttendanceStatus;
+  team: (Pick<DailyTeam, "id" | "name" | "shift" | "work_area" | "activity"> & { foremanName: string | null }) | null;
+};
+
+/**
+ * The Employee Dashboard's "TODAY" card data source (Phase F) — richer
+ * than listWorkforceForDate's per-row shape (that one is for a manager
+ * scanning the whole roster; this resolves the ONE team's foreman name
+ * too, since the card shows "Foreman: Karl Andersson" directly).
+ */
+export async function getEmployeeTodayCard(companyId: string, projectId: string, employeeId: string, workDate: string): Promise<EmployeeTodayCard> {
+  const supabase = await createClient();
+
+  const [{ data: attendanceRow, error: attendanceError }, { data: membership, error: membershipError }] = await Promise.all([
+    supabase.from("daily_attendance").select("status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", employeeId).eq("work_date", workDate).maybeSingle(),
+    supabase.from("daily_team_members").select("daily_team_id").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", employeeId).eq("work_date", workDate).is("removed_at", null).maybeSingle(),
+  ]);
+  if (attendanceError) throw attendanceError;
+  if (membershipError) throw membershipError;
+
+  if (!membership) {
+    return { attendanceStatus: attendanceRow?.status ?? "not_set", team: null };
+  }
+
+  const { data: team, error: teamError } = await supabase
+    .from("daily_teams")
+    .select("id, name, shift, work_area, activity")
+    .eq("id", membership.daily_team_id)
+    .maybeSingle();
+  if (teamError) throw teamError;
+  if (!team) {
+    return { attendanceStatus: attendanceRow?.status ?? "not_set", team: null };
+  }
+
+  const { data: foremanRows, error: foremanError } = await supabase
+    .from("daily_team_members")
+    .select("employee_id")
+    .eq("daily_team_id", team.id)
+    .eq("role", "foreman")
+    .is("removed_at", null)
+    .limit(1);
+  if (foremanError) throw foremanError;
+
+  let foremanName: string | null = null;
+  if (foremanRows && foremanRows.length > 0) {
+    const { data: foremen, error: foremenError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: [foremanRows[0].employee_id] });
+    if (foremenError) throw foremenError;
+    const foreman = foremen?.[0];
+    if (foreman) foremanName = `${foreman.first_name} ${foreman.last_name}`;
+  }
+
+  return { attendanceStatus: attendanceRow?.status ?? "not_set", team: { ...team, foremanName } };
 }
 
 export type DailyTeamsArchiveDay = {

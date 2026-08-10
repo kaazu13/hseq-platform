@@ -18,14 +18,14 @@ export const upsertWorkedHoursSchema = z.object({
   note: optionalText,
   reason: optionalText,
 });
-export type UpsertWorkedHoursInput = z.infer<typeof upsertWorkedHoursSchema>;
+export type UpsertWorkedHoursInput = z.input<typeof upsertWorkedHoursSchema>;
 
 /** `bulkApplyWorkedHours` Server Function input — "Apply [X] hours to all". */
 export const bulkApplyWorkedHoursSchema = z.object({
   hours: hoursField,
   employeeIds: z.array(z.string().uuid()).min(1, "Select at least one employee"),
 });
-export type BulkApplyWorkedHoursInput = z.infer<typeof bulkApplyWorkedHoursSchema>;
+export type BulkApplyWorkedHoursInput = z.input<typeof bulkApplyWorkedHoursSchema>;
 
 /** `reportWorkedHoursDiscrepancy` Server Function input. */
 export const reportWorkedHoursDiscrepancySchema = z.object({
@@ -47,4 +47,4 @@ export const resolveWorkedHoursDiscrepancySchema = z.object({
     .refine((value) => value === undefined || (Number.isFinite(Number(value)) && Number(value) >= WORKED_HOURS_MIN && Number(value) <= WORKED_HOURS_MAX), `Hours must be between ${WORKED_HOURS_MIN} and ${WORKED_HOURS_MAX}`)
     .transform((value) => (value === undefined ? undefined : Number(value))),
 });
-export type ResolveWorkedHoursDiscrepancyInput = z.infer<typeof resolveWorkedHoursDiscrepancySchema>;
+export type ResolveWorkedHoursDiscrepancyInput = z.input<typeof resolveWorkedHoursDiscrepancySchema>;

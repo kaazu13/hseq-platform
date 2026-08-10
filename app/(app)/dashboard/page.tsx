@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -18,6 +19,10 @@ import {
 } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { createClient } from "@/lib/supabase/server";
+import { getMyEmployeeId, getEmployeeTodayCard } from "@/modules/daily-workforce/queries";
+import { getEmployeeMonthToDateHours, getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listMyNotifications } from "@/modules/worked-hours/queries";
+import { listMyObservations } from "@/modules/observations/queries";
+import { EmployeeDashboardSection } from "@/modules/daily-workforce/components/employee-dashboard-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shared/page-header";
@@ -77,9 +82,11 @@ export default async function DashboardPage() {
   // this render); more than one, with none currently active, prompts an
   // explicit choice instead of guessing.
   const { projects, currentProjectId } = await resolveCurrentProject(user.id, current.id);
+  let effectiveProjectId = currentProjectId;
   if (!currentProjectId && projects.length === 1) {
     const supabase = await createClient();
     await supabase.from("profiles").update({ active_project_id: projects[0].id }).eq("id", user.id);
+    effectiveProjectId = projects[0].id;
   } else if (!currentProjectId && projects.length > 1) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -87,6 +94,37 @@ export default async function DashboardPage() {
         <ProjectSelectorCard companyId={current.id} projects={projects} />
       </div>
     );
+  }
+
+  // Employee Dashboard section (Phase F) — only when the signed-in user
+  // has a linked employee record for this company AND an active project;
+  // every query below is explicitly scoped to that one employee, never
+  // exposing another employee's records.
+  let employeeSection: ReactNode = null;
+  if (effectiveProjectId) {
+    const myEmployeeId = await getMyEmployeeId(current.id, user.id);
+    if (myEmployeeId) {
+      const today = new Date().toISOString().slice(0, 10);
+      const [todayCard, monthToDateHours, latestWorkedHours, discrepancies, notifications, observations] = await Promise.all([
+        getEmployeeTodayCard(current.id, effectiveProjectId, myEmployeeId, today),
+        getEmployeeMonthToDateHours(current.id, effectiveProjectId, myEmployeeId, today),
+        getLatestWorkedHours(current.id, effectiveProjectId, myEmployeeId),
+        listMyWorkedHoursDiscrepancies(current.id, myEmployeeId),
+        listMyNotifications(),
+        listMyObservations(current.id, user.id, myEmployeeId),
+      ]);
+      employeeSection = (
+        <EmployeeDashboardSection
+          companyId={current.id}
+          todayCard={todayCard}
+          monthToDateHours={monthToDateHours}
+          latestWorkedHours={latestWorkedHours}
+          discrepancies={discrepancies}
+          notifications={notifications}
+          observations={observations}
+        />
+      );
+    }
   }
 
   return (
@@ -107,6 +145,8 @@ export default async function DashboardPage() {
           </>
         }
       />
+
+      {employeeSection}
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4">

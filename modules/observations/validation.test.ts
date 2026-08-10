@@ -14,6 +14,8 @@ const VALID_INPUT = {
   immediateActionTaken: "Cordoned off the area and notified the foreman",
   riskLevel: "high",
   isStopWork: false,
+  observationType: "negative",
+  targetType: "general",
 } as const;
 
 describe("observationFormSchema", () => {
@@ -71,6 +73,56 @@ describe("observationFormSchema", () => {
 
   it("requires isStopWork to be an actual boolean", () => {
     expect(observationFormSchema.safeParse({ ...VALID_INPUT, isStopWork: "true" }).success).toBe(false);
+  });
+
+  describe("targeting (Phase G)", () => {
+    const EMPLOYEE_ID = "123e4567-e89b-42d3-a456-426614174002";
+    const DAILY_TEAM_ID = "123e4567-e89b-42d3-a456-426614174003";
+
+    it("accepts targetType=employee with a targetEmployeeId", () => {
+      const result = observationFormSchema.safeParse({ ...VALID_INPUT, targetType: "employee", targetEmployeeId: EMPLOYEE_ID });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects targetType=employee with no targetEmployeeId", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, targetType: "employee" }).success).toBe(false);
+    });
+
+    it("accepts targetType=daily_team with a targetDailyTeamId", () => {
+      const result = observationFormSchema.safeParse({ ...VALID_INPUT, targetType: "daily_team", targetDailyTeamId: DAILY_TEAM_ID });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects targetType=daily_team with no targetDailyTeamId", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, targetType: "daily_team" }).success).toBe(false);
+    });
+
+    it("rejects a targetEmployeeId supplied when targetType is not employee — mirrors safety_observations_target_consistency", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, targetType: "general", targetEmployeeId: EMPLOYEE_ID }).success).toBe(false);
+    });
+
+    it("rejects a targetDailyTeamId supplied when targetType is not daily_team", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, targetType: "general", targetDailyTeamId: DAILY_TEAM_ID }).success).toBe(false);
+    });
+
+    it("accepts every observation type", () => {
+      for (const observationType of ["positive", "negative", "general"]) {
+        expect(observationFormSchema.safeParse({ ...VALID_INPUT, observationType }).success).toBe(true);
+      }
+    });
+
+    it("rejects an observation type outside the fixed list", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, observationType: "neutral" }).success).toBe(false);
+    });
+
+    it("accepts a disposition only when observationType is negative", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, observationType: "negative", disposition: "coaching" }).success).toBe(true);
+    });
+
+    it("rejects a disposition when observationType is not negative — mirrors safety_observations_disposition_only_when_negative", () => {
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, observationType: "positive", disposition: "coaching" }).success).toBe(false);
+      expect(observationFormSchema.safeParse({ ...VALID_INPUT, observationType: "general", disposition: "no_action" }).success).toBe(false);
+    });
   });
 });
 

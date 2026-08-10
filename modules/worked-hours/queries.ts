@@ -49,6 +49,22 @@ export async function getWorkedHours(companyId: string, projectId: string, emplo
   return data;
 }
 
+/** The employee's most recently recorded worked_hours row for a project, regardless of date — the Employee Dashboard's "today's/latest credited hours" data source. */
+export async function getLatestWorkedHours(companyId: string, projectId: string, employeeId: string): Promise<WorkedHours | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("worked_hours")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("employee_id", employeeId)
+    .order("work_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /** A single worked_hours row by id, scoped to companyId — used to resolve the parent row before reporting/reviewing a discrepancy. */
 export async function getWorkedHoursById(companyId: string, workedHoursId: string): Promise<WorkedHours | null> {
   const supabase = await createClient();

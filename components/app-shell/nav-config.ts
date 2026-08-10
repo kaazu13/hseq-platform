@@ -125,14 +125,6 @@ export const NAV_GROUPS: NavGroup[] = [
         description:
           "Company employment records for your company — name, position, employment status, and (once activated) company roles.",
       },
-      {
-        label: "Timesheets",
-        href: "/timesheets",
-        icon: Clock,
-        status: "planned",
-        description:
-          "Worked hours per employee per day, linked to the schedule, with Foreman approval before hours are considered final.",
-      },
     ],
   },
   {
@@ -160,14 +152,23 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Planning & Daily",
     items: [
       {
-        label: "Teams",
+        label: "Today's Teams",
         href: "/teams",
         icon: Users,
         status: "available",
         description:
-          "Project crews — name, Foreman, workers, shift, work area, and active dates. Scoped to your currently selected project.",
+          "Date-specific project workforce teams — foreman, workers, shift, work area, and activity, for a specific day. Open during the day, locked at end of day as historical evidence. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/teams`,
         matchSegment: "teams",
+      },
+      {
+        label: "Worked Hours",
+        href: "/worked-hours",
+        icon: Clock,
+        status: "available",
+        description: "Credited hours per employee per day — draft/submitted lifecycle, independent of Today's Teams locking. Scoped to your currently selected project.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/worked-hours`,
+        matchSegment: "worked-hours",
       },
       {
         label: "Scaffold Register",
