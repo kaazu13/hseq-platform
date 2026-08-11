@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Calendar, MapPin } from "lucide-react";
-import type { LmraAssessment } from "@/modules/lmra/types";
+import { LMRA_SHIFT_LABELS, type LmraAssessment } from "@/modules/lmra/types";
 import { LmraStatusBadge } from "@/modules/lmra/components/lmra-status-badge";
 import { LmraResultBadge } from "@/modules/lmra/components/lmra-result-badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -33,7 +33,7 @@ export function LmraCard({ assessment, projectName }: { assessment: LmraAssessme
           </span>
           <span className="flex items-center gap-1.5">
             <Calendar className="size-3.5 shrink-0" />
-            {formatDate(assessment.work_date)} · {assessment.shift}
+            {formatDate(assessment.work_date)} · {LMRA_SHIFT_LABELS[assessment.shift]}
           </span>
         </CardContent>
       </Card>

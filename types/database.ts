@@ -824,17 +824,18 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           company_id: string
+          completed_by_employee_id: string
           created_at: string
           created_by: string | null
           id: string
           notes: string | null
           project_id: string
-          responsible_foreman_id: string
+          responsible_person_id: string | null
           result: Database["public"]["Enums"]["lmra_result"]
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          shift: string
+          shift: Database["public"]["Enums"]["lmra_shift"]
           status: Database["public"]["Enums"]["lmra_status"]
           stop_work_reason: string | null
           submitted_at: string | null
@@ -850,17 +851,18 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           company_id: string
+          completed_by_employee_id: string
           created_at?: string
           created_by?: string | null
           id?: string
           notes?: string | null
           project_id: string
-          responsible_foreman_id: string
+          responsible_person_id?: string | null
           result?: Database["public"]["Enums"]["lmra_result"]
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          shift: string
+          shift: Database["public"]["Enums"]["lmra_shift"]
           status?: Database["public"]["Enums"]["lmra_status"]
           stop_work_reason?: string | null
           submitted_at?: string | null
@@ -876,17 +878,18 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           company_id?: string
+          completed_by_employee_id?: string
           created_at?: string
           created_by?: string | null
           id?: string
           notes?: string | null
           project_id?: string
-          responsible_foreman_id?: string
+          responsible_person_id?: string | null
           result?: Database["public"]["Enums"]["lmra_result"]
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          shift?: string
+          shift?: Database["public"]["Enums"]["lmra_shift"]
           status?: Database["public"]["Enums"]["lmra_status"]
           stop_work_reason?: string | null
           submitted_at?: string | null
@@ -906,18 +909,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lmra_assessments_completed_by_fk"
+            columns: ["completed_by_employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
             foreignKeyName: "lmra_assessments_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lmra_assessments_foreman_fk"
-            columns: ["responsible_foreman_id", "company_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "lmra_assessments_organization_id_fkey"
@@ -931,6 +934,13 @@ export type Database = {
             columns: ["project_id", "company_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "lmra_assessments_responsible_person_fk"
+            columns: ["responsible_person_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id", "company_id"]
           },
           {
@@ -968,6 +978,7 @@ export type Database = {
           lmra_assessment_id: string
           other_description: string | null
           responsible_person_id: string | null
+          selected_controls: string[]
           updated_at: string
         }
         Insert: {
@@ -981,6 +992,7 @@ export type Database = {
           lmra_assessment_id: string
           other_description?: string | null
           responsible_person_id?: string | null
+          selected_controls?: string[]
           updated_at?: string
         }
         Update: {
@@ -994,6 +1006,7 @@ export type Database = {
           lmra_assessment_id?: string
           other_description?: string | null
           responsible_person_id?: string | null
+          selected_controls?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -3340,6 +3353,57 @@ export type Database = {
         }
         Returns: number
       }
+      create_lmra_assessment: {
+        Args: {
+          target_company_id: string
+          target_completed_by_employee_id: string
+          target_hazards: Json
+          target_notes: string
+          target_participant_employee_ids: string[]
+          target_project_id: string
+          target_responsible_person_id: string
+          target_result?: Database["public"]["Enums"]["lmra_result"]
+          target_shift: Database["public"]["Enums"]["lmra_shift"]
+          target_stop_work_reason?: string
+          target_submit: boolean
+          target_work_activity: string
+          target_work_area: string
+          target_work_date: string
+        }
+        Returns: {
+          approved_at: string | null
+          archived_at: string | null
+          archived_by: string | null
+          company_id: string
+          completed_by_employee_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          responsible_person_id: string | null
+          result: Database["public"]["Enums"]["lmra_result"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"]
+          status: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_activity: string
+          work_area: string
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lmra_assessments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       daily_attendance_permits_work: {
         Args: {
           target_status: Database["public"]["Enums"]["daily_attendance_status"]
@@ -3465,6 +3529,14 @@ export type Database = {
           target_organization_id: string
           target_project_id: string
         }
+        Returns: boolean
+      }
+      is_own_employee: {
+        Args: { target_employee_id: string }
+        Returns: boolean
+      }
+      is_own_lmra_assessment: {
+        Args: { target_lmra_id: string }
         Returns: boolean
       }
       is_project_foreman: {
@@ -3978,6 +4050,52 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      update_lmra_assessment: {
+        Args: {
+          target_hazards: Json
+          target_lmra_id: string
+          target_notes: string
+          target_participant_employee_ids: string[]
+          target_responsible_person_id: string
+          target_shift: Database["public"]["Enums"]["lmra_shift"]
+          target_work_activity: string
+          target_work_area: string
+          target_work_date: string
+        }
+        Returns: {
+          approved_at: string | null
+          archived_at: string | null
+          archived_by: string | null
+          company_id: string
+          completed_by_employee_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          responsible_person_id: string | null
+          result: Database["public"]["Enums"]["lmra_result"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"]
+          status: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_activity: string
+          work_area: string
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lmra_assessments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_worked_hours: {
         Args: {
           target_employee_id: string
@@ -4128,6 +4246,7 @@ export type Database = {
         | "simultaneous_operations"
         | "other"
       lmra_result: "go" | "no_go"
+      lmra_shift: "day" | "night" | "late"
       lmra_status: "draft" | "submitted" | "approved" | "rejected" | "archived"
       membership_status: "invited" | "active" | "suspended" | "removed"
       observation_category:
@@ -4458,6 +4577,7 @@ export const Constants = {
         "other",
       ],
       lmra_result: ["go", "no_go"],
+      lmra_shift: ["day", "night", "late"],
       lmra_status: ["draft", "submitted", "approved", "rejected", "archived"],
       membership_status: ["invited", "active", "suspended", "removed"],
       observation_category: [

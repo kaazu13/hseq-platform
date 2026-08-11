@@ -2,32 +2,24 @@ import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
-import { getLmraAssessment, isCallerProjectForeman, listLmraCandidateEmployees } from "@/modules/lmra/queries";
+import { getLmraAssessment, isCallerProjectForeman, listLmraCandidateEmployees, getMyEmployeeId } from "@/modules/lmra/queries";
 import { canManageLmra } from "@/modules/lmra/permissions";
-import { LmraAssessmentForm } from "@/modules/lmra/components/lmra-assessment-form";
-import { LmraHazardChecklist } from "@/modules/lmra/components/lmra-hazard-checklist";
-import { LmraParticipantsPicker } from "@/modules/lmra/components/lmra-participants-picker";
+import { lmraHazardInputsFromRows } from "@/modules/lmra/types";
+import { LmraForm } from "@/modules/lmra/components/lmra-form";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeader } from "@/components/shared/section-header";
 
 type EditLmraPageProps = {
   params: Promise<{ lmraId: string }>;
 };
 
 /**
- * Edit surface — core fields, the 12-hazard checklist, and the worker
- * picker, all on one scrolling page (docs/UI_GUIDELINES.md §4's field-facing
- * form guidance, simplified from a full stepper to sections given this
- * milestone's scope — see the implementation report). Submit/review/
- * approve/archive are separate, explicit actions on the detail page, not
- * here — this page only ever changes content.
- *
- * Hazards/participants are draft-only at the database level
- * (assert_lmra_assessment_is_draft() — see the migration); once submitted
- * they render read-only here with an explanatory note rather than letting a
- * save attempt fail. Core fields have no such restriction (only 'archived'
- * is a hard stop), so they stay editable regardless of status.
+ * Edit surface — the SAME `LmraForm` component the create flow uses
+ * (Phase 9: "editing should reuse the same form architecture where
+ * practical"), in mode="edit". Core fields stay editable regardless of
+ * status (only 'archived' is a hard stop, enforced below); workers/hazards
+ * render read-only once the assessment is past draft — reopen it first
+ * (the detail page's "Reopen" action) to make further changes there.
  */
 export default async function EditLmraPage({ params }: EditLmraPageProps) {
   const { lmraId } = await params;
@@ -46,13 +38,15 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
     forbidden();
   }
 
-  const [roleNames, isForeman, project] = await Promise.all([
+  const [roleNames, isForeman, myEmployeeId, project] = await Promise.all([
     getUserRoleNames(currentCompanyId),
     isCallerProjectForeman(currentCompanyId, assessment.project_id, user.id),
+    getMyEmployeeId(currentCompanyId, user.id),
     getProject(currentCompanyId, assessment.project_id),
   ]);
 
-  if (!canManageLmra(roleNames, isForeman)) {
+  const isOwnAssessment = Boolean(myEmployeeId && assessment.completed_by_employee_id === myEmployeeId);
+  if (!canManageLmra(roleNames, isForeman, isOwnAssessment)) {
     forbidden();
   }
 
@@ -64,39 +58,25 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
   // edit.
   const projectName = project?.name ?? "Project unavailable";
 
-  const candidates = await listLmraCandidateEmployees(currentCompanyId, assessment.project_id);
-  const employeeOptions = toEmployeeOptions(candidates);
+  const candidateRows = await listLmraCandidateEmployees(currentCompanyId, assessment.project_id);
+  const candidates = toEmployeeOptions(candidateRows);
   const hazardsEditable = assessment.status === "draft";
 
   return (
-    <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
+    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Edit LMRA" description={`${projectName} · ${assessment.work_activity}`} />
-
       <div className="max-w-3xl">
-        <LmraAssessmentForm mode="edit" companyId={currentCompanyId} projectId={assessment.project_id} projectName={projectName} candidates={employeeOptions} assessment={assessment} />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <SectionHeader title="Hazard checklist" description={hazardsEditable ? undefined : "Read-only — reopen this LMRA to a draft to make changes."} />
-        <LmraHazardChecklist
+        <LmraForm
+          mode="edit"
           companyId={currentCompanyId}
-          lmraId={assessment.id}
           projectId={assessment.project_id}
-          hazards={assessment.hazards}
-          candidates={employeeOptions}
-          readOnly={!hazardsEditable}
-        />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <SectionHeader title="Workers involved" description={hazardsEditable ? undefined : "Read-only — reopen this LMRA to a draft to make changes."} />
-        <LmraParticipantsPicker
-          companyId={currentCompanyId}
-          lmraId={assessment.id}
-          projectId={assessment.project_id}
+          projectName={projectName}
           candidates={candidates}
-          currentParticipantIds={assessment.participants.map((participant) => participant.employee_id)}
-          readOnly={!hazardsEditable}
+          todayDate={new Date().toISOString().slice(0, 10)}
+          hazardRows={lmraHazardInputsFromRows(assessment.hazards)}
+          participantIds={assessment.participants.map((participant) => participant.employee_id)}
+          assessment={assessment}
+          hazardsEditable={hazardsEditable}
         />
       </div>
     </div>

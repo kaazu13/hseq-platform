@@ -1,79 +1,113 @@
 import { describe, it, expect } from "vitest";
 import {
-  lmraAssessmentFormSchema,
+  lmraShiftSchema,
   lmraHazardSchema,
   lmraHazardsFormSchema,
   lmraParticipantsFormSchema,
+  lmraCreateFormSchema,
+  lmraEditFormSchema,
   lmraReviewFormSchema,
   lmraSubmitFormSchema,
 } from "./validation";
-import { LMRA_HAZARD_TYPES } from "./types";
+import { LMRA_COMMON_CONTROLS, LMRA_MAX_PARTICIPANTS, LMRA_WORK_AREA_MAX_LENGTH, LMRA_WORK_ACTIVITY_MAX_LENGTH, initialLmraHazardRows } from "./types";
 
 // zod's .uuid() validates the version/variant nibbles, not just the
 // hyphenation shape — an all-zero placeholder like
 // "00000000-0000-0000-0000-000000000001" fails it (version nibble '0' isn't
 // a real UUID version), so these fixtures use valid-shaped v4 UUIDs.
-const VALID_ASSESSMENT_INPUT = {
-  projectId: "123e4567-e89b-42d3-a456-426614174000",
+const PROJECT_ID = "123e4567-e89b-42d3-a456-426614174000";
+const EMPLOYEE_ID = "123e4567-e89b-42d3-a456-426614174001";
+const OTHER_EMPLOYEE_ID = "123e4567-e89b-42d3-a456-426614174002";
+
+function validHazardRows() {
+  return initialLmraHazardRows();
+}
+
+const VALID_CREATE_INPUT = {
+  projectId: PROJECT_ID,
   workArea: "Scaffold bay 3",
   workActivity: "Erecting tube-and-clip scaffold",
   workDate: "2026-08-01",
-  shift: "Day",
-  responsibleForemanId: "123e4567-e89b-42d3-a456-426614174001",
+  shift: "day",
+  completedByEmployeeId: EMPLOYEE_ID,
+  responsiblePersonId: null,
   notes: "",
-};
+  participantEmployeeIds: [],
+  hazards: validHazardRows(),
+  submit: false,
+  result: "go",
+  stopWorkReason: "",
+  confirmed: false,
+} as const;
 
-function validHazardRow(hazardType: (typeof LMRA_HAZARD_TYPES)[number]) {
-  return lmraHazardSchema.parse({
-    hazardType,
-    isApplicable: true,
-    controls: "Guardrails installed",
-    responsiblePersonId: null,
-    controlsConfirmed: true,
-    otherDescription: "",
-  });
-}
-
-describe("lmraAssessmentFormSchema", () => {
-  it("accepts a fully populated valid input", () => {
-    expect(lmraAssessmentFormSchema.safeParse(VALID_ASSESSMENT_INPUT).success).toBe(true);
+describe("lmraShiftSchema", () => {
+  it("accepts the three fixed shift values", () => {
+    for (const shift of ["day", "night", "late"]) {
+      expect(lmraShiftSchema.safeParse(shift).success).toBe(true);
+    }
   });
 
-  it("rejects a non-uuid projectId/responsibleForemanId", () => {
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, projectId: "not-a-uuid" }).success).toBe(false);
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, responsibleForemanId: "not-a-uuid" }).success).toBe(false);
-  });
-
-  it("rejects blank work area/work activity/shift", () => {
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, workArea: "  " }).success).toBe(false);
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, workActivity: "" }).success).toBe(false);
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, shift: "" }).success).toBe(false);
-  });
-
-  it("rejects a malformed date", () => {
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, workDate: "08/01/2026" }).success).toBe(false);
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, workDate: "" }).success).toBe(false);
-  });
-
-  it("allows notes to be empty", () => {
-    expect(lmraAssessmentFormSchema.safeParse({ ...VALID_ASSESSMENT_INPUT, notes: "" }).success).toBe(true);
+  it("rejects free text outside the controlled vocabulary", () => {
+    expect(lmraShiftSchema.safeParse("Morning").success).toBe(false);
+    expect(lmraShiftSchema.safeParse("DAY").success).toBe(false);
   });
 });
 
-describe("lmraHazardsFormSchema", () => {
-  it("accepts exactly 12 rows, one per LMRA_HAZARD_TYPES entry", () => {
-    const rows = LMRA_HAZARD_TYPES.map((hazardType) => validHazardRow(hazardType));
-    expect(lmraHazardsFormSchema.safeParse(rows).success).toBe(true);
+describe("lmraHazardSchema", () => {
+  it("accepts a valid inapplicable row", () => {
+    expect(
+      lmraHazardSchema.safeParse({
+        hazardType: "working_at_height",
+        isApplicable: false,
+        selectedControls: [],
+        controls: "",
+        responsiblePersonId: null,
+        controlsConfirmed: false,
+        otherDescription: "",
+      }).success,
+    ).toBe(true);
   });
 
-  it("rejects fewer than 12 rows", () => {
-    const rows = LMRA_HAZARD_TYPES.slice(0, 11).map((hazardType) => validHazardRow(hazardType));
-    expect(lmraHazardsFormSchema.safeParse(rows).success).toBe(false);
+  it("accepts predefined common controls that exist in that hazard's catalogue", () => {
+    const controls = LMRA_COMMON_CONTROLS.working_at_height.slice(0, 2);
+    expect(
+      lmraHazardSchema.safeParse({
+        hazardType: "working_at_height",
+        isApplicable: true,
+        selectedControls: controls,
+        controls: "",
+        responsiblePersonId: null,
+        controlsConfirmed: false,
+        otherDescription: "",
+      }).success,
+    ).toBe(true);
   });
 
-  it("rejects more than 12 rows", () => {
-    const rows = [...LMRA_HAZARD_TYPES, "working_at_height"].map((hazardType) => validHazardRow(hazardType as (typeof LMRA_HAZARD_TYPES)[number]));
-    expect(lmraHazardsFormSchema.safeParse(rows).success).toBe(false);
+  it("rejects a selected control that isn't in that hazard type's fixed catalogue", () => {
+    const result = lmraHazardSchema.safeParse({
+      hazardType: "working_at_height",
+      isApplicable: true,
+      selectedControls: ["Made up control not on the list"],
+      controls: "",
+      responsiblePersonId: null,
+      controlsConfirmed: false,
+      otherDescription: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a control valid for a DIFFERENT hazard type — catalogues are hazard-specific, not interchangeable", () => {
+    const foreignControl = LMRA_COMMON_CONTROLS.housekeeping[0];
+    const result = lmraHazardSchema.safeParse({
+      hazardType: "working_at_height",
+      isApplicable: true,
+      selectedControls: [foreignControl],
+      controls: "",
+      responsiblePersonId: null,
+      controlsConfirmed: false,
+      otherDescription: "",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects a hazard type outside the fixed 12-item vocabulary", () => {
@@ -81,6 +115,7 @@ describe("lmraHazardsFormSchema", () => {
       lmraHazardSchema.safeParse({
         hazardType: "not_a_real_hazard",
         isApplicable: true,
+        selectedControls: [],
         controls: "",
         responsiblePersonId: null,
         controlsConfirmed: false,
@@ -88,16 +123,163 @@ describe("lmraHazardsFormSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("rejects oversized custom control text (Phase 10 limit)", () => {
+    const result = lmraHazardSchema.safeParse({
+      hazardType: "other",
+      isApplicable: true,
+      selectedControls: [],
+      controls: "x".repeat(1001),
+      responsiblePersonId: null,
+      controlsConfirmed: false,
+      otherDescription: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an oversized custom hazard description (other_description, Phase 10 limit)", () => {
+    const result = lmraHazardSchema.safeParse({
+      hazardType: "other",
+      isApplicable: true,
+      selectedControls: [],
+      controls: "",
+      responsiblePersonId: null,
+      controlsConfirmed: false,
+      otherDescription: "x".repeat(151),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an oversized selectedControls array (Phase 10 'sensible upper limit')", () => {
+    const result = lmraHazardSchema.safeParse({
+      hazardType: "working_at_height",
+      isApplicable: true,
+      selectedControls: Array.from({ length: 21 }, (_, i) => `control-${i}`),
+      controls: "",
+      responsiblePersonId: null,
+      controlsConfirmed: false,
+      otherDescription: "",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("lmraHazardsFormSchema", () => {
+  it("accepts exactly 12 fresh rows", () => {
+    expect(lmraHazardsFormSchema.safeParse(validHazardRows()).success).toBe(true);
+  });
+
+  it("rejects fewer than 12 rows", () => {
+    expect(lmraHazardsFormSchema.safeParse(validHazardRows().slice(0, 11)).success).toBe(false);
+  });
+
+  it("rejects more than 12 rows", () => {
+    const rows = [...validHazardRows(), validHazardRows()[0]];
+    expect(lmraHazardsFormSchema.safeParse(rows).success).toBe(false);
+  });
 });
 
 describe("lmraParticipantsFormSchema", () => {
   it("accepts an array of uuids, including an empty array", () => {
     expect(lmraParticipantsFormSchema.safeParse([]).success).toBe(true);
-    expect(lmraParticipantsFormSchema.safeParse(["123e4567-e89b-42d3-a456-426614174000"]).success).toBe(true);
+    expect(lmraParticipantsFormSchema.safeParse([EMPLOYEE_ID]).success).toBe(true);
   });
 
   it("rejects a non-uuid entry", () => {
     expect(lmraParticipantsFormSchema.safeParse(["not-a-uuid"]).success).toBe(false);
+  });
+
+  it("rejects an oversized participant array (Phase 10 'sensible upper limit')", () => {
+    const ids = Array.from({ length: LMRA_MAX_PARTICIPANTS + 1 }, () => EMPLOYEE_ID);
+    expect(lmraParticipantsFormSchema.safeParse(ids).success).toBe(false);
+  });
+
+  it("accepts exactly the max participant count", () => {
+    const ids = Array.from({ length: LMRA_MAX_PARTICIPANTS }, () => EMPLOYEE_ID);
+    expect(lmraParticipantsFormSchema.safeParse(ids).success).toBe(true);
+  });
+});
+
+describe("lmraCreateFormSchema", () => {
+  it("accepts a fully populated valid Save Draft input (submit=false, no confirmation required)", () => {
+    expect(lmraCreateFormSchema.safeParse(VALID_CREATE_INPUT).success).toBe(true);
+  });
+
+  it("rejects submit=true without the confirmation checkbox", () => {
+    const result = lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, submit: true, confirmed: false });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.confirmed).toBeTruthy();
+    }
+  });
+
+  it("accepts submit=true with confirmation and a go result", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, submit: true, confirmed: true, result: "go" }).success).toBe(true);
+  });
+
+  it("rejects submit=true with a no_go result and a blank stop-work reason", () => {
+    const result = lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, submit: true, confirmed: true, result: "no_go", stopWorkReason: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts submit=true with a no_go result and a stop-work reason", () => {
+    expect(
+      lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, submit: true, confirmed: true, result: "no_go", stopWorkReason: "Unsafe wind conditions" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a non-uuid projectId/completedByEmployeeId", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, projectId: "not-a-uuid" }).success).toBe(false);
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, completedByEmployeeId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("rejects blank work area/work activity", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, workArea: "  " }).success).toBe(false);
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, workActivity: "" }).success).toBe(false);
+  });
+
+  it("rejects oversized work area/work activity (Phase 10 limits)", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, workArea: "x".repeat(LMRA_WORK_AREA_MAX_LENGTH + 1) }).success).toBe(false);
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, workActivity: "x".repeat(LMRA_WORK_ACTIVITY_MAX_LENGTH + 1) }).success).toBe(false);
+  });
+
+  it("rejects a malformed date", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, workDate: "08/01/2026" }).success).toBe(false);
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, workDate: "" }).success).toBe(false);
+  });
+
+  it("rejects a shift outside day/night/late", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, shift: "morning" }).success).toBe(false);
+  });
+
+  it("allows notes/responsiblePersonId to be omitted", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, notes: "", responsiblePersonId: null }).success).toBe(true);
+  });
+
+  it("accepts a distinct responsiblePersonId from completedByEmployeeId — the two are never conflated", () => {
+    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, responsiblePersonId: OTHER_EMPLOYEE_ID }).success).toBe(true);
+  });
+});
+
+describe("lmraEditFormSchema", () => {
+  const VALID_EDIT_INPUT = {
+    workArea: "Scaffold bay 3",
+    workActivity: "Erecting tube-and-clip scaffold",
+    workDate: "2026-08-01",
+    shift: "night",
+    responsiblePersonId: null,
+    notes: "",
+    participantEmployeeIds: [EMPLOYEE_ID],
+    hazards: validHazardRows(),
+  };
+
+  it("accepts a fully populated valid input — no completedByEmployeeId/submit/result fields at all", () => {
+    expect(lmraEditFormSchema.safeParse(VALID_EDIT_INPUT).success).toBe(true);
+    expect("completedByEmployeeId" in lmraEditFormSchema.shape).toBe(false);
+  });
+
+  it("rejects blank work area/work activity same as create", () => {
+    expect(lmraEditFormSchema.safeParse({ ...VALID_EDIT_INPUT, workArea: "" }).success).toBe(false);
   });
 });
 

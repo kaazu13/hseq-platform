@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import type { LmraAssessment, LmraAssessmentDetail, BasicEmployee } from "./types";
-import type { Project } from "@/modules/projects/types";
 
 /**
  * Server-only data access for the LMRA domain — see docs/API_CONVENTIONS.md
@@ -8,7 +7,14 @@ import type { Project } from "@/modules/projects/types";
  * enforces this — see supabase/migrations/20260801090000_lmra.sql — but
  * explicit scoping keeps index usage and intent readable). No PostgREST
  * embeds, same reason as modules/employees/queries.ts's header comment.
+ *
+ * `getMyEmployeeId`/`listDailyTeamsForDate`/`isCallerProjectAccessible` are
+ * imported directly from modules/daily-workforce/queries.ts rather than
+ * redeclared here — that module was built specifically to be reused by
+ * LMRA/Toolbox/Safety Observations (its own Phase I), and LMRA's Today's
+ * Team integration (Phase 3 of this redesign) is the first real consumer.
  */
+export { getMyEmployeeId, listDailyTeamsForDate, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
 
 export type LmraListFilters = {
   projectId?: string;
@@ -34,7 +40,7 @@ export async function listLmraAssessments(companyId: string, filters: LmraListFi
   return data ?? [];
 }
 
-/** A single assessment scoped to `companyId`, with foreman/hazards/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own company-scoped lookup). Null if it doesn't exist, belongs to another company, or RLS hides it. */
+/** A single assessment scoped to `companyId`, with completed-by/responsible-person/hazards/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own company-scoped lookup). Null if it doesn't exist, belongs to another company, or RLS hides it. */
 export async function getLmraAssessment(companyId: string, lmraId: string): Promise<LmraAssessmentDetail | null> {
   const supabase = await createClient();
 
@@ -56,7 +62,8 @@ export async function getLmraAssessment(companyId: string, lmraId: string): Prom
 
   const employeeIds = [
     ...new Set([
-      assessment.responsible_foreman_id,
+      assessment.completed_by_employee_id,
+      ...(assessment.responsible_person_id ? [assessment.responsible_person_id] : []),
       ...(hazards ?? []).map((h) => h.responsible_person_id).filter((id): id is string => Boolean(id)),
       ...(participants ?? []).map((p) => p.employee_id),
     ]),
@@ -70,7 +77,8 @@ export async function getLmraAssessment(companyId: string, lmraId: string): Prom
 
   return {
     ...assessment,
-    foreman: employeeById.get(assessment.responsible_foreman_id) ?? null,
+    completedBy: employeeById.get(assessment.completed_by_employee_id) ?? null,
+    responsiblePerson: assessment.responsible_person_id ? (employeeById.get(assessment.responsible_person_id) ?? null) : null,
     hazards: (hazards ?? [])
       .map((h) => ({ ...h, responsiblePerson: h.responsible_person_id ? (employeeById.get(h.responsible_person_id) ?? null) : null }))
       .sort((a, b) => a.hazard_type.localeCompare(b.hazard_type)),
@@ -105,7 +113,7 @@ export async function isCallerProjectForeman(companyId: string, projectId: strin
   return Boolean(data);
 }
 
-/** Employee ids currently rostered onto `projectId` — the candidate pool for the responsible-foreman select and the worker picker, same "only project-assigned employees are selectable" convention as modules/projects/queries.ts's listProjectRosterEmployeeIds. */
+/** Employee ids currently rostered onto `projectId` — the candidate pool for completed-by/responsible-person/workers-involved, same "only project-assigned employees are selectable" convention as modules/projects/queries.ts's listProjectRosterEmployeeIds. */
 export async function listLmraCandidateEmployeeIds(companyId: string, projectId: string): Promise<string[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -118,7 +126,7 @@ export async function listLmraCandidateEmployeeIds(companyId: string, projectId:
   return [...new Set((data ?? []).map((row) => row.employee_id))];
 }
 
-/** Same candidate pool as `listLmraCandidateEmployeeIds`, resolved to display info via `get_basic_employee_info()` — what the foreman select and worker picker actually render. */
+/** Same candidate pool as `listLmraCandidateEmployeeIds`, resolved to display info via `get_basic_employee_info()` — what the worker picker, completed-by, and responsible-person fields actually render from. */
 export async function listLmraCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();
   const employeeIds = await listLmraCandidateEmployeeIds(companyId, projectId);
@@ -127,72 +135,6 @@ export async function listLmraCandidateEmployees(companyId: string, projectId: s
   const { data, error } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
   if (error) throw error;
   return (data ?? []).sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
-}
-
-/**
- * Projects the caller can create an LMRA for — company-wide (every non-archived
- * project) if they hold `hseq_manager`, otherwise only the projects where
- * they currently hold an active foreman `team_assignments` row. Drives the
- * project-picker step on /lmra/new; the real enforcement is still
- * `requireLmraManageAccess` on the create Server Function itself (this is a
- * "what should I show them to choose from" read, same trust boundary as
- * every other queries.ts function in this codebase).
- *
- * The `isHseqManager` branch asks for every non-archived project, but
- * `projects_select` RLS still has the final say — and that policy does NOT
- * grant hseq_manager company-wide read access the way it does company_admin/
- * operations_manager (see supabase/migrations/20260728090000_projects_and_teams.sql).
- * In practice an HSE Manager only sees projects here that RLS independently
- * grants them via `has_project_access()` (i.e. they also hold some project/
- * team assignment there) — this function does not itself widen that. See
- * app/(app)/lmra/[lmraId]/page.tsx's comment for the matching gap this
- * causes on the detail/edit pages (an company-wide-visible LMRA whose project
- * row isn't independently visible), handled there by degrading gracefully
- * rather than 404ing.
- */
-export async function listLmraCreatableProjects(companyId: string, userId: string, isHseqManager: boolean): Promise<Project[]> {
-  const supabase = await createClient();
-
-  if (isHseqManager) {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("company_id", companyId)
-      .neq("status", "archived")
-      .order("name", { ascending: true });
-    if (error) throw error;
-    return data ?? [];
-  }
-
-  const { data: employee, error: employeeError } = await supabase
-    .from("employees")
-    .select("id")
-    .eq("company_id", companyId)
-    .eq("profile_id", userId)
-    .maybeSingle();
-  if (employeeError) throw employeeError;
-  if (!employee) return [];
-
-  const { data: assignments, error: assignmentsError } = await supabase
-    .from("team_assignments")
-    .select("project_id")
-    .eq("company_id", companyId)
-    .eq("employee_id", employee.id)
-    .eq("assignment_role", "foreman")
-    .is("end_at", null);
-  if (assignmentsError) throw assignmentsError;
-
-  const projectIds = [...new Set((assignments ?? []).map((row) => row.project_id))];
-  if (projectIds.length === 0) return [];
-
-  const { data: projects, error: projectsError } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("company_id", companyId)
-    .in("id", projectIds)
-    .order("name", { ascending: true });
-  if (projectsError) throw projectsError;
-  return projects ?? [];
 }
 
 // ── Safety Overview aggregations ─────────────────────────────────────

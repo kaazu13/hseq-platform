@@ -1,25 +1,46 @@
 import { describe, it, expect } from "vitest";
-import { canManageLmra, canArchiveLmra } from "./permissions";
+import { canCreateLmra, canManageLmra, canArchiveLmra } from "./permissions";
+
+describe("canCreateLmra", () => {
+  it("allows an HSE Manager regardless of project access/foreman standing", () => {
+    expect(canCreateLmra(["hseq_manager"], false, false)).toBe(true);
+  });
+
+  it("allows the caller's own foreman standing on this project, even without project access being separately true", () => {
+    expect(canCreateLmra(["employee"], false, true)).toBe(true);
+  });
+
+  it("allows an ordinary employee with plain project access — Phase 1's 'not only foremen' requirement", () => {
+    expect(canCreateLmra(["employee"], true, false)).toBe(true);
+  });
+
+  it("denies someone with none of hseq_manager, foreman standing, or project access", () => {
+    expect(canCreateLmra(["employee"], false, false)).toBe(false);
+    expect(canCreateLmra([], false, false)).toBe(false);
+  });
+});
 
 describe("canManageLmra", () => {
-  it("allows an HSE Manager regardless of foreman standing", () => {
-    expect(canManageLmra(["hseq_manager"], false)).toBe(true);
-    expect(canManageLmra(["hseq_manager"], true)).toBe(true);
+  it("allows an HSE Manager regardless of foreman/own-assessment standing", () => {
+    expect(canManageLmra(["hseq_manager"], false, false)).toBe(true);
   });
 
-  it("allows the caller's own foreman standing on this project, even without any company-wide role", () => {
-    expect(canManageLmra(["employee"], true)).toBe(true);
+  it("allows the caller's own foreman standing on this project", () => {
+    expect(canManageLmra(["employee"], true, false)).toBe(true);
   });
 
-  it("denies someone with neither hseq_manager nor foreman standing on this project — including roles Full elsewhere", () => {
-    expect(canManageLmra(["employee"], false)).toBe(false);
-    expect(canManageLmra([], false)).toBe(false);
+  it("allows an ordinary employee managing their OWN assessment — Phase 1's self-scoped edit grant", () => {
+    expect(canManageLmra(["employee"], false, true)).toBe(true);
   });
 
-  it("does NOT grant access to company_admin/operations_manager/project_manager — LMRA is View-only for those roles per docs/ROLES_AND_PERMISSIONS.md §5, unlike every other module's write gate", () => {
-    expect(canManageLmra(["company_admin"], false)).toBe(false);
-    expect(canManageLmra(["operations_manager"], false)).toBe(false);
-    expect(canManageLmra(["project_manager"], false)).toBe(false);
+  it("denies an ordinary employee for an assessment that is not their own", () => {
+    expect(canManageLmra(["employee"], false, false)).toBe(false);
+  });
+
+  it("does NOT grant access to company_admin/operations_manager/project_manager — LMRA is View-only for those roles, unless they also happen to be the assessment's own completer", () => {
+    expect(canManageLmra(["company_admin"], false, false)).toBe(false);
+    expect(canManageLmra(["operations_manager"], false, false)).toBe(false);
+    expect(canManageLmra(["project_manager"], false, false)).toBe(false);
   });
 });
 
@@ -29,9 +50,6 @@ describe("canArchiveLmra", () => {
   });
 
   it("denies a foreman's manage-tier access from also archiving — the F-vs-M distinction", () => {
-    // canArchiveLmra takes only roleNames, not foreman standing — this
-    // documents that a caller who is a Foreman (and therefore passes
-    // canManageLmra) still cannot archive without also holding hseq_manager.
     expect(canArchiveLmra(["employee"])).toBe(false);
     expect(canArchiveLmra(["foreman"])).toBe(false);
   });
