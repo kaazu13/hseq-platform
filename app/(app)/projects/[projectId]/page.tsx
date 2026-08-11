@@ -10,6 +10,16 @@ import type { EmployeeOption } from "@/modules/employees/employee-options";
 import { ProjectOverviewTab } from "@/modules/projects/components/project-overview-tab";
 import { ProjectAssignmentsTab } from "@/modules/projects/components/project-assignments-tab";
 import { ProjectStatusBadge } from "@/modules/projects/components/project-status-badge";
+import { ProjectDailyOverview } from "@/modules/projects/components/project-daily-overview";
+import { listWorkforceForDate, listDailyTeamsForDate, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
+import { canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
+import { summarizeDailyWorkforce } from "@/modules/daily-workforce/types";
+import { listWorkedHoursForDate, listOpenWorkedHoursDiscrepancies } from "@/modules/worked-hours/queries";
+import { getLmraOverviewCounts } from "@/modules/lmra/queries";
+import { getObservationOverviewCounts } from "@/modules/observations/queries";
+import { getCorrectiveActionOverviewCounts } from "@/modules/corrective-actions/queries";
+import { getScaffoldOverviewCounts } from "@/modules/scaffolds/queries";
+import { SectionHeader } from "@/components/shared/section-header";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -48,16 +58,64 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
     notFound();
   }
 
-  const [roleNames, myProjectRoles] = await Promise.all([
+  const [roleNames, myProjectRoles, hasProjectAccess] = await Promise.all([
     getUserRoleNames(currentCompanyId),
     getMyProjectAssignmentRoles(currentCompanyId, projectId, user.id),
+    isCallerProjectAccessible(projectId),
   ]);
   const canManage = canManageProject(roleNames, myProjectRoles);
+  const canViewDailyOverview = canViewDailyWorkforceBroadly(roleNames, hasProjectAccess);
 
   const [projectAssignments, pickerEmployeeRows] = await Promise.all([
     listProjectAssignments(currentCompanyId, projectId),
     listActiveEmployeesForPicker(currentCompanyId),
   ]);
+
+  type DailyOverviewProps = Parameters<typeof ProjectDailyOverview>[0];
+  let dailyOverview: { today: DailyOverviewProps["today"]; safety: DailyOverviewProps["safety"]; actionRequired: DailyOverviewProps["actionRequired"] } | null = null;
+  if (canViewDailyOverview) {
+    const today = new Date().toISOString().slice(0, 10);
+    const [workforce, teams, hoursRows, discrepancies, lmraCounts, observationCounts, correctiveActionCounts, scaffoldCounts] = await Promise.all([
+      listWorkforceForDate(currentCompanyId, projectId, today),
+      listDailyTeamsForDate(currentCompanyId, projectId, today),
+      listWorkedHoursForDate(currentCompanyId, projectId, today),
+      listOpenWorkedHoursDiscrepancies(currentCompanyId, projectId),
+      getLmraOverviewCounts(currentCompanyId, projectId),
+      getObservationOverviewCounts(currentCompanyId, projectId),
+      getCorrectiveActionOverviewCounts(currentCompanyId, projectId),
+      getScaffoldOverviewCounts(currentCompanyId, projectId),
+    ]);
+
+    const { incompleteAttendanceCount, ...todayWorkforceCounts } = summarizeDailyWorkforce(workforce);
+    const hoursSubmittedCount = hoursRows.filter((row) => row.status === "submitted").length;
+    const hoursDraftCount = hoursRows.filter((row) => row.status === "draft").length;
+
+    dailyOverview = {
+      today: {
+        ...todayWorkforceCounts,
+        teamCount: teams.length,
+        allTeamsLocked: teams.length > 0 && teams.every((team) => team.status === "locked"),
+        anyTeamsOpen: teams.some((team) => team.status === "open"),
+        hoursSubmittedCount,
+        hoursDraftCount,
+        hoursNotRecordedCount: Math.max(0, workforce.length - hoursRows.length),
+      },
+      safety: {
+        lmraSubmittedToday: lmraCounts.submittedToday,
+        lmraStopWork: lmraCounts.stopWork,
+        observationsPositiveToday: observationCounts.positiveToday,
+        observationsNegativeToday: observationCounts.negativeToday,
+        openCorrectiveActions: correctiveActionCounts.open,
+        scaffoldsExpiringSoon: scaffoldCounts.expiringSoon,
+        scaffoldsExpired: scaffoldCounts.expired,
+      },
+      actionRequired: {
+        openHourDiscrepancies: discrepancies.length,
+        overdueCorrectiveActions: correctiveActionCounts.overdue,
+        incompleteAttendanceCount,
+      },
+    };
+  }
 
   const pickerEmployees: EmployeeOption[] = pickerEmployeeRows.map((employee) => ({
     value: employee.id,
@@ -91,6 +149,13 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
         {project.code ? <span className="font-mono text-sm text-muted-foreground">{project.code}</span> : null}
         {project.location ? <span className="text-sm text-muted-foreground">{project.location}</span> : null}
       </div>
+
+      {dailyOverview && (
+        <div className="flex flex-col gap-3">
+          <SectionHeader title="Daily overview" />
+          <ProjectDailyOverview companyId={currentCompanyId} projectId={projectId} today={dailyOverview.today} safety={dailyOverview.safety} actionRequired={dailyOverview.actionRequired} />
+        </div>
+      )}
 
       <Tabs defaultValue="overview">
         <TabsList>

@@ -62,6 +62,16 @@ describe("observationFormSchema", () => {
     expect(observationFormSchema.safeParse({ ...VALID_INPUT, description: "" }).success).toBe(false);
   });
 
+  it("rejects an oversized work area (Phase 11 input-limit audit)", () => {
+    expect(observationFormSchema.safeParse({ ...VALID_INPUT, workArea: "a".repeat(101) }).success).toBe(false);
+    expect(observationFormSchema.safeParse({ ...VALID_INPUT, workArea: "a".repeat(100) }).success).toBe(true);
+  });
+
+  it("rejects an oversized description (Phase 11 input-limit audit)", () => {
+    expect(observationFormSchema.safeParse({ ...VALID_INPUT, description: "a".repeat(2001) }).success).toBe(false);
+    expect(observationFormSchema.safeParse({ ...VALID_INPUT, description: "a".repeat(2000) }).success).toBe(true);
+  });
+
   it("rejects a malformed observedAt (not the datetime-local shape)", () => {
     expect(observationFormSchema.safeParse({ ...VALID_INPUT, observedAt: "2026-08-02" }).success).toBe(false);
     expect(observationFormSchema.safeParse({ ...VALID_INPUT, observedAt: "08/02/2026 14:30" }).success).toBe(false);
@@ -137,5 +147,10 @@ describe("observationParticipantsFormSchema", () => {
 
   it("rejects a non-uuid entry", () => {
     expect(observationParticipantsFormSchema.safeParse(["not-a-uuid"]).success).toBe(false);
+  });
+
+  it("rejects an oversized participant array (Phase 11 input-limit audit)", () => {
+    const tooMany = Array.from({ length: 201 }, (_, i) => `123e4567-e89b-42d3-a456-4266141740${String(i).padStart(2, "0")}`);
+    expect(observationParticipantsFormSchema.safeParse(tooMany).success).toBe(false);
   });
 });

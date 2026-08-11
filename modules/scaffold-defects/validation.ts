@@ -15,7 +15,7 @@ const requiredDate = z
 
 /** Create/edit core fields — only a manage-tier role may touch these (validate_scaffold_defect_update() in the migration enforces it at the database level too). */
 export const scaffoldDefectFormSchema = z.object({
-  description: z.string().trim().min(1, "Description is required"),
+  description: z.string().trim().min(1, "Description is required").max(2000, "Keep it under 2000 characters"),
   severity: z.enum(SEVERITY_VALUES),
   responsiblePersonId: z.string().uuid("Choose a responsible person"),
   dueDate: requiredDate,
@@ -45,6 +45,6 @@ export type ScaffoldDefectCloseFormInput = z.infer<typeof scaffoldDefectCloseFor
 
 /** Rejecting an awaiting_verification defect, or reopening a closed/rejected one — both require a reason. */
 export const scaffoldDefectReasonFormSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required"),
+  reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type ScaffoldDefectReasonFormInput = z.infer<typeof scaffoldDefectReasonFormSchema>;

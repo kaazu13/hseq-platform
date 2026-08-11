@@ -12,7 +12,7 @@ import { optionalText } from "@/lib/validation";
 
 export const toolboxMeetingMetadataSchema = z.object({
   projectId: z.string().uuid("Choose a project"),
-  title: z.string().trim().min(1, "Title is required"),
+  title: z.string().trim().min(1, "Title is required").max(200, "Keep it under 200 characters"),
   meetingDate: z
     .string()
     .trim()
@@ -24,7 +24,7 @@ export const toolboxMeetingMetadataSchema = z.object({
 export type ToolboxMeetingMetadataInput = z.infer<typeof toolboxMeetingMetadataSchema>;
 
 export const toolboxMeetingEditFormSchema = z.object({
-  title: z.string().trim().min(1, "Title is required"),
+  title: z.string().trim().min(1, "Title is required").max(200, "Keep it under 200 characters"),
   meetingDate: z
     .string()
     .trim()
@@ -37,6 +37,6 @@ export type ToolboxMeetingEditFormInput = z.infer<typeof toolboxMeetingEditFormS
 
 /** Required whenever the uploaded PDF is being swapped for a corrected one — mirrors the reopen/reject reason-required pattern used across every other module this session. */
 export const replaceFileReasonSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required"),
+  reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type ReplaceFileReasonInput = z.infer<typeof replaceFileReasonSchema>;

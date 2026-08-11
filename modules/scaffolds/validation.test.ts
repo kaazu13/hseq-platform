@@ -42,6 +42,13 @@ describe("scaffoldFormSchema", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxLoadClass: "" }).success).toBe(false);
   });
 
+  it("rejects an oversized tag number/work area/intended use/max load class (Phase 11 input-limit audit)", () => {
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, tagNumber: "a".repeat(51) }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, workArea: "a".repeat(101) }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, intendedUse: "a".repeat(201) }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxLoadClass: "a".repeat(101) }).success).toBe(false);
+  });
+
   it("rejects a non-positive or non-numeric height/length/width", () => {
     for (const field of ["heightMetres", "lengthMetres", "widthMetres"] as const) {
       expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, [field]: "0" }).success).toBe(false);
@@ -171,6 +178,12 @@ describe("inspectionItemsFormSchema", () => {
     const rows = [...SCAFFOLD_INSPECTION_ITEM_TYPES, "standards"].map((itemType) => validRow(itemType as (typeof SCAFFOLD_INSPECTION_ITEM_TYPES)[number]));
     expect(inspectionItemsFormSchema.safeParse(rows).success).toBe(false);
   });
+
+  it("rejects an oversized comment/requiredCorrectiveAction on any row (Phase 11 input-limit audit)", () => {
+    const rows = SCAFFOLD_INSPECTION_ITEM_TYPES.map((itemType) => validRow(itemType));
+    rows[0] = { ...rows[0], comment: "a".repeat(1001) };
+    expect(inspectionItemsFormSchema.safeParse(rows).success).toBe(false);
+  });
 });
 
 describe("finalizeInspectionFormSchema", () => {
@@ -209,6 +222,10 @@ describe("correctionReasonFormSchema", () => {
   it("rejects a blank or whitespace-only reason", () => {
     expect(correctionReasonFormSchema.safeParse({ correctionReason: "" }).success).toBe(false);
     expect(correctionReasonFormSchema.safeParse({ correctionReason: "   " }).success).toBe(false);
+  });
+
+  it("rejects an oversized reason (Phase 11 input-limit audit)", () => {
+    expect(correctionReasonFormSchema.safeParse({ correctionReason: "a".repeat(2001) }).success).toBe(false);
   });
 });
 

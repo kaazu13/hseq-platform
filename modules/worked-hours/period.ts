@@ -91,6 +91,11 @@ export function getIsoWeekNumber(date: Date): { week: number; weekYear: number }
   return { week, weekYear: target.getUTCFullYear() };
 }
 
+/** Count of dates with recorded hours > 0 in a pivoted hoursByDate map — the "Days worked" figure on the Employee Dashboard and the Worked Hours matrix export. Callers must already have the map scoped to the intended period (e.g. via listWorkedHoursForPeriod) — this simply counts, it doesn't itself filter by date range. */
+export function countDaysWorked(hoursByDate: Record<string, number>): number {
+  return Object.values(hoursByDate).filter((hours) => hours > 0).length;
+}
+
 function sanitizeForFilename(name: string): string {
   return name
     .replace(/[/\\:*?"<>|]+/g, " ")

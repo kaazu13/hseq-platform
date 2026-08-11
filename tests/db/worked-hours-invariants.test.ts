@@ -193,4 +193,75 @@ describe("worked hours invariants", () => {
       sql`insert into worked_hours (company_id, project_id, employee_id, work_date, hours) values (${companyB.companyId}, ${projectInA}, ${employeeInA}, '2026-08-10', 8)`,
     ).rejects.toMatchObject(FK_VIOLATION);
   });
+
+  it("resolving a discrepancy ALWAYS notifies the reporting employee — both accepted and rejected, even with no resulting hours change (Product Integration Phase 6)", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Discrepancy Notification Project");
+    const employeeUser = await createTestUser("Notify Discrepancy Employee");
+    await addMembership(companyA.companyId, employeeUser.userId, ["employee"]);
+    const employeeId = await createTestEmployee(companyA.companyId, employeeUser.userId, "Notify", "Employee");
+    const workDate = "2026-08-11";
+
+    const [worked] = await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours(${projectId}, ${employeeId}, ${workDate}, 8)`);
+    await asUser(admin.userId, (tx) => tx`select * from submit_worked_hours(${projectId}, ${workDate})`);
+
+    // Case 1: rejected, no hours change at all — previously produced ZERO notification.
+    const [rejectedDiscrepancy] = await asUser(employeeUser.userId, (tx) => tx`select * from report_worked_hours_discrepancy(${worked.id}, 'I think this is wrong')`);
+    await asUser(admin.userId, (tx) => tx`select * from resolve_worked_hours_discrepancy(${rejectedDiscrepancy.id}, 'rejected', 'Confirmed correct with foreman', null)`);
+
+    const rejectedNotifications = await sql`select type, title, body from notifications where recipient_user_id = ${employeeUser.userId} and type = 'worked_hours_discrepancy_resolved'`;
+    expect(rejectedNotifications).toHaveLength(1);
+    expect(rejectedNotifications[0].title).toBe("Discrepancy report rejected");
+    expect(rejectedNotifications[0].body).toBe("Confirmed correct with foreman");
+
+    // Case 2: accepted WITH a resulting hours change — gets BOTH the existing
+    // 'worked_hours_corrected' notification (from upsert_worked_hours' own
+    // correction path) AND the new 'worked_hours_discrepancy_resolved' one —
+    // two distinct facts, not a duplicate.
+    const [secondDiscrepancy] = await asUser(employeeUser.userId, (tx) => tx`select * from report_worked_hours_discrepancy(${worked.id}, 'Actually worked 9 hours')`);
+    await asUser(admin.userId, (tx) => tx`select * from resolve_worked_hours_discrepancy(${secondDiscrepancy.id}, 'accepted', 'Confirmed with foreman', 9)`);
+
+    const allNotifications = await sql`select type from notifications where recipient_user_id = ${employeeUser.userId} order by created_at`;
+    expect(allNotifications.map((n) => n.type)).toEqual(["worked_hours_discrepancy_resolved", "worked_hours_corrected", "worked_hours_discrepancy_resolved"]);
+
+    await deleteTestUser(employeeUser.userId);
+  });
+
+  it("notification recipient isolation: one employee cannot see or mark-read another employee's notification", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Notification Isolation Project");
+    const employeeUserA = await createTestUser("Notification Employee A");
+    const employeeUserB = await createTestUser("Notification Employee B");
+    await addMembership(companyA.companyId, employeeUserA.userId, ["employee"]);
+    await addMembership(companyA.companyId, employeeUserB.userId, ["employee"]);
+    const employeeIdA = await createTestEmployee(companyA.companyId, employeeUserA.userId, "Notify", "A");
+    const workDate = "2026-08-11";
+
+    await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours(${projectId}, ${employeeIdA}, ${workDate}, 8)`);
+    await asUser(admin.userId, (tx) => tx`select * from submit_worked_hours(${projectId}, ${workDate})`);
+    await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours(${projectId}, ${employeeIdA}, ${workDate}, 6, null, 'Correction to test notification isolation')`);
+
+    const [notification] = await sql`select id from notifications where recipient_user_id = ${employeeUserA.userId} and type = 'worked_hours_corrected'`;
+    expect(notification).toBeTruthy();
+
+    // Employee B cannot see Employee A's notification at all via RLS.
+    const bVisible = await asUser(employeeUserB.userId, (tx) => tx`select id from notifications where id = ${notification.id}`);
+    expect(bVisible).toHaveLength(0);
+
+    // Employee B attempting to mark Employee A's notification read is a
+    // silent no-op (RLS excludes the row from the UPDATE, same "unmatched
+    // UPDATE by id" semantics as worked_hours_discrepancies_update above) —
+    // never actually flips read_at.
+    await asUser(employeeUserB.userId, (tx) => tx`update notifications set read_at = now() where id = ${notification.id}`);
+    const [stillUnread] = await sql`select read_at from notifications where id = ${notification.id}`;
+    expect(stillUnread.read_at).toBeNull();
+
+    // Employee A CAN see and mark-read their own notification.
+    const aVisible = await asUser(employeeUserA.userId, (tx) => tx`select id from notifications where id = ${notification.id}`);
+    expect(aVisible).toHaveLength(1);
+    await asUser(employeeUserA.userId, (tx) => tx`update notifications set read_at = now() where id = ${notification.id}`);
+    const [nowRead] = await sql`select read_at from notifications where id = ${notification.id}`;
+    expect(nowRead.read_at).not.toBeNull();
+
+    await deleteTestUser(employeeUserA.userId);
+    await deleteTestUser(employeeUserB.userId);
+  });
 });

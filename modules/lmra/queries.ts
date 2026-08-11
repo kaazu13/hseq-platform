@@ -88,6 +88,28 @@ export async function getLmraAssessment(companyId: string, lmraId: string): Prom
   };
 }
 
+/**
+ * Every LMRA assessment for `workDate` that `employeeId` is a listed
+ * participant in — the Employee Dashboard's "Today's Safety" section
+ * (Phase 4). Resolved via lmra_participants (RLS already grants a
+ * participant read access to their own row — see
+ * supabase/migrations/20260801090000_lmra.sql's lmra_participants_select),
+ * then the matching assessments filtered to today's date. Two-step, not a
+ * PostgREST embed, same convention as every other query in this file.
+ */
+export async function listMyLmraAssessmentsForDate(companyId: string, employeeId: string, workDate: string): Promise<LmraAssessment[]> {
+  const supabase = await createClient();
+  const { data: participantRows, error: participantError } = await supabase.from("lmra_participants").select("lmra_assessment_id").eq("company_id", companyId).eq("employee_id", employeeId);
+  if (participantError) throw participantError;
+
+  const assessmentIds = [...new Set((participantRows ?? []).map((row) => row.lmra_assessment_id))];
+  if (assessmentIds.length === 0) return [];
+
+  const { data, error } = await supabase.from("lmra_assessments").select("*").eq("company_id", companyId).eq("work_date", workDate).in("id", assessmentIds).order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** True if the caller holds an active team_assignments row (assignment_role = 'foreman') for `projectId` — same underlying fact as the RLS helper is_project_foreman(), queried directly for UI-gating (show/hide the create/edit actions), never as the actual access-control decision. */
 export async function isCallerProjectForeman(companyId: string, projectId: string, userId: string): Promise<boolean> {
   const supabase = await createClient();

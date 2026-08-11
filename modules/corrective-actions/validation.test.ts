@@ -33,6 +33,11 @@ describe("correctiveActionFormSchema", () => {
   it("rejects a malformed due date", () => {
     expect(correctiveActionFormSchema.safeParse({ ...VALID_FORM_INPUT, dueDate: "10/08/2026" }).success).toBe(false);
   });
+
+  it("rejects an oversized description (Phase 11 input-limit audit)", () => {
+    expect(correctiveActionFormSchema.safeParse({ ...VALID_FORM_INPUT, description: "a".repeat(2001) }).success).toBe(false);
+    expect(correctiveActionFormSchema.safeParse({ ...VALID_FORM_INPUT, description: "a".repeat(2000) }).success).toBe(true);
+  });
 });
 
 describe("correctiveActionProgressFormSchema", () => {
@@ -69,5 +74,9 @@ describe("correctiveActionReasonFormSchema", () => {
 
   it("rejects a whitespace-only reason", () => {
     expect(correctiveActionReasonFormSchema.safeParse({ reason: "   " }).success).toBe(false);
+  });
+
+  it("rejects an oversized reason (Phase 11 input-limit audit)", () => {
+    expect(correctiveActionReasonFormSchema.safeParse({ reason: "a".repeat(2001) }).success).toBe(false);
   });
 });

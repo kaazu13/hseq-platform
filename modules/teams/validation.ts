@@ -13,7 +13,7 @@ const optionalDate = z
 /** Create/edit — General section only. Assignments (Foreman(s)/Members) are a separate, per-employee action (see setTeamAssignmentSchema below), not one big form field. */
 export const teamFormSchema = z
   .object({
-    name: z.string().trim().min(1, "Team name is required"),
+    name: z.string().trim().min(1, "Team name is required").max(100, "Keep it under 100 characters"),
     code: optionalText,
     color: z.enum(TEAM_COLOR_VALUES),
     description: optionalText,

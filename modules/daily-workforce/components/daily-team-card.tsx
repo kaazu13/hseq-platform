@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, Pencil, Plus, UserPlus, X } from "lucide-react";
+import { Eye, Lock, Pencil, Plus, ShieldCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { moveDailyTeamMember, removeDailyTeamMember } from "@/modules/daily-workforce/actions";
 import type { DailyTeamWithMembers, EmployeeDailyState } from "@/modules/daily-workforce/types";
@@ -145,8 +146,20 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
         </div>
       </CardContent>
 
-      <CardFooter className="text-sm text-muted-foreground">
-        {totalCount} {totalCount === 1 ? "worker" : "workers"}
+      <CardFooter className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+        <span>
+          {totalCount} {totalCount === 1 ? "worker" : "workers"}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/lmra/new?dailyTeamId=${team.id}&workDate=${workDate}`} />}>
+            <ShieldCheck />
+            LMRA
+          </Button>
+          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/observations/new?projectId=${projectId}&dailyTeamId=${team.id}`} />}>
+            <Eye />
+            Observation
+          </Button>
+        </div>
       </CardFooter>
 
       {canEdit && <DailyTeamFormDialog companyId={companyId} projectId={projectId} workDate={workDate} team={team} open={editOpen} onOpenChange={setEditOpen} />}

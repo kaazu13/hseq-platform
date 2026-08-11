@@ -47,6 +47,30 @@ export async function listRecentSafetyFlashesForOverview(companyId: string, filt
   return results.slice(0, limit);
 }
 
+/**
+ * Active Safety Flashes relevant to one employee — company-wide flashes
+ * (project_id is null) unioned with flashes scoped specifically to
+ * `projectId`, newest first. The Employee Dashboard's "Today's Safety"
+ * section (Phase 4) — this module has no per-employee acknowledgement
+ * state (it's a document-based evidence record, see this module's own
+ * header comment elsewhere), so "relevant to them" is scope-based only:
+ * every flash they'd actually be covered by, not a fabricated read/unread
+ * status.
+ */
+export async function listActiveSafetyFlashesForEmployee(companyId: string, projectId: string, limit = 5): Promise<SafetyFlash[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("safety_flashes")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("status", "active")
+    .or(`project_id.is.null,project_id.eq.${projectId}`)
+    .order("date_issued", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getSafetyFlash(companyId: string, flashId: string): Promise<SafetyFlashDetail | null> {
   const supabase = await createClient();
   const { data: flash, error } = await supabase.from("safety_flashes").select("*").eq("company_id", companyId).eq("id", flashId).maybeSingle();

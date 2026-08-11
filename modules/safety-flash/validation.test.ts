@@ -42,10 +42,19 @@ describe("safetyFlashMetadataSchema", () => {
   it("rejects a non-uuid projectId when one is provided", () => {
     expect(safetyFlashMetadataSchema.safeParse({ ...VALID_INPUT, projectId: "not-a-uuid" }).success).toBe(false);
   });
+
+  it("rejects an oversized title/language (Phase 11 input-limit audit)", () => {
+    expect(safetyFlashMetadataSchema.safeParse({ ...VALID_INPUT, title: "a".repeat(201) }).success).toBe(false);
+    expect(safetyFlashMetadataSchema.safeParse({ ...VALID_INPUT, language: "a".repeat(51) }).success).toBe(false);
+  });
 });
 
 describe("replaceFileReasonSchema", () => {
   it("rejects a blank reason", () => {
     expect(replaceFileReasonSchema.safeParse({ reason: "" }).success).toBe(false);
+  });
+
+  it("rejects an oversized reason (Phase 11 input-limit audit)", () => {
+    expect(replaceFileReasonSchema.safeParse({ reason: "a".repeat(2001) }).success).toBe(false);
   });
 });

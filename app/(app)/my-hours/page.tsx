@@ -1,0 +1,133 @@
+import Link from "next/link";
+import { Clock } from "lucide-react";
+import { requireUser } from "@/lib/auth/session";
+import { resolveCurrentCompany } from "@/modules/companies/queries";
+import { resolveCurrentProject } from "@/modules/projects/queries";
+import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
+import { listWorkedHoursHistoryForEmployee, listMyWorkedHoursDiscrepancies, listWorkedHoursCorrections } from "@/modules/worked-hours/queries";
+import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, type WorkedHoursPeriodMode } from "@/modules/worked-hours/period";
+import { MyHoursRow } from "@/modules/worked-hours/components/my-hours-row";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+
+type MyHoursPageProps = {
+  searchParams: Promise<Record<string, string | undefined>>;
+};
+
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function shiftDate(date: string, mode: WorkedHoursPeriodMode, direction: 1 | -1): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  if (mode === "day") d.setUTCDate(d.getUTCDate() + direction);
+  else if (mode === "week") d.setUTCDate(d.getUTCDate() + direction * 7);
+  else d.setUTCMonth(d.getUTCMonth() + direction);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * "My Hours" (Phase 2) — the employee's own read-only worked-hours history:
+ * Day/Week/Month periods, previous-period navigation, correction history,
+ * and discrepancy status/reporting per day. No edit control exists
+ * anywhere on this page — upsert_worked_hours() is never called from here,
+ * only report_worked_hours_discrepancy() via MyHoursRow's
+ * ReportDiscrepancyButton. Scoped to the caller's own employee record in
+ * their current company/project, same resolution as the Employee
+ * Dashboard section this page is linked from.
+ */
+export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
+  const params = await searchParams;
+  const { user } = await requireUser();
+  const { currentCompanyId } = await resolveCurrentCompany(user.id);
+
+  if (!currentCompanyId) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title="My Hours" />
+        <EmptyState icon={Clock} title="No company yet" description="Once you're part of a company, your worked hours will appear here." className="flex-1" />
+      </div>
+    );
+  }
+
+  const { currentProjectId } = await resolveCurrentProject(user.id, currentCompanyId);
+  if (!currentProjectId) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title="My Hours" />
+        <EmptyState icon={Clock} title="No active project" description="Choose a project from the dashboard first." className="flex-1" />
+      </div>
+    );
+  }
+
+  const myEmployeeId = await getMyEmployeeId(currentCompanyId, user.id);
+  if (!myEmployeeId) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title="My Hours" />
+        <EmptyState icon={Clock} title="No linked employee record" description="Your account isn't linked to an employee record in this company yet." className="flex-1" />
+      </div>
+    );
+  }
+
+  const mode: WorkedHoursPeriodMode = params.view === "week" ? "week" : params.view === "month" ? "month" : "day";
+  const anchorDate = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : todayIsoDate();
+  const period = resolveWorkedHoursPeriod(mode, anchorDate);
+
+  const [rows, discrepancies] = await Promise.all([
+    listWorkedHoursHistoryForEmployee(currentCompanyId, currentProjectId, myEmployeeId, period.fromDate, period.toDate),
+    listMyWorkedHoursDiscrepancies(currentCompanyId, myEmployeeId),
+  ]);
+
+  const correctionsByWorkedHoursId = new Map(
+    await Promise.all(rows.map(async (row) => [row.id, await listWorkedHoursCorrections(currentCompanyId, row.id)] as const)),
+  );
+  const discrepancyByWorkedHoursId = new Map(discrepancies.map((discrepancy) => [discrepancy.worked_hours_id, discrepancy]));
+
+  const totalHours = rows.reduce((sum, row) => sum + Number(row.hours), 0);
+  const basePath = "/my-hours";
+  const prevDate = shiftDate(anchorDate, mode, -1);
+  const nextDate = shiftDate(anchorDate, mode, 1);
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      <PageHeader title="My Hours" description={`${formatWorkedHoursPeriodLabel(period)} · ${totalHours.toFixed(1)}h total`} />
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Link href={`${basePath}?view=day`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+          Day
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <Link href={`${basePath}?view=week`} className={mode === "week" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+          Week
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <Link href={`${basePath}?view=month`} className={mode === "month" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+          Month
+        </Link>
+      </div>
+
+      <div className="flex items-center gap-3 text-sm">
+        <Link href={`${basePath}?view=${mode}&date=${prevDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
+          ← Previous
+        </Link>
+        <Link href={basePath} className="text-muted-foreground transition-colors hover:text-foreground">
+          Today
+        </Link>
+        <Link href={`${basePath}?view=${mode}&date=${nextDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
+          Next →
+        </Link>
+      </div>
+
+      {rows.length === 0 ? (
+        <EmptyState icon={Clock} title="No hours recorded" description="Nothing has been recorded for this period yet." className="flex-1" />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {rows.map((row) => (
+            <MyHoursRow key={row.id} companyId={currentCompanyId} workedHours={row} corrections={correctionsByWorkedHoursId.get(row.id) ?? []} discrepancy={discrepancyByWorkedHoursId.get(row.id) ?? null} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

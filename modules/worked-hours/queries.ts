@@ -253,7 +253,7 @@ export async function getEmployeeMonthToDateHours(companyId: string, projectId: 
   return (data ?? []).reduce((sum, row) => sum + Number(row.hours), 0);
 }
 
-/** An unread-first page of a user's own notifications — the Employee Dashboard's "Notifications / actions required" section. Always scoped to `recipient_user_id = auth.uid()` by RLS, never client-filterable to another user. */
+/** An unread-first page of a user's own notifications — the Employee Dashboard's "Notifications / actions required" section, and the full Notification Center page. Always scoped to `recipient_user_id = auth.uid()` by RLS, never client-filterable to another user. */
 export async function listMyNotifications(limit = 20): Promise<AppNotification[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -262,6 +262,40 @@ export async function listMyNotifications(limit = 20): Promise<AppNotification[]
     .order("read_at", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** The caller's own unread notification count — the top bar bell badge's single data source. A lightweight `head: true` count, never the full row set, since it renders on every page via app/(app)/layout.tsx. RLS-scoped to `recipient_user_id = auth.uid()` the same as listMyNotifications. */
+export async function getUnreadNotificationCount(): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
+ * One employee's individual worked_hours rows (not pivoted) across
+ * [fromDate, toDate], newest first — the "My Hours" page's history-list
+ * data source (Phase 2). Distinct from listWorkedHoursForPeriod (which
+ * pivots into one row per employee for the payroll matrix/"This Month"
+ * views) — this stays one row per DAY so each day's status/note/id (needed
+ * for corrections + "Report discrepancy") is directly available.
+ * `employeeId` must already be verified as the caller's own — callers
+ * resolve it via getMyEmployeeId() first, same convention as every other
+ * "my own data" query in this codebase; RLS backstops it regardless.
+ */
+export async function listWorkedHoursHistoryForEmployee(companyId: string, projectId: string, employeeId: string, fromDate: string, toDate: string): Promise<WorkedHours[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("worked_hours")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("employee_id", employeeId)
+    .gte("work_date", fromDate)
+    .lte("work_date", toDate)
+    .order("work_date", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }

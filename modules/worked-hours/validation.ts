@@ -29,7 +29,7 @@ export type BulkApplyWorkedHoursInput = z.input<typeof bulkApplyWorkedHoursSchem
 
 /** `reportWorkedHoursDiscrepancy` Server Function input. */
 export const reportWorkedHoursDiscrepancySchema = z.object({
-  comment: z.string().trim().min(1, "A comment is required"),
+  comment: z.string().trim().min(1, "A comment is required").max(2000, "Keep it under 2000 characters"),
 });
 export type ReportWorkedHoursDiscrepancyInput = z.infer<typeof reportWorkedHoursDiscrepancySchema>;
 
@@ -38,7 +38,7 @@ const DISCREPANCY_RESOLUTION_VALUES = ["accepted", "rejected"] as const;
 /** `resolveWorkedHoursDiscrepancy` Server Function input. */
 export const resolveWorkedHoursDiscrepancySchema = z.object({
   status: z.enum(DISCREPANCY_RESOLUTION_VALUES),
-  resolutionNote: z.string().trim().min(1, "A resolution note is required"),
+  resolutionNote: z.string().trim().min(1, "A resolution note is required").max(2000, "Keep it under 2000 characters"),
   resultingHours: z
     .string()
     .trim()

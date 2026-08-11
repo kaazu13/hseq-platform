@@ -10,10 +10,22 @@ import { z } from "zod";
  * provided" (HTML form inputs always submit `""`, never `undefined`, when
  * left blank) — trimmed and transformed to `undefined` before any further
  * validation runs.
+ *
+ * `DEFAULT_TEXT_MAX_LENGTH` bounds every caller of `optionalText` that
+ * doesn't layer its own stricter limit on top — a platform-wide input-size
+ * backstop (Phase 11 audit) so a genuinely unbounded free-text field never
+ * exists by omission. No field on this platform legitimately needs a note/
+ * reason/comment longer than this (documents are uploaded as files, never
+ * typed as text) — a module with a real reason to differ can still
+ * `.pipe(z.string().max(N))` a tighter bound, matching
+ * modules/lmra/validation.ts's optionalNotes() convention.
  */
+export const DEFAULT_TEXT_MAX_LENGTH = 5000;
+
 export const optionalText = z
   .string()
   .trim()
+  .max(DEFAULT_TEXT_MAX_LENGTH, `Keep it under ${DEFAULT_TEXT_MAX_LENGTH} characters`)
   .optional()
   .transform((value) => (value === "" || value === undefined ? undefined : value));
 

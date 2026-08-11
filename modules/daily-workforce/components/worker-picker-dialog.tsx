@@ -70,6 +70,8 @@ export function WorkerPickerDialog({ open, onOpenChange, title, description, wor
                   type="button"
                   disabled={!available}
                   onClick={() => handleSelect(state.employee.id, available)}
+                  title={available ? undefined : `Cannot assign — marked ${DAILY_ATTENDANCE_STATUS_LABELS[state.attendanceStatus]} today`}
+                  aria-label={available ? undefined : `${state.employee.first_name} ${state.employee.last_name} — cannot assign, marked ${DAILY_ATTENDANCE_STATUS_LABELS[state.attendanceStatus]} today`}
                   className="flex items-center justify-between gap-3 rounded-md p-2 text-left text-sm transition-colors enabled:hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <div className="flex flex-col">

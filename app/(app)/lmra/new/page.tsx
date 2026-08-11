@@ -3,7 +3,7 @@ import { forbidden, notFound } from "next/navigation";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject, getProject } from "@/modules/projects/queries";
-import { listLmraCandidateEmployees, isCallerProjectForeman, isCallerProjectAccessible, getMyEmployeeId } from "@/modules/lmra/queries";
+import { listLmraCandidateEmployees, isCallerProjectForeman, isCallerProjectAccessible, getMyEmployeeId, listDailyTeamsForDate } from "@/modules/lmra/queries";
 import { canCreateLmra } from "@/modules/lmra/permissions";
 import { initialLmraHazardRows } from "@/modules/lmra/types";
 import { LmraForm } from "@/modules/lmra/components/lmra-form";
@@ -22,7 +22,12 @@ import { Button } from "@/components/ui/button";
  * the existing mechanism (dashboard/sidebar switcher), not a second picker
  * built just for LMRA.
  */
-export default async function NewLmraPage() {
+type NewLmraPageProps = {
+  searchParams: Promise<Record<string, string | undefined>>;
+};
+
+export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
+  const params = await searchParams;
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
 
@@ -78,6 +83,23 @@ export default async function NewLmraPage() {
   const candidates = toEmployeeOptions(candidateRows);
   const todayDate = new Date().toISOString().slice(0, 10);
 
+  // "Create LMRA for team" from Today's Teams (Phase 9) — pre-populates
+  // participants from that day's actual roster, reusing the exact same
+  // flatten-foremen-and-workers logic as the in-form "Add Today's Team"
+  // dialog (modules/lmra/components/lmra-add-daily-team-dialog.tsx), just
+  // triggered on load instead of by a button. Only honored for a team that
+  // genuinely belongs to THIS project on the given date — an unrecognized/
+  // cross-project id silently falls back to an empty participant list.
+  let initialParticipantIds: string[] = [];
+  if (params.dailyTeamId) {
+    const teamWorkDate = params.workDate && /^\d{4}-\d{2}-\d{2}$/.test(params.workDate) ? params.workDate : todayDate;
+    const teams = await listDailyTeamsForDate(currentCompanyId, currentProjectId, teamWorkDate);
+    const team = teams.find((candidate) => candidate.id === params.dailyTeamId);
+    if (team) {
+      initialParticipantIds = [...team.foremen, ...team.workers].map((member) => member.employee.id);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="New LMRA" description={`For ${project.name}.`} />
@@ -90,7 +112,7 @@ export default async function NewLmraPage() {
           candidates={candidates}
           todayDate={todayDate}
           hazardRows={initialLmraHazardRows()}
-          participantIds={[]}
+          participantIds={initialParticipantIds}
           isElevated={isElevated}
           myEmployeeId={myEmployeeId}
         />

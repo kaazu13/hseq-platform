@@ -36,6 +36,10 @@ describe("scaffoldDefectFormSchema", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.inspectionItemId).toBeUndefined();
   });
+
+  it("rejects an oversized description (Phase 11 input-limit audit)", () => {
+    expect(scaffoldDefectFormSchema.safeParse({ ...VALID_INPUT, description: "a".repeat(2001) }).success).toBe(false);
+  });
 });
 
 describe("scaffoldDefectProgressFormSchema", () => {
@@ -65,5 +69,9 @@ describe("scaffoldDefectReasonFormSchema", () => {
   it("rejects a blank or whitespace-only reason", () => {
     expect(scaffoldDefectReasonFormSchema.safeParse({ reason: "" }).success).toBe(false);
     expect(scaffoldDefectReasonFormSchema.safeParse({ reason: "   " }).success).toBe(false);
+  });
+
+  it("rejects an oversized reason (Phase 11 input-limit audit)", () => {
+    expect(scaffoldDefectReasonFormSchema.safeParse({ reason: "a".repeat(2001) }).success).toBe(false);
   });
 });

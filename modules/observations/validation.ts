@@ -47,11 +47,11 @@ const optionalUuid = z
 export const observationFormSchema = z
   .object({
     projectId: z.string().uuid("Choose a project"),
-    workArea: z.string().trim().min(1, "Work area is required"),
+    workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
     observedAt: requiredLocalDateTime,
     observerId: z.string().uuid("Choose who made this observation"),
     category: z.enum(CATEGORY_VALUES),
-    description: z.string().trim().min(1, "Description is required"),
+    description: z.string().trim().min(1, "Description is required").max(2000, "Keep it under 2000 characters"),
     immediateActionTaken: optionalText,
     riskLevel: z.enum(RISK_LEVEL_VALUES),
     isStopWork: z.boolean(),
@@ -73,5 +73,5 @@ export const observationFormSchema = z
 export type ObservationFormInput = z.infer<typeof observationFormSchema>;
 
 /** Worker picker — the desired final set of participant employee ids, optional ("people involved, where appropriate"). */
-export const observationParticipantsFormSchema = z.array(z.string().uuid());
+export const observationParticipantsFormSchema = z.array(z.string().uuid()).max(200, "Too many workers selected");
 export type ObservationParticipantsFormInput = z.infer<typeof observationParticipantsFormSchema>;

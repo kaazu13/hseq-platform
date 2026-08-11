@@ -13,7 +13,7 @@ const PROJECT_STATUS_VALUES = ["planning", "active", "completed", "archived"] as
 
 export const projectFormSchema = z
   .object({
-    name: z.string().trim().min(1, "Project name is required"),
+    name: z.string().trim().min(1, "Project name is required").max(200, "Keep it under 200 characters"),
     clientName: optionalText,
     code: optionalText,
     description: optionalText,

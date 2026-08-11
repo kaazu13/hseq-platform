@@ -1,0 +1,109 @@
+import Link from "next/link";
+import { AlertTriangle, CalendarCheck, Clock, Eye, HardHat, ListChecks, Lock, ShieldAlert, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { SectionHeader } from "@/components/shared/section-header";
+import { StatCard } from "@/components/shared/stat-card";
+
+type ProjectDailyOverviewProps = {
+  companyId: string;
+  projectId: string;
+  today: {
+    rosterSize: number;
+    presentCount: number;
+    unavailableCount: number;
+    notAssignedCount: number;
+    assignedCount: number;
+    teamCount: number;
+    allTeamsLocked: boolean;
+    anyTeamsOpen: boolean;
+    hoursSubmittedCount: number;
+    hoursDraftCount: number;
+    hoursNotRecordedCount: number;
+  };
+  safety: {
+    lmraSubmittedToday: number;
+    lmraStopWork: number;
+    observationsPositiveToday: number;
+    observationsNegativeToday: number;
+    openCorrectiveActions: number;
+    scaffoldsExpiringSoon: number;
+    scaffoldsExpired: number;
+  };
+  actionRequired: {
+    openHourDiscrepancies: number;
+    overdueCorrectiveActions: number;
+    incompleteAttendanceCount: number;
+  };
+};
+
+/**
+ * Project Manager Daily Overview (Phase 7) — every number here is a real,
+ * project-scoped query result (listWorkforceForDate/listDailyTeamsForDate
+ * for TODAY, the SAME getXxxOverviewCounts()/listOpenWorkedHoursDiscrepancies()
+ * functions the company-wide Safety Overview page already uses, just
+ * scoped to this one project) — never a fabricated metric. Nothing here
+ * duplicates Today's Teams' own page; this is a compact summary with links
+ * out to the canonical pages for detail.
+ */
+export function ProjectDailyOverview({ companyId, projectId, today, safety, actionRequired }: ProjectDailyOverviewProps) {
+  const teamsHref = `/companies/${companyId}/projects/${projectId}/teams`;
+  const worksedHoursHref = `/companies/${companyId}/projects/${projectId}/worked-hours`;
+  const hasActionRequired = actionRequired.openHourDiscrepancies > 0 || actionRequired.overdueCorrectiveActions > 0 || actionRequired.incompleteAttendanceCount > 0;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <SectionHeader title="Today" description="Workforce and worked-hours state for today." className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard variant="live" label="Present" icon={UserCheck} value={today.presentCount} href={teamsHref} />
+          <StatCard variant="live" label="Absent / unavailable" icon={UserX} value={today.unavailableCount} href={teamsHref} />
+          <StatCard variant="live" label="Not assigned" icon={Users} value={today.notAssignedCount} href={teamsHref} hint="Available but no team yet" />
+          <StatCard variant="live" label="Assigned to teams" icon={HardHat} value={today.assignedCount} href={teamsHref} />
+          <StatCard variant="live" label="Today's Teams" icon={CalendarCheck} value={today.teamCount} href={teamsHref} />
+          <StatCard
+            variant="live"
+            label="Team lock status"
+            icon={Lock}
+            value={today.teamCount === 0 ? "—" : today.allTeamsLocked ? "Locked" : today.anyTeamsOpen ? "Open" : "Mixed"}
+            href={teamsHref}
+          />
+          <StatCard variant="live" label="Hours submitted" icon={Clock} value={today.hoursSubmittedCount} href={worksedHoursHref} />
+          <StatCard variant="live" label="Hours not recorded" icon={Clock} value={today.hoursNotRecordedCount} href={worksedHoursHref} hint={`${today.hoursDraftCount} draft`} />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeader title="Safety today" className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard variant="live" label="LMRAs submitted today" icon={ShieldCheck} value={safety.lmraSubmittedToday} href="/lmra" />
+          <StatCard variant="live" label="Stop-work calls" icon={ShieldAlert} value={safety.lmraStopWork} href="/lmra" hint="No-go results" />
+          <StatCard variant="live" label="Positive observations" icon={Eye} value={safety.observationsPositiveToday} href="/observations" />
+          <StatCard variant="live" label="Negative observations" icon={Eye} value={safety.observationsNegativeToday} href="/observations" />
+          <StatCard variant="live" label="Open corrective actions" icon={ListChecks} value={safety.openCorrectiveActions} href="/observations" />
+          <StatCard variant="live" label="Scaffold inspections expiring soon" icon={AlertTriangle} value={safety.scaffoldsExpiringSoon} href="/scaffolds" />
+          <StatCard variant="live" label="Scaffold inspections expired" icon={AlertTriangle} value={safety.scaffoldsExpired} href="/scaffolds" />
+        </div>
+      </div>
+
+      {hasActionRequired && (
+        <div>
+          <SectionHeader title="Action required" className="mb-3" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {actionRequired.openHourDiscrepancies > 0 && (
+              <StatCard variant="live" label="Open hour discrepancies" icon={AlertTriangle} value={actionRequired.openHourDiscrepancies} href={worksedHoursHref} />
+            )}
+            {actionRequired.overdueCorrectiveActions > 0 && (
+              <StatCard variant="live" label="Overdue corrective actions" icon={AlertTriangle} value={actionRequired.overdueCorrectiveActions} href="/observations?overdueOnly=true" />
+            )}
+            {actionRequired.incompleteAttendanceCount > 0 && (
+              <StatCard variant="live" label="Incomplete daily workforce state" icon={AlertTriangle} value={actionRequired.incompleteAttendanceCount} href={teamsHref} hint="Attendance not yet recorded today" />
+            )}
+          </div>
+        </div>
+      )}
+
+      <Link href={`/safety-overview?projectId=${projectId}`} className="text-sm text-primary hover:underline">
+        View full safety overview →
+      </Link>
+    </div>
+  );
+}

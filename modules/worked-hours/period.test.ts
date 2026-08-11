@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveWorkedHoursPeriod, listPeriodDates, formatWorkedHoursPeriodLabel, buildWorkedHoursFilename } from "./period";
+import { resolveWorkedHoursPeriod, listPeriodDates, formatWorkedHoursPeriodLabel, buildWorkedHoursFilename, countDaysWorked } from "./period";
 
 describe("resolveWorkedHoursPeriod", () => {
   it("day mode resolves to the exact selected date", () => {
@@ -58,5 +58,19 @@ describe("buildWorkedHoursFilename", () => {
   it("sanitizes a project name containing filesystem-unsafe characters without stripping spaces", () => {
     const filename = buildWorkedHoursFilename('North / Plant: "Expansion"', { mode: "day", fromDate: "2026-08-10", toDate: "2026-08-10" });
     expect(filename).toBe("North Plant Expansion - Worked Hours - 2026-08-10.xlsx");
+  });
+});
+
+describe("countDaysWorked", () => {
+  it("counts only dates with hours greater than zero", () => {
+    expect(countDaysWorked({ "2026-08-10": 8, "2026-08-11": 7.5, "2026-08-12": 0 })).toBe(2);
+  });
+
+  it("returns 0 for an empty map", () => {
+    expect(countDaysWorked({})).toBe(0);
+  });
+
+  it("does not count a negative or zero value as a day worked", () => {
+    expect(countDaysWorked({ "2026-08-10": 0, "2026-08-11": -1 })).toBe(0);
   });
 });

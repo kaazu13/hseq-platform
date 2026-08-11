@@ -40,6 +40,8 @@ type ObservationFormProps = {
   candidates: EmployeeOption[];
   /** Recent Today's Teams for this project (any date) — the "target a Today's Team" picker's candidate list, see modules/daily-workforce/queries.ts's listRecentDailyTeamsForProject(). */
   dailyTeamOptions: DailyTeamOption[];
+  /** Pre-selects targetType="daily_team" + this team, when arriving via a "Create Safety Observation for team" link from Today's Teams (Phase 9) — create mode only, ignored in edit mode. Still just a starting value; the caller can change it before submit, and createObservation() re-validates the target server-side regardless. */
+  initialTargetDailyTeamId?: string;
 } & ({ mode: "create"; observation?: undefined } | { mode: "edit"; observation: SafetyObservation });
 
 function formatDailyTeamOptionLabel(option: DailyTeamOption): string {
@@ -61,7 +63,7 @@ function toLocalDateTimeInputValue(isoString: string | undefined): string {
  * before this form ever renders, on /observations/new's project-picker
  * step; project_id is an immutable identity column once created).
  */
-export function ObservationForm({ companyId, projectId, projectName, candidates, dailyTeamOptions, mode, observation }: ObservationFormProps) {
+export function ObservationForm({ companyId, projectId, projectName, candidates, dailyTeamOptions, mode, observation, initialTargetDailyTeamId }: ObservationFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -71,9 +73,9 @@ export function ObservationForm({ companyId, projectId, projectName, candidates,
   const [riskLevel, setRiskLevel] = useState<ObservationRiskLevel>(observation?.risk_level ?? "low");
   const [isStopWork, setIsStopWork] = useState(observation?.is_stop_work ?? false);
   const [observationType, setObservationType] = useState<ObservationType>(observation?.observation_type ?? "negative");
-  const [targetType, setTargetType] = useState<ObservationTargetType>(observation?.target_type ?? "general");
+  const [targetType, setTargetType] = useState<ObservationTargetType>(observation?.target_type ?? (initialTargetDailyTeamId ? "daily_team" : "general"));
   const [targetEmployeeId, setTargetEmployeeId] = useState(observation?.target_employee_id ?? "");
-  const [targetDailyTeamId, setTargetDailyTeamId] = useState(observation?.target_daily_team_id ?? "");
+  const [targetDailyTeamId, setTargetDailyTeamId] = useState(observation?.target_daily_team_id ?? initialTargetDailyTeamId ?? "");
   const [disposition, setDisposition] = useState<ObservationNegativeDisposition | "">(observation?.disposition ?? "");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -108,6 +110,15 @@ export function ObservationForm({ companyId, projectId, projectName, candidates,
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});
+        return;
+      }
+
+      // Edit → Save → the canonical updated-record view page (Phase 10
+      // consistency fix — updateObservation() previously left the user on
+      // the edit form with no confirmation or redirect at all; create
+      // already redirects server-side, see modules/observations/actions.ts).
+      if (mode === "edit") {
+        router.push(`/observations/${observation.id}`);
       }
     });
   }

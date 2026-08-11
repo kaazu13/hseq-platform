@@ -23,9 +23,9 @@ const HSEQ_DOCUMENT_CATEGORY_VALUES = [
 ] as const;
 
 export const toolboxTemplateMetadataSchema = z.object({
-  title: z.string().trim().min(1, "Title is required"),
+  title: z.string().trim().min(1, "Title is required").max(200, "Keep it under 200 characters"),
   category: z.enum(HSEQ_DOCUMENT_CATEGORY_VALUES),
-  language: z.string().trim().min(1, "Language is required"),
+  language: z.string().trim().min(1, "Language is required").max(50, "Keep it under 50 characters"),
   description: optionalText,
 });
 export type ToolboxTemplateMetadataInput = z.infer<typeof toolboxTemplateMetadataSchema>;
@@ -34,6 +34,6 @@ export const toolboxTemplateEditFormSchema = toolboxTemplateMetadataSchema;
 export type ToolboxTemplateEditFormInput = z.infer<typeof toolboxTemplateEditFormSchema>;
 
 export const replaceFileReasonSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required"),
+  reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type ReplaceFileReasonInput = z.infer<typeof replaceFileReasonSchema>;

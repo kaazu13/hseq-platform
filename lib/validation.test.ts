@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { optionalText, optionalDate } from "./validation";
+import { optionalText, optionalDate, DEFAULT_TEXT_MAX_LENGTH } from "./validation";
 
 describe("optionalText", () => {
   it("treats an empty string as undefined (HTML forms always submit '' for a blank field)", () => {
@@ -20,6 +20,14 @@ describe("optionalText", () => {
 
   it("treats whitespace-only input as undefined (trims to '')", () => {
     expect(optionalText.parse("   ")).toBeUndefined();
+  });
+
+  it("rejects input longer than DEFAULT_TEXT_MAX_LENGTH (Phase 11 platform-wide input-limit backstop)", () => {
+    expect(() => optionalText.parse("a".repeat(DEFAULT_TEXT_MAX_LENGTH + 1))).toThrow();
+  });
+
+  it("accepts input at exactly DEFAULT_TEXT_MAX_LENGTH", () => {
+    expect(optionalText.parse("a".repeat(DEFAULT_TEXT_MAX_LENGTH))).toHaveLength(DEFAULT_TEXT_MAX_LENGTH);
   });
 });
 

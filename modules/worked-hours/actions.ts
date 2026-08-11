@@ -198,5 +198,23 @@ export async function markNotificationRead(notificationId: string): Promise<Acti
   }
 
   revalidatePath("/dashboard");
+  revalidatePath("/notifications");
+  return { ok: true, data: null };
+}
+
+/** Marks every one of the caller's own currently-unread notifications read in one request. RLS's notifications_update policy (recipient_user_id = auth.uid()) means this can never touch another user's rows even though no id list is passed. */
+export async function markAllNotificationsRead(): Promise<ActionResult<null>> {
+  await requireUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    return { ok: false, error: { code: "server_error", message: "Couldn't update your notifications." } };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/notifications");
   return { ok: true, data: null };
 }

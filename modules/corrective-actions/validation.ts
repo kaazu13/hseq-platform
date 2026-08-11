@@ -18,7 +18,7 @@ const requiredDate = z
 
 /** Create/edit core fields — description, responsible person, priority, due date. Only a manage-tier role may touch these (validate_corrective_action_update() in the migration enforces it at the database level too). */
 export const correctiveActionFormSchema = z.object({
-  description: z.string().trim().min(1, "Description is required"),
+  description: z.string().trim().min(1, "Description is required").max(2000, "Keep it under 2000 characters"),
   responsiblePersonId: z.string().uuid("Choose a responsible person"),
   priority: z.enum(PRIORITY_VALUES),
   dueDate: requiredDate,
@@ -41,6 +41,6 @@ export type CorrectiveActionCloseFormInput = z.infer<typeof correctiveActionClos
 
 /** Rejecting an awaiting_verification action, or reopening a closed/rejected one — both require a reason (this milestone's explicit requirement). */
 export const correctiveActionReasonFormSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required"),
+  reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type CorrectiveActionReasonFormInput = z.infer<typeof correctiveActionReasonFormSchema>;

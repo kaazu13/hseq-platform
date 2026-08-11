@@ -12,7 +12,7 @@ export type SetDailyAttendanceStatusInput = z.infer<typeof setDailyAttendanceSta
 
 /** Create/edit a Today's Team's own fields — General section only, mirrors modules/teams/validation.ts's teamFormSchema shape. */
 export const dailyTeamFormSchema = z.object({
-  name: z.string().trim().min(1, "Team name is required"),
+  name: z.string().trim().min(1, "Team name is required").max(100, "Keep it under 100 characters"),
   shift: optionalText,
   workArea: optionalText,
   activity: optionalText,
@@ -31,6 +31,6 @@ export type MoveDailyTeamMemberInput = z.infer<typeof moveDailyTeamMemberSchema>
 
 /** `unlockDailyTeams` Server Function input — a reason is required. */
 export const unlockDailyTeamsSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required"),
+  reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type UnlockDailyTeamsInput = z.infer<typeof unlockDailyTeamsSchema>;

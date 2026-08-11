@@ -75,3 +75,25 @@ export type EmployeeDailyState = {
 export function employeeIsAvailableForAssignment(state: Pick<EmployeeDailyState, "attendanceStatus">): boolean {
   return dailyAttendancePermitsWork(state.attendanceStatus);
 }
+
+export type DailyWorkforceSummary = {
+  rosterSize: number;
+  presentCount: number;
+  unavailableCount: number;
+  notAssignedCount: number;
+  assignedCount: number;
+  /** Attendance never recorded for this date at all — distinct from "not assigned" (which already has a permits-work status, just no team yet). The PM Daily Overview's "Incomplete daily workforce state" action-required card. */
+  incompleteAttendanceCount: number;
+};
+
+/** Aggregates a day's full roster into the PM Daily Overview's "Today" counts (Phase 7) — the single source both the overview cards and (if ever needed elsewhere) any other daily-workforce summary should derive from, rather than re-deriving these filters ad hoc per caller. */
+export function summarizeDailyWorkforce(workforce: Pick<EmployeeDailyState, "attendanceStatus" | "assignedTeam">[]): DailyWorkforceSummary {
+  return {
+    rosterSize: workforce.length,
+    presentCount: workforce.filter((state) => state.attendanceStatus === "present").length,
+    unavailableCount: workforce.filter((state) => !dailyAttendancePermitsWork(state.attendanceStatus)).length,
+    assignedCount: workforce.filter((state) => state.assignedTeam !== null).length,
+    notAssignedCount: workforce.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus) && state.assignedTeam === null).length,
+    incompleteAttendanceCount: workforce.filter((state) => state.attendanceStatus === "not_set").length,
+  };
+}

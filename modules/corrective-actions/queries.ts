@@ -57,6 +57,23 @@ export async function getCorrectiveAction(companyId: string, actionId: string): 
   return { ...action, responsiblePerson: responsibleById.get(action.responsible_person_id) ?? null };
 }
 
+/** Open/in-progress/awaiting-verification corrective actions where `employeeId` is the responsible person — the Employee Dashboard's "Today's Safety... actions requiring their attention" section (Phase 4). Newest-due first so the most urgent item leads. */
+export async function listMyCorrectiveActions(companyId: string, employeeId: string): Promise<CorrectiveActionDetail[]> {
+  const supabase = await createClient();
+  const { data: actions, error } = await supabase
+    .from("corrective_actions")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("responsible_person_id", employeeId)
+    .in("status", ["open", "in_progress", "awaiting_verification"])
+    .order("due_date", { ascending: true });
+  if (error) throw error;
+  if (!actions || actions.length === 0) return [];
+
+  const responsibleById = await resolveResponsiblePersons(supabase, actions);
+  return actions.map((action) => ({ ...action, responsiblePerson: responsibleById.get(action.responsible_person_id) ?? null }));
+}
+
 /** Employee ids currently rostered onto `projectId` — the candidate pool for the responsible-person select, same convention as modules/observations/queries.ts's listObservationCandidateEmployees. */
 export async function listCorrectiveActionCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();

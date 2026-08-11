@@ -20,8 +20,13 @@ import {
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getMyEmployeeId, getEmployeeTodayCard } from "@/modules/daily-workforce/queries";
-import { getEmployeeMonthToDateHours, getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listMyNotifications } from "@/modules/worked-hours/queries";
+import { getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listMyNotifications, listWorkedHoursForPeriod } from "@/modules/worked-hours/queries";
+import { resolveWorkedHoursPeriod, countDaysWorked } from "@/modules/worked-hours/period";
 import { listMyObservations } from "@/modules/observations/queries";
+import { listMyLmraAssessmentsForDate } from "@/modules/lmra/queries";
+import { listToolboxMeetings } from "@/modules/toolbox-meetings/queries";
+import { listActiveSafetyFlashesForEmployee } from "@/modules/safety-flash/queries";
+import { listMyCorrectiveActions } from "@/modules/corrective-actions/queries";
 import { EmployeeDashboardSection } from "@/modules/daily-workforce/components/employee-dashboard-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,23 +110,42 @@ export default async function DashboardPage() {
     const myEmployeeId = await getMyEmployeeId(current.id, user.id);
     if (myEmployeeId) {
       const today = new Date().toISOString().slice(0, 10);
-      const [todayCard, monthToDateHours, latestWorkedHours, discrepancies, notifications, observations] = await Promise.all([
-        getEmployeeTodayCard(current.id, effectiveProjectId, myEmployeeId, today),
-        getEmployeeMonthToDateHours(current.id, effectiveProjectId, myEmployeeId, today),
-        getLatestWorkedHours(current.id, effectiveProjectId, myEmployeeId),
-        listMyWorkedHoursDiscrepancies(current.id, myEmployeeId),
-        listMyNotifications(),
-        listMyObservations(current.id, user.id, myEmployeeId),
-      ]);
+      const weekPeriod = resolveWorkedHoursPeriod("week", today);
+      const monthPeriod = resolveWorkedHoursPeriod("month", today);
+      const [todayCard, weekRows, monthToDateRows, latestWorkedHours, discrepancies, notifications, observations, todaysLmra, todaysToolboxMeetings, activeSafetyFlashes, myCorrectiveActions] =
+        await Promise.all([
+          getEmployeeTodayCard(current.id, effectiveProjectId, myEmployeeId, today),
+          listWorkedHoursForPeriod(current.id, effectiveProjectId, weekPeriod.fromDate, weekPeriod.toDate, [myEmployeeId]),
+          listWorkedHoursForPeriod(current.id, effectiveProjectId, monthPeriod.fromDate, today, [myEmployeeId]),
+          getLatestWorkedHours(current.id, effectiveProjectId, myEmployeeId),
+          listMyWorkedHoursDiscrepancies(current.id, myEmployeeId),
+          listMyNotifications(),
+          listMyObservations(current.id, user.id, myEmployeeId),
+          listMyLmraAssessmentsForDate(current.id, myEmployeeId, today),
+          listToolboxMeetings(current.id, { projectId: effectiveProjectId, dateFrom: today, dateTo: today }),
+          listActiveSafetyFlashesForEmployee(current.id, effectiveProjectId),
+          listMyCorrectiveActions(current.id, myEmployeeId),
+        ]);
+
+      const hoursThisWeek = weekRows[0]?.totalHours ?? 0;
+      const monthToDateHours = monthToDateRows[0]?.totalHours ?? 0;
+      const daysWorkedThisMonth = monthToDateRows[0] ? countDaysWorked(monthToDateRows[0].hoursByDate) : 0;
+
       employeeSection = (
         <EmployeeDashboardSection
           companyId={current.id}
           todayCard={todayCard}
+          hoursThisWeek={hoursThisWeek}
           monthToDateHours={monthToDateHours}
+          daysWorkedThisMonth={daysWorkedThisMonth}
           latestWorkedHours={latestWorkedHours}
           discrepancies={discrepancies}
           notifications={notifications}
           observations={observations}
+          todaysLmra={todaysLmra}
+          todaysToolboxMeetings={todaysToolboxMeetings}
+          activeSafetyFlashes={activeSafetyFlashes}
+          myCorrectiveActions={myCorrectiveActions}
         />
       );
     }

@@ -55,12 +55,12 @@ function optionalPositiveDecimal(fieldLabel: string) {
 export const scaffoldFormSchema = z
   .object({
     projectId: z.string().uuid("Choose a project"),
-    tagNumber: z.string().trim().min(1, "Tag number is required"),
-    workArea: z.string().trim().min(1, "Work area is required"),
+    tagNumber: z.string().trim().min(1, "Tag number is required").max(50, "Keep it under 50 characters"),
+    workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
     structureReference: optionalText,
     scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
-    intendedUse: z.string().trim().min(1, "Intended use is required"),
-    maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required"),
+    intendedUse: z.string().trim().min(1, "Intended use is required").max(200, "Keep it under 200 characters"),
+    maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required").max(100, "Keep it under 100 characters"),
     heightMetres: optionalPositiveDecimal("height"),
     lengthMetres: optionalPositiveDecimal("length"),
     widthMetres: optionalPositiveDecimal("width"),
@@ -166,8 +166,8 @@ const SCAFFOLD_INSPECTION_ITEM_TYPE_VALUES = [
 export const inspectionItemSchema = z.object({
   itemType: z.enum(SCAFFOLD_INSPECTION_ITEM_TYPE_VALUES),
   result: z.enum(SCAFFOLD_INSPECTION_ITEM_RESULT_VALUES),
-  comment: z.string().trim(),
-  requiredCorrectiveAction: z.string().trim(),
+  comment: z.string().trim().max(1000, "Keep it under 1000 characters"),
+  requiredCorrectiveAction: z.string().trim().max(1000, "Keep it under 1000 characters"),
   severity: z.enum(SCAFFOLD_DEFECT_SEVERITY_VALUES).nullable(),
 });
 
@@ -191,12 +191,12 @@ export type FinalizeInspectionFormInput = z.infer<typeof finalizeInspectionFormS
 
 /** Starting a correction to an already-finalized inspection — a reason is required (mirrors the reopen/reject reason requirement pattern used across every other HSEQ module this session). */
 export const correctionReasonFormSchema = z.object({
-  correctionReason: z.string().trim().min(1, "A reason is required"),
+  correctionReason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type CorrectionReasonFormInput = z.infer<typeof correctionReasonFormSchema>;
 
 /** Voiding a mistaken/abandoned draft inspection — a reason is required (void_scaffold_inspection() in the migration enforces this too; same "catch it earlier" reasoning as finalizeInspectionFormSchema). */
 export const voidInspectionFormSchema = z.object({
-  voidReason: z.string().trim().min(1, "A reason is required"),
+  voidReason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type VoidInspectionFormInput = z.infer<typeof voidInspectionFormSchema>;

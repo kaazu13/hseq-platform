@@ -80,6 +80,11 @@ export function isPositiveObservationCategory(category: ObservationCategory): bo
   return category === "positive_observation";
 }
 
+/** The full "counts as positive" rule — either the dedicated positive category, OR observation_type itself is "positive" (a record can be typed positive under a different category). Single source for the Employee Dashboard's "My observations" split and getObservationOverviewCounts()'s positiveToday/negativeToday SQL filter, so the two never drift on what "positive" means. */
+export function isPositiveObservation(observation: Pick<SafetyObservation, "category" | "observation_type">): boolean {
+  return isPositiveObservationCategory(observation.category) || observation.observation_type === "positive";
+}
+
 export const OBSERVATION_TARGET_TYPES: ObservationTargetType[] = ["employee", "daily_team", "general"];
 
 export const OBSERVATION_TARGET_TYPE_LABELS: Record<ObservationTargetType, string> = {

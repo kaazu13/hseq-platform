@@ -81,11 +81,26 @@ export default async function NewObservationPage({ searchParams }: NewObservatio
   ]);
   const candidates = toEmployeeOptions(candidateRows);
 
+  // "Create Safety Observation for team" from Today's Teams (Phase 9) —
+  // only honored when it's actually one of THIS project's teams (already
+  // scoped by listRecentDailyTeamsForProject above); an unrecognized/
+  // cross-project id is silently ignored rather than passed through, since
+  // the form's own Select only ever offers this same validated list anyway.
+  const initialTargetDailyTeamId = params.dailyTeamId && dailyTeamOptions.some((option) => option.id === params.dailyTeamId) ? params.dailyTeamId : undefined;
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="New observation" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <ObservationForm mode="create" companyId={currentCompanyId} projectId={project.id} projectName={project.name} candidates={candidates} dailyTeamOptions={dailyTeamOptions} />
+        <ObservationForm
+          mode="create"
+          companyId={currentCompanyId}
+          projectId={project.id}
+          projectName={project.name}
+          candidates={candidates}
+          dailyTeamOptions={dailyTeamOptions}
+          initialTargetDailyTeamId={initialTargetDailyTeamId}
+        />
       </div>
     </div>
   );

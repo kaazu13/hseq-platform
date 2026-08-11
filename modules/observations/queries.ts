@@ -229,9 +229,11 @@ export type ObservationOverviewCounts = {
   createdToday: number;
   openHighRisk: number;
   stopWork: number;
+  positiveToday: number;
+  negativeToday: number;
 };
 
-/** Counts backing the Safety Overview's Safety Observations section. Every count is a real, scoped query — no fabricated numbers. */
+/** Counts backing the Safety Overview's Safety Observations section, and (positiveToday/negativeToday) the PM Daily Overview's "Positive / Negative observations" card (Phase 7). Every count is a real, scoped query — no fabricated numbers. "Positive" mirrors modules/observations/types.ts's isPositiveObservationCategory()/observation_type==="positive" definition, expressed as an .or() filter rather than an app-level pass since this is a count query. */
 export async function getObservationOverviewCounts(companyId: string, projectId?: string): Promise<ObservationOverviewCounts> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
@@ -242,13 +244,15 @@ export async function getObservationOverviewCounts(companyId: string, projectId?
     return q;
   }
 
-  const [createdToday, openHighRisk, stopWork] = await Promise.all([
+  const [createdToday, openHighRisk, stopWork, positiveToday, negativeToday] = await Promise.all([
     scoped().gte("observed_at", `${today}T00:00:00.000Z`),
     scoped().eq("status", "open").in("risk_level", ["high", "critical"]),
     scoped().eq("is_stop_work", true).eq("status", "open"),
+    scoped().gte("observed_at", `${today}T00:00:00.000Z`).or("category.eq.positive_observation,observation_type.eq.positive"),
+    scoped().gte("observed_at", `${today}T00:00:00.000Z`).not("category", "eq", "positive_observation").neq("observation_type", "positive"),
   ]);
 
-  for (const r of [createdToday, openHighRisk, stopWork]) {
+  for (const r of [createdToday, openHighRisk, stopWork, positiveToday, negativeToday]) {
     if (r.error) throw r.error;
   }
 
@@ -256,6 +260,8 @@ export async function getObservationOverviewCounts(companyId: string, projectId?
     createdToday: createdToday.count ?? 0,
     openHighRisk: openHighRisk.count ?? 0,
     stopWork: stopWork.count ?? 0,
+    positiveToday: positiveToday.count ?? 0,
+    negativeToday: negativeToday.count ?? 0,
   };
 }
 
