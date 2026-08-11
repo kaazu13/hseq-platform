@@ -6,7 +6,7 @@ import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getLmraAssessment, isCallerProjectForeman, listLmraCandidateEmployees, getMyEmployeeId } from "@/modules/lmra/queries";
 import { canManageLmra, canArchiveLmra } from "@/modules/lmra/permissions";
-import { lmraHazardInputsFromRows, LMRA_SHIFT_LABELS } from "@/modules/lmra/types";
+import { lmraHazardInputsFromRows, LMRA_SHIFT_LABELS, formatLmraReference } from "@/modules/lmra/types";
 import { LmraStatusBadge } from "@/modules/lmra/components/lmra-status-badge";
 import { LmraResultBadge } from "@/modules/lmra/components/lmra-result-badge";
 import { LmraHazardsAndControls } from "@/modules/lmra/components/lmra-hazards-and-controls";
@@ -15,6 +15,7 @@ import { LmraSubmitCard } from "@/modules/lmra/components/lmra-submit-card";
 import { LmraReviewCard } from "@/modules/lmra/components/lmra-review-card";
 import { LmraDetailActions } from "@/modules/lmra/components/lmra-detail-actions";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { listReportSharesForRecord } from "@/modules/reports/queries";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,8 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
   const canArchive = canArchiveLmra(roleNames);
   const candidateRows = await listLmraCandidateEmployees(currentCompanyId, assessment.project_id);
   const candidates = toEmployeeOptions(candidateRows);
-  const reference = `LMRA-${assessment.id.slice(0, 8).toUpperCase()}`;
+  const reference = formatLmraReference(assessment);
+  const shares = canManage ? await listReportSharesForRecord(currentCompanyId, "lmra", assessment.id) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
@@ -101,6 +103,8 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
               projectId={assessment.project_id}
               canReopen={canManage && (assessment.status === "approved" || assessment.status === "rejected")}
               canArchive={canArchive && assessment.status !== "archived"}
+              canShare={canManage}
+              initialShares={shares}
             />
           </>
         }

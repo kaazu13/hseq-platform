@@ -13,10 +13,14 @@ import { listDefectsForInspection } from "@/modules/scaffold-defects/queries";
 import { canManageScaffoldDefectDetails } from "@/modules/scaffold-defects/permissions";
 import { ScaffoldDefectsSection } from "@/modules/scaffold-defects/components/scaffold-defects-section";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { listReportSharesForRecord } from "@/modules/reports/queries";
+import { ShareReportDialog } from "@/modules/reports/components/share-report-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 type InspectionDetailPageProps = {
   params: Promise<{ companyId: string; projectId: string; scaffoldId: string; inspectionId: string }>;
@@ -76,13 +80,29 @@ export default async function InspectionDetailPage({ params }: InspectionDetailP
   // keeps the UI from offering a control the write would then reject).
   const canManageDefects = !inspection.voided_at && canManageScaffoldDefectDetails(roleNames, hasProjectAccess);
   const candidates = toEmployeeOptions(await listScaffoldCandidateEmployees(companyId, inspection.project_id));
+  const shares = canManage ? await listReportSharesForRecord(companyId, "scaffold_inspection", inspection.id) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
       <PageHeader
         title={formatInspectionReference(scaffold, inspection)}
         description={`${scaffold.tag_number} · ${projectName} · ${scaffold.work_area} · ${SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]}`}
-        actions={<ScaffoldPrintButton />}
+        actions={
+          <>
+            <ScaffoldPrintButton />
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<a href={`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}/pdf`} />}
+              className="print:hidden"
+            >
+              <Download />
+              Download PDF
+            </Button>
+            {canManage && <ShareReportDialog companyId={companyId} projectId={projectId} recordType="scaffold_inspection" recordId={inspection.id} initialShares={shares} />}
+          </>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">

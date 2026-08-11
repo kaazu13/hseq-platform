@@ -22,7 +22,12 @@ import { NextResponse, type NextRequest } from "next/server";
 // Public routes reachable without a session. Deny-by-default: everything
 // NOT in this list is treated as protected, so a newly added (app) route
 // is protected automatically without this list needing to be updated.
-const PUBLIC_PATHS = ["/login", "/unauthorized", "/forbidden"];
+// "/share" is the external report-sharing read-only route
+// (app/share/[token]/**) — deliberately public; its own authorization is
+// entirely the token itself (resolve_public_report()), never company/
+// project membership — see supabase/migrations/20260817090000_report_pdf_export_and_sharing.sql's
+// header comment.
+const PUBLIC_PATHS = ["/login", "/unauthorized", "/forbidden", "/share"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

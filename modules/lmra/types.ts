@@ -182,6 +182,19 @@ export type LmraHazardInput = {
 };
 
 /**
+ * The human-readable LMRA reference shown on the view page, PDF, and
+ * shared report — derived from the record's own id (never a separately
+ * stored/allocated sequence, matching modules/scaffolds/types.ts's
+ * formatInspectionReference()'s "derive, don't duplicate-store"
+ * convention) — LMRA has no natural per-project numbering the way a
+ * scaffold does, so the first 8 hex characters of its uuid, uppercased,
+ * are used as a short, stable, collision-safe-enough label.
+ */
+export function formatLmraReference(assessment: Pick<LmraAssessment, "id">): string {
+  return `LMRA-${assessment.id.slice(0, 8).toUpperCase()}`;
+}
+
+/**
  * The 12 fresh, all-inapplicable rows a brand-new create form starts from
  * — a plain function, deliberately kept in this neutral (no "use client")
  * file so a Server Component page can call it directly when composing

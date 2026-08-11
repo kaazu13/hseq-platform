@@ -9,6 +9,8 @@ import { ToolboxMeetingEditForm } from "@/modules/toolbox-meetings/components/to
 import { ToolboxMeetingStatusToggle } from "@/modules/toolbox-meetings/components/toolbox-meeting-status-toggle";
 import { ToolboxMeetingReplaceFileForm } from "@/modules/toolbox-meetings/components/toolbox-meeting-replace-file-form";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { listReportSharesForRecord } from "@/modules/reports/queries";
+import { ShareReportDialog } from "@/modules/reports/components/share-report-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ToolboxDocumentStatusBadge } from "@/components/shared/toolbox-document-status-badge";
@@ -45,10 +47,20 @@ export default async function ToolboxMeetingDetailPage({ params }: ToolboxMeetin
 
   const candidates = toEmployeeOptions(candidateRows);
   const canManage = canManageToolboxMeeting(roleNames, hasProjectAccess);
+  const shares = canManage ? await listReportSharesForRecord(currentCompanyId, "toolbox_meeting", meeting.id) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
-      <PageHeader title={formatToolboxMeetingNumberLabel(meeting.meeting_number)} description={meeting.title} actions={<ToolboxDocumentStatusBadge status={meeting.status} />} />
+      <PageHeader
+        title={formatToolboxMeetingNumberLabel(meeting.meeting_number)}
+        description={meeting.title}
+        actions={
+          <>
+            <ToolboxDocumentStatusBadge status={meeting.status} />
+            {canManage && <ShareReportDialog companyId={currentCompanyId} projectId={meeting.project_id} recordType="toolbox_meeting" recordId={meeting.id} initialShares={shares} />}
+          </>
+        }
+      />
 
       <Card>
         <CardContent className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">

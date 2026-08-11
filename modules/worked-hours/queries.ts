@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { AppNotification, MonthlyWorkedHoursRow, WorkedHours, WorkedHoursCorrection, WorkedHoursDiscrepancy, WorkedHoursWithEmployee } from "./types";
+import type { AppNotification, WorkedHoursMatrixRow, WorkedHours, WorkedHoursCorrection, WorkedHoursDiscrepancy, WorkedHoursWithEmployee } from "./types";
 import type { BasicEmployee } from "@/modules/daily-workforce/types";
 
 /**
@@ -104,25 +104,21 @@ export async function listProjectRosterEmployees(companyId: string, projectId: s
   return (employees ?? []).sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
 }
 
-/** Every worked_hours row for a project within [fromDate, toDate] inclusive, pivoted into one row per employee with hours keyed by date — the Worked Hours "This Month" view's single data source. */
-export async function listMonthlyWorkedHours(companyId: string, projectId: string, fromDate: string, toDate: string): Promise<MonthlyWorkedHoursRow[]> {
+/** Every worked_hours row for a project within [fromDate, toDate] inclusive, pivoted into one row per employee with hours keyed by date — the Worked Hours "This Month" view's and the Week/Month export's single data source. `employeeIds`, when given, restricts the result to exactly those employees (the "selected workers" export scope) — still always scoped to this one company/project regardless. */
+export async function listWorkedHoursForPeriod(companyId: string, projectId: string, fromDate: string, toDate: string, employeeIds?: string[]): Promise<WorkedHoursMatrixRow[]> {
   const supabase = await createClient();
-  const { data: rows, error } = await supabase
-    .from("worked_hours")
-    .select("employee_id, work_date, hours")
-    .eq("company_id", companyId)
-    .eq("project_id", projectId)
-    .gte("work_date", fromDate)
-    .lte("work_date", toDate);
+  let query = supabase.from("worked_hours").select("employee_id, work_date, hours").eq("company_id", companyId).eq("project_id", projectId).gte("work_date", fromDate).lte("work_date", toDate);
+  if (employeeIds) query = query.in("employee_id", employeeIds);
+  const { data: rows, error } = await query;
   if (error) throw error;
   if (!rows || rows.length === 0) return [];
 
-  const employeeIds = [...new Set(rows.map((row) => row.employee_id))];
-  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
+  const foundEmployeeIds = [...new Set(rows.map((row) => row.employee_id))];
+  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: foundEmployeeIds });
   if (employeesError) throw employeesError;
   const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
 
-  const byEmployeeId = new Map<string, MonthlyWorkedHoursRow>();
+  const byEmployeeId = new Map<string, WorkedHoursMatrixRow>();
   for (const row of rows) {
     const employee = employeeById.get(row.employee_id);
     if (!employee) continue;
@@ -136,6 +132,33 @@ export async function listMonthlyWorkedHours(companyId: string, projectId: strin
     const lastNameCompare = a.employee.last_name.localeCompare(b.employee.last_name);
     return lastNameCompare !== 0 ? lastNameCompare : a.employee.first_name.localeCompare(b.employee.first_name);
   });
+}
+
+/** Every employee assigned/eligible in this project at any point during [fromDate, toDate] — the union of (a) a project_assignments row overlapping the period and (b) anyone who already has a worked_hours row inside it (covers a since-ended assignment that still has recorded hours in-period). Backs the "All project workers" export scope (Phase 6) and the "selected workers" picker's candidate list — deliberately never company-wide, always scoped to this one project_id. */
+export async function listProjectWorkersForPeriod(companyId: string, projectId: string, fromDate: string, toDate: string): Promise<BasicEmployee[]> {
+  const supabase = await createClient();
+  const periodStart = `${fromDate}T00:00:00.000Z`;
+  const periodEnd = `${toDate}T23:59:59.999Z`;
+
+  const [{ data: assignments, error: assignmentsError }, { data: hoursRows, error: hoursError }] = await Promise.all([
+    supabase
+      .from("project_assignments")
+      .select("employee_id")
+      .eq("company_id", companyId)
+      .eq("project_id", projectId)
+      .lte("start_at", periodEnd)
+      .or(`end_at.is.null,end_at.gte.${periodStart}`),
+    supabase.from("worked_hours").select("employee_id").eq("company_id", companyId).eq("project_id", projectId).gte("work_date", fromDate).lte("work_date", toDate),
+  ]);
+  if (assignmentsError) throw assignmentsError;
+  if (hoursError) throw hoursError;
+
+  const employeeIds = [...new Set([...(assignments ?? []).map((row) => row.employee_id), ...(hoursRows ?? []).map((row) => row.employee_id)])];
+  if (employeeIds.length === 0) return [];
+
+  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
+  if (employeesError) throw employeesError;
+  return (employees ?? []).sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
 }
 
 export type WorkedHoursArchiveDay = {

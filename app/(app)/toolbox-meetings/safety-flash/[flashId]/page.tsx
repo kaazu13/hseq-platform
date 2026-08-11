@@ -10,6 +10,8 @@ import { SafetyFlashEditForm } from "@/modules/safety-flash/components/safety-fl
 import { SafetyFlashStatusToggle } from "@/modules/safety-flash/components/safety-flash-status-toggle";
 import { SafetyFlashReplaceFileForm } from "@/modules/safety-flash/components/safety-flash-replace-file-form";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { listReportSharesForRecord } from "@/modules/reports/queries";
+import { ShareReportDialog } from "@/modules/reports/components/share-report-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ToolboxDocumentStatusBadge } from "@/components/shared/toolbox-document-status-badge";
@@ -46,10 +48,20 @@ export default async function SafetyFlashDetailPage({ params }: SafetyFlashDetai
 
   const candidates = toEmployeeOptions(candidateRows);
   const canManage = canManageSafetyFlash(roleNames, flash.project_id, hasProjectAccess);
+  const shares = canManage ? await listReportSharesForRecord(currentCompanyId, "safety_flash", flash.id) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
-      <PageHeader title={formatSafetyFlashNumberLabel(flash.flash_number)} description={flash.title} actions={<ToolboxDocumentStatusBadge status={flash.status} />} />
+      <PageHeader
+        title={formatSafetyFlashNumberLabel(flash.flash_number)}
+        description={flash.title}
+        actions={
+          <>
+            <ToolboxDocumentStatusBadge status={flash.status} />
+            {canManage && <ShareReportDialog companyId={currentCompanyId} projectId={flash.project_id} recordType="safety_flash" recordId={flash.id} initialShares={shares} />}
+          </>
+        }
+      />
 
       <Card>
         <CardContent className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">

@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
-import { listWorkedHoursForDate, listMonthlyWorkedHours, listWorkedHoursArchiveDays, listOpenWorkedHoursDiscrepancies } from "@/modules/worked-hours/queries";
+import { listWorkedHoursForDate, listWorkedHoursForPeriod, listProjectRosterEmployees, listWorkedHoursArchiveDays, listOpenWorkedHoursDiscrepancies } from "@/modules/worked-hours/queries";
 import { canManageWorkedHours } from "@/modules/worked-hours/permissions";
 import { BulkApplyHoursBar } from "@/modules/worked-hours/components/bulk-apply-hours-bar";
 import { WorkedHoursRow } from "@/modules/worked-hours/components/worked-hours-row";
 import { SubmitWorkedHoursButton } from "@/modules/worked-hours/components/submit-worked-hours-button";
 import { DiscrepancyReviewItem } from "@/modules/worked-hours/components/discrepancy-review-item";
-import { ExportWorkedHoursButton } from "@/modules/worked-hours/components/export-worked-hours-button";
+import { WorkedHoursExportDialog } from "@/modules/worked-hours/components/worked-hours-export-dialog";
+import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -62,6 +63,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
   }
 
   const view = urlParams.view === "month" ? "month" : urlParams.view === "archive" ? "archive" : "today";
+  const rosterCandidates = toEmployeeOptions(await listProjectRosterEmployees(companyId, projectId));
 
   const viewNav = (
     <div className="flex items-center gap-2 text-sm">
@@ -84,11 +86,15 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
     const fromDate = `${monthParam}-01`;
     const lastDay = new Date(Number(monthParam.slice(0, 4)), Number(monthParam.slice(5, 7)), 0).getDate();
     const toDate = `${monthParam}-${String(lastDay).padStart(2, "0")}`;
-    const rows = await listMonthlyWorkedHours(companyId, projectId, fromDate, toDate);
+    const rows = await listWorkedHoursForPeriod(companyId, projectId, fromDate, toDate);
 
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Worked Hours" description={`${project.name} — ${monthParam}`} actions={<ExportWorkedHoursButton companyId={companyId} projectId={projectId} query={`from=${fromDate}&to=${toDate}`} label="Export month" />} />
+        <PageHeader
+          title="Worked Hours"
+          description={`${project.name} — ${monthParam}`}
+          actions={<WorkedHoursExportDialog companyId={companyId} projectId={projectId} defaultMode="month" defaultDate={fromDate} rosterCandidates={rosterCandidates} />}
+        />
         {viewNav}
         {rows.length === 0 ? (
           <EmptyState icon={Clock} title="No hours recorded this month" className="flex-1" />
@@ -171,7 +177,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
         description={`${formatWorkDate(workDate)} · ${project.name}`}
         actions={
           <div className="flex items-center gap-2">
-            <ExportWorkedHoursButton companyId={companyId} projectId={projectId} query={`date=${workDate}`} />
+            <WorkedHoursExportDialog companyId={companyId} projectId={projectId} defaultMode="day" defaultDate={workDate} rosterCandidates={rosterCandidates} />
             <SubmitWorkedHoursButton companyId={companyId} projectId={projectId} workDate={workDate} draftCount={draftCount} />
           </div>
         }

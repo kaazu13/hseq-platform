@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, Loader2, Printer, RotateCcw } from "lucide-react";
+import { Archive, Download, Loader2, Printer, RotateCcw } from "lucide-react";
 import { archiveLmra, reopenLmra } from "@/modules/lmra/actions";
+import { ShareReportDialog } from "@/modules/reports/components/share-report-dialog";
+import type { ReportShare } from "@/modules/reports/types";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -20,10 +22,12 @@ type LmraDetailActionsProps = {
   projectId: string;
   canReopen: boolean;
   canArchive: boolean;
+  canShare: boolean;
+  initialShares: ReportShare[];
 };
 
-/** Print (always available — the printable detail page is this same route, styled for print via globals.css), Reopen (approved/rejected → draft, for corrections), and Archive (HSE Manager only, confirmed — terminal, no un-archive path). */
-export function LmraDetailActions({ companyId, lmraId, projectId, canReopen, canArchive }: LmraDetailActionsProps) {
+/** Print/Download PDF (always available — same view every viewer already has reach to), Share (manage-tier only, mirrors edit permission), Reopen (approved/rejected → draft, for corrections), and Archive (HSE Manager only, confirmed — terminal, no un-archive path). */
+export function LmraDetailActions({ companyId, lmraId, projectId, canReopen, canArchive, canShare, initialShares }: LmraDetailActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -49,6 +53,13 @@ export function LmraDetailActions({ companyId, lmraId, projectId, canReopen, can
         <Printer />
         Print
       </Button>
+
+      <Button variant="outline" size="sm" nativeButton={false} render={<a href={`/lmra/${lmraId}/pdf`} />}>
+        <Download />
+        Download PDF
+      </Button>
+
+      {canShare && <ShareReportDialog companyId={companyId} projectId={projectId} recordType="lmra" recordId={lmraId} initialShares={initialShares} />}
 
       {canReopen && (
         <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={handleReopen}>

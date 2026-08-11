@@ -5,6 +5,7 @@ import { ListChecks, Plus } from "lucide-react";
 import type { CorrectiveActionDetail } from "@/modules/corrective-actions/types";
 import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import type { RoleName } from "@/modules/companies/types";
+import type { ReportShare } from "@/modules/reports/types";
 import { CorrectiveActionItem } from "@/modules/corrective-actions/components/corrective-action-item";
 import { CorrectiveActionFormDialog } from "@/modules/corrective-actions/components/corrective-action-form-dialog";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ type CorrectiveActionsSectionProps = {
   isProjectManager: boolean;
   hasProjectAccess: boolean;
   currentUserProfileId: string;
+  sharesByActionId: Record<string, ReportShare[]>;
 };
 
 /** Corrective-action management, embedded on the observation detail page (this milestone's explicit placement — no standalone Corrective Actions list page). */
@@ -37,6 +39,7 @@ export function CorrectiveActionsSection({
   isProjectManager,
   hasProjectAccess,
   currentUserProfileId,
+  sharesByActionId,
 }: CorrectiveActionsSectionProps) {
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -68,6 +71,7 @@ export function CorrectiveActionsSection({
               isProjectManager={isProjectManager}
               hasProjectAccess={hasProjectAccess}
               currentUserProfileId={currentUserProfileId}
+              initialShares={sharesByActionId[action.id] ?? []}
             />
           ))}
         </div>

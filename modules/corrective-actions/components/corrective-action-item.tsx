@@ -2,12 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Loader2, Pencil } from "lucide-react";
+import { AlertCircle, Download, Loader2, Pencil } from "lucide-react";
 import { closeCorrectiveAction, rejectCorrectiveAction, reopenCorrectiveAction, updateCorrectiveActionProgress } from "@/modules/corrective-actions/actions";
 import { canCloseCorrectiveAction, canUpdateCorrectiveActionProgress } from "@/modules/corrective-actions/permissions";
 import { CORRECTIVE_ACTION_STATUS_LABELS, type CorrectiveActionDetail } from "@/modules/corrective-actions/types";
 import type { EmployeeOption } from "@/components/shared/employee-combobox";
 import type { RoleName } from "@/modules/companies/types";
+import type { ReportShare } from "@/modules/reports/types";
+import { ShareReportDialog } from "@/modules/reports/components/share-report-dialog";
 import { CorrectiveActionStatusBadge } from "@/modules/corrective-actions/components/corrective-action-status-badge";
 import { CorrectiveActionPriorityBadge } from "@/modules/corrective-actions/components/corrective-action-priority-badge";
 import { CorrectiveActionFormDialog } from "@/modules/corrective-actions/components/corrective-action-form-dialog";
@@ -41,6 +43,7 @@ type CorrectiveActionItemProps = {
   isProjectManager: boolean;
   hasProjectAccess: boolean;
   currentUserProfileId: string;
+  initialShares: ReportShare[];
 };
 
 function formatDate(value: string): string {
@@ -59,6 +62,7 @@ export function CorrectiveActionItem({
   isProjectManager,
   hasProjectAccess,
   currentUserProfileId,
+  initialShares,
 }: CorrectiveActionItemProps) {
   const router = useRouter();
   const isAssignee = action.responsiblePerson?.profile_id === currentUserProfileId;
@@ -134,11 +138,19 @@ export function CorrectiveActionItem({
 
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm">{action.description}</p>
-          {canManageDetails && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setEditOpen(true)} className="print:hidden">
-              <Pencil />
+          <div className="flex items-center gap-1 print:hidden">
+            <Button variant="ghost" size="icon-sm" nativeButton={false} render={<a href={`/corrective-actions/${action.id}/pdf`} />} aria-label="Download PDF">
+              <Download />
             </Button>
-          )}
+            {canManageDetails && (
+              <>
+                <ShareReportDialog companyId={companyId} projectId={projectId} recordType="corrective_action" recordId={action.id} initialShares={initialShares} />
+                <Button type="button" variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

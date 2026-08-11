@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { upsertWorkedHoursSchema, bulkApplyWorkedHoursSchema, reportWorkedHoursDiscrepancySchema, resolveWorkedHoursDiscrepancySchema } from "./validation";
+import { upsertWorkedHoursSchema, bulkApplyWorkedHoursSchema, reportWorkedHoursDiscrepancySchema, resolveWorkedHoursDiscrepancySchema, workedHoursExportQuerySchema } from "./validation";
 
 describe("upsertWorkedHoursSchema", () => {
   it("accepts a valid hours string and transforms it to a number", () => {
@@ -82,5 +82,41 @@ describe("resolveWorkedHoursDiscrepancySchema", () => {
 
   it("rejects an out-of-bounds resultingHours", () => {
     expect(resolveWorkedHoursDiscrepancySchema.safeParse({ status: "rejected", resolutionNote: "note", resultingHours: "30" }).success).toBe(false);
+  });
+});
+
+describe("workedHoursExportQuerySchema", () => {
+  const EMPLOYEE_ID = "123e4567-e89b-42d3-a456-426614174000";
+
+  it("accepts a plain day export with no employeeIds", () => {
+    const result = workedHoursExportQuerySchema.safeParse({ mode: "day", date: "2026-08-10", scope: "hours_only" });
+    expect(result.success).toBe(true);
+  });
+
+  it("falls back to day/hours_only for an unrecognized mode or scope, rather than rejecting the request", () => {
+    const result = workedHoursExportQuerySchema.safeParse({ mode: "year", date: "2026-08-10", scope: "everyone" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.mode).toBe("day");
+      expect(result.data.scope).toBe("hours_only");
+    }
+  });
+
+  it("rejects a malformed date", () => {
+    expect(workedHoursExportQuerySchema.safeParse({ mode: "day", date: "10-08-2026", scope: "hours_only" }).success).toBe(false);
+  });
+
+  it("requires at least one employeeId when scope=selected", () => {
+    expect(workedHoursExportQuerySchema.safeParse({ mode: "day", date: "2026-08-10", scope: "selected" }).success).toBe(false);
+    expect(workedHoursExportQuerySchema.safeParse({ mode: "day", date: "2026-08-10", scope: "selected", employeeIds: [] }).success).toBe(false);
+    expect(workedHoursExportQuerySchema.safeParse({ mode: "day", date: "2026-08-10", scope: "selected", employeeIds: [EMPLOYEE_ID] }).success).toBe(true);
+  });
+
+  it("rejects a non-uuid entry in employeeIds", () => {
+    expect(workedHoursExportQuerySchema.safeParse({ mode: "day", date: "2026-08-10", scope: "selected", employeeIds: ["not-a-uuid"] }).success).toBe(false);
+  });
+
+  it("does not require employeeIds for all_workers/hours_only scopes", () => {
+    expect(workedHoursExportQuerySchema.safeParse({ mode: "week", date: "2026-08-10", scope: "all_workers" }).success).toBe(true);
   });
 });

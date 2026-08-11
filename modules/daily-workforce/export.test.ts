@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import ExcelJS from "exceljs";
-import { formatDailyTeamsWorkbook, buildMonthlyWorkedHoursWorkbook, buildDailyWorkedHoursWorkbook } from "./export";
+import { formatDailyTeamsWorkbook, buildWorkedHoursMatrixWorkbook, buildDailyWorkedHoursWorkbook } from "./export";
 import type { DailyTeamWithMembers, DailyTeamMemberWithEmployee } from "./types";
 
-function employee(id: string, firstName: string, lastName: string): DailyTeamMemberWithEmployee["employee"] {
-  return { id, first_name: firstName, last_name: lastName, position_title: "", profile_id: "", archived_at: "" };
+function employee(id: string, firstName: string, lastName: string, positionTitle = ""): DailyTeamMemberWithEmployee["employee"] {
+  return { id, first_name: firstName, last_name: lastName, position_title: positionTitle, profile_id: "", archived_at: "" };
 }
 
 function member(id: string, dailyTeamId: string, role: "member" | "foreman", emp: DailyTeamMemberWithEmployee["employee"]): DailyTeamMemberWithEmployee {
@@ -88,22 +88,42 @@ describe("formatDailyTeamsWorkbook", () => {
   });
 });
 
-describe("buildMonthlyWorkedHoursWorkbook", () => {
-  it("lays out one row per employee with hours under the matching date column and a totals row at the bottom", async () => {
-    const buffer = await buildMonthlyWorkedHoursWorkbook("Northstar", "North Plant Expansion", "2026-08-01", "2026-08-03", [
-      { employee: { first_name: "Karl", last_name: "Andersson" }, hoursByDate: { "2026-08-01": 8, "2026-08-02": 8 }, totalHours: 16 },
+describe("buildWorkedHoursMatrixWorkbook", () => {
+  it("lays out one row per employee with hours under the matching date column, plus Role/Total Hours/Days Worked and a totals row", async () => {
+    const period = { mode: "week" as const, fromDate: "2026-08-01", toDate: "2026-08-03" };
+    const buffer = await buildWorkedHoursMatrixWorkbook("Northstar", "North Plant Expansion", period, [
+      { employee: employee("e1", "Karl", "Andersson", "Scaffolder"), hoursByDate: { "2026-08-01": 8, "2026-08-02": 8 }, totalHours: 16 },
     ]);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
     const sheet = workbook.worksheets[0];
 
-    // Row 3 is the column header row (rows 1-2 are the title/period lines);
-    // columns are Employee, one per date in range, then Total.
-    expect(sheet.getRow(3).getCell(1).value).toBe("Employee");
-    expect(sheet.getRow(4).getCell(1).value).toBe("Karl Andersson");
-    expect(sheet.getRow(4).getCell(5).value).toBe(16); // Total column (Employee + 3 dates + Total = column 5)
-    const totalsRowValues = (sheet.getRow(5).values as unknown[]).slice(1);
+    // Row 4 is the column header row (rows 1-3 are the title/project/period
+    // lines); columns are Employee, Role, one per date in range, Total
+    // Hours, Days Worked.
+    expect(sheet.getRow(4).getCell(1).value).toBe("Employee");
+    expect(sheet.getRow(4).getCell(2).value).toBe("Role");
+    expect(sheet.getRow(5).getCell(1).value).toBe("Karl Andersson");
+    expect(sheet.getRow(5).getCell(2).value).toBe("Scaffolder");
+    // Employee(1) + Role(2) + 3 dates(3-5) + Total Hours = column 6.
+    expect(sheet.getRow(5).getCell(6).value).toBe(16);
+    // Days Worked = column 7 — 2 days had hours > 0 out of the 3-day range.
+    expect(sheet.getRow(5).getCell(7).value).toBe(2);
+    const totalsRowValues = (sheet.getRow(6).values as unknown[]).slice(1);
     expect(totalsRowValues[0]).toBe("TOTAL");
+  });
+
+  it("never emits a date column outside the resolved period, even if a row's hoursByDate has a stray out-of-range key", async () => {
+    const period = { mode: "day" as const, fromDate: "2026-08-10", toDate: "2026-08-10" };
+    const buffer = await buildWorkedHoursMatrixWorkbook("Northstar", "North Plant Expansion", period, [
+      { employee: employee("e2", "Anders", "Holm"), hoursByDate: { "2026-08-10": 8, "2026-09-01": 99 }, totalHours: 8 },
+    ]);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const sheet = workbook.worksheets[0];
+    // Employee, Role, one date column, Total Hours, Days Worked = 5 columns.
+    expect(sheet.getRow(4).actualCellCount).toBe(5);
+    expect(sheet.getRow(4).getCell(3).value).toBe("08-10");
   });
 });
 

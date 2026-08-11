@@ -38,9 +38,20 @@ export type WorkedHoursWithEmployee = WorkedHours & {
 export const WORKED_HOURS_MIN = 0;
 export const WORKED_HOURS_MAX = 24;
 
-/** One employee's full month of worked hours — the Worked Hours "This Month" view's row shape, dates keyed by ISO ('YYYY-MM-DD'). */
-export type MonthlyWorkedHoursRow = {
+/** One employee's worked hours across a multi-day period (week/month view or export) — the "This Month" view's and the Week/Month matrix export's shared row shape, dates keyed by ISO ('YYYY-MM-DD'). */
+export type WorkedHoursMatrixRow = {
   employee: BasicEmployee;
   hoursByDate: Record<string, number>;
   totalHours: number;
+};
+
+/** Worked Hours export employee scope (Phase 6) — always resolved server-side against the selected company/project, never trusted from the client beyond which mode was picked. */
+export type WorkedHoursEmployeeScope = "all_workers" | "hours_only" | "selected";
+
+export const WORKED_HOURS_EMPLOYEE_SCOPES: WorkedHoursEmployeeScope[] = ["all_workers", "hours_only", "selected"];
+
+export const WORKED_HOURS_EMPLOYEE_SCOPE_LABELS: Record<WorkedHoursEmployeeScope, string> = {
+  all_workers: "All project workers",
+  hours_only: "Workers with recorded hours only",
+  selected: "Selected workers",
 };

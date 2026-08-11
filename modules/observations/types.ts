@@ -128,3 +128,8 @@ export type SafetyObservationDetail = SafetyObservation & {
   targetEmployee: BasicEmployee | null;
   targetDailyTeam: { id: string; name: string; work_date: string } | null;
 };
+
+/** The human-readable observation reference shown on the PDF/shared report — same "derive from the record's own id" convention as modules/lmra/types.ts's formatLmraReference(), since observations have no natural per-project numbering. */
+export function formatObservationReference(observation: Pick<SafetyObservation, "id">): string {
+  return `OBS-${observation.id.slice(0, 8).toUpperCase()}`;
+}

@@ -1,6 +1,8 @@
 import ExcelJS from "exceljs";
 import { listDailyTeamsForDate } from "./queries";
 import type { DailyTeamWithMembers } from "./types";
+import type { WorkedHoursMatrixRow } from "@/modules/worked-hours/types";
+import { formatWorkedHoursPeriodLabel, listPeriodDates, type WorkedHoursPeriod } from "@/modules/worked-hours/period";
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F2937" } };
 const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -72,41 +74,46 @@ export async function formatDailyTeamsWorkbook(companyName: string, projectName:
   return workbook.xlsx.writeBuffer();
 }
 
-/** Monthly Worked Hours export — employees as rows, dates as columns, totals included (Phase H's "useful for payroll checking" requirement). */
-export async function buildMonthlyWorkedHoursWorkbook(
-  companyName: string,
-  projectName: string,
-  fromDate: string,
-  toDate: string,
-  rows: { employee: { first_name: string; last_name: string }; hoursByDate: Record<string, number>; totalHours: number }[],
-): Promise<ExcelJS.Buffer> {
+/**
+ * Week/Month Worked Hours export (Phase 7) — a payroll-checking matrix:
+ * Employee | Role | one column per calendar date in the resolved period |
+ * Total Hours | Days Worked. Every date column comes from
+ * listPeriodDates(period) — never a date outside the resolved [fromDate,
+ * toDate] range, even if a caller's `rows` somehow contained one (a stray
+ * hoursByDate key outside the period is simply never read). Role uses
+ * `position_title` (get_basic_employee_info()'s narrow, approved column
+ * set has no employee_number — see modules/employees/employee-options.ts's
+ * header comment; deliberately not widening that SECURITY DEFINER
+ * function's return shape just for this export). No raw UUIDs or
+ * database-internal fields appear anywhere in the sheet.
+ */
+export async function buildWorkedHoursMatrixWorkbook(companyName: string, projectName: string, period: WorkedHoursPeriod, rows: WorkedHoursMatrixRow[]): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "HSEQ Platform";
   workbook.created = new Date();
 
-  const dates: string[] = [];
-  for (let d = new Date(`${fromDate}T00:00:00Z`); d <= new Date(`${toDate}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) {
-    dates.push(d.toISOString().slice(0, 10));
-  }
+  const dates = listPeriodDates(period);
+  const sheet = workbook.addWorksheet("Worked Hours", { views: [{ state: "frozen", xSplit: 2, ySplit: 4 }] });
 
-  const sheet = workbook.addWorksheet("Worked Hours", { views: [{ state: "frozen", xSplit: 1, ySplit: 3 }] });
-
-  sheet.getCell("A1").value = `${companyName} — ${projectName}`;
+  sheet.getCell("A1").value = `${companyName} — Worked Hours`;
   sheet.getCell("A1").font = { bold: true, size: 12 };
-  sheet.getCell("A2").value = `Period: ${fromDate} to ${toDate}`;
-  sheet.getCell("A2").font = { italic: true, color: { argb: "FF6B7280" } };
+  sheet.getCell("A2").value = `Project: ${projectName}`;
+  sheet.getCell("A2").font = { color: { argb: "FF6B7280" } };
+  sheet.getCell("A3").value = `Period: ${formatWorkedHoursPeriodLabel(period)}`;
+  sheet.getCell("A3").font = { italic: true, color: { argb: "FF6B7280" } };
 
   const columns = [
     { header: "Employee", key: "employee", width: 24 },
+    { header: "Role", key: "role", width: 18 },
     ...dates.map((date) => ({ header: date.slice(5), key: date, width: 8 })),
-    { header: "Total", key: "total", width: 10 },
+    { header: "Total Hours", key: "total", width: 12 },
+    { header: "Days Worked", key: "daysWorked", width: 12 },
   ];
   sheet.columns = columns;
 
-  const headerRow = sheet.getRow(3);
+  const headerRow = sheet.getRow(4);
   columns.forEach((column, index) => {
-    const cell = headerRow.getCell(index + 1);
-    cell.value = column.header;
+    headerRow.getCell(index + 1).value = column.header;
   });
   headerRow.font = HEADER_FONT;
   headerRow.fill = HEADER_FILL;
@@ -114,13 +121,22 @@ export async function buildMonthlyWorkedHoursWorkbook(
   for (const row of rows) {
     const rowData: Record<string, string | number> = {
       employee: `${row.employee.first_name} ${row.employee.last_name}`,
+      role: row.employee.position_title || "",
       total: row.totalHours,
+      daysWorked: dates.filter((date) => (row.hoursByDate[date] ?? 0) > 0).length,
     };
-    for (const date of dates) rowData[date] = row.hoursByDate[date] ?? "";
+    for (const date of dates) {
+      const hours = row.hoursByDate[date];
+      if (hours !== undefined) rowData[date] = hours;
+    }
     sheet.addRow(rowData);
   }
 
-  const totalsRow = sheet.addRow({ employee: "TOTAL", total: rows.reduce((sum, row) => sum + row.totalHours, 0) });
+  const totalsRow = sheet.addRow({
+    employee: "TOTAL",
+    total: rows.reduce((sum, row) => sum + row.totalHours, 0),
+    daysWorked: rows.reduce((sum, row) => sum + dates.filter((date) => (row.hoursByDate[date] ?? 0) > 0).length, 0),
+  });
   totalsRow.font = { bold: true };
 
   return workbook.xlsx.writeBuffer();

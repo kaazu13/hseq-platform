@@ -19,10 +19,13 @@ import { ObservationReviewCloseCard } from "@/modules/observations/components/ob
 import { ObservationPrintButton } from "@/modules/observations/components/observation-print-button";
 import { CorrectiveActionsSection } from "@/modules/corrective-actions/components/corrective-actions-section";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { listReportSharesForRecord } from "@/modules/reports/queries";
+import { ShareReportDialog } from "@/modules/reports/components/share-report-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Download } from "lucide-react";
 
 type ObservationDetailPageProps = {
   params: Promise<{ observationId: string }>;
@@ -85,6 +88,11 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
 
   const candidates = await listObservationCandidateEmployees(currentCompanyId, observation.project_id);
   const actionCandidates = toEmployeeOptions(await listCorrectiveActionCandidateEmployees(currentCompanyId, observation.project_id));
+  const shares = canEdit ? await listReportSharesForRecord(currentCompanyId, "safety_observation", observation.id) : [];
+  const actionShareEntries = canManageActionDetails
+    ? await Promise.all(correctiveActions.map(async (action) => [action.id, await listReportSharesForRecord(currentCompanyId, "corrective_action", action.id)] as const))
+    : [];
+  const sharesByActionId = Object.fromEntries(actionShareEntries);
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
@@ -100,6 +108,13 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
               </Button>
             )}
             <ObservationPrintButton />
+            <Button variant="outline" size="sm" nativeButton={false} render={<a href={`/observations/${observation.id}/pdf`} />} className="print:hidden">
+              <Download />
+              Download PDF
+            </Button>
+            {canEdit && (
+              <ShareReportDialog companyId={currentCompanyId} projectId={observation.project_id} recordType="safety_observation" recordId={observation.id} initialShares={shares} />
+            )}
           </>
         }
       />
@@ -190,6 +205,7 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
           isProjectManager={isProjectManager}
           hasProjectAccess={hasProjectAccess}
           currentUserProfileId={user.id}
+          sharesByActionId={sharesByActionId}
         />
       </div>
 

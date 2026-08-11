@@ -1391,6 +1391,133 @@ export type Database = {
           },
         ]
       }
+      report_shares: {
+        Row: {
+          company_id: string
+          corrective_action_id: string | null
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          last_viewed_at: string | null
+          lmra_assessment_id: string | null
+          project_id: string | null
+          record_type: Database["public"]["Enums"]["report_record_type"]
+          revoked_at: string | null
+          revoked_by: string | null
+          safety_flash_id: string | null
+          safety_observation_id: string | null
+          scaffold_inspection_id: string | null
+          token_hash: string
+          toolbox_meeting_id: string | null
+          view_count: number
+        }
+        Insert: {
+          company_id: string
+          corrective_action_id?: string | null
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          lmra_assessment_id?: string | null
+          project_id?: string | null
+          record_type: Database["public"]["Enums"]["report_record_type"]
+          revoked_at?: string | null
+          revoked_by?: string | null
+          safety_flash_id?: string | null
+          safety_observation_id?: string | null
+          scaffold_inspection_id?: string | null
+          token_hash: string
+          toolbox_meeting_id?: string | null
+          view_count?: number
+        }
+        Update: {
+          company_id?: string
+          corrective_action_id?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          lmra_assessment_id?: string | null
+          project_id?: string | null
+          record_type?: Database["public"]["Enums"]["report_record_type"]
+          revoked_at?: string | null
+          revoked_by?: string | null
+          safety_flash_id?: string | null
+          safety_observation_id?: string | null
+          scaffold_inspection_id?: string | null
+          token_hash?: string
+          toolbox_meeting_id?: string | null
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_shares_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_corrective_action_id_fkey"
+            columns: ["corrective_action_id"]
+            isOneToOne: false
+            referencedRelation: "corrective_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_lmra_assessment_id_fkey"
+            columns: ["lmra_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "lmra_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_safety_flash_id_fkey"
+            columns: ["safety_flash_id"]
+            isOneToOne: false
+            referencedRelation: "safety_flashes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_safety_observation_id_fkey"
+            columns: ["safety_observation_id"]
+            isOneToOne: false
+            referencedRelation: "safety_observations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_scaffold_inspection_id_fkey"
+            columns: ["scaffold_inspection_id"]
+            isOneToOne: false
+            referencedRelation: "scaffold_inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_shares_toolbox_meeting_id_fkey"
+            columns: ["toolbox_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "toolbox_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           created_at: string
@@ -3343,6 +3470,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_manage_report_share_target: {
+        Args: {
+          target_corrective_action_id: string
+          target_lmra_assessment_id: string
+          target_record_type: Database["public"]["Enums"]["report_record_type"]
+          target_safety_flash_id: string
+          target_safety_observation_id: string
+          target_scaffold_inspection_id: string
+          target_toolbox_meeting_id: string
+        }
+        Returns: boolean
+      }
       count_employees: {
         Args: {
           include_archived?: boolean
@@ -3403,6 +3542,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_report_share: {
+        Args: {
+          target_company_id: string
+          target_expires_at?: string
+          target_project_id: string
+          target_record_id: string
+          target_record_type: Database["public"]["Enums"]["report_record_type"]
+        }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+        }[]
       }
       daily_attendance_permits_work: {
         Args: {
@@ -3508,6 +3662,10 @@ export type Database = {
       }
       has_project_access: {
         Args: { target_project_id: string }
+        Returns: boolean
+      }
+      has_valid_toolbox_document_share: {
+        Args: { target_object_path: string }
         Returns: boolean
       }
       is_company_member: { Args: { target_org_id: string }; Returns: boolean }
@@ -3835,6 +3993,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resolve_public_report: { Args: { target_token: string }; Returns: Json }
       resolve_scaffold_inspection_validity_days: {
         Args: { target_project_id: string }
         Returns: number
@@ -3864,6 +4023,35 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "worked_hours_discrepancies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revoke_report_share: {
+        Args: { target_share_id: string }
+        Returns: {
+          company_id: string
+          corrective_action_id: string | null
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          last_viewed_at: string | null
+          lmra_assessment_id: string | null
+          project_id: string | null
+          record_type: Database["public"]["Enums"]["report_record_type"]
+          revoked_at: string | null
+          revoked_by: string | null
+          safety_flash_id: string | null
+          safety_observation_id: string | null
+          scaffold_inspection_id: string | null
+          token_hash: string
+          toolbox_meeting_id: string | null
+          view_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "report_shares"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -4279,6 +4467,13 @@ export type Database = {
         | "inspector"
         | "member"
       project_status: "planning" | "active" | "completed" | "archived"
+      report_record_type:
+        | "lmra"
+        | "scaffold_inspection"
+        | "safety_observation"
+        | "corrective_action"
+        | "toolbox_meeting"
+        | "safety_flash"
       scaffold_defect_severity: "low" | "medium" | "high" | "critical"
       scaffold_defect_status:
         | "open"
@@ -4613,6 +4808,14 @@ export const Constants = {
         "member",
       ],
       project_status: ["planning", "active", "completed", "archived"],
+      report_record_type: [
+        "lmra",
+        "scaffold_inspection",
+        "safety_observation",
+        "corrective_action",
+        "toolbox_meeting",
+        "safety_flash",
+      ],
       scaffold_defect_severity: ["low", "medium", "high", "critical"],
       scaffold_defect_status: [
         "open",

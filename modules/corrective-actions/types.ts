@@ -72,3 +72,8 @@ export type BasicEmployee = Database["public"]["Functions"]["get_basic_employee_
 export type CorrectiveActionDetail = CorrectiveAction & {
   responsiblePerson: BasicEmployee | null;
 };
+
+/** The human-readable reference shown on the PDF/shared report — same "derive from the record's own id" convention as modules/lmra/types.ts's formatLmraReference(). */
+export function formatCorrectiveActionReference(action: Pick<CorrectiveAction, "id">): string {
+  return `CA-${action.id.slice(0, 8).toUpperCase()}`;
+}
