@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-type Row = { employee: BasicEmployee; workedHours: WorkedHoursWithEmployee | null; disabledReason?: string };
+type Row = { employee: BasicEmployee; workedHours: WorkedHoursWithEmployee | null; disabledReason?: string; correctionCount?: number };
 
 /**
  * Item 2's mobile concept — "Karl Andersson  10.0h  Submitted" collapsed,
@@ -52,6 +52,11 @@ function WorkedHoursMobileRow({ companyId, projectId, workDate, row, canManage }
         <div className="flex shrink-0 items-center gap-2">
           <span className={cn("text-sm font-semibold", overCap && "text-destructive")}>{total.toFixed(1)}h</span>
           {row.workedHours ? <Badge variant={isSubmitted ? "default" : "secondary"}>{isSubmitted ? "Submitted" : "Draft"}</Badge> : <Badge variant="outline">Missing</Badge>}
+          {Boolean(row.correctionCount) && (
+            <Badge variant="outline" className="text-amber-700 dark:text-amber-400">
+              Corrected{row.correctionCount! > 1 ? ` (${row.correctionCount})` : ""}
+            </Badge>
+          )}
         </div>
       </button>
 

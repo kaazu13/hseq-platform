@@ -361,4 +361,75 @@ describe("worked hours invariants", () => {
       expect(absentRow).toHaveLength(0); // never even created a draft row for them
     });
   });
+
+  describe("milestone H, items 5/6: management editing a HISTORICAL date (not just today), correction audit, notification", () => {
+    it("adds missing hours for a date far in the past — the write path has no 'today only' restriction", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Historical Add Project");
+      const employeeId = await createTestEmployee(companyA.companyId, null, "Historical", "Add");
+      const farPastDate = "2025-01-15";
+
+      const [row] = await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${farPastDate}, ${JSON.stringify([{ category: "regular", hours: 8 }])}::jsonb)`);
+      expect(Number(row.hours)).toBe(8);
+      expect(row.status).toBe("draft");
+    });
+
+    it("editing an already-submitted HISTORICAL day still requires a reason and records full audit history (previous, new, category, changed by, changed at)", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Historical Edit Submitted Project");
+      const employeeUser = await createTestUser("Historical Edit Employee");
+      await addMembership(companyA.companyId, employeeUser.userId, ["employee"]);
+      const employeeId = await createTestEmployee(companyA.companyId, employeeUser.userId, "Historical", "Edit");
+      const farPastDate = "2025-02-01";
+
+      await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${farPastDate}, ${JSON.stringify([{ category: "regular", hours: 8 }])}::jsonb)`);
+      await asUser(admin.userId, (tx) => tx`select * from submit_worked_hours(${projectId}, ${farPastDate})`);
+
+      // No reason -> rejected, even though the day is long in the past.
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${farPastDate}, ${JSON.stringify([{ category: "regular", hours: 6 }])}::jsonb)`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      // With a reason -> succeeds, status stays 'submitted' (no second, competing status is introduced), and full audit history is preserved.
+      const [corrected] = await asUser(
+        admin.userId,
+        (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${farPastDate}, ${JSON.stringify([{ category: "regular", hours: 6 }])}::jsonb, null, 'Payroll correction after review')`,
+      );
+      expect(corrected.status).toBe("submitted");
+      expect(Number(corrected.hours)).toBe(6);
+
+      const [correction] = await sql`select category, previous_hours, new_hours, reason, changed_by, changed_at from worked_hours_corrections where employee_id = ${employeeId} and work_date = ${farPastDate}`;
+      expect(correction).toMatchObject({ category: "regular", reason: "Payroll correction after review" });
+      expect(Number(correction.previous_hours)).toBe(8);
+      expect(Number(correction.new_hours)).toBe(6);
+      expect(correction.changed_by).toBe(admin.userId);
+      expect(correction.changed_at).not.toBeNull();
+
+      // The employee is notified.
+      const [notification] = await sql`select title, body from notifications where recipient_user_id = ${employeeUser.userId} and type = 'worked_hours_corrected' order by created_at desc limit 1`;
+      expect(notification).toBeDefined();
+      expect(notification.body).toContain("Payroll correction after review");
+
+      await deleteTestUser(employeeUser.userId);
+    });
+
+    it("total hours across all categories for one day cannot exceed 24.0 — unchanged by the historical-date/correction work", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Over 24h Project");
+      const employeeId = await createTestEmployee(companyA.companyId, null, "Over", "Cap");
+      const workDate = "2026-08-20";
+
+      await expect(
+        asUser(
+          admin.userId,
+          (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([
+            { category: "regular", hours: 12 },
+            { category: "overtime", hours: 8 },
+            { category: "night", hours: 5 },
+          ])}::jsonb)`,
+        ),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      const row = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+      // Nothing was persisted from the rejected attempt.
+      if (row.length > 0) expect(Number(row[0].hours)).toBeLessThanOrEqual(24);
+    });
+  });
 });

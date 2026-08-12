@@ -290,14 +290,21 @@ export async function listRecentDailyTeamsForProject(companyId: string, projectI
 
 export type EmployeeTodayCard = {
   attendanceStatus: import("./types").DailyAttendanceStatus;
-  team: (Pick<DailyTeam, "id" | "name" | "shift" | "work_area" | "activity"> & { foremanName: string | null }) | null;
+  team:
+    | (Pick<DailyTeam, "id" | "name" | "shift" | "work_area" | "activity"> & {
+        foremanName: string | null;
+        /** Item 9: the caller's current team colleagues (workers only, excluding the caller themselves) — names only, no phone/personal data. */
+        colleagues: BasicEmployee[];
+      })
+    | null;
 };
 
 /**
  * The Employee Dashboard's "TODAY" card data source (Phase F) — richer
  * than listWorkforceForDate's per-row shape (that one is for a manager
- * scanning the whole roster; this resolves the ONE team's foreman name
- * too, since the card shows "Foreman: Karl Andersson" directly).
+ * scanning the whole roster; this resolves the ONE team's foreman name and
+ * (item 9) its current worker roster too, since the card shows the
+ * Foreman's name and "Your team" colleague list directly).
  */
 export async function getEmployeeTodayCard(companyId: string, projectId: string, employeeId: string, workDate: string): Promise<EmployeeTodayCard> {
   const supabase = await createClient();
@@ -313,25 +320,39 @@ export async function getEmployeeTodayCard(companyId: string, projectId: string,
     return { attendanceStatus: attendanceRow?.status ?? "not_set", team: null };
   }
 
-  const { data: team, error: teamError } = await supabase
-    .from("daily_teams")
-    .select("id, name, shift, work_area, activity, foreman_employee_id")
-    .eq("id", membership.daily_team_id)
-    .maybeSingle();
+  const [{ data: team, error: teamError }, { data: memberRows, error: membersError }] = await Promise.all([
+    supabase.from("daily_teams").select("id, name, shift, work_area, activity, foreman_employee_id").eq("id", membership.daily_team_id).maybeSingle(),
+    supabase.from("daily_team_members").select("employee_id").eq("daily_team_id", membership.daily_team_id).eq("role", "member").is("removed_at", null),
+  ]);
   if (teamError) throw teamError;
+  if (membersError) throw membersError;
   if (!team) {
     return { attendanceStatus: attendanceRow?.status ?? "not_set", team: null };
   }
 
+  const colleagueIds = [...new Set((memberRows ?? []).map((row) => row.employee_id).filter((id) => id !== employeeId))];
+  const resolveIds = [...new Set([...(team.foreman_employee_id ? [team.foreman_employee_id] : []), ...colleagueIds])];
+
   let foremanName: string | null = null;
-  if (team.foreman_employee_id) {
-    const { data: foremen, error: foremenError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: [team.foreman_employee_id] });
-    if (foremenError) throw foremenError;
-    const foreman = foremen?.[0];
-    if (foreman) foremanName = `${foreman.first_name} ${foreman.last_name}`;
+  let colleagues: BasicEmployee[] = [];
+  if (resolveIds.length > 0) {
+    const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: resolveIds });
+    if (employeesError) throw employeesError;
+    const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
+    if (team.foreman_employee_id) {
+      const foreman = employeeById.get(team.foreman_employee_id);
+      if (foreman) foremanName = `${foreman.first_name} ${foreman.last_name}`;
+    }
+    colleagues = colleagueIds
+      .map((id) => employeeById.get(id))
+      .filter((employee): employee is BasicEmployee => Boolean(employee))
+      .sort((a, b) => {
+        const lastNameCompare = a.last_name.localeCompare(b.last_name);
+        return lastNameCompare !== 0 ? lastNameCompare : a.first_name.localeCompare(b.first_name);
+      });
   }
 
-  return { attendanceStatus: attendanceRow?.status ?? "not_set", team: { ...team, foremanName } };
+  return { attendanceStatus: attendanceRow?.status ?? "not_set", team: { ...team, foremanName, colleagues } };
 }
 
 export type DailyTeamsArchiveDay = {

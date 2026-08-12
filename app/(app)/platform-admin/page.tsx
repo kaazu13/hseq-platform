@@ -68,7 +68,7 @@ export default async function PlatformAdminPage({ searchParams }: PlatformAdminP
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 {account.account_status_reason && <p className="text-sm text-muted-foreground">Reason: {account.account_status_reason}</p>}
-                <AccountActions userId={account.id} accountStatus={account.account_status} />
+                <AccountActions userId={account.id} accountStatus={account.account_status} fullName={account.full_name} />
 
                 {expandedUserId === account.id && (
                   <div className="flex flex-col gap-4 border-t pt-3">

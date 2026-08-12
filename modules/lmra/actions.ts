@@ -19,6 +19,7 @@ import {
   type LmraReviewFormInput,
   type LmraSubmitFormInput,
 } from "./validation";
+import { buildMyTodaysTeamParticipantIds } from "./types";
 
 /**
  * Server Functions for the LMRA domain — same fixed recipe as every other
@@ -96,6 +97,55 @@ export async function listTodaysTeamsForLmra(companyId: string, projectId: strin
     }
   }
   return listDailyTeamsForDate(companyId, projectId, workDate);
+}
+
+function formatWorkDateForMessage(workDate: string): string {
+  return new Date(`${workDate}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+export type MyTodaysTeamResult = { employeeIds: string[]; teamName: string };
+
+/**
+ * Item 2: "Add My Today's Team" — resolves the CALLING employee's own
+ * Today's Team for this LMRA's (company, project, work_date) and returns
+ * that team's Foreman + every current worker + the caller themselves, deduplicated.
+ * Uses the exact historical roster for the LMRA's own work_date (never
+ * "today" the calendar date), same guarantee listTodaysTeamsForLmra above
+ * already provides. Read-only company-membership gate only — resolving
+ * "my own team" never exposes anyone else's team the caller couldn't
+ * already see via their own membership row.
+ */
+export async function getMyTodaysTeamForLmra(companyId: string, projectId: string, workDate: string): Promise<ActionResult<MyTodaysTeamResult>> {
+  const { user } = await requireCompanyMembership(companyId);
+  const myEmployeeId = await getMyEmployeeId(companyId, user.id);
+  if (!myEmployeeId) {
+    return { ok: false, error: { code: "not_found", message: "You don't have an employee record in this company." } };
+  }
+
+  const supabase = await createClient();
+  const { data: membership, error: membershipError } = await supabase
+    .from("daily_team_members")
+    .select("daily_team_id")
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("work_date", workDate)
+    .eq("employee_id", myEmployeeId)
+    .is("removed_at", null)
+    .maybeSingle();
+  if (membershipError) throw membershipError;
+
+  if (!membership) {
+    return { ok: false, error: { code: "not_found", message: `You are not assigned to a team for ${formatWorkDateForMessage(workDate)}.` } };
+  }
+
+  const teams = await listDailyTeamsForDate(companyId, projectId, workDate);
+  const team = teams.find((candidate) => candidate.id === membership.daily_team_id);
+  if (!team) {
+    return { ok: false, error: { code: "not_found", message: `You are not assigned to a team for ${formatWorkDateForMessage(workDate)}.` } };
+  }
+
+  const employeeIds = buildMyTodaysTeamParticipantIds(team, myEmployeeId);
+  return { ok: true, data: { employeeIds, teamName: team.name } };
 }
 
 /**

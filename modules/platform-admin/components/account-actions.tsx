@@ -3,20 +3,40 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { suspendAccount, banAccount, restoreAccount, issuePlatformWarning, revokeUserSessions } from "@/modules/platform-admin/actions";
+import { suspendAccount, banAccount, restoreAccount, issuePlatformWarning, revokeUserSessions, adminUpdateUserName } from "@/modules/platform-admin/actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 
 type Action = "suspend" | "ban" | "warn" | null;
 
-/** Platform admin per-account controls (Phase 12-13) — every mutation is re-checked server-side by requirePlatformSuperAdmin() + the RPC's own is_platform_super_admin() gate; this component has no independent authority. */
-export function AccountActions({ userId, accountStatus }: { userId: string; accountStatus: string }) {
+/** Platform admin per-account controls (Phase 12-13). Item 10: "Rename" is the ONE authorized path to change a user's display name — every mutation here is re-checked server-side by requirePlatformSuperAdmin() + the RPC's own is_platform_super_admin() gate; this component has no independent authority. */
+export function AccountActions({ userId, accountStatus, fullName }: { userId: string; accountStatus: string; fullName: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeAction, setActiveAction] = useState<Action>(null);
   const [reason, setReason] = useState("");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newName, setNewName] = useState(fullName);
+
+  function submitRename() {
+    if (!newName.trim()) {
+      toast.error("A name is required.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await adminUpdateUserName(userId, { fullName: newName });
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success("Name updated.");
+      setRenameOpen(false);
+      router.refresh();
+    });
+  }
 
   function restore() {
     startTransition(async () => {
@@ -75,6 +95,28 @@ export function AccountActions({ userId, accountStatus }: { userId: string; acco
       <Button type="button" size="sm" variant="outline" onClick={revokeSessions} disabled={isPending}>
         Revoke sessions
       </Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => setRenameOpen(true)}>
+        Rename
+      </Button>
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change name</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="admin-rename-name">Full name</Label>
+            <Input id="admin-rename-name" value={newName} onChange={(event) => setNewName(event.target.value)} maxLength={200} />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={submitRename} disabled={isPending}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={activeAction !== null} onOpenChange={(open) => !open && setActiveAction(null)}>
         <DialogTrigger render={<Button type="button" size="sm" variant="outline" onClick={() => setActiveAction("warn")} />}>Issue warning</DialogTrigger>
         {accountStatus !== "suspended" && <DialogTrigger render={<Button type="button" size="sm" variant="outline" onClick={() => setActiveAction("suspend")} />}>Suspend</DialogTrigger>}

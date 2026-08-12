@@ -23,6 +23,8 @@ type LmraFormProps = {
   todayDate: string;
   hazardRows: LmraHazardInput[];
   participantIds: string[];
+  /** Item 2: HSE Manager/project Foreman may browse and pick ANY of that day's teams via "Select Today's Team"; everyone else only gets "Add My Today's Team". */
+  canSelectAnyTeam: boolean;
 } & (
   | {
       mode: "create";
@@ -53,7 +55,7 @@ type LmraFormProps = {
  * fails.
  */
 export function LmraForm(props: LmraFormProps) {
-  const { companyId, projectId, projectName, candidates, todayDate } = props;
+  const { companyId, projectId, projectName, candidates, todayDate, canSelectAnyTeam } = props;
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -78,6 +80,22 @@ export function LmraForm(props: LmraFormProps) {
 
   const canPickCompletedBy = props.mode === "create" && props.isElevated;
   const hazardsEditable = props.mode === "create" || props.hazardsEditable;
+
+  // Item 1: "Responsible person" (assessment-level and per-hazard) may only
+  // be one of Workers Involved — never the full project roster. Filtering
+  // `candidates` down to `participantIds` here (rather than inside
+  // LmraHazardsAndControls) is the single source of truth both the
+  // assessment-level field and every per-hazard field below share.
+  const participantCandidates = candidates.filter((candidate) => participantIds.includes(candidate.value));
+
+  function handleParticipantIdsChange(nextIds: string[]) {
+    setParticipantIds(nextIds);
+    // A worker removed from Workers Involved can no longer be anyone's
+    // Responsible person — clear rather than silently keep an invalid
+    // reference the server would reject anyway.
+    setResponsiblePersonId((current) => (current && !nextIds.includes(current) ? null : current));
+    setHazardRows((rows) => rows.map((row) => (row.responsiblePersonId && !nextIds.includes(row.responsiblePersonId) ? { ...row, responsiblePersonId: null } : row)));
+  }
 
   function fieldError(name: string) {
     return fieldErrors[name];
@@ -218,8 +236,8 @@ export function LmraForm(props: LmraFormProps) {
               htmlFor="responsiblePersonId"
               value={responsiblePersonId}
               onValueChange={setResponsiblePersonId}
-              options={candidates}
-              placeholder="Not set"
+              options={participantCandidates}
+              placeholder={participantCandidates.length === 0 ? "Add Workers involved first" : "Not set"}
               error={fieldError("responsiblePersonId")}
             />
           </div>
@@ -237,11 +255,12 @@ export function LmraForm(props: LmraFormProps) {
         workDate={workDate}
         options={candidates}
         selectedIds={participantIds}
-        onChange={setParticipantIds}
+        onChange={handleParticipantIdsChange}
         readOnly={!hazardsEditable}
+        canSelectAnyTeam={canSelectAnyTeam}
       />
 
-      <LmraHazardsAndControls rows={hazardRows} onChange={setHazardRows} candidates={candidates} readOnly={!hazardsEditable} />
+      <LmraHazardsAndControls rows={hazardRows} onChange={setHazardRows} candidates={participantCandidates} readOnly={!hazardsEditable} />
 
       {props.mode === "create" && (
         <LmraFinalConfirmation

@@ -80,6 +80,16 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
     // same guard modules/lmra/actions.ts's requireLmraCreateAccess enforces.
     forbidden();
   }
+  // Item 2: WHO may browse and pick ANY of that day's teams via "Select
+  // Today's Team" — broader than `isElevated` (which stays narrowly scoped
+  // to hseq_manager/foreman for the separate, RLS-backed "set completed-by
+  // to someone else" capability). This mirrors listTodaysTeamsForLmra's own
+  // read-access fallback (company_admin/operations_manager/hseq_manager),
+  // plus project_manager for "higher authorized management" — purely a UI
+  // convenience gate, never a security boundary: the underlying read is
+  // still RLS-scoped, and every write still goes through the full atomic
+  // participant/hazard validation regardless of who clicked the button.
+  const canSelectAnyTeam = isElevated || roleNames.includes("company_admin") || roleNames.includes("operations_manager") || roleNames.includes("project_manager");
   const candidates = toEmployeeOptions(candidateRows);
   const todayDate = new Date().toISOString().slice(0, 10);
 
@@ -118,6 +128,7 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
           isElevated={isElevated}
           myEmployeeId={myEmployeeId}
           dailyTeamId={initialDailyTeamId}
+          canSelectAnyTeam={canSelectAnyTeam}
         />
       </div>
     </div>

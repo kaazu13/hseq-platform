@@ -8,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+/**
+ * Item 10: `fullName` is read-only display text, not an input — a user
+ * can no longer self-edit their own display name (only a Platform Super
+ * Admin can, via a dedicated authorized path). Phone stays freely
+ * self-editable, unchanged.
+ */
 export function ProfileEditForm({ fullName, phone }: { fullName: string; phone: string | null }) {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -22,7 +28,6 @@ export function ProfileEditForm({ fullName, phone }: { fullName: string; phone: 
 
     const formData = new FormData(event.currentTarget);
     const input = {
-      fullName: String(formData.get("fullName") ?? ""),
       phone: String(formData.get("phone") ?? ""),
     };
 
@@ -50,12 +55,15 @@ export function ProfileEditForm({ fullName, phone }: { fullName: string; phone: 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="fullName">Full name</Label>
-          <Input id="fullName" name="fullName" required defaultValue={fullName} aria-invalid={Boolean(fieldErrors.fullName)} />
-          {fieldErrors.fullName && <p className="text-sm text-destructive">{fieldErrors.fullName}</p>}
+          <p id="fullName" className="text-sm text-muted-foreground">
+            {fullName}
+          </p>
+          <p className="text-xs text-muted-foreground">Only a Platform Super Admin can change your name.</p>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="phone">Phone (optional)</Label>
-          <Input id="phone" name="phone" defaultValue={phone ?? ""} />
+          <Input id="phone" name="phone" defaultValue={phone ?? ""} aria-invalid={Boolean(fieldErrors.phone)} />
+          {fieldErrors.phone && <p className="text-sm text-destructive">{fieldErrors.phone}</p>}
         </div>
       </div>
 

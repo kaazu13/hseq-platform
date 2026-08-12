@@ -11,3 +11,7 @@ export type RestoreAccountInput = z.infer<typeof restoreAccountSchema>;
 
 export const issuePlatformWarningSchema = z.object({ reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters") });
 export type IssuePlatformWarningInput = z.infer<typeof issuePlatformWarningSchema>;
+
+/** Item 10: the ONE authorized path to change another user's name — Platform Super Admin only. */
+export const adminUpdateUserNameSchema = z.object({ fullName: z.string().trim().min(1, "A name is required").max(200, "Keep it under 200 characters") });
+export type AdminUpdateUserNameInput = z.infer<typeof adminUpdateUserNameSchema>;

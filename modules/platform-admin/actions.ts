@@ -5,7 +5,18 @@ import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRaisedException } from "@/lib/supabase/errors";
-import { suspendAccountSchema, banAccountSchema, restoreAccountSchema, issuePlatformWarningSchema, type SuspendAccountInput, type BanAccountInput, type RestoreAccountInput, type IssuePlatformWarningInput } from "./validation";
+import {
+  suspendAccountSchema,
+  banAccountSchema,
+  restoreAccountSchema,
+  issuePlatformWarningSchema,
+  adminUpdateUserNameSchema,
+  type SuspendAccountInput,
+  type BanAccountInput,
+  type RestoreAccountInput,
+  type IssuePlatformWarningInput,
+  type AdminUpdateUserNameInput,
+} from "./validation";
 import type { Database } from "@/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -135,6 +146,25 @@ export async function revokeUserSessions(targetUserId: string): Promise<ActionRe
 
   revalidatePlatformAdminPaths();
   return { ok: true, data: null };
+}
+
+/** Item 10: the ONE authorized path to change another user's display name — Platform Super Admin only. admin_update_profile_name() independently re-checks is_platform_super_admin() (SECURITY DEFINER), so this app-layer check is a fast pre-filter, not the only gate. */
+export async function adminUpdateUserName(targetUserId: string, input: AdminUpdateUserNameInput): Promise<ActionResult<Profile>> {
+  const parsed = adminUpdateUserNameSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "A name is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_update_profile_name", { target_user_id: targetUserId, target_full_name: parsed.data.fullName }).single();
+  if (error || !data) {
+    if (error && isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't update the name. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data };
 }
 
 export async function grantPlatformSuperAdmin(targetUserId: string): Promise<ActionResult<null>> {

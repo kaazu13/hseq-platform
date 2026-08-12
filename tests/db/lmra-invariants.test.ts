@@ -338,6 +338,78 @@ describe("LMRA invariants (redesign)", () => {
     expect(participants).toHaveLength(0);
   });
 
+  describe("item 1: responsible person must be one of this LMRA's own participants", () => {
+    it("rejects an assessment-level responsible_person_id that is not a participant", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Responsible Not Participant Project");
+      const completer = await rosterEmployee(projectId, "RPCompleter");
+      const outsider = await rosterEmployee(projectId, "RPOutsider");
+
+      await expect(
+        asUser(completer.userId, (tx) => tx`
+          select * from create_lmra_assessment(
+            ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-10', 'day',
+            ${completer.employeeId}, ${outsider.employeeId}, null, ${[completer.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+          )
+        `),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+    });
+
+    it("accepts a responsible_person_id that IS a participant", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Responsible Is Participant Project");
+      const completer = await rosterEmployee(projectId, "RP2Completer");
+      const worker = await rosterEmployee(projectId, "RP2Worker");
+
+      const [assessment] = await asUser(completer.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-10', 'day',
+          ${completer.employeeId}, ${worker.employeeId}, null, ${[completer.employeeId, worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      expect(assessment.responsible_person_id).toBe(worker.employeeId);
+    });
+
+    it("rejects a hazard-level responsible_person_id that is not a participant, atomically — no assessment/hazards/participants rows are left behind", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Hazard Responsible Not Participant Project");
+      const completer = await rosterEmployee(projectId, "HRCompleter");
+      const outsider = await rosterEmployee(projectId, "HROutsider");
+
+      await expect(
+        asUser(completer.userId, (tx) => tx`
+          select * from create_lmra_assessment(
+            ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-10', 'day',
+            ${completer.employeeId}, null, null, ${[completer.employeeId]},
+            ${JSON.stringify(freshHazards({ hazardType: "working_at_height", isApplicable: true })).replace('"responsible_person_id":null', `"responsible_person_id":"${outsider.employeeId}"`)}::jsonb,
+            false, 'go', null
+          )
+        `),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      const orphanedAssessments = await sql`select id from lmra_assessments where project_id = ${projectId} and work_area = 'Area'`;
+      expect(orphanedAssessments).toHaveLength(0);
+    });
+
+    it("update_lmra_assessment also rejects a responsible_person_id that is not a participant", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Edit Responsible Not Participant Project");
+      const completer = await rosterEmployee(projectId, "EditRPCompleter");
+      const outsider = await rosterEmployee(projectId, "EditRPOutsider");
+
+      const [assessment] = await asUser(completer.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-10', 'day',
+          ${completer.employeeId}, null, null, ${[completer.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+
+      await expect(
+        asUser(completer.userId, (tx) => tx`
+          select * from update_lmra_assessment(
+            ${assessment.id}, 'Area', 'Activity', '2026-08-10', 'day', ${outsider.employeeId}, null, ${[completer.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb
+          )
+        `),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+    });
+  });
+
   it("cross-company isolation: a company B caller cannot create an LMRA in company A", async () => {
     const projectId = await createTestProject(companyA.companyId, "Cross Company Project");
     const bUser = await createTestUser("Company B Caller");

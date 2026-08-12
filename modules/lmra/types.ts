@@ -89,77 +89,84 @@ export const LMRA_HAZARD_TYPE_LABELS: Record<LmraHazardType, string> = {
  * `other_description`.
  */
 export const LMRA_COMMON_CONTROLS: Record<LmraHazardType, string[]> = {
+  // Items 3/4: simple-English wording (short sentences, common words, one
+  // instruction per line) plus an explicit harness control — previously
+  // only "100% tie-off required" implied harness use; that is now its own,
+  // separate line so the two distinct requirements are never conflated.
   working_at_height: [
-    "Approved scaffold/access platform",
-    "Scaffold inspected and tagged",
-    "100% tie-off required",
-    "Certified anchor point identified",
+    "Approved scaffold or work platform",
+    "Safety harness worn and correctly fitted",
+    "100% tie-off maintained where required",
+    "Connected to an approved anchor point",
+    "Scaffold inspected and tagged before use",
     "Tools secured against falling",
-    "Exclusion zone established",
-    "Rescue arrangement confirmed",
+    "Keep the area below clear or barricaded",
+    "Rescue plan understood and available",
   ],
   falling_objects: [
-    "Exclusion zone established below work area",
-    "Toe boards / debris netting installed",
-    "Tools and materials secured/tethered",
+    "Keep people out of the area below",
+    "Toe boards or debris netting installed",
+    "Secure tools and materials so they cannot fall",
     "Overhead protection in place",
-    "Warning signage posted",
+    "Put up warning signs",
   ],
   line_of_fire: [
-    "Exclusion zone established",
-    "Barricades/warning tape in place",
-    "No work permitted directly below/above others",
-    "Spotter assigned",
+    "Keep away from moving equipment",
+    "Do not stand below suspended loads",
+    "Keep hands away from pinch/crush points",
+    "Barricade the danger area where needed",
+    "Make sure the operator can see you",
+    "Use a spotter when needed",
   ],
   manual_material_handling: [
-    "Mechanical aids used where possible",
-    "Team lift for heavy/awkward items",
-    "Correct lifting technique briefed",
-    "Clear pathway to destination",
+    "Use mechanical aids where possible",
+    "Use a team lift for heavy or awkward items",
+    "Use the correct lifting technique",
+    "Keep the pathway clear",
   ],
   lifting_operations: [
-    "Lift plan in place",
-    "Certified lifting equipment and slings",
-    "Appointed person / banksman assigned",
-    "Exclusion zone established",
-    "Load path checked for obstructions",
+    "Lift plan is ready",
+    "Use certified lifting equipment and slings",
+    "Appointed person or banksman assigned",
+    "Keep people out of the lifting area",
+    "Check the load path for obstructions",
   ],
   mobile_equipment_mewp: [
-    "Operator certified/competent",
-    "Pre-use inspection completed",
-    "Ground conditions assessed",
-    "Exclusion zone / barriers in place",
-    "Harness and lanyard used in MEWP basket",
+    "Operator is certified and competent",
+    "Complete a pre-use inspection",
+    "Check ground conditions",
+    "Put up barriers around the work area",
+    "Wear harness and lanyard in the MEWP basket",
   ],
   weather_conditions: [
-    "Wind speed checked against work limits",
-    "Work halted in lightning/severe weather",
-    "Surfaces checked for ice/rain slip hazard",
-    "Weather forecast reviewed before starting",
+    "Check wind speed against work limits",
+    "Stop work in lightning or severe weather",
+    "Check surfaces for ice or rain slip hazard",
+    "Check the weather forecast before starting",
   ],
   access_egress: [
-    "Access route inspected and clear",
-    "Ladders/stairs secured and in good condition",
-    "Emergency egress route identified",
-    "Housekeeping maintained on walkways",
+    "Check the access route is clear",
+    "Ladders and stairs are secure and in good condition",
+    "Know the emergency exit route",
+    "Keep walkways clear and tidy",
   ],
   housekeeping: [
-    "Work area kept clear of debris",
-    "Materials stored tidily and stably",
-    "Waste removed regularly",
-    "Trip hazards identified and removed",
+    "Keep the work area clear of debris",
+    "Store materials tidily and safely",
+    "Remove waste regularly",
+    "Find and remove trip hazards",
   ],
   tools_equipment: [
-    "Tools inspected before use",
-    "Correct tool for the task",
-    "Guards/safety devices in place",
-    "Damaged tools removed from service",
+    "Inspect tools before use",
+    "Use the correct tool for the task",
+    "Keep guards and safety devices in place",
+    "Remove damaged tools from use",
   ],
   simultaneous_operations: [
-    "Work coordinated with other trades/teams",
-    "SIMOPS communication plan in place",
-    "Schedules deconflicted",
-    "Common work areas clearly demarcated",
+    "Coordinate work with other trades and teams",
+    "Have a communication plan for simultaneous work",
+    "Check schedules do not conflict",
+    "Clearly mark shared work areas",
   ],
   other: [],
 };
@@ -228,6 +235,18 @@ export function lmraHazardInputsFromRows(hazards: Pick<LmraHazard, "hazard_type"
       otherDescription: row?.other_description ?? "",
     };
   });
+}
+
+/**
+ * Item 2: "Add My Today's Team" — the employee ids to merge into Workers
+ * involved for one Today's Team (its Foreman, if any, every current
+ * worker, and the caller themselves), deduplicated. A plain, pure
+ * function so the dedup guarantee is directly unit-testable without a
+ * request context — modules/lmra/actions.ts's getMyTodaysTeamForLmra()
+ * is the only caller.
+ */
+export function buildMyTodaysTeamParticipantIds(team: { foreman: Pick<BasicEmployee, "id"> | null; workers: { employee: Pick<BasicEmployee, "id"> }[] }, myEmployeeId: string): string[] {
+  return [...new Set([...(team.foreman ? [team.foreman.id] : []), ...team.workers.map((member) => member.employee.id), myEmployeeId])];
 }
 
 /** One assessment with everything a detail/edit page needs, resolved in one place. */

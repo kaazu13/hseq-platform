@@ -10,7 +10,7 @@ import { DAILY_ATTENDANCE_STATUS_LABELS, dailyAttendancePermitsWork } from "@/mo
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-export type WorkedHoursTodayRow = { employee: BasicEmployee; workedHours: WorkedHoursWithEmployee | null; attendanceStatus: DailyAttendanceStatus };
+export type WorkedHoursTodayRow = { employee: BasicEmployee; workedHours: WorkedHoursWithEmployee | null; attendanceStatus: DailyAttendanceStatus; correctionCount?: number };
 
 type StatusFilter = "all" | "missing" | "entered" | "submitted" | "unavailable";
 
@@ -43,6 +43,7 @@ export function WorkedHoursTodayView({ companyId, projectId, workDate, rows, can
     employee: row.employee,
     workedHours: row.workedHours,
     disabledReason: dailyAttendancePermitsWork(row.attendanceStatus) ? undefined : `Marked ${DAILY_ATTENDANCE_STATUS_LABELS[row.attendanceStatus]} — hours locked at 0`,
+    correctionCount: row.correctionCount,
   }));
 
   const filters: { key: StatusFilter; label: string }[] = [

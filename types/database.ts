@@ -4074,6 +4074,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_update_profile_name: {
+        Args: { target_full_name: string; target_user_id: string }
+        Returns: {
+          accent_theme: Database["public"]["Enums"]["accent_theme"]
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at: string | null
+          account_status_changed_by: string | null
+          account_status_reason: string | null
+          active_company_id: string | null
+          active_project_id: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          theme_mode: Database["public"]["Enums"]["theme_mode"]
+          updated_at: string
+          user_number: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       allocate_employee_number: {
         Args: { target_org_id: string }
         Returns: string

@@ -2,6 +2,7 @@
 
 import { EmployeeMultiSelect } from "@/components/shared/employee-multi-select";
 import { LmraAddDailyTeamButton } from "@/modules/lmra/components/lmra-add-daily-team-dialog";
+import { LmraAddMyTeamButton } from "@/modules/lmra/components/lmra-add-my-team-button";
 import type { EmployeeOption } from "@/modules/employees/employee-options";
 import { LMRA_MAX_PARTICIPANTS } from "@/modules/lmra/types";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -15,16 +16,20 @@ type LmraWorkersSectionProps = {
   /** Optional so a read-only render (e.g. the detail page, a Server Component) never needs to pass a function prop across the server/client boundary. */
   onChange?: (ids: string[]) => void;
   readOnly?: boolean;
+  /** Item 2: only HSE Manager/project Foreman (the existing elevated-access tier) may browse and pick ANY project team — an ordinary employee only ever gets "Add My Today's Team". */
+  canSelectAnyTeam?: boolean;
 };
 
 /**
- * "Workers involved" (Phase 3) — replaces the old checkbox-wall picker with
- * a searchable add/remove list plus "[ Add Today's Team ]", which merges
- * that day's actual team roster in (deduplicated against whatever's already
- * selected — a plain array-union, since EmployeeMultiSelect's onChange
- * already treats the id list as a set of distinct values).
+ * "Workers involved" (Phase 3) — a searchable add/remove list plus two
+ * quick-add shortcuts (item 2): "Add My Today's Team" (everyone — resolves
+ * the caller's OWN team, no picker) and, only for elevated roles, "Select
+ * Today's Team" (a full list of that day's teams, for preparing an LMRA on
+ * someone else's behalf). Both merge into whatever's already selected — a
+ * plain array-union, since EmployeeMultiSelect's onChange already treats
+ * the id list as a set of distinct values.
  */
-export function LmraWorkersSection({ companyId, projectId, workDate, options, selectedIds, onChange, readOnly }: LmraWorkersSectionProps) {
+export function LmraWorkersSection({ companyId, projectId, workDate, options, selectedIds, onChange, readOnly, canSelectAnyTeam }: LmraWorkersSectionProps) {
   function handleAddTeam(employeeIds: string[]) {
     if (!onChange) return;
     const merged = new Set(selectedIds);
@@ -36,7 +41,12 @@ export function LmraWorkersSection({ companyId, projectId, workDate, options, se
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SectionHeader title={`Workers involved (${selectedIds.length})`} />
-        {!readOnly && <LmraAddDailyTeamButton companyId={companyId} projectId={projectId} workDate={workDate} onAddTeam={handleAddTeam} />}
+        {!readOnly && (
+          <div className="flex flex-wrap items-center gap-2">
+            <LmraAddMyTeamButton companyId={companyId} projectId={projectId} workDate={workDate} onAddTeam={handleAddTeam} />
+            {canSelectAnyTeam && <LmraAddDailyTeamButton companyId={companyId} projectId={projectId} workDate={workDate} onAddTeam={handleAddTeam} />}
+          </div>
+        )}
       </div>
 
       {readOnly ? (

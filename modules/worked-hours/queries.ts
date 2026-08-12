@@ -108,6 +108,27 @@ export async function listWorkedHoursCorrections(companyId: string, workedHoursI
   return data ?? [];
 }
 
+/**
+ * Item 6: how many correction rows exist per worked_hours row — lets the
+ * PM-facing day table/mobile-list show a "Corrected (N)" indicator inline,
+ * keyed by worked_hours_id (the caller already has that day's rows from
+ * listWorkedHoursForDate, same "batch, don't join" convention as
+ * listBreakdownByWorkedHoursId above). Status itself deliberately stays
+ * "Submitted" (no second, competing status value is introduced) — this is
+ * the "visible correction history" the record surfaces instead.
+ */
+export async function listWorkedHoursCorrectionCountsByWorkedHoursId(companyId: string, workedHoursIds: string[]): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (workedHoursIds.length === 0) return map;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("worked_hours_corrections").select("worked_hours_id").eq("company_id", companyId).in("worked_hours_id", workedHoursIds);
+  if (error) throw error;
+  for (const row of data ?? []) {
+    map.set(row.worked_hours_id, (map.get(row.worked_hours_id) ?? 0) + 1);
+  }
+  return map;
+}
+
 /** Every employee currently rostered onto `projectId` (an active project_assignments row) — the bulk-apply picker's candidate list, same roster query shape as modules/daily-workforce/queries.ts's listWorkforceForDate but without the attendance/team join (Worked Hours doesn't gate on attendance status). */
 export async function listProjectRosterEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();

@@ -49,6 +49,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
   if (!canManageLmra(roleNames, isForeman, isOwnAssessment)) {
     forbidden();
   }
+  const canSelectAnyTeam = roleNames.includes("hseq_manager") || isForeman || roleNames.includes("company_admin") || roleNames.includes("operations_manager") || roleNames.includes("project_manager");
 
   // `project` can legitimately be null even though the caller can manage
   // this assessment — see app/(app)/lmra/[lmraId]/page.tsx's comment on the
@@ -77,6 +78,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
           participantIds={assessment.participants.map((participant) => participant.employee_id)}
           assessment={assessment}
           hazardsEditable={hazardsEditable}
+          canSelectAnyTeam={canSelectAnyTeam}
         />
       </div>
     </div>

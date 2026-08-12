@@ -693,4 +693,62 @@ describe("daily workforce invariants", () => {
     const thirdFetch = await sql`select id from daily_teams where project_id = ${projectId} and work_date = ${workDate} order by display_order`;
     expect(thirdFetch.map((r) => r.id)).toEqual([teamA.id, teamB.id]);
   });
+
+  it("milestone H, item 2: an employee's team membership is scoped to the EXACT work_date — 'Add My Today's Team' for a backdated LMRA sees that day's historical roster, never a different day's", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Historical Roster Project");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Historical", "Worker");
+    const dayOne = "2026-08-10";
+    const dayTwo = "2026-08-11";
+
+    const [teamDayOne] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${dayOne}, 'Day One Team', 'day', null, null)`);
+    const [teamDayTwo] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${dayTwo}, 'Day Two Team', 'day', null, null)`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${dayOne}, ${teamDayOne.id}, ${employeeId}, 'member')`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${dayTwo}, ${teamDayTwo.id}, ${employeeId}, 'member')`);
+
+    const dayOneMembership = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = ${dayOne} and employee_id = ${employeeId} and removed_at is null`;
+    expect(dayOneMembership).toHaveLength(1);
+    expect(dayOneMembership[0].daily_team_id).toBe(teamDayOne.id);
+
+    const dayTwoMembership = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = ${dayTwo} and employee_id = ${employeeId} and removed_at is null`;
+    expect(dayTwoMembership).toHaveLength(1);
+    expect(dayTwoMembership[0].daily_team_id).toBe(teamDayTwo.id);
+
+    // A third day the employee was never assigned on: the "no team" case (getMyTodaysTeamForLmra's safe empty/error state).
+    const dayThreeMembership = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = '2026-08-12' and employee_id = ${employeeId} and removed_at is null`;
+    expect(dayThreeMembership).toHaveLength(0);
+  });
+
+  it("milestone H, item 9: 'Your Dashboard' team colleagues are exactly this team's OTHER current workers — self excluded, foreman resolved separately, no unrelated team leaks in", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Team Colleagues Project");
+    const foreman = await createTestForeman(companyA.companyId, projectId, "Colleagues", "Foreman");
+    const me = await createTestEmployee(companyA.companyId, null, "Me", "Myself");
+    const colleagueOne = await createTestEmployee(companyA.companyId, null, "Colleague", "One");
+    const colleagueTwo = await createTestEmployee(companyA.companyId, null, "Colleague", "Two");
+    const workDate = "2026-08-20";
+
+    await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${foreman.employeeId})`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foreman.employeeId}, 'Colleagues Team', 'day', null, null)`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${me}, 'member')`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${colleagueOne}, 'member')`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${colleagueTwo}, 'member')`);
+
+    // A completely unrelated team on the same day, to prove nothing leaks across teams.
+    const otherForeman = await createTestForeman(companyA.companyId, projectId, "Other", "Foreman");
+    await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${otherForeman.employeeId})`);
+    const [otherTeam] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${otherForeman.employeeId}, 'Unrelated Team', 'day', null, null)`);
+    const stranger = await createTestEmployee(companyA.companyId, null, "Stranger", "Unrelated");
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${otherTeam.id}, ${stranger}, 'member')`);
+
+    // Exactly what getEmployeeTodayCard's colleague resolution queries: role='member', removed_at is null, self excluded client-side.
+    const memberRows = await sql`select employee_id from daily_team_members where daily_team_id = ${team.id} and role = 'member' and removed_at is null`;
+    const colleagueIds = memberRows.map((row) => row.employee_id).filter((id) => id !== me);
+
+    expect(colleagueIds.sort()).toEqual([colleagueOne, colleagueTwo].sort());
+    expect(colleagueIds).not.toContain(me); // never includes yourself
+    expect(colleagueIds).not.toContain(foreman.employeeId); // the foreman is resolved separately, never folded into "colleagues"
+    expect(colleagueIds).not.toContain(stranger); // no leak from the unrelated team
+
+    await deleteTestUser(foreman.userId);
+    await deleteTestUser(otherForeman.userId);
+  });
 });

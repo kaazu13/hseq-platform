@@ -144,7 +144,7 @@ export default async function AccountPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title="Edit profile" description="Full name and phone are the only fields you can change here — role and company are managed by an administrator." />
+        <SectionHeader title="Edit profile" description="Phone is the only field you can change here — your name, role, and company are managed by an administrator." />
         <ProfileEditForm fullName={overview.profile.fullName} phone={overview.profile.phone} />
       </div>
 

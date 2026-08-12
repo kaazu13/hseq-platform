@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initialLmraHazardRows, lmraHazardInputsFromRows, LMRA_HAZARD_TYPES, LMRA_COMMON_CONTROLS } from "./types";
+import { initialLmraHazardRows, lmraHazardInputsFromRows, LMRA_HAZARD_TYPES, LMRA_COMMON_CONTROLS, buildMyTodaysTeamParticipantIds } from "./types";
 
 describe("initialLmraHazardRows", () => {
   it("returns exactly 12 rows, one per LMRA_HAZARD_TYPES entry, in that fixed order", () => {
@@ -26,7 +26,7 @@ describe("lmraHazardInputsFromRows", () => {
       {
         hazard_type: "working_at_height",
         is_applicable: true,
-        selected_controls: ["Approved scaffold/access platform"],
+        selected_controls: ["Approved scaffold or work platform"],
         controls: "Extra tie-off point added",
         responsible_person_id: "123e4567-e89b-42d3-a456-426614174000",
         controls_confirmed: true,
@@ -36,7 +36,7 @@ describe("lmraHazardInputsFromRows", () => {
 
     const heightRow = rows.find((row) => row.hazardType === "working_at_height")!;
     expect(heightRow.isApplicable).toBe(true);
-    expect(heightRow.selectedControls).toEqual(["Approved scaffold/access platform"]);
+    expect(heightRow.selectedControls).toEqual(["Approved scaffold or work platform"]);
     expect(heightRow.controls).toBe("Extra tie-off point added");
     expect(heightRow.responsiblePersonId).toBe("123e4567-e89b-42d3-a456-426614174000");
     expect(heightRow.controlsConfirmed).toBe(true);
@@ -74,5 +74,76 @@ describe("LMRA_COMMON_CONTROLS", () => {
       if (hazardType === "other") continue;
       expect(LMRA_COMMON_CONTROLS[hazardType].length).toBeGreaterThan(0);
     }
+  });
+
+  it("item 3: Working at Height has an explicit, separate harness control — never relying only on '100% tie-off' to imply it", () => {
+    expect(LMRA_COMMON_CONTROLS.working_at_height).toContain("Safety harness worn and correctly fitted");
+    expect(LMRA_COMMON_CONTROLS.working_at_height.some((control) => control.toLowerCase().includes("tie-off"))).toBe(true);
+  });
+
+  it("item 3: Working at Height distinguishes every required control listed in the instruction", () => {
+    const controls = LMRA_COMMON_CONTROLS.working_at_height;
+    expect(controls).toContain("Approved scaffold or work platform");
+    expect(controls).toContain("Safety harness worn and correctly fitted");
+    expect(controls).toContain("100% tie-off maintained where required");
+    expect(controls).toContain("Connected to an approved anchor point");
+    expect(controls).toContain("Scaffold inspected and tagged before use");
+    expect(controls).toContain("Tools secured against falling");
+    expect(controls).toContain("Keep the area below clear or barricaded");
+    expect(controls).toContain("Rescue plan understood and available");
+  });
+
+  it("item 4: Line of Fire uses the simplified, one-instruction-per-line wording", () => {
+    expect(LMRA_COMMON_CONTROLS.line_of_fire).toEqual([
+      "Keep away from moving equipment",
+      "Do not stand below suspended loads",
+      "Keep hands away from pinch/crush points",
+      "Barricade the danger area where needed",
+      "Make sure the operator can see you",
+      "Use a spotter when needed",
+    ]);
+  });
+
+  it("item 4: no control string exceeds a short, simple sentence — a rough proxy for 'short sentences, common words'", () => {
+    for (const hazardType of LMRA_HAZARD_TYPES) {
+      for (const control of LMRA_COMMON_CONTROLS[hazardType]) {
+        expect(control.length).toBeLessThanOrEqual(60);
+      }
+    }
+  });
+
+  it("item 4: the old, more technical wording no longer appears verbatim", () => {
+    expect(LMRA_COMMON_CONTROLS.falling_objects).not.toContain("Exclusion zone established below work area");
+    expect(LMRA_COMMON_CONTROLS.line_of_fire).not.toContain("No work permitted directly below/above others");
+  });
+});
+
+describe("buildMyTodaysTeamParticipantIds — item 2's 'Add My Today's Team'", () => {
+  function employee(id: string) {
+    return { id } as never;
+  }
+
+  it("adds the Foreman and every worker plus the caller", () => {
+    const team = { foreman: employee("foreman-1"), workers: [{ employee: employee("worker-1") }, { employee: employee("worker-2") }] };
+    const ids = buildMyTodaysTeamParticipantIds(team, "me-1");
+    expect(ids.sort()).toEqual(["foreman-1", "me-1", "worker-1", "worker-2"].sort());
+  });
+
+  it("deduplicates the caller when they are already the Foreman or a worker", () => {
+    const asForeman = buildMyTodaysTeamParticipantIds({ foreman: employee("me-1"), workers: [{ employee: employee("worker-1") }] }, "me-1");
+    expect(asForeman.filter((id) => id === "me-1")).toHaveLength(1);
+
+    const asWorker = buildMyTodaysTeamParticipantIds({ foreman: employee("foreman-1"), workers: [{ employee: employee("me-1") }] }, "me-1");
+    expect(asWorker.filter((id) => id === "me-1")).toHaveLength(1);
+  });
+
+  it("handles a team with no Foreman assigned", () => {
+    const ids = buildMyTodaysTeamParticipantIds({ foreman: null, workers: [{ employee: employee("worker-1") }] }, "me-1");
+    expect(ids.sort()).toEqual(["me-1", "worker-1"].sort());
+  });
+
+  it("handles a team with no other workers — just the caller", () => {
+    const ids = buildMyTodaysTeamParticipantIds({ foreman: null, workers: [] }, "me-1");
+    expect(ids).toEqual(["me-1"]);
   });
 });

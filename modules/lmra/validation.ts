@@ -104,20 +104,44 @@ export const lmraCreateFormSchema = z
   .refine((data) => !data.submit || data.result !== "no_go" || Boolean(data.stopWorkReason?.trim()), {
     message: "A reason is required when stopping work",
     path: ["stopWorkReason"],
+  })
+  .refine((data) => data.responsiblePersonId === null || data.participantEmployeeIds.includes(data.responsiblePersonId), {
+    message: "The person responsible for the work must be one of Workers involved",
+    path: ["responsiblePersonId"],
+  })
+  .superRefine((data, ctx) => {
+    // Item 1: every hazard's Responsible person must be one of Workers involved — never rely only on the UI's filtered dropdown.
+    data.hazards.forEach((hazard, index) => {
+      if (hazard.responsiblePersonId !== null && !data.participantEmployeeIds.includes(hazard.responsiblePersonId)) {
+        ctx.addIssue({ code: "custom", message: "This hazard's responsible person must be one of Workers involved", path: ["hazards", index, "responsiblePersonId"] });
+      }
+    });
   });
 export type LmraCreateFormInput = z.infer<typeof lmraCreateFormSchema>;
 
 /** Edit — core fields, workers, and hazards/controls (draft-only for the latter two, enforced server-side by update_lmra_assessment()); never the go/no-go decision, which stays a detail-page action (lmraSubmitFormSchema below) once a draft is ready. */
-export const lmraEditFormSchema = z.object({
-  workArea: z.string().trim().min(1, "Work area is required").max(LMRA_WORK_AREA_MAX_LENGTH, `Keep it under ${LMRA_WORK_AREA_MAX_LENGTH} characters`),
-  workActivity: z.string().trim().min(1, "Work activity is required").max(LMRA_WORK_ACTIVITY_MAX_LENGTH, `Keep it under ${LMRA_WORK_ACTIVITY_MAX_LENGTH} characters`),
-  workDate: requiredDate,
-  shift: lmraShiftSchema,
-  responsiblePersonId: z.string().uuid().nullable(),
-  notes: optionalNotes(LMRA_NOTES_MAX_LENGTH),
-  participantEmployeeIds: lmraParticipantsFormSchema,
-  hazards: lmraHazardsFormSchema,
-});
+export const lmraEditFormSchema = z
+  .object({
+    workArea: z.string().trim().min(1, "Work area is required").max(LMRA_WORK_AREA_MAX_LENGTH, `Keep it under ${LMRA_WORK_AREA_MAX_LENGTH} characters`),
+    workActivity: z.string().trim().min(1, "Work activity is required").max(LMRA_WORK_ACTIVITY_MAX_LENGTH, `Keep it under ${LMRA_WORK_ACTIVITY_MAX_LENGTH} characters`),
+    workDate: requiredDate,
+    shift: lmraShiftSchema,
+    responsiblePersonId: z.string().uuid().nullable(),
+    notes: optionalNotes(LMRA_NOTES_MAX_LENGTH),
+    participantEmployeeIds: lmraParticipantsFormSchema,
+    hazards: lmraHazardsFormSchema,
+  })
+  .refine((data) => data.responsiblePersonId === null || data.participantEmployeeIds.includes(data.responsiblePersonId), {
+    message: "The person responsible for the work must be one of Workers involved",
+    path: ["responsiblePersonId"],
+  })
+  .superRefine((data, ctx) => {
+    data.hazards.forEach((hazard, index) => {
+      if (hazard.responsiblePersonId !== null && !data.participantEmployeeIds.includes(hazard.responsiblePersonId)) {
+        ctx.addIssue({ code: "custom", message: "This hazard's responsible person must be one of Workers involved", path: ["hazards", index, "responsiblePersonId"] });
+      }
+    });
+  });
 export type LmraEditFormInput = z.infer<typeof lmraEditFormSchema>;
 
 const REVIEW_DECISION_VALUES = ["approved", "rejected"] as const;

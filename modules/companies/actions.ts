@@ -52,14 +52,19 @@ export async function setActiveCompany(companyId: string): Promise<ActionResult<
 }
 
 /**
- * A user editing their OWN `profiles.full_name`/`phone` — the /account
- * page's edit form. `profiles_update_own` RLS (`id = auth.uid()`) is the
- * real backstop; scoping the `.eq("id", user.id)` below is what keeps
- * this from ever touching a row that isn't the caller's own. Deliberately
- * cannot change `active_company_id` (use `setActiveCompany`
- * above), `user_number` (immutable), or anything about role/company/
- * status — those are read-only everywhere in the UI by design, this
- * function has no field for them at all.
+ * A user editing their OWN `profiles.phone` — the /account page's edit
+ * form. `profiles_update_own` RLS (`id = auth.uid()`) is the real
+ * backstop; scoping the `.eq("id", user.id)` below is what keeps this
+ * from ever touching a row that isn't the caller's own. Item 10:
+ * `full_name` is deliberately never sent here — a user cannot change their
+ * own display name at all (only a Platform Super Admin can, via
+ * `adminUpdateUserName()`/`admin_update_profile_name()`); the DB trigger
+ * (`validate_profile_update()`) independently enforces this regardless of
+ * what any client ever sends, this function just never offers the field.
+ * Also cannot change `active_company_id` (use `setActiveCompany` above),
+ * `user_number` (immutable), or anything about role/company/status — those
+ * are read-only everywhere in the UI by design, this function has no field
+ * for them at all.
  */
 export async function updateOwnProfile(input: unknown): Promise<ActionResult<null>> {
   const parsed = updateOwnProfileFormSchema.safeParse(input);
@@ -72,7 +77,7 @@ export async function updateOwnProfile(input: unknown): Promise<ActionResult<nul
 
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name: parsed.data.fullName, phone: parsed.data.phone ?? null })
+    .update({ phone: parsed.data.phone ?? null })
     .eq("id", user.id);
 
   if (error) {

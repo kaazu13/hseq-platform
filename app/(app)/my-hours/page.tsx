@@ -131,17 +131,16 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
         <div className="flex flex-col gap-4">
           {mode !== "day" && (
             <Card>
-              <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 pt-4 sm:grid-cols-3">
-                {WORKED_HOURS_CATEGORIES.map((category) => (
-                  <div key={category} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-muted-foreground">{WORKED_HOURS_CATEGORY_LABELS[category]}</span>
-                    <span className="font-medium tabular-nums">{periodCategoryTotals[category].toFixed(1)} h</span>
-                  </div>
+              <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-sm">
+                {/* Item 7: only categories with real hours are shown — never a wall of "0.0h" rows. */}
+                {WORKED_HOURS_CATEGORIES.filter((category) => periodCategoryTotals[category] > 0).map((category) => (
+                  <span key={category} className="text-muted-foreground">
+                    {WORKED_HOURS_CATEGORY_LABELS[category]} <span className="font-medium text-foreground tabular-nums">{periodCategoryTotals[category].toFixed(1)}h</span>
+                  </span>
                 ))}
-                <div className="col-span-2 flex items-center justify-between gap-2 border-t pt-2 text-sm sm:col-span-3">
-                  <span className="font-semibold">Grand total</span>
-                  <span className="text-lg font-semibold tabular-nums">{sumWorkedHoursCategoryBreakdown(periodCategoryTotals).toFixed(1)} h</span>
-                </div>
+                <span className="ml-auto font-semibold">
+                  Grand Total <span className="text-lg tabular-nums">{sumWorkedHoursCategoryBreakdown(periodCategoryTotals).toFixed(1)}h</span>
+                </span>
               </CardContent>
             </Card>
           )}

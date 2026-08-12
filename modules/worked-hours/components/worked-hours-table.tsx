@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-type Row = { employee: BasicEmployee; workedHours: WorkedHoursWithEmployee | null; disabledReason?: string };
+type Row = { employee: BasicEmployee; workedHours: WorkedHoursWithEmployee | null; disabledReason?: string; correctionCount?: number };
 
 /**
  * Item 2's desktop concept: a compact, directly-editable table (Employee |
@@ -77,7 +77,14 @@ function WorkedHoursTableRow({ companyId, projectId, workDate, row, canManage }:
         {total.toFixed(1)} / {WORKED_HOURS_MAX.toFixed(1)}
       </td>
       <td className="p-2">
-        {row.workedHours ? <Badge variant={isSubmitted ? "default" : "secondary"}>{isSubmitted ? "Submitted" : "Draft"}</Badge> : <Badge variant="outline">Missing</Badge>}
+        <div className="flex flex-wrap items-center gap-1">
+          {row.workedHours ? <Badge variant={isSubmitted ? "default" : "secondary"}>{isSubmitted ? "Submitted" : "Draft"}</Badge> : <Badge variant="outline">Missing</Badge>}
+          {Boolean(row.correctionCount) && (
+            <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400" title="This day's hours have been corrected since first submitted — see /my-hours for the full history">
+              Corrected{row.correctionCount! > 1 ? ` (${row.correctionCount})` : ""}
+            </Badge>
+          )}
+        </div>
       </td>
       <td className="p-2">
         {canManage && !disabled && (

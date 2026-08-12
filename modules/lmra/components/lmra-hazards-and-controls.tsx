@@ -13,6 +13,7 @@ type LmraHazardsAndControlsProps = {
   rows: LmraHazardInput[];
   /** Optional so a read-only render (e.g. the detail page, a Server Component) never needs to pass a function prop across the server/client boundary. */
   onChange?: (rows: LmraHazardInput[]) => void;
+  /** Item 1: already filtered to this LMRA's own Workers Involved by the caller (LmraForm) — never the full project roster. Each "Responsible person" combobox below is scoped to exactly this list. */
   candidates: EmployeeOption[];
   readOnly?: boolean;
 };
@@ -127,7 +128,7 @@ export function LmraHazardsAndControls({ rows, onChange, candidates, readOnly }:
                       value={row.responsiblePersonId}
                       onValueChange={(id) => updateRow(row.hazardType, { responsiblePersonId: id })}
                       options={candidates}
-                      placeholder="Not assigned"
+                      placeholder={candidates.length === 0 ? "Add Workers involved first" : "Not assigned"}
                       disabled={readOnly}
                     />
 

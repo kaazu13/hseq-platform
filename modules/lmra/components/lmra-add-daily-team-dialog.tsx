@@ -18,14 +18,20 @@ type LmraAddDailyTeamDialogProps = {
 };
 
 /**
- * "Add Today's Team" (Phase 3) — lists the Daily Workforce teams for the
- * LMRA's project/date (modules/daily-workforce/queries.ts's
+ * "Select Today's Team" (Phase 3, renamed by item 2) — lists EVERY Daily
+ * Workforce team for the LMRA's project/date (modules/daily-workforce/queries.ts's
  * listDailyTeamsForDate, already scoped by removed_at is null, so an
  * unavailable/absent worker who was removed from the team never appears
- * here). Selecting a team merges its foremen+workers into Workers Involved
+ * here). Selecting a team merges its foreman+workers into Workers Involved
  * — deduplication against already-selected workers happens in the caller
  * (modules/lmra/components/lmra-workers-section.tsx), since this dialog has
  * no opinion on what's already selected.
+ *
+ * Item 2: gated to elevated roles only (HSE Manager / project Foreman) —
+ * the caller (LmraWorkersSection) only renders this when `canSelectAnyTeam`
+ * is true, so an ordinary employee is never shown every project team; they
+ * get the simpler, non-listing `LmraAddMyTeamButton` ("Add My Today's
+ * Team") instead.
  */
 export function LmraAddDailyTeamDialog({ open, onOpenChange, companyId, projectId, workDate, onAddTeam }: LmraAddDailyTeamDialogProps) {
   // `teams === null` (and no error) IS the loading state — deliberately no
@@ -62,7 +68,7 @@ export function LmraAddDailyTeamDialog({ open, onOpenChange, companyId, projectI
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Today&apos;s Team</DialogTitle>
+          <DialogTitle>Select Today&apos;s Team</DialogTitle>
           <DialogDescription>Add every worker from one of that day&apos;s teams to Workers Involved.</DialogDescription>
         </DialogHeader>
 
@@ -112,7 +118,7 @@ export function LmraAddDailyTeamButton({ companyId, projectId, workDate, onAddTe
     <>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
         <Users />
-        Add Today&apos;s Team
+        Select Today&apos;s Team
       </Button>
       <LmraAddDailyTeamDialog open={open} onOpenChange={setOpen} companyId={companyId} projectId={projectId} workDate={workDate} onAddTeam={onAddTeam} />
     </>

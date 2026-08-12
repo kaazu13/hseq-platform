@@ -256,8 +256,38 @@ describe("lmraCreateFormSchema", () => {
     expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, notes: "", responsiblePersonId: null }).success).toBe(true);
   });
 
-  it("accepts a distinct responsiblePersonId from completedByEmployeeId — the two are never conflated", () => {
-    expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, responsiblePersonId: OTHER_EMPLOYEE_ID }).success).toBe(true);
+  it("accepts a distinct responsiblePersonId from completedByEmployeeId — the two are never conflated — as long as they're a participant", () => {
+    expect(
+      lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, responsiblePersonId: OTHER_EMPLOYEE_ID, participantEmployeeIds: [OTHER_EMPLOYEE_ID] }).success,
+    ).toBe(true);
+  });
+
+  describe("item 1: responsible person must be one of Workers involved", () => {
+    it("rejects an assessment-level responsiblePersonId that isn't in participantEmployeeIds", () => {
+      const result = lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, responsiblePersonId: OTHER_EMPLOYEE_ID, participantEmployeeIds: [] });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.flatten().fieldErrors.responsiblePersonId).toBeTruthy();
+      }
+    });
+
+    it("accepts responsiblePersonId === null regardless of participants — 'optional' is preserved", () => {
+      expect(lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, responsiblePersonId: null, participantEmployeeIds: [] }).success).toBe(true);
+    });
+
+    it("rejects a hazard's responsiblePersonId that isn't in participantEmployeeIds", () => {
+      const hazards = validHazardRows();
+      hazards[0] = { ...hazards[0], isApplicable: true, responsiblePersonId: OTHER_EMPLOYEE_ID };
+      const result = lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, participantEmployeeIds: [], hazards });
+      expect(result.success).toBe(false);
+    });
+
+    it("accepts a hazard's responsiblePersonId that IS in participantEmployeeIds", () => {
+      const hazards = validHazardRows();
+      hazards[0] = { ...hazards[0], isApplicable: true, responsiblePersonId: OTHER_EMPLOYEE_ID };
+      const result = lmraCreateFormSchema.safeParse({ ...VALID_CREATE_INPUT, participantEmployeeIds: [OTHER_EMPLOYEE_ID], hazards });
+      expect(result.success).toBe(true);
+    });
   });
 });
 
@@ -280,6 +310,20 @@ describe("lmraEditFormSchema", () => {
 
   it("rejects blank work area/work activity same as create", () => {
     expect(lmraEditFormSchema.safeParse({ ...VALID_EDIT_INPUT, workArea: "" }).success).toBe(false);
+  });
+
+  it("item 1: rejects a responsiblePersonId that isn't in participantEmployeeIds", () => {
+    expect(lmraEditFormSchema.safeParse({ ...VALID_EDIT_INPUT, responsiblePersonId: OTHER_EMPLOYEE_ID, participantEmployeeIds: [EMPLOYEE_ID] }).success).toBe(false);
+  });
+
+  it("item 1: accepts a responsiblePersonId that IS in participantEmployeeIds", () => {
+    expect(lmraEditFormSchema.safeParse({ ...VALID_EDIT_INPUT, responsiblePersonId: EMPLOYEE_ID, participantEmployeeIds: [EMPLOYEE_ID] }).success).toBe(true);
+  });
+
+  it("item 1: rejects a hazard's responsiblePersonId that isn't a participant", () => {
+    const hazards = validHazardRows();
+    hazards[0] = { ...hazards[0], isApplicable: true, responsiblePersonId: OTHER_EMPLOYEE_ID };
+    expect(lmraEditFormSchema.safeParse({ ...VALID_EDIT_INPUT, participantEmployeeIds: [EMPLOYEE_ID], hazards }).success).toBe(false);
   });
 });
 

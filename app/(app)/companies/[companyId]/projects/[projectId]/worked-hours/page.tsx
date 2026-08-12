@@ -4,13 +4,21 @@ import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
 import { dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
-import { listWorkedHoursForDate, listWorkedHoursForPeriod, listProjectRosterEmployees, listWorkedHoursArchiveDays, listOpenWorkedHoursDiscrepancies } from "@/modules/worked-hours/queries";
+import {
+  listWorkedHoursForDate,
+  listWorkedHoursForPeriod,
+  listProjectRosterEmployees,
+  listWorkedHoursArchiveDays,
+  listOpenWorkedHoursDiscrepancies,
+  listWorkedHoursCorrectionCountsByWorkedHoursId,
+} from "@/modules/worked-hours/queries";
 import { canManageWorkedHours } from "@/modules/worked-hours/permissions";
 import { BulkApplyHoursBar } from "@/modules/worked-hours/components/bulk-apply-hours-bar";
 import { WorkedHoursTodayView, type WorkedHoursTodayRow } from "@/modules/worked-hours/components/worked-hours-today-view";
 import { SubmitWorkedHoursButton } from "@/modules/worked-hours/components/submit-worked-hours-button";
 import { DiscrepancyReviewItem } from "@/modules/worked-hours/components/discrepancy-review-item";
 import { WorkedHoursExportDialog } from "@/modules/worked-hours/components/worked-hours-export-dialog";
+import { WorkedHoursDateNav } from "@/modules/worked-hours/components/worked-hours-date-nav";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -161,6 +169,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
     listOpenWorkedHoursDiscrepancies(companyId, projectId),
   ]);
 
+  const correctionCountsById = await listWorkedHoursCorrectionCountsByWorkedHoursId(companyId, existingHours.map((row) => row.id));
   const hoursByEmployeeId = new Map(existingHours.map((row) => [row.employee_id, row]));
   // Pre-populate from that day's Today's Teams roster (this milestone's
   // explicit "so the PM does not need to search the entire project"
@@ -177,11 +186,15 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
 
   const draftCount = existingHours.filter((row) => row.status === "draft").length;
 
-  const tableRows: WorkedHoursTodayRow[] = relevantEmployees.map((state) => ({
-    employee: state.employee,
-    workedHours: hoursByEmployeeId.get(state.employee.id) ?? null,
-    attendanceStatus: state.attendanceStatus,
-  }));
+  const tableRows: WorkedHoursTodayRow[] = relevantEmployees.map((state) => {
+    const workedHours = hoursByEmployeeId.get(state.employee.id) ?? null;
+    return {
+      employee: state.employee,
+      workedHours,
+      attendanceStatus: state.attendanceStatus,
+      correctionCount: workedHours ? correctionCountsById.get(workedHours.id) : undefined,
+    };
+  });
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -196,6 +209,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
         }
       />
       {viewNav}
+      <WorkedHoursDateNav basePath={basePath} workDate={workDate} todayDate={todayDate} />
 
       {discrepancies.length > 0 && (
         <div className="flex flex-col gap-3">

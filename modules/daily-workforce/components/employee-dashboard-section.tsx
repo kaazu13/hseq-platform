@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarCheck, Clock, Eye } from "lucide-react";
 import type { EmployeeTodayCard } from "@/modules/daily-workforce/queries";
-import { DAILY_ATTENDANCE_STATUS_LABELS, dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
+import { DAILY_ATTENDANCE_STATUS_LABELS, DAILY_TEAM_SHIFT_LABELS, dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import type { WorkedHours, WorkedHoursDiscrepancy, AppNotification } from "@/modules/worked-hours/types";
 import { WORKED_HOURS_DISCREPANCY_STATUS_LABELS } from "@/modules/worked-hours/types";
 import type { SafetyObservation } from "@/modules/observations/types";
@@ -96,10 +96,32 @@ export function EmployeeDashboardSection({
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-base font-semibold">{todayCard.team.name}</span>
-                {todayCard.team.foremanName && <span className="text-sm text-muted-foreground">Foreman: {todayCard.team.foremanName}</span>}
-                {todayCard.team.work_area && <span className="text-sm text-muted-foreground">Area: {todayCard.team.work_area}</span>}
-                {todayCard.team.activity && <span className="text-sm text-muted-foreground">Activity: {todayCard.team.activity}</span>}
-                {todayCard.team.shift && <span className="text-sm text-muted-foreground">Shift: {todayCard.team.shift}</span>}
+                <span className="text-sm text-muted-foreground">
+                  {[todayCard.team.shift ? DAILY_TEAM_SHIFT_LABELS[todayCard.team.shift] : null, todayCard.team.work_area, todayCard.team.activity].filter(Boolean).join(" · ")}
+                </span>
+              </div>
+
+              {todayCard.team.foremanName && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Foreman</span>
+                  <span className="text-sm font-semibold">{todayCard.team.foremanName}</span>
+                </div>
+              )}
+
+              {/* Item 9: current team colleagues — names only, no phone/personal data. */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your team</span>
+                {todayCard.team.colleagues.length === 0 ? (
+                  <span className="text-sm text-muted-foreground">No other workers on this team yet.</span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    {todayCard.team.colleagues
+                      .slice(0, 8)
+                      .map((colleague) => `${colleague.first_name} ${colleague.last_name}`)
+                      .join(", ")}
+                    {todayCard.team.colleagues.length > 8 && ` + ${todayCard.team.colleagues.length - 8} more`}
+                  </span>
+                )}
               </div>
             </>
           ) : !canWork ? (
