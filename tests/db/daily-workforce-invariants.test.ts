@@ -393,4 +393,201 @@ describe("daily workforce invariants", () => {
 
     await deleteTestUser(worker.userId);
   });
+
+  /**
+   * Milestone F, item 1/9/10: update_daily_team_with_foreman() — the ONE
+   * atomic edit path behind the Edit Team dialog. Covers: field persistence
+   * (name/work_area/activity), foreman swap (old foreman removed, never
+   * demoted to a plain worker; new eligible foreman assigned), rejection of
+   * an ineligible foreman, atomic rejection of a shift change that would
+   * collide with another team's current member, and the locked-team freeze.
+   */
+  describe("update_daily_team_with_foreman — item 1/9", () => {
+    it("persists name, work area, and activity", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Edit Fields Project");
+      const workDate = "2026-08-20";
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Original Name', 'day', 'Old Area', 'Old Activity')`);
+
+      const [updated] = await asUser(
+        admin.userId,
+        (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Renamed Team', 'day', null, 'New Area', 'New Activity')`,
+      );
+      expect(updated).toMatchObject({ name: "Renamed Team", work_area: "New Area", activity: "New Activity" });
+    });
+
+    it("swaps the foreman atomically — the old foreman is removed from the slot, never demoted to a plain worker; the new foreman is assigned", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Foreman Swap Project");
+      const workDate = "2026-08-20";
+      const oldForeman = await createTestForeman(companyA.companyId, projectId, "Old", "Foreman");
+      const newForeman = await createTestForeman(companyA.companyId, projectId, "New", "Foreman");
+
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'Swap Team', 'day', ${oldForeman.employeeId}, null, null)`);
+
+      await asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Swap Team', 'day', ${newForeman.employeeId}, null, null)`);
+
+      const [oldRow] = await sql`select role, removed_at from daily_team_members where daily_team_id = ${team.id} and employee_id = ${oldForeman.employeeId} order by created_at desc limit 1`;
+      expect(oldRow.role).toBe("foreman"); // never silently converted to 'member'
+      expect(oldRow.removed_at).not.toBeNull(); // but removed from the slot
+
+      const [newRow] = await sql`select role, removed_at from daily_team_members where daily_team_id = ${team.id} and employee_id = ${newForeman.employeeId} and removed_at is null`;
+      expect(newRow.role).toBe("foreman");
+
+      await deleteTestUser(oldForeman.userId);
+      await deleteTestUser(newForeman.userId);
+    });
+
+    it("a null foremanEmployeeId leaves existing foreman assignment untouched (the legacy/repair-safe path)", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Foreman Untouched Project");
+      const workDate = "2026-08-20";
+      const foreman = await createTestForeman(companyA.companyId, projectId, "Untouched", "Foreman");
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'Untouched Team', 'day', ${foreman.employeeId}, null, null)`);
+
+      await asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Renamed Only', 'day', null, null, null)`);
+
+      const [row] = await sql`select role from daily_team_members where daily_team_id = ${team.id} and employee_id = ${foreman.employeeId} and removed_at is null`;
+      expect(row.role).toBe("foreman");
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("rejects an employee who does not hold the project's foreman role", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Invalid Foreman Edit Project");
+      const workDate = "2026-08-20";
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Invalid Foreman Team', 'day', null, null)`);
+      const plainEmployeeId = await createTestEmployee(companyA.companyId, null, "Not", "Eligible");
+
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Invalid Foreman Team', 'day', ${plainEmployeeId}, null, null)`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+    });
+
+    it("rejects a shift change that would conflict with another team's current member, atomically — nothing is partially updated, and the conflicting worker is unaffected", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Shift Conflict Project");
+      const workDate = "2026-08-20";
+      const worker = await createTestEmployee(companyA.companyId, null, "Conflict", "Worker");
+
+      const [teamDay] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Day Team', 'day', null, null)`);
+      const [teamNight] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Night Team', 'night', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamDay.id}, ${worker}, 'member')`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamNight.id}, ${worker}, 'member')`);
+
+      // Attempting to change the Night team to 'day' would collide with the worker's existing Day Team membership.
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${teamNight.id}, ${projectId}, ${workDate}, 'Night Team', 'day', null, null, null)`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      // Nothing partially applied: the Night team's shift is unchanged, and the worker's two memberships are untouched.
+      const [unchangedTeam] = await sql`select shift from daily_teams where id = ${teamNight.id}`;
+      expect(unchangedTeam.shift).toBe("night");
+      const openRows = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = ${workDate} and employee_id = ${worker} and removed_at is null`;
+      expect(openRows.map((r) => r.daily_team_id).sort()).toEqual([teamDay.id, teamNight.id].sort());
+    });
+
+    it("a successful shift change resyncs every current member's denormalized shift to match", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Shift Resync Project");
+      const workDate = "2026-08-20";
+      const worker = await createTestEmployee(companyA.companyId, null, "Resync", "Worker");
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Resync Team', 'day', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${worker}, 'member')`);
+
+      await asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Resync Team', 'late', null, null, null)`);
+
+      const [row] = await sql`select shift from daily_team_members where daily_team_id = ${team.id} and employee_id = ${worker} and removed_at is null`;
+      expect(row.shift).toBe("late");
+    });
+
+    it("a locked team cannot be edited via update_daily_team_with_foreman", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Locked Edit Project");
+      const workDate = "2026-08-20";
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Locked Edit Team', 'day', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from lock_daily_teams(${projectId}, ${workDate})`);
+
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Renamed While Locked', 'day', null, null, null)`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+    });
+  });
+
+  /** Milestone F, item 3/10: LMRA count precision — exact per (company, project, daily_team_id, work_date), never fuzzy. */
+  describe("listLmraCountsByDailyTeamId's underlying query — item 3/10", () => {
+    async function rosterEmployee(projectId: string, firstName: string) {
+      const user = await createTestUser(`${firstName} Worker`);
+      await addMembership(companyA.companyId, user.userId, ["employee"]);
+      const employeeId = await createTestEmployee(companyA.companyId, user.userId, firstName, "Worker");
+      await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${employeeId}, 'member')`;
+      return { userId: user.userId, employeeId };
+    }
+
+    function freshHazards() {
+      const hazardTypes = [
+        "working_at_height", "falling_objects", "line_of_fire", "manual_material_handling", "lifting_operations",
+        "mobile_equipment_mewp", "weather_conditions", "access_egress", "housekeeping", "tools_equipment",
+        "simultaneous_operations", "other",
+      ];
+      return hazardTypes.map((hazard_type) => ({
+        hazard_type, is_applicable: false, controls: null, selected_controls: [], responsible_person_id: null, controls_confirmed: false, other_description: null,
+      }));
+    }
+
+    it("multiple LMRAs for the same daily_team_id all count — a team is never restricted to one per day", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Multiple LMRA Project");
+      const workDate = "2026-08-20";
+      const worker = await rosterEmployee(projectId, "Multi");
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Multi LMRA Team', 'day', null, null)`);
+
+      const hazardsJson = JSON.stringify(freshHazards());
+      const [first] = await asUser(
+        worker.userId,
+        (tx) => tx`select * from create_lmra_assessment(${companyA.companyId}, ${projectId}, 'Area 1', 'Activity 1', ${workDate}, 'day', ${worker.employeeId}, null, null, ${[]}, ${hazardsJson}::jsonb, false, 'go', null, ${team.id})`,
+      );
+      const [second] = await asUser(
+        worker.userId,
+        (tx) => tx`select * from create_lmra_assessment(${companyA.companyId}, ${projectId}, 'Area 2', 'Activity 2', ${workDate}, 'day', ${worker.employeeId}, null, null, ${[]}, ${hazardsJson}::jsonb, false, 'go', null, ${team.id})`,
+      );
+
+      const linked = await sql`select id from lmra_assessments where daily_team_id = ${team.id} and work_date = ${workDate} and archived_at is null`;
+      expect(linked.map((row) => row.id).sort()).toEqual([first.id, second.id].sort());
+
+      await deleteTestUser(worker.userId);
+    });
+
+    it("an archived LMRA does not count toward the valid total", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Archived LMRA Project");
+      const workDate = "2026-08-20";
+      const worker = await rosterEmployee(projectId, "Archive");
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Archived LMRA Team', 'day', null, null)`);
+
+      const hazardsJson = JSON.stringify(freshHazards());
+      const [assessment] = await asUser(
+        worker.userId,
+        (tx) => tx`select * from create_lmra_assessment(${companyA.companyId}, ${projectId}, 'Area 1', 'Activity 1', ${workDate}, 'day', ${worker.employeeId}, null, null, ${[]}, ${hazardsJson}::jsonb, false, 'go', null, ${team.id})`,
+      );
+      await sql`update lmra_assessments set archived_at = now() where id = ${assessment.id}`;
+
+      const linked = await sql`select id from lmra_assessments where daily_team_id = ${team.id} and work_date = ${workDate} and archived_at is null`;
+      expect(linked).toHaveLength(0);
+
+      await deleteTestUser(worker.userId);
+    });
+  });
+
+  it("item 4/10: reorder_daily_teams persists across a fresh re-fetch, ordered by display_order — a second reorder call still round-trips correctly", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Reorder Refetch Project");
+    const workDate = "2026-08-20";
+    const [teamA] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Refetch A', 'day', null, null)`);
+    const [teamB] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Refetch B', 'day', null, null)`);
+
+    await asUser(admin.userId, (tx) => tx`select * from reorder_daily_teams(${projectId}, ${workDate}, ${[teamB.id, teamA.id]})`);
+    const firstFetch = await sql`select id from daily_teams where project_id = ${projectId} and work_date = ${workDate} order by display_order`;
+    expect(firstFetch.map((r) => r.id)).toEqual([teamB.id, teamA.id]);
+
+    // A fully independent second "session" re-fetches — order must still hold (simulates logout/login).
+    const secondFetch = await sql`select id from daily_teams where project_id = ${projectId} and work_date = ${workDate} order by display_order`;
+    expect(secondFetch.map((r) => r.id)).toEqual([teamB.id, teamA.id]);
+
+    // Reordering back the other way round-trips cleanly too.
+    await asUser(admin.userId, (tx) => tx`select * from reorder_daily_teams(${projectId}, ${workDate}, ${[teamA.id, teamB.id]})`);
+    const thirdFetch = await sql`select id from daily_teams where project_id = ${projectId} and work_date = ${workDate} order by display_order`;
+    expect(thirdFetch.map((r) => r.id)).toEqual([teamA.id, teamB.id]);
+  });
 });

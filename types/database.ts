@@ -5400,6 +5400,45 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      update_daily_team_with_foreman: {
+        Args: {
+          target_activity?: string
+          target_daily_team_id: string
+          target_foreman_employee_id?: string
+          target_name: string
+          target_project_id: string
+          target_shift: Database["public"]["Enums"]["lmra_shift"]
+          target_work_area?: string
+          target_work_date: string
+        }
+        Returns: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_lmra_assessment: {
         Args: {
           target_hazards: Json

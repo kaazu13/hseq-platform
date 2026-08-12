@@ -34,6 +34,24 @@ export const createDailyTeamSchema = z.object({
 });
 export type CreateDailyTeamInput = z.infer<typeof createDailyTeamSchema>;
 
+/**
+ * Item 1/9: the ONE atomic edit path for an EXISTING Today's Team — name,
+ * shift, work area, activity, and an optional Foreman change (null means
+ * "leave foreman assignment as-is," the legacy/repair-safe case). Unlike
+ * dailyTeamFormSchema above, shift is required here — the edit dialog
+ * always shows a pre-filled Select, so there is no "no shift chosen"
+ * state to represent once the update RPC (which requires a shift) is the
+ * only thing this schema feeds.
+ */
+export const updateDailyTeamSchema = z.object({
+  name: z.string().trim().min(1, "Team name is required").max(100, "Keep it under 100 characters"),
+  shift: dailyTeamShiftSchema,
+  foremanEmployeeId: z.string().uuid().nullable(),
+  workArea: optionalText,
+  activity: optionalText,
+});
+export type UpdateDailyTeamInput = z.infer<typeof updateDailyTeamSchema>;
+
 /** Item 4: persists drag-reordered card positions — the ordered list of every team id for that (project, work_date). */
 export const reorderDailyTeamsSchema = z.object({
   orderedTeamIds: z.array(z.string().uuid()).min(1),

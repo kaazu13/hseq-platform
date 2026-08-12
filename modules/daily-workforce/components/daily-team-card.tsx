@@ -6,12 +6,15 @@ import { useRouter } from "next/navigation";
 import { Eye, Lock, Pencil, Plus, ShieldCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { moveDailyTeamMember, removeDailyTeamMember } from "@/modules/daily-workforce/actions";
-import type { DailyTeamWithMembers, EmployeeDailyState } from "@/modules/daily-workforce/types";
+import { DAILY_TEAM_SHIFT_LABELS, type DailyTeamWithMembers, type EmployeeDailyState } from "@/modules/daily-workforce/types";
+import type { DailyTeamLmraSummary } from "@/modules/lmra/queries";
+import { LMRA_STATUS_LABELS } from "@/modules/lmra/types";
 import { DailyTeamFormDialog } from "@/modules/daily-workforce/components/daily-team-form-dialog";
 import { WorkerPickerDialog } from "@/modules/daily-workforce/components/worker-picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type DailyTeamCardProps = {
   companyId: string;
@@ -20,9 +23,13 @@ type DailyTeamCardProps = {
   team: DailyTeamWithMembers;
   workforce: EmployeeDailyState[];
   canManage: boolean;
-  /** Item 5: non-archived LMRA ids already created for this EXACT team/day, if any. */
-  lmraIds?: string[];
+  /** Item 3: every valid (non-archived) LMRA already created for this EXACT (company, project, daily_team_id, work_date), newest first. Zero = neutral "LMRA"; one = green "✓ LMRA" linking straight to it; more than one = green "✓ LMRA (N)" opening a list of all of them. */
+  lmraEntries?: DailyTeamLmraSummary[];
 };
+
+function formatLmraTimestamp(value: string): string {
+  return new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
 
 /**
  * A single Today's Team card — see this milestone's example UI ("Team
@@ -32,7 +39,7 @@ type DailyTeamCardProps = {
  * even a manage-tier user cannot edit a locked day without first calling
  * unlock (a day-level action, not per-team — see the page header).
  */
-export function DailyTeamCard({ companyId, projectId, workDate, team, workforce, canManage, lmraIds = [] }: DailyTeamCardProps) {
+export function DailyTeamCard({ companyId, projectId, workDate, team, workforce, canManage, lmraEntries = [] }: DailyTeamCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
@@ -72,6 +79,11 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
           <div className="flex flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">{team.name}</span>
+              {team.shift && (
+                <Badge variant="outline" className="text-xs">
+                  {DAILY_TEAM_SHIFT_LABELS[team.shift]}
+                </Badge>
+              )}
               {isLocked && (
                 <Badge variant="secondary" className="gap-1 text-xs">
                   <Lock className="size-3" />
@@ -83,7 +95,7 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
             {team.activity && <span className="text-xs text-muted-foreground">Activity: {team.activity}</span>}
           </div>
           {canEdit && (
-            <Button variant="ghost" size="icon-sm" onClick={() => setEditOpen(true)} aria-label={`Edit ${team.name}`}>
+            <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} aria-label={`Edit ${team.name}`} title="Edit team">
               <Pencil />
             </Button>
           )}
@@ -153,22 +165,46 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
           {totalCount} {totalCount === 1 ? "worker" : "workers"}
         </span>
         <div className="flex items-center gap-1">
-          {lmraIds.length > 0 ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              nativeButton={false}
-              render={<Link href={`/lmra/${lmraIds[0]}`} />}
-              className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
-            >
-              <ShieldCheck />
-              LMRA{lmraIds.length > 1 ? ` (${lmraIds.length})` : ""}
-            </Button>
-          ) : (
+          {lmraEntries.length === 0 ? (
             <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/lmra/new?dailyTeamId=${team.id}&workDate=${workDate}`} />}>
               <ShieldCheck />
               LMRA
             </Button>
+          ) : lmraEntries.length === 1 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
+              render={<Link href={`/lmra/${lmraEntries[0].id}`} />}
+              className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              <ShieldCheck />
+              LMRA
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+                  />
+                }
+              >
+                <ShieldCheck />
+                LMRA ({lmraEntries.length})
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">{team.name} — {lmraEntries.length} LMRAs today</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {lmraEntries.map((entry) => (
+                  <DropdownMenuItem key={entry.id} render={<Link href={`/lmra/${entry.id}`} />}>
+                    {formatLmraTimestamp(entry.createdAt)} · {LMRA_STATUS_LABELS[entry.status]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/observations/new?projectId=${projectId}&dailyTeamId=${team.id}`} />}>
             <Eye />
@@ -177,7 +213,7 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
         </div>
       </CardFooter>
 
-      {canEdit && <DailyTeamFormDialog companyId={companyId} projectId={projectId} workDate={workDate} team={team} open={editOpen} onOpenChange={setEditOpen} />}
+      {canEdit && <DailyTeamFormDialog companyId={companyId} projectId={projectId} workDate={workDate} team={team} workforce={workforce} open={editOpen} onOpenChange={setEditOpen} />}
       {canEdit && (
         <WorkerPickerDialog
           open={pickerMode !== null}

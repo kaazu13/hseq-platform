@@ -91,6 +91,46 @@ export function employeeIsAvailableForAssignment(state: Pick<EmployeeDailyState,
   return dailyAttendancePermitsWork(state.attendanceStatus);
 }
 
+export type ForemanGroup<T extends DailyTeamWithMembers> = { foremanId: string | null; foremanName: string; items: T[] };
+
+/**
+ * Item 5: Today's Teams' primary grouping is the responsible Foreman, not
+ * shift — shift stays a per-card attribute and remains fully in the data
+ * model, just no longer the heading key. "No Foreman Assigned" is the
+ * explicit fallback for legacy/broken records only (still grouped, still
+ * respects display_order — nothing silently disappears); new teams always
+ * require a foreman (create_daily_team_with_foreman()), so this bucket
+ * should only ever hold pre-existing historical rows. A team with more
+ * than one foreman (unusual, but the data model allows it) groups under
+ * its FIRST foreman only — the same "first" convention used for that
+ * team's own foreman-count singular/plural label. Groups sort by foreman
+ * name, with "No Foreman Assigned" always last; within a group, `items`
+ * keeps its input order, i.e. whatever the caller already sorted by
+ * display_order.
+ */
+export function groupTeamsByForeman<T extends DailyTeamWithMembers>(items: T[]): ForemanGroup<T>[] {
+  const groups = new Map<string, ForemanGroup<T>>();
+  for (const item of items) {
+    const foreman = item.foremen[0] ?? null;
+    const key = foreman?.employee.id ?? "__none";
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      groups.set(key, {
+        foremanId: foreman?.employee.id ?? null,
+        foremanName: foreman ? `${foreman.employee.first_name} ${foreman.employee.last_name}` : "No Foreman Assigned",
+        items: [item],
+      });
+    }
+  }
+  return [...groups.values()].sort((a, b) => {
+    if (a.foremanId === null) return 1;
+    if (b.foremanId === null) return -1;
+    return a.foremanName.localeCompare(b.foremanName);
+  });
+}
+
 export type DailyWorkforceSummary = {
   rosterSize: number;
   presentCount: number;

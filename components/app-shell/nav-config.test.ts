@@ -135,4 +135,47 @@ describe("NAV_GROUPS structure", () => {
     const item = ALL_NAV_ITEMS.find((i) => i.label === "Scaffold Inspections")!;
     expect(item.status).toBe("available");
   });
+
+  it("milestone F item 6: the personal dashboard is labeled 'Your Dashboard', not the generic 'Dashboard'", () => {
+    expect(ALL_NAV_ITEMS.some((item) => item.label === "Dashboard")).toBe(false);
+    const item = ALL_NAV_ITEMS.find((item) => item.href === "/dashboard")!;
+    expect(item).toBeDefined();
+    expect(item.label).toBe("Your Dashboard");
+  });
+
+  it("milestone F item 7: a 'Project Dashboard' nav item resolves to the canonical company/project-scoped route", () => {
+    const item = ALL_NAV_ITEMS.find((i) => i.label === "Project Dashboard")!;
+    expect(item).toBeDefined();
+    expect(item.buildHref).toBeTypeOf("function");
+    expect(item.buildHref!({ companyId: "c1", projectId: "p1" })).toBe("/companies/c1/projects/p1");
+  });
+});
+
+describe("milestone F item 8: 'Projects' stays a single, non-competing admin/list entry", () => {
+  it("exactly one 'Projects' nav item exists, pointing at the plain admin list — never a second everyday context selector", () => {
+    const projectsItems = ALL_NAV_ITEMS.filter((item) => item.label === "Projects");
+    expect(projectsItems).toHaveLength(1);
+    expect(projectsItems[0].href).toBe("/projects");
+    expect(projectsItems[0].buildHref).toBeUndefined();
+  });
+});
+
+describe("matchSegment: '' (project root — 'Project Dashboard')", () => {
+  const projectDashboardItem: NavItem = {
+    label: "Project Dashboard",
+    href: "/project-dashboard",
+    icon: baseItem.icon,
+    status: "available",
+    description: "",
+    buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}`,
+    matchSegment: "",
+  };
+
+  it("matches the bare project root", () => {
+    expect(isNavItemActive(projectDashboardItem, "/companies/c1/projects/p1", new URLSearchParams())).toBe(true);
+  });
+
+  it("does not match a sub-page under the same project", () => {
+    expect(isNavItemActive(projectDashboardItem, "/companies/c1/projects/p1/teams", new URLSearchParams())).toBe(false);
+  });
 });

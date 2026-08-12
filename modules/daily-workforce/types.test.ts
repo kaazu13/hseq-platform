@@ -1,9 +1,34 @@
 import { describe, it, expect } from "vitest";
-import { dailyAttendancePermitsWork, employeeIsAvailableForAssignment, summarizeDailyWorkforce, summarizeWorkforceByStatus, DAILY_ATTENDANCE_STATUSES_PERMITTING_WORK, DAILY_ATTENDANCE_STATUSES } from "./types";
-import type { DailyAttendanceStatus, DailyTeamShift } from "./types";
+import {
+  dailyAttendancePermitsWork,
+  employeeIsAvailableForAssignment,
+  summarizeDailyWorkforce,
+  summarizeWorkforceByStatus,
+  groupTeamsByForeman,
+  DAILY_ATTENDANCE_STATUSES_PERMITTING_WORK,
+  DAILY_ATTENDANCE_STATUSES,
+} from "./types";
+import type { DailyAttendanceStatus, DailyTeamShift, DailyTeamWithMembers, DailyTeamMemberWithEmployee } from "./types";
 
 function state(attendanceStatus: DailyAttendanceStatus, assignedTeam: { id: string; name: string; shift: DailyTeamShift | null } | null = null) {
   return { attendanceStatus, assignedTeam };
+}
+
+function foremanMember(id: string, firstName: string): DailyTeamMemberWithEmployee {
+  return {
+    id: `member-${id}`,
+    employee: { id, first_name: firstName, last_name: "Foreman" },
+  } as unknown as DailyTeamMemberWithEmployee;
+}
+
+function team(id: string, displayOrder: number, foremen: DailyTeamMemberWithEmployee[]): DailyTeamWithMembers {
+  return {
+    id,
+    name: `Team ${id}`,
+    display_order: displayOrder,
+    foremen,
+    workers: [],
+  } as unknown as DailyTeamWithMembers;
 }
 
 describe("dailyAttendancePermitsWork", () => {
@@ -87,5 +112,47 @@ describe("summarizeWorkforceByStatus — item 11's clickable summary counters", 
 
   it("returns all zeros for an empty roster", () => {
     expect(summarizeWorkforceByStatus([])).toEqual({ present: 0, assigned: 0, notAssigned: 0, absent: 0, leave: 0, sick: 0, otherUnavailable: 0 });
+  });
+});
+
+describe("groupTeamsByForeman — item 5/10", () => {
+  it("groups teams under their foreman's name, keeping each group's items in the input (display_order) order", () => {
+    const karl = foremanMember("karl-1", "Karl");
+    const peter = foremanMember("peter-1", "Peter");
+    const teams = [
+      team("t3", 2, [karl]),
+      team("t1", 0, [karl]),
+      team("t2", 1, [peter]),
+    ];
+
+    const groups = groupTeamsByForeman(teams);
+
+    expect(groups.map((g) => g.foremanName)).toEqual(["Karl Foreman", "Peter Foreman"]);
+    const karlGroup = groups.find((g) => g.foremanName === "Karl Foreman")!;
+    // Input order preserved — this is where display_order-sorted input stays respected inside the group.
+    expect(karlGroup.items.map((t) => t.id)).toEqual(["t3", "t1"]);
+  });
+
+  it("teams with no foreman fall back to a 'No Foreman Assigned' group, sorted last", () => {
+    const karl = foremanMember("karl-1", "Karl");
+    const teams = [team("legacy", 0, []), team("with-foreman", 1, [karl])];
+
+    const groups = groupTeamsByForeman(teams);
+
+    expect(groups.map((g) => g.foremanName)).toEqual(["Karl Foreman", "No Foreman Assigned"]);
+    expect(groups.find((g) => g.foremanName === "No Foreman Assigned")!.items.map((t) => t.id)).toEqual(["legacy"]);
+  });
+
+  it("a team with more than one foreman groups under the first one only", () => {
+    const karl = foremanMember("karl-1", "Karl");
+    const peter = foremanMember("peter-1", "Peter");
+    const groups = groupTeamsByForeman([team("t1", 0, [karl, peter])]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].foremanName).toBe("Karl Foreman");
+  });
+
+  it("returns an empty list for no teams", () => {
+    expect(groupTeamsByForeman([])).toEqual([]);
   });
 });

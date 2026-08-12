@@ -12,12 +12,14 @@ import {
   setDailyAttendanceStatusSchema,
   dailyTeamFormSchema,
   createDailyTeamSchema,
+  updateDailyTeamSchema,
   reorderDailyTeamsSchema,
   moveDailyTeamMemberSchema,
   unlockDailyTeamsSchema,
   type SetDailyAttendanceStatusInput,
   type DailyTeamFormInput,
   type CreateDailyTeamInput,
+  type UpdateDailyTeamInput,
   type ReorderDailyTeamsInput,
   type MoveDailyTeamMemberInput,
   type UnlockDailyTeamsInput,
@@ -126,6 +128,50 @@ export async function saveDailyTeam(
       target_work_date: workDate,
       target_name: parsed.data.name,
       target_shift: (parsed.data.shift ?? null) as DailyTeamShift,
+      target_work_area: (parsed.data.workArea ?? null) as string,
+      target_activity: (parsed.data.activity ?? null) as string,
+    })
+    .single();
+
+  if (error || !data) {
+    if (error && isRlsViolation(error)) forbidden();
+    if (error && isRaisedException(error)) {
+      return { ok: false, error: { code: "validation_error", message: error.message } };
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't save the team. Try again." } };
+  }
+
+  revalidateDailyWorkforcePaths(companyId, projectId);
+  return { ok: true, data: { dailyTeamId: (data as DailyTeam).id } };
+}
+
+/**
+ * Item 1/9: the ONE atomic edit path for an EXISTING Today's Team —
+ * name/shift/work area/activity plus an optional Foreman change, all in
+ * one all-or-nothing save (update_daily_team_with_foreman()). A shift
+ * change that would collide with another team's existing member for any
+ * of this team's current employees is rejected with a specific,
+ * actionable message and nothing is partially applied. Historical locked
+ * teams remain frozen — validate_daily_team_update()'s existing lock
+ * check fires the same way it does for save_daily_team().
+ */
+export async function updateDailyTeam(companyId: string, projectId: string, workDate: string, dailyTeamId: string, input: UpdateDailyTeamInput): Promise<ActionResult<{ dailyTeamId: string }>> {
+  const parsed = updateDailyTeamSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireDailyWorkforceManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .rpc("update_daily_team_with_foreman", {
+      target_daily_team_id: dailyTeamId,
+      target_project_id: projectId,
+      target_work_date: workDate,
+      target_name: parsed.data.name,
+      target_shift: parsed.data.shift as DailyTeamShift,
+      target_foreman_employee_id: parsed.data.foremanEmployeeId as string,
       target_work_area: (parsed.data.workArea ?? null) as string,
       target_activity: (parsed.data.activity ?? null) as string,
     })

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { LmraAssessment, LmraAssessmentDetail, BasicEmployee } from "./types";
+import type { LmraAssessment, LmraAssessmentDetail, BasicEmployee, LmraStatus } from "./types";
 
 /**
  * Server-only data access for the LMRA domain — see docs/API_CONVENTIONS.md
@@ -24,30 +24,41 @@ export type LmraListFilters = {
   dateTo?: string;
 };
 
+export type DailyTeamLmraSummary = { id: string; status: LmraStatus; createdAt: string };
+
 /**
- * Item 5: which Today's Teams (by daily_team_id) already have a non-
- * archived LMRA created for that EXACT team — the precise link
- * lmra_assessments.daily_team_id now provides (supabase/migrations/20260820092000_lmra_daily_team_link.sql),
- * never a fuzzy participant/work-area/date match that could mark an
- * unrelated team green. Returns each linked team's LMRA ids so the card
- * can link straight to the (single, or first-of-several) assessment.
+ * Item 3/5: which Today's Teams (by daily_team_id) already have a valid
+ * LMRA created for that EXACT (company, project, daily_team_id, work_date)
+ * — the precise link lmra_assessments.daily_team_id provides
+ * (supabase/migrations/20260820092000_lmra_daily_team_link.sql), never a
+ * fuzzy participant/work-area/date/team-name match that could mark an
+ * unrelated team green. "Valid" excludes archived (archived_at is not a
+ * status this codebase's lmra_status enum defines separately as
+ * "voided"/"cancelled" — draft/submitted/approved/rejected are all real,
+ * non-archived assessments, so they all count toward completion; only
+ * `archived_at is null` is the exclusion this domain actually has). A team
+ * may have any number of LMRAs, not just one — every one of them is
+ * returned, newest first, so the card can offer a real "see all" list
+ * once there is more than one.
  */
-export async function listLmraCountsByDailyTeamId(companyId: string, projectId: string, workDate: string): Promise<Map<string, string[]>> {
+export async function listLmraCountsByDailyTeamId(companyId: string, projectId: string, workDate: string): Promise<Map<string, DailyTeamLmraSummary[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lmra_assessments")
-    .select("id, daily_team_id")
+    .select("id, daily_team_id, status, created_at")
     .eq("company_id", companyId)
     .eq("project_id", projectId)
     .eq("work_date", workDate)
     .is("archived_at", null)
-    .not("daily_team_id", "is", null);
+    .not("daily_team_id", "is", null)
+    .order("created_at", { ascending: false });
   if (error) throw error;
 
-  const byTeamId = new Map<string, string[]>();
+  const byTeamId = new Map<string, DailyTeamLmraSummary[]>();
   for (const row of data ?? []) {
     if (!row.daily_team_id) continue;
-    byTeamId.set(row.daily_team_id, [...(byTeamId.get(row.daily_team_id) ?? []), row.id]);
+    const entry: DailyTeamLmraSummary = { id: row.id, status: row.status, createdAt: row.created_at };
+    byTeamId.set(row.daily_team_id, [...(byTeamId.get(row.daily_team_id) ?? []), entry]);
   }
   return byTeamId;
 }

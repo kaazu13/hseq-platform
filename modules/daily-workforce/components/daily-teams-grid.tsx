@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { reorderDailyTeams } from "@/modules/daily-workforce/actions";
 import { DailyTeamCard } from "@/modules/daily-workforce/components/daily-team-card";
 import type { DailyTeamWithMembers, EmployeeDailyState } from "@/modules/daily-workforce/types";
+import type { DailyTeamLmraSummary } from "@/modules/lmra/queries";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +19,7 @@ type DailyTeamsGridProps = {
   teams: DailyTeamWithMembers[];
   workforce: EmployeeDailyState[];
   /** Plain object, not a Map — Maps do not cross the Server/Client Component boundary. */
-  lmraCountsByTeamId: Record<string, string[]>;
+  lmraCountsByTeamId: Record<string, DailyTeamLmraSummary[]>;
 };
 
 /**
@@ -46,7 +47,22 @@ export function DailyTeamsGrid({ companyId, projectId, workDate, canManage, team
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const teamIds = teams.map((team) => team.id);
-  if (!draggingId && !isPending && JSON.stringify(order) !== JSON.stringify(teamIds)) {
+  const teamIdsKey = teamIds.join(",");
+  // Item 4's persistence bug: this used to gate on `isPending` instead of
+  // a remembered "last order we actually rendered" key. router.refresh()
+  // is fire-and-forget — our own startTransition's `isPending` can flip
+  // back to false before the refreshed `teams` prop actually arrives,
+  // which raced this sync back to the STALE pre-reorder prop and visibly
+  // snapped the drop back to its old position even though the RPC had
+  // already succeeded. Comparing against STATE holding the last order we
+  // actually synced from (the React-sanctioned "adjust state during
+  // render" pattern — https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  // — refs cannot be read/written during render) means this only ever
+  // fires when `teams` itself has genuinely changed — never mid-flight —
+  // regardless of timing.
+  const [lastSyncedTeamIdsKey, setLastSyncedTeamIdsKey] = useState(teamIdsKey);
+  if (!draggingId && teamIdsKey !== lastSyncedTeamIdsKey) {
+    setLastSyncedTeamIdsKey(teamIdsKey);
     setOrder(teamIds);
   }
 
@@ -131,7 +147,7 @@ export function DailyTeamsGrid({ companyId, projectId, workDate, canManage, team
               team={team}
               workforce={workforce}
               canManage={canManage}
-              lmraIds={lmraCountsByTeamId[teamId] ?? []}
+              lmraEntries={lmraCountsByTeamId[teamId] ?? []}
             />
           </div>
         );

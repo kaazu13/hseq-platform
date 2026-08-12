@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { setDailyAttendanceStatusSchema, dailyTeamFormSchema, createDailyTeamSchema, reorderDailyTeamsSchema, moveDailyTeamMemberSchema, unlockDailyTeamsSchema } from "./validation";
+import { setDailyAttendanceStatusSchema, dailyTeamFormSchema, createDailyTeamSchema, updateDailyTeamSchema, reorderDailyTeamsSchema, moveDailyTeamMemberSchema, unlockDailyTeamsSchema } from "./validation";
 
 describe("setDailyAttendanceStatusSchema", () => {
   it("accepts every one of the 7 controlled statuses", () => {
@@ -64,6 +64,39 @@ describe("createDailyTeamSchema — item 9: name, shift, and foreman are all req
 
   it("rejects a blank name", () => {
     expect(createDailyTeamSchema.safeParse({ ...VALID, name: "" }).success).toBe(false);
+  });
+});
+
+describe("updateDailyTeamSchema — item 1: the Edit Team dialog's fields", () => {
+  const FOREMAN_ID = "123e4567-e89b-42d3-a456-426614174002";
+  const VALID = { name: "Team A200", shift: "day", foremanEmployeeId: FOREMAN_ID, workArea: "A200", activity: "Scaffold Assembly" };
+
+  it("accepts a fully populated valid input", () => {
+    expect(updateDailyTeamSchema.safeParse(VALID).success).toBe(true);
+  });
+
+  it("accepts a null foremanEmployeeId — 'leave foreman assignment untouched'", () => {
+    expect(updateDailyTeamSchema.safeParse({ ...VALID, foremanEmployeeId: null }).success).toBe(true);
+  });
+
+  it("rejects a missing foremanEmployeeId key entirely — must be explicitly null, not omitted", () => {
+    const withoutForeman: Record<string, unknown> = { ...VALID };
+    delete withoutForeman.foremanEmployeeId;
+    expect(updateDailyTeamSchema.safeParse(withoutForeman).success).toBe(false);
+  });
+
+  it("rejects a missing shift — unlike dailyTeamFormSchema, the edit dialog always has a shift selected", () => {
+    const withoutShift: Record<string, unknown> = { ...VALID };
+    delete withoutShift.shift;
+    expect(updateDailyTeamSchema.safeParse(withoutShift).success).toBe(false);
+  });
+
+  it("rejects a blank name", () => {
+    expect(updateDailyTeamSchema.safeParse({ ...VALID, name: "" }).success).toBe(false);
+  });
+
+  it("rejects a non-uuid foremanEmployeeId", () => {
+    expect(updateDailyTeamSchema.safeParse({ ...VALID, foremanEmployeeId: "not-a-uuid" }).success).toBe(false);
   });
 });
 

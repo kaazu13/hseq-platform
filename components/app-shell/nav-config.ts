@@ -98,11 +98,20 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Overview",
     items: [
       {
-        label: "Dashboard",
+        label: "Your Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
         status: "available",
-        description: "Your company at a glance.",
+        description: "Your personal daily assignment, hours, observations, notifications, and leave — at a glance.",
+      },
+      {
+        label: "Project Dashboard",
+        href: "/project-dashboard",
+        icon: FolderKanban,
+        status: "available",
+        description: "Workforce, Today's Teams, Worked Hours, LMRA activity, Scaffold inspections, Safety Observations, and Corrective Actions for your currently selected project.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}`,
+        matchSegment: "",
       },
       {
         label: "Safety Overview",
@@ -332,8 +341,13 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.item
  * alone can't tell them apart since they share one route.
  */
 export function isNavItemActive(item: NavItem, pathname: string, searchParams: URLSearchParams): boolean {
-  if (item.matchSegment) {
-    return new RegExp(`^/companies/[^/]+/projects/[^/]+/${item.matchSegment}(/|$)`).test(pathname);
+  if (typeof item.matchSegment === "string") {
+    // An empty matchSegment (e.g. "Project Dashboard") means the
+    // project's own root — /companies/X/projects/Y with nothing further —
+    // not a sub-page; every non-empty matchSegment keeps requiring the
+    // literal /segment it names.
+    const pattern = item.matchSegment ? `^/companies/[^/]+/projects/[^/]+/${item.matchSegment}(/|$)` : `^/companies/[^/]+/projects/[^/]+/?$`;
+    return new RegExp(pattern).test(pathname);
   }
   const hrefPath = item.href.split("?")[0];
   if (pathname !== hrefPath && !pathname.startsWith(`${hrefPath}/`)) return false;

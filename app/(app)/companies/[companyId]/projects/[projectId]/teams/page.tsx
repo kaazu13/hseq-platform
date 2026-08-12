@@ -6,7 +6,7 @@ import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/quer
 import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
-import { DAILY_TEAM_SHIFT_LABELS, type DailyTeamShift } from "@/modules/daily-workforce/types";
+import { groupTeamsByForeman } from "@/modules/daily-workforce/types";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
 import { DailyTeamsGrid } from "@/modules/daily-workforce/components/daily-teams-grid";
@@ -30,16 +30,6 @@ function formatWorkDate(value: string): string {
   return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-function groupByShift<T extends { shift: DailyTeamShift | null }>(items: T[]): { shift: DailyTeamShift | null; items: T[] }[] {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const key = item.shift ?? "";
-    groups.set(key, [...(groups.get(key) ?? []), item]);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([shift, groupItems]) => ({ shift: (shift || null) as DailyTeamShift | null, items: groupItems }));
-}
 
 /**
  * Today's Teams — canonical project-scoped route (Planning & Daily nav),
@@ -121,7 +111,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
   ]);
   const hasOpenTeams = teams.some((team) => team.status === "open");
   const hasLockedTeams = teams.some((team) => team.status === "locked");
-  const shiftGroups = groupByShift(teams);
+  const foremanGroups = groupTeamsByForeman(teams);
   const lmraCountsByTeamId = Object.fromEntries(lmraCountsByTeamIdMap);
 
   return (
@@ -158,9 +148,9 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
         <EmptyState icon={HardHat} title="No teams yet for this day" description={canManage ? "Add the first team above." : "No teams have been created for this day yet."} />
       ) : (
         <div className="flex flex-col gap-6">
-          {shiftGroups.map((group) => (
-            <div key={group.shift ?? "__none"} className="flex flex-col gap-3">
-              <SectionHeader title={group.shift ? DAILY_TEAM_SHIFT_LABELS[group.shift] : "Unassigned shift"} />
+          {foremanGroups.map((group) => (
+            <div key={group.foremanId ?? "__none"} className="flex flex-col gap-3">
+              <SectionHeader title={group.foremanName} />
               <DailyTeamsGrid
                 companyId={companyId}
                 projectId={projectId}
