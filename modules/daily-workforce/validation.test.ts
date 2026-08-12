@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { setDailyAttendanceStatusSchema, dailyTeamFormSchema, createDailyTeamSchema, updateDailyTeamSchema, reorderDailyTeamsSchema, moveDailyTeamMemberSchema, unlockDailyTeamsSchema } from "./validation";
+import {
+  setDailyAttendanceStatusSchema,
+  dailyTeamFormSchema,
+  addDailyTeamForemanSchema,
+  createDailyTeamForForemanSchema,
+  updateDailyTeamSchema,
+  reorderDailyTeamsSchema,
+  moveDailyTeamMemberSchema,
+  unlockDailyTeamsSchema,
+} from "./validation";
 
 describe("setDailyAttendanceStatusSchema", () => {
   it("accepts every one of the 7 controlled statuses", () => {
@@ -38,32 +47,46 @@ describe("dailyTeamFormSchema", () => {
   });
 });
 
-describe("createDailyTeamSchema — item 9: name, shift, and foreman are all required", () => {
+describe("addDailyTeamForemanSchema — item 4", () => {
+  it("accepts a valid foreman id", () => {
+    expect(addDailyTeamForemanSchema.safeParse({ foremanEmployeeId: "123e4567-e89b-42d3-a456-426614174002" }).success).toBe(true);
+  });
+
+  it("rejects a non-uuid", () => {
+    expect(addDailyTeamForemanSchema.safeParse({ foremanEmployeeId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("rejects a missing foremanEmployeeId", () => {
+    expect(addDailyTeamForemanSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("createDailyTeamForForemanSchema — item 5: name, shift, and foreman are all required; foreman is never re-selected by the user, but is still validated", () => {
   const FOREMAN_ID = "123e4567-e89b-42d3-a456-426614174002";
   const VALID = { name: "Team A200", shift: "day", foremanEmployeeId: FOREMAN_ID, workArea: "A200", activity: "Scaffold Assembly" };
 
   it("accepts a fully populated valid input", () => {
-    expect(createDailyTeamSchema.safeParse(VALID).success).toBe(true);
+    expect(createDailyTeamForForemanSchema.safeParse(VALID).success).toBe(true);
   });
 
   it("accepts with workArea/activity omitted", () => {
-    expect(createDailyTeamSchema.safeParse({ name: "Team A200", shift: "day", foremanEmployeeId: FOREMAN_ID }).success).toBe(true);
+    expect(createDailyTeamForForemanSchema.safeParse({ name: "Team A200", shift: "day", foremanEmployeeId: FOREMAN_ID }).success).toBe(true);
   });
 
   it("rejects a missing shift", () => {
-    expect(createDailyTeamSchema.safeParse({ name: "Team A200", foremanEmployeeId: FOREMAN_ID }).success).toBe(false);
+    expect(createDailyTeamForForemanSchema.safeParse({ name: "Team A200", foremanEmployeeId: FOREMAN_ID }).success).toBe(false);
   });
 
   it("rejects a missing foreman", () => {
-    expect(createDailyTeamSchema.safeParse({ name: "Team A200", shift: "day" }).success).toBe(false);
+    expect(createDailyTeamForForemanSchema.safeParse({ name: "Team A200", shift: "day" }).success).toBe(false);
   });
 
   it("rejects a non-uuid foremanEmployeeId", () => {
-    expect(createDailyTeamSchema.safeParse({ ...VALID, foremanEmployeeId: "not-a-uuid" }).success).toBe(false);
+    expect(createDailyTeamForForemanSchema.safeParse({ ...VALID, foremanEmployeeId: "not-a-uuid" }).success).toBe(false);
   });
 
   it("rejects a blank name", () => {
-    expect(createDailyTeamSchema.safeParse({ ...VALID, name: "" }).success).toBe(false);
+    expect(createDailyTeamForForemanSchema.safeParse({ ...VALID, name: "" }).success).toBe(false);
   });
 });
 

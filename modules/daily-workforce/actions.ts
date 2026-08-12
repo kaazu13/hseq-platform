@@ -11,14 +11,16 @@ import { canManageDailyWorkforce } from "./permissions";
 import {
   setDailyAttendanceStatusSchema,
   dailyTeamFormSchema,
-  createDailyTeamSchema,
+  addDailyTeamForemanSchema,
+  createDailyTeamForForemanSchema,
   updateDailyTeamSchema,
   reorderDailyTeamsSchema,
   moveDailyTeamMemberSchema,
   unlockDailyTeamsSchema,
   type SetDailyAttendanceStatusInput,
   type DailyTeamFormInput,
-  type CreateDailyTeamInput,
+  type AddDailyTeamForemanInput,
+  type CreateDailyTeamForForemanInput,
   type UpdateDailyTeamInput,
   type ReorderDailyTeamsInput,
   type MoveDailyTeamMemberInput,
@@ -189,9 +191,70 @@ export async function updateDailyTeam(companyId: string, projectId: string, work
   return { ok: true, data: { dailyTeamId: (data as DailyTeam).id } };
 }
 
-/** Item 9: the ONLY way to create a NEW Today's Team — name, shift, and an eligible foreman are all required, atomically (create_daily_team_with_foreman()). */
-export async function createDailyTeam(companyId: string, projectId: string, workDate: string, input: CreateDailyTeamInput): Promise<ActionResult<{ dailyTeamId: string }>> {
-  const parsed = createDailyTeamSchema.safeParse(input);
+/**
+ * Milestone G, item 4: adds a Foreman to today's roster — this alone
+ * creates no team. Only an eligible, available Foreman not already on
+ * today's roster can be added (add_daily_team_foreman()).
+ */
+export async function addDailyTeamForeman(companyId: string, projectId: string, workDate: string, input: AddDailyTeamForemanInput): Promise<ActionResult<null>> {
+  const parsed = addDailyTeamForemanSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the selection.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireDailyWorkforceManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("add_daily_team_foreman", {
+    target_project_id: projectId,
+    target_work_date: workDate,
+    target_foreman_employee_id: parsed.data.foremanEmployeeId,
+  });
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) {
+      return { ok: false, error: { code: "validation_error", message: error.message } };
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't add this foreman. Try again." } };
+  }
+
+  revalidateDailyWorkforcePaths(companyId, projectId);
+  return { ok: true, data: null };
+}
+
+/** The inverse of addDailyTeamForeman — refuses while the Foreman still has any team today (remove_daily_team_foreman()). */
+export async function removeDailyTeamForeman(companyId: string, projectId: string, workDate: string, foremanEmployeeId: string): Promise<ActionResult<null>> {
+  await requireDailyWorkforceManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("remove_daily_team_foreman", {
+    target_project_id: projectId,
+    target_work_date: workDate,
+    target_foreman_employee_id: foremanEmployeeId,
+  });
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) {
+      return { ok: false, error: { code: "validation_error", message: error.message } };
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't remove this foreman. Try again." } };
+  }
+
+  revalidateDailyWorkforcePaths(companyId, projectId);
+  return { ok: true, data: null };
+}
+
+/**
+ * Milestone G, item 5: creates a NEW Today's Team directly under an
+ * already-known, already-rostered Foreman — no Foreman re-selection in
+ * this flow (create_daily_team_for_foreman()). Unlike the old, retired
+ * create_daily_team_with_foreman(), this never touches daily_team_members,
+ * so it never collides with another team the same Foreman already runs.
+ */
+export async function createDailyTeamForForeman(companyId: string, projectId: string, workDate: string, input: CreateDailyTeamForForemanInput): Promise<ActionResult<{ dailyTeamId: string }>> {
+  const parsed = createDailyTeamForForemanSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
@@ -200,12 +263,12 @@ export async function createDailyTeam(companyId: string, projectId: string, work
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .rpc("create_daily_team_with_foreman", {
+    .rpc("create_daily_team_for_foreman", {
       target_project_id: projectId,
       target_work_date: workDate,
+      target_foreman_employee_id: parsed.data.foremanEmployeeId,
       target_name: parsed.data.name,
       target_shift: parsed.data.shift as DailyTeamShift,
-      target_foreman_employee_id: parsed.data.foremanEmployeeId,
       target_work_area: (parsed.data.workArea ?? null) as string,
       target_activity: (parsed.data.activity ?? null) as string,
     })

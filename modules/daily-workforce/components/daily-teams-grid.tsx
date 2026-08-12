@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import { GripVertical, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import { reorderDailyTeams } from "@/modules/daily-workforce/actions";
 import { DailyTeamCard } from "@/modules/daily-workforce/components/daily-team-card";
 import type { DailyTeamWithMembers, EmployeeDailyState } from "@/modules/daily-workforce/types";
 import type { DailyTeamLmraSummary } from "@/modules/lmra/queries";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 type DailyTeamsGridProps = {
@@ -23,22 +24,30 @@ type DailyTeamsGridProps = {
 };
 
 /**
- * Item 4: drag-and-drop DISPLAY ORDER for Today's Team cards. Native HTML5
- * drag-and-drop (desktop, mouse) — no new dependency — PLUS always-visible
- * Up/Down buttons on every card (works identically on desktop and touch,
- * satisfying "on mobile, do not rely on drag/drop as the only method").
- * Reordering calls reorder_daily_teams() (DISPLAY ORDER ONLY — see that
- * RPC's own comment); membership/shift/foreman/work_area/activity/
+ * Item 9: drag-and-drop DISPLAY ORDER for Today's Team cards WITHIN one
+ * Foreman's section (the page renders one DailyTeamsGrid per Foreman
+ * group — see the Teams page). Reordering calls reorder_daily_teams()
+ * (DISPLAY ORDER ONLY); membership/shift/foreman/work_area/activity/
  * historical data are never touched by anything in this component.
+ * Cross-Foreman drag is deliberately NOT implemented — moving a team to a
+ * different Foreman only ever happens through Change Foreman (item 6's
+ * atomic mutation), never a client-side visual reparent.
+ *
+ * Item 1/8: dragging is scoped to a dedicated small grip handle — never
+ * the whole card — specifically because a full-card draggable region
+ * previously sat as an absolutely-positioned overlay directly on top of
+ * the card's own top-right pencil button, silently swallowing clicks
+ * meant for it (the reported "pencil does nothing" bug). The handle row
+ * sits in normal flow ABOVE the card now — zero overlap with anything the
+ * card itself renders. The permanent on-card Up/Down arrows are gone too
+ * (item 8's "reduce desktop clutter"); the same moves are still reachable
+ * via this row's overflow menu, so keyboard/screen-reader users lose
+ * nothing.
  *
  * Renders DailyTeamCard directly (both are Client Components) rather than
  * accepting a server-supplied render-prop — a plain function cannot cross
- * the Server/Client Component boundary (confirmed live: an earlier
- * version passed `renderCard: (teamId) => ReactNode` from the Server
- * Component page, which silently failed to render any card content at
- * all — caught via an authenticated HTTP smoke test finding zero
- * manage-tier button text anywhere on the page despite canManage being
- * server-computed as true).
+ * the Server/Client Component boundary (confirmed live in an earlier
+ * milestone).
  */
 export function DailyTeamsGrid({ companyId, projectId, workDate, canManage, teams, workforce, lmraCountsByTeamId }: DailyTeamsGridProps) {
   const router = useRouter();
@@ -48,18 +57,11 @@ export function DailyTeamsGrid({ companyId, projectId, workDate, canManage, team
 
   const teamIds = teams.map((team) => team.id);
   const teamIdsKey = teamIds.join(",");
-  // Item 4's persistence bug: this used to gate on `isPending` instead of
-  // a remembered "last order we actually rendered" key. router.refresh()
-  // is fire-and-forget — our own startTransition's `isPending` can flip
-  // back to false before the refreshed `teams` prop actually arrives,
-  // which raced this sync back to the STALE pre-reorder prop and visibly
-  // snapped the drop back to its old position even though the RPC had
-  // already succeeded. Comparing against STATE holding the last order we
-  // actually synced from (the React-sanctioned "adjust state during
-  // render" pattern — https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  // — refs cannot be read/written during render) means this only ever
-  // fires when `teams` itself has genuinely changed — never mid-flight —
-  // regardless of timing.
+  // Comparing against STATE holding the last order we actually synced (the
+  // React-sanctioned "adjust state during render" pattern) rather than
+  // `isPending` — router.refresh() is fire-and-forget, so `isPending` can
+  // flip false before the refreshed `teams` prop actually arrives, which
+  // used to race this sync back to the stale pre-reorder order.
   const [lastSyncedTeamIdsKey, setLastSyncedTeamIdsKey] = useState(teamIdsKey);
   if (!draggingId && teamIdsKey !== lastSyncedTeamIdsKey) {
     setLastSyncedTeamIdsKey(teamIdsKey);
@@ -112,30 +114,33 @@ export function DailyTeamsGrid({ companyId, projectId, workDate, canManage, team
         return (
           <div
             key={teamId}
-            draggable={canManage}
-            onDragStart={() => canManage && setDraggingId(teamId)}
             onDragOver={(event) => canManage && event.preventDefault()}
             onDrop={() => canManage && handleDrop(teamId)}
-            onDragEnd={() => setDraggingId(null)}
-            className={cn("relative", draggingId === teamId && "opacity-50")}
+            className={cn("flex flex-col gap-1", draggingId === teamId && "opacity-50")}
           >
             {canManage && (
-              <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5">
-                <Button type="button" variant="ghost" size="icon-sm" disabled={isPending || index === 0} onClick={() => moveBy(teamId, -1)} aria-label="Move card earlier" title="Move earlier">
-                  <ChevronUp className="size-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={isPending || index === order.length - 1}
-                  onClick={() => moveBy(teamId, 1)}
-                  aria-label="Move card later"
-                  title="Move later"
+              <div className="flex items-center justify-end gap-0.5">
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label={`More actions for ${team.name}`} />}>
+                    <MoreVertical className="size-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem disabled={isPending || index === 0} onClick={() => moveBy(teamId, -1)}>
+                      Move up
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={isPending || index === order.length - 1} onClick={() => moveBy(teamId, 1)}>
+                      Move down
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span
+                  draggable
+                  onDragStart={() => setDraggingId(teamId)}
+                  onDragEnd={() => setDraggingId(null)}
+                  className="cursor-grab p-1 text-muted-foreground"
+                  title="Drag to reorder"
+                  aria-hidden="true"
                 >
-                  <ChevronDown className="size-3.5" />
-                </Button>
-                <span className="cursor-grab text-muted-foreground" title="Drag to reorder">
                   <GripVertical className="size-3.5" />
                 </span>
               </div>

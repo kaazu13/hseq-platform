@@ -53,7 +53,7 @@ export function LmraAddDailyTeamDialog({ open, onOpenChange, companyId, projectI
   }, [open, companyId, projectId, workDate]);
 
   function handleSelect(team: DailyTeamWithMembers) {
-    const employeeIds = [...team.foremen, ...team.workers].map((member) => member.employee.id);
+    const employeeIds = [...(team.foreman ? [team.foreman.id] : []), ...team.workers.map((member) => member.employee.id)];
     onAddTeam(employeeIds);
     onOpenChange(false);
   }
@@ -78,8 +78,8 @@ export function LmraAddDailyTeamDialog({ open, onOpenChange, companyId, projectI
         ) : (
           <div className="flex max-h-96 flex-col gap-1 overflow-y-auto">
             {teams.map((team) => {
-              const workerCount = team.foremen.length + team.workers.length;
-              const foremanNames = team.foremen.map((member) => `${member.employee.first_name} ${member.employee.last_name}`).join(", ");
+              const workerCount = (team.foreman ? 1 : 0) + team.workers.length;
+              const foremanNames = team.foreman ? `${team.foreman.first_name} ${team.foreman.last_name}` : "";
               return (
                 <button
                   key={team.id}

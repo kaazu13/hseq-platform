@@ -53,7 +53,8 @@ export async function formatDailyTeamsWorkbook(companyName: string, projectName:
   headerRow.alignment = { vertical: "middle" };
 
   for (const team of teams) {
-    const members = [...team.foremen.map((m) => ({ ...m, roleLabel: "Foreman" })), ...team.workers.map((m) => ({ ...m, roleLabel: "Member" }))];
+    const foremanRow = team.foreman ? [{ employee: team.foreman, roleLabel: "Foreman" }] : [];
+    const members = [...foremanRow, ...team.workers.map((m) => ({ employee: m.employee, roleLabel: "Member" }))];
     const base = {
       company: companyName,
       project: projectName,

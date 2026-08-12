@@ -24,15 +24,21 @@ export const dailyTeamFormSchema = z.object({
 });
 export type DailyTeamFormInput = z.infer<typeof dailyTeamFormSchema>;
 
-/** Item 9: creating a NEW Today's Team — name, shift, and foreman are all required; work area/activity stay optional. */
-export const createDailyTeamSchema = z.object({
+/** Milestone G, item 4: adding an eligible Foreman to today's roster — this alone creates no team. */
+export const addDailyTeamForemanSchema = z.object({
+  foremanEmployeeId: z.string().uuid("Pick a foreman"),
+});
+export type AddDailyTeamForemanInput = z.infer<typeof addDailyTeamForemanSchema>;
+
+/** Milestone G, item 5: creating a NEW Today's Team under an already-known, already-rostered Foreman — no Foreman re-selection. */
+export const createDailyTeamForForemanSchema = z.object({
   name: z.string().trim().min(1, "Team name is required").max(100, "Keep it under 100 characters"),
   shift: dailyTeamShiftSchema,
-  foremanEmployeeId: z.string().uuid("Pick a foreman"),
+  foremanEmployeeId: z.string().uuid("A foreman is required"),
   workArea: optionalText,
   activity: optionalText,
 });
-export type CreateDailyTeamInput = z.infer<typeof createDailyTeamSchema>;
+export type CreateDailyTeamForForemanInput = z.infer<typeof createDailyTeamForForemanSchema>;
 
 /**
  * Item 1/9: the ONE atomic edit path for an EXISTING Today's Team — name,

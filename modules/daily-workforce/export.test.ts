@@ -57,7 +57,8 @@ describe("formatDailyTeamsWorkbook", () => {
     updated_at: "2026-08-10T07:00:00Z",
     created_by: null,
     updated_by: null,
-    foremen: [member("m1", "t1", "foreman", employee("e1", "Karl", "Andersson"))],
+    foreman_employee_id: "e1",
+    foreman: employee("e1", "Karl", "Andersson"),
     workers: [member("m2", "t1", "member", employee("e2", "Anders", "Holm"))],
   };
 
@@ -79,7 +80,7 @@ describe("formatDailyTeamsWorkbook", () => {
   });
 
   it("emits a single row with blank employee/role for a team with no members, rather than omitting it entirely", async () => {
-    const emptyTeam: DailyTeamWithMembers = { ...team, foremen: [], workers: [] };
+    const emptyTeam: DailyTeamWithMembers = { ...team, foreman_employee_id: null, foreman: null, workers: [] };
     const buffer = await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-10", [emptyTeam]);
     const rows = await loadFirstSheetRows(buffer);
     expect(rows).toHaveLength(2);

@@ -15,8 +15,6 @@ type WorkerPickerDialogProps = {
   title: string;
   description?: string;
   workforce: EmployeeDailyState[];
-  /** "foreman" shows ONLY employees who hold the project's real Foreman role (item 7); "worker" shows every OTHER eligible employee, foremen excluded entirely (item 8). */
-  mode: "foreman" | "worker";
   /** The team currently being added to — a worker already on THIS team is hidden (nothing to do). */
   currentTeamId?: string;
   currentTeamName?: string;
@@ -24,32 +22,33 @@ type WorkerPickerDialogProps = {
 };
 
 /**
- * The fast worker-search-and-assign picker (items 6, 7, 8). Filters to the
- * correct candidate pool for the mode (real foremen only / everyone else),
- * reusing EmployeeDailyState.isEligibleForeman — the same
- * is_eligible_scaffold_foreman() check the database itself enforces, never
- * a second, divergent "who counts as a foreman" rule.
+ * The fast worker-search-and-assign picker (item 7: Foremen never appear
+ * here — non-Foreman eligible workers only). Milestone G retired this
+ * component's old "foreman" mode entirely — Foreman selection now has its
+ * own, differently-behaved ForemanPickerDialog (a Foreman managing
+ * another team is normal, never disabled/requiring "Move to…" the way a
+ * double-booked WORKER still is).
  *
- * Item 6's fix: an employee already assigned to a DIFFERENT team is shown
- * for context but DISABLED for a plain click — the previous version only
- * showed a badge while leaving the row fully clickable, which is exactly
- * how "David was assignable to Team 2 while already on Team 1" happened.
- * Moving them requires the explicit "Move to…" button, which asks for
- * confirmation before calling the same atomic move_daily_team_member()
- * RPC every assignment already goes through — never a silent double
- * assignment, never a temporary unassigned gap.
+ * An employee already assigned to a DIFFERENT team is shown for context
+ * but DISABLED for a plain click — the previous version only showed a
+ * badge while leaving the row fully clickable, which is exactly how "David
+ * was assignable to Team 2 while already on Team 1" happened. Moving them
+ * requires the explicit "Move to…" button, which asks for confirmation
+ * before calling the same atomic move_daily_team_member() RPC every
+ * assignment already goes through — never a silent double assignment,
+ * never a temporary unassigned gap.
  */
-export function WorkerPickerDialog({ open, onOpenChange, title, description, workforce, mode, currentTeamId, currentTeamName, onSelect }: WorkerPickerDialogProps) {
+export function WorkerPickerDialog({ open, onOpenChange, title, description, workforce, currentTeamId, currentTeamName, onSelect }: WorkerPickerDialogProps) {
   const [search, setSearch] = useState("");
   const [pendingMove, setPendingMove] = useState<{ employeeId: string; name: string; fromTeamName: string } | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return workforce
-      .filter((state) => (mode === "foreman" ? state.isEligibleForeman : !state.isEligibleForeman))
+      .filter((state) => !state.isEligibleForeman)
       .filter((state) => state.assignedTeam?.id !== currentTeamId)
       .filter((state) => !query || `${state.employee.first_name} ${state.employee.last_name}`.toLowerCase().includes(query));
-  }, [workforce, search, currentTeamId, mode]);
+  }, [workforce, search, currentTeamId]);
 
   function handleSelect(state: EmployeeDailyState) {
     const available = employeeIsAvailableForAssignment(state);
@@ -80,12 +79,12 @@ export function WorkerPickerDialog({ open, onOpenChange, title, description, wor
 
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder={mode === "foreman" ? "Search foremen…" : "Search workers…"} value={search} onChange={(event) => setSearch(event.target.value)} className="pl-8" autoFocus />
+            <Input placeholder="Search workers…" value={search} onChange={(event) => setSearch(event.target.value)} className="pl-8" autoFocus />
           </div>
 
           <div className="flex max-h-96 flex-col gap-1 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">{mode === "foreman" ? "No eligible foremen found for this project." : "No workers found."}</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">No workers found.</p>
             ) : (
               filtered.map((state) => {
                 const available = employeeIsAvailableForAssignment(state);

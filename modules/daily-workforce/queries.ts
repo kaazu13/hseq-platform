@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DailyAttendance, DailyTeam, DailyTeamMemberWithEmployee, DailyTeamWithMembers, EmployeeDailyState, BasicEmployee } from "./types";
+import type { DailyAttendance, DailyTeam, DailyTeamMemberWithEmployee, DailyTeamWithMembers, DailyTeamForemanRosterEntry, EmployeeDailyState, BasicEmployee } from "./types";
 
 /**
  * Server-only data access for the Daily Workforce / Today's Teams domain —
@@ -36,8 +36,11 @@ export async function isCallerProjectAccessible(projectId: string): Promise<bool
 
 /**
  * Every Today's Team for (project, work_date), ordered by display_order,
- * each paired with its current (removed_at is null) foreman(s) and
- * workers — the Today's Teams grid's single data source.
+ * each paired with its resolved responsible Foreman (milestone G: a
+ * direct `foreman_employee_id` column, not a daily_team_members row — a
+ * Foreman may run more than one of these teams) and its current
+ * (removed_at is null) workers — the Today's Teams grid's single data
+ * source.
  */
 export async function listDailyTeamsForDate(companyId: string, projectId: string, workDate: string): Promise<DailyTeamWithMembers[]> {
   const supabase = await createClient();
@@ -63,7 +66,9 @@ export async function listDailyTeamsForDate(companyId: string, projectId: string
 
   if (membersError) throw membersError;
 
-  const employeeIds = [...new Set((members ?? []).map((member) => member.employee_id))];
+  const foremanIds = [...new Set(teams.map((team) => team.foreman_employee_id).filter((id): id is string => id !== null))];
+  const memberEmployeeIds = [...new Set((members ?? []).map((member) => member.employee_id))];
+  const employeeIds = [...new Set([...foremanIds, ...memberEmployeeIds])];
   const employeeById = new Map<string, BasicEmployee>();
   if (employeeIds.length > 0) {
     const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
@@ -84,10 +89,40 @@ export async function listDailyTeamsForDate(companyId: string, projectId: string
     const teamMembers = membersByTeamId.get(team.id) ?? [];
     return {
       ...team,
-      foremen: sortByName(teamMembers.filter((member) => member.role === "foreman")),
+      foreman: team.foreman_employee_id ? (employeeById.get(team.foreman_employee_id) ?? null) : null,
       workers: sortByName(teamMembers.filter((member) => member.role === "member")),
     };
   });
+}
+
+/**
+ * Milestone G, item 10: which Foremen are part of a project's Today's
+ * Teams structure for one work_date — independent of team count. Drives
+ * which Foreman group headings render, including a Foreman with zero
+ * teams yet.
+ */
+export async function listDailyTeamForemanRoster(companyId: string, projectId: string, workDate: string): Promise<DailyTeamForemanRosterEntry[]> {
+  const supabase = await createClient();
+  const { data: roster, error: rosterError } = await supabase
+    .from("daily_team_foreman_roster")
+    .select("foreman_employee_id")
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("work_date", workDate);
+  if (rosterError) throw rosterError;
+  if (!roster || roster.length === 0) return [];
+
+  const foremanIds = [...new Set(roster.map((row) => row.foreman_employee_id))];
+  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: foremanIds });
+  if (employeesError) throw employeesError;
+
+  const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
+  return foremanIds
+    .map((foremanEmployeeId) => {
+      const employee = employeeById.get(foremanEmployeeId);
+      return employee ? { foremanEmployeeId, employee } : null;
+    })
+    .filter((entry): entry is DailyTeamForemanRosterEntry => entry !== null);
 }
 
 /** A single Today's Team scoped to companyId/projectId/work_date — null if it doesn't exist, belongs elsewhere, or RLS hides it. */
@@ -280,7 +315,7 @@ export async function getEmployeeTodayCard(companyId: string, projectId: string,
 
   const { data: team, error: teamError } = await supabase
     .from("daily_teams")
-    .select("id, name, shift, work_area, activity")
+    .select("id, name, shift, work_area, activity, foreman_employee_id")
     .eq("id", membership.daily_team_id)
     .maybeSingle();
   if (teamError) throw teamError;
@@ -288,18 +323,9 @@ export async function getEmployeeTodayCard(companyId: string, projectId: string,
     return { attendanceStatus: attendanceRow?.status ?? "not_set", team: null };
   }
 
-  const { data: foremanRows, error: foremanError } = await supabase
-    .from("daily_team_members")
-    .select("employee_id")
-    .eq("daily_team_id", team.id)
-    .eq("role", "foreman")
-    .is("removed_at", null)
-    .limit(1);
-  if (foremanError) throw foremanError;
-
   let foremanName: string | null = null;
-  if (foremanRows && foremanRows.length > 0) {
-    const { data: foremen, error: foremenError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: [foremanRows[0].employee_id] });
+  if (team.foreman_employee_id) {
+    const { data: foremen, error: foremenError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: [team.foreman_employee_id] });
     if (foremenError) throw foremenError;
     const foreman = foremen?.[0];
     if (foreman) foremanName = `${foreman.first_name} ${foreman.last_name}`;

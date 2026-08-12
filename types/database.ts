@@ -659,6 +659,65 @@ export type Database = {
           },
         ]
       }
+      daily_team_foreman_roster: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          foreman_employee_id: string
+          id: string
+          project_id: string
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          foreman_employee_id: string
+          id?: string
+          project_id: string
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          foreman_employee_id?: string
+          id?: string
+          project_id?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_team_foreman_roster_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_team_foreman_roster_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_team_foreman_roster_employee_fk"
+            columns: ["foreman_employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "daily_team_foreman_roster_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
       daily_team_members: {
         Row: {
           company_id: string
@@ -747,6 +806,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null
@@ -768,6 +828,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           display_order?: number
+          foreman_employee_id?: string | null
           id?: string
           locked_at?: string | null
           locked_by?: string | null
@@ -789,6 +850,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           display_order?: number
+          foreman_employee_id?: string | null
           id?: string
           locked_at?: string | null
           locked_by?: string | null
@@ -818,6 +880,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_teams_foreman_fk"
+            columns: ["foreman_employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "daily_teams_locked_by_fkey"
@@ -3983,6 +4052,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      add_daily_team_foreman: {
+        Args: {
+          target_foreman_employee_id: string
+          target_project_id: string
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          foreman_employee_id: string
+          id: string
+          project_id: string
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_team_foreman_roster"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       allocate_employee_number: {
         Args: { target_org_id: string }
         Returns: string
@@ -4266,7 +4357,7 @@ export type Database = {
         }
         Returns: number
       }
-      create_daily_team_with_foreman: {
+      create_daily_team_for_foreman: {
         Args: {
           target_activity?: string
           target_foreman_employee_id: string
@@ -4282,6 +4373,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null
@@ -4644,6 +4736,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null
@@ -4801,6 +4894,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      remove_daily_team_foreman: {
+        Args: {
+          target_foreman_employee_id: string
+          target_project_id: string
+          target_work_date: string
+        }
+        Returns: undefined
+      }
       reopen_absence_day: {
         Args: {
           target_project_id: string
@@ -4837,6 +4938,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null
@@ -5208,6 +5310,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null
@@ -5378,6 +5481,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null
@@ -5417,6 +5521,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          foreman_employee_id: string | null
           id: string
           locked_at: string | null
           locked_by: string | null

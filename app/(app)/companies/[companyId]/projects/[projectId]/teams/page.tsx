@@ -3,16 +3,16 @@ import { notFound } from "next/navigation";
 import { HardHat, Lock } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
-import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays } from "@/modules/daily-workforce/queries";
+import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
-import { groupTeamsByForeman } from "@/modules/daily-workforce/types";
+import { groupTeamsByForemanRoster } from "@/modules/daily-workforce/types";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
-import { DailyTeamsGrid } from "@/modules/daily-workforce/components/daily-teams-grid";
+import { ForemanSection } from "@/modules/daily-workforce/components/foreman-section";
+import { AddForemanButton } from "@/modules/daily-workforce/components/add-foreman-button";
 import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/export-daily-teams-button";
 import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -104,15 +104,17 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
 
   const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayDate;
 
-  const [teams, workforce, lmraCountsByTeamIdMap] = await Promise.all([
+  const [teams, workforce, roster, lmraCountsByTeamIdMap] = await Promise.all([
     listDailyTeamsForDate(companyId, projectId, workDate),
     listWorkforceForDate(companyId, projectId, workDate),
+    listDailyTeamForemanRoster(companyId, projectId, workDate),
     listLmraCountsByDailyTeamId(companyId, projectId, workDate),
   ]);
   const hasOpenTeams = teams.some((team) => team.status === "open");
   const hasLockedTeams = teams.some((team) => team.status === "locked");
-  const foremanGroups = groupTeamsByForeman(teams);
+  const foremanGroups = groupTeamsByForemanRoster(roster, teams);
   const lmraCountsByTeamId = Object.fromEntries(lmraCountsByTeamIdMap);
+  const rosterForemanIds = roster.map((entry) => entry.foremanEmployeeId);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -141,27 +143,32 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
         hasOpenTeams={hasOpenTeams}
         hasLockedTeams={hasLockedTeams}
         canManage={canManage}
-        workforce={workforce}
       />
 
-      {teams.length === 0 ? (
-        <EmptyState icon={HardHat} title="No teams yet for this day" description={canManage ? "Add the first team above." : "No teams have been created for this day yet."} />
+      {foremanGroups.length === 0 ? (
+        <EmptyState icon={HardHat} title="No foremen added for this day yet" description={canManage ? "Add a foreman below to start building today's teams." : "No foremen have been added for this day yet."} />
       ) : (
         <div className="flex flex-col gap-6">
           {foremanGroups.map((group) => (
-            <div key={group.foremanId ?? "__none"} className="flex flex-col gap-3">
-              <SectionHeader title={group.foremanName} />
-              <DailyTeamsGrid
-                companyId={companyId}
-                projectId={projectId}
-                workDate={workDate}
-                canManage={canManage}
-                teams={group.items}
-                workforce={workforce}
-                lmraCountsByTeamId={lmraCountsByTeamId}
-              />
-            </div>
+            <ForemanSection
+              key={group.foremanId ?? "__none"}
+              companyId={companyId}
+              projectId={projectId}
+              workDate={workDate}
+              canManage={canManage}
+              foremanId={group.foremanId}
+              foremanName={group.foremanName}
+              teams={group.items}
+              workforce={workforce}
+              lmraCountsByTeamId={lmraCountsByTeamId}
+            />
           ))}
+        </div>
+      )}
+
+      {canManage && (
+        <div>
+          <AddForemanButton companyId={companyId} projectId={projectId} workDate={workDate} workforce={workforce} rosterForemanIds={rosterForemanIds} />
         </div>
       )}
     </div>

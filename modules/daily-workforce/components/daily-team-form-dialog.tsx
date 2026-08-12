@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateDailyTeam } from "@/modules/daily-workforce/actions";
 import { DAILY_TEAM_SHIFTS, DAILY_TEAM_SHIFT_LABELS, type DailyTeamWithMembers, type DailyTeamShift, type EmployeeDailyState } from "@/modules/daily-workforce/types";
-import { WorkerPickerDialog } from "@/modules/daily-workforce/components/worker-picker-dialog";
+import { ForemanPickerDialog } from "@/modules/daily-workforce/components/foreman-picker-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,30 +28,28 @@ type DailyTeamFormDialogProps = {
  * and all-or-nothing. A shift change that would conflict with another
  * team's current member is rejected server-side with a specific message
  * (surfaced as a toast) and nothing is partially applied. The embedded
- * Foreman picker reuses the SAME foreman-only WorkerPickerDialog every
- * other foreman assignment uses (mode="foreman", currentTeamId=team.id so
- * the current foreman — already on this team — is excluded from the
- * pickable list, matching its own "nothing to do" convention); picking one
- * only stages the choice locally until Save, it does not call
- * moveDailyTeamMember directly the way the card's standalone "Change
- * foreman" control does.
+ * Foreman picker (ForemanPickerDialog) shows every eligible Foreman —
+ * unlike the old WorkerPickerDialog(mode="foreman"), it never disables or
+ * requires "Move to…" for a Foreman who already runs another team; that is
+ * completely normal now. Picking one only stages the choice locally until
+ * Save.
  */
 export function DailyTeamFormDialog({ companyId, projectId, workDate, team, workforce, open, onOpenChange }: DailyTeamFormDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [shift, setShift] = useState<DailyTeamShift | "">(team.shift ?? "");
-  const currentForeman = team.foremen[0] ?? null;
-  const [foremanId, setForemanId] = useState<string | null>(currentForeman?.employee.id ?? null);
-  const [foremanName, setForemanName] = useState<string | null>(currentForeman ? `${currentForeman.employee.first_name} ${currentForeman.employee.last_name}` : null);
+  const currentForeman = team.foreman;
+  const [foremanId, setForemanId] = useState<string | null>(currentForeman?.id ?? null);
+  const [foremanName, setForemanName] = useState<string | null>(currentForeman ? `${currentForeman.first_name} ${currentForeman.last_name}` : null);
   const [foremanPickerOpen, setForemanPickerOpen] = useState(false);
   const [name, setName] = useState(team.name);
 
   function resetToTeam() {
     setName(team.name);
     setShift(team.shift ?? "");
-    setForemanId(currentForeman?.employee.id ?? null);
-    setForemanName(currentForeman ? `${currentForeman.employee.first_name} ${currentForeman.employee.last_name}` : null);
+    setForemanId(currentForeman?.id ?? null);
+    setForemanName(currentForeman ? `${currentForeman.first_name} ${currentForeman.last_name}` : null);
     setFieldErrors({});
   }
 
@@ -69,7 +67,7 @@ export function DailyTeamFormDialog({ companyId, projectId, workDate, team, work
     const input = {
       name: String(formData.get("name") ?? ""),
       shift: shift as DailyTeamShift,
-      foremanEmployeeId: foremanId !== currentForeman?.employee.id ? foremanId : null,
+      foremanEmployeeId: foremanId !== currentForeman?.id ? foremanId : null,
       workArea: String(formData.get("workArea") ?? ""),
       activity: String(formData.get("activity") ?? ""),
     };
@@ -154,15 +152,12 @@ export function DailyTeamFormDialog({ companyId, projectId, workDate, team, work
         </DialogContent>
       </Dialog>
 
-      <WorkerPickerDialog
+      <ForemanPickerDialog
         open={foremanPickerOpen}
         onOpenChange={setForemanPickerOpen}
         title="Select foreman"
-        description="Only employees holding this project's Foreman role are shown."
+        description="Only employees holding this project's Foreman role are shown. They may already run other teams — that's expected."
         workforce={workforce}
-        mode="foreman"
-        currentTeamId={team.id}
-        currentTeamName={name || team.name}
         onSelect={handleSelectForeman}
       />
     </>

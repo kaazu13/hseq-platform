@@ -97,7 +97,7 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
     const teams = await listDailyTeamsForDate(currentCompanyId, currentProjectId, teamWorkDate);
     const team = teams.find((candidate) => candidate.id === params.dailyTeamId);
     if (team) {
-      initialParticipantIds = [...team.foremen, ...team.workers].map((member) => member.employee.id);
+      initialParticipantIds = [...(team.foreman ? [team.foreman.id] : []), ...team.workers.map((member) => member.employee.id)];
       initialDailyTeamId = team.id;
     }
   }

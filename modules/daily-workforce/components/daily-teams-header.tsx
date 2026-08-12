@@ -3,11 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Lock, LockOpen, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 import { lockDailyTeams, unlockDailyTeams } from "@/modules/daily-workforce/actions";
-import { CreateDailyTeamDialog } from "@/modules/daily-workforce/components/create-daily-team-dialog";
-import type { EmployeeDailyState } from "@/modules/daily-workforce/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +22,6 @@ type DailyTeamsHeaderProps = {
   hasOpenTeams: boolean;
   hasLockedTeams: boolean;
   canManage: boolean;
-  workforce: EmployeeDailyState[];
 };
 
 function shiftDate(dateStr: string, days: number): string {
@@ -33,11 +30,17 @@ function shiftDate(dateStr: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** Today's Teams' date navigation + [ Lock Today's Teams ] / unlock lifecycle controls — see this milestone's Phase C example UX. */
-export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, todayDate, hasOpenTeams, hasLockedTeams, canManage, workforce }: DailyTeamsHeaderProps) {
+/**
+ * Today's Teams' date navigation + [ Lock Today's Teams ] / unlock
+ * lifecycle controls. Milestone G: the global "Add team" button is
+ * retired — teams are now created per-Foreman-section on the page itself
+ * (each already-added Foreman gets its own "+ Add Team"), and a project-
+ * wide "+ Add Foreman" button lives at the bottom of the Foreman list —
+ * both rendered by the page, not here.
+ */
+export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, todayDate, hasOpenTeams, hasLockedTeams, canManage }: DailyTeamsHeaderProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [createOpen, setCreateOpen] = useState(false);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockReason, setUnlockReason] = useState("");
   const isToday = workDate === todayDate;
@@ -111,16 +114,8 @@ export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, tod
               Unlock
             </Button>
           )}
-          {canManage && (
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus />
-              Add team
-            </Button>
-          )}
         </div>
       </div>
-
-      {canManage && <CreateDailyTeamDialog companyId={companyId} projectId={projectId} workDate={workDate} workforce={workforce} open={createOpen} onOpenChange={setCreateOpen} />}
 
       <AlertDialog open={unlockOpen} onOpenChange={setUnlockOpen}>
         <AlertDialogContent>

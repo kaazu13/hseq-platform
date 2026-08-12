@@ -65,14 +65,29 @@ export function dailyAttendancePermitsWork(status: DailyAttendanceStatus): boole
  */
 export type BasicEmployee = Database["public"]["Functions"]["get_basic_employee_info"]["Returns"][number];
 
-/** One daily team's members, split into foreman(s) and workers for direct rendering — mirrors modules/teams/types.ts's TeamWithAssignments split. */
+/** One daily team's workers, resolved to their employee info — mirrors modules/teams/types.ts's TeamWithAssignments split. */
 export type DailyTeamMemberWithEmployee = DailyTeamMember & {
   employee: BasicEmployee;
 };
 
+/**
+ * Milestone G: a team's Foreman is a direct column (`foreman_employee_id`)
+ * — decoupled from daily_team_members entirely, so ONE Foreman may run
+ * MULTIPLE Today's Teams for the same project/date/shift (the old
+ * daily_team_members-row model accidentally capped a Foreman to one team
+ * per shift, which was wrong — see the migration's header comment).
+ * `foreman` is the resolved employee for display; `null` only for
+ * legacy/broken historical rows.
+ */
 export type DailyTeamWithMembers = DailyTeam & {
-  foremen: DailyTeamMemberWithEmployee[];
+  foreman: BasicEmployee | null;
   workers: DailyTeamMemberWithEmployee[];
+};
+
+/** One employee on today's Foreman roster (milestone G, item 10) — resolved for display. */
+export type DailyTeamForemanRosterEntry = {
+  foremanEmployeeId: string;
+  employee: BasicEmployee;
 };
 
 /** One employee's resolved daily-workforce state for a project/date — the shape the worker picker and attendance sheet both render from. */
@@ -94,41 +109,42 @@ export function employeeIsAvailableForAssignment(state: Pick<EmployeeDailyState,
 export type ForemanGroup<T extends DailyTeamWithMembers> = { foremanId: string | null; foremanName: string; items: T[] };
 
 /**
- * Item 5: Today's Teams' primary grouping is the responsible Foreman, not
- * shift — shift stays a per-card attribute and remains fully in the data
- * model, just no longer the heading key. "No Foreman Assigned" is the
- * explicit fallback for legacy/broken records only (still grouped, still
- * respects display_order — nothing silently disappears); new teams always
- * require a foreman (create_daily_team_with_foreman()), so this bucket
- * should only ever hold pre-existing historical rows. A team with more
- * than one foreman (unusual, but the data model allows it) groups under
- * its FIRST foreman only — the same "first" convention used for that
- * team's own foreman-count singular/plural label. Groups sort by foreman
- * name, with "No Foreman Assigned" always last; within a group, `items`
- * keeps its input order, i.e. whatever the caller already sorted by
- * display_order.
+ * Milestone G, item 3/10: Today's Teams' primary grouping is the
+ * project's daily Foreman ROSTER, not derived purely from which teams
+ * happen to exist. A roster Foreman with zero teams still gets a heading
+ * (with an empty team list) — that is the whole point of "Add Foreman does
+ * NOT by itself create a team." `roster` drives which named groups exist
+ * (sorted by name); `teams` (already display_order-sorted by the caller)
+ * are bucketed by their own `foreman_employee_id`, preserving that order
+ * within each group. Any team whose foreman_employee_id doesn't match a
+ * roster entry (a legacy/broken row with no foreman, or a foreman removed
+ * from the roster in some edge case) falls into a "No Foreman Assigned"
+ * group, sorted last — historical/repair-only, since every team created
+ * via create_daily_team_for_foreman() requires a rostered Foreman.
  */
-export function groupTeamsByForeman<T extends DailyTeamWithMembers>(items: T[]): ForemanGroup<T>[] {
+export function groupTeamsByForemanRoster<T extends DailyTeamWithMembers>(roster: DailyTeamForemanRosterEntry[], teams: T[]): ForemanGroup<T>[] {
   const groups = new Map<string, ForemanGroup<T>>();
-  for (const item of items) {
-    const foreman = item.foremen[0] ?? null;
-    const key = foreman?.employee.id ?? "__none";
-    const existing = groups.get(key);
-    if (existing) {
-      existing.items.push(item);
+  for (const entry of roster) {
+    groups.set(entry.foremanEmployeeId, {
+      foremanId: entry.foremanEmployeeId,
+      foremanName: `${entry.employee.first_name} ${entry.employee.last_name}`,
+      items: [],
+    });
+  }
+
+  const noForemanGroup: ForemanGroup<T> = { foremanId: null, foremanName: "No Foreman Assigned", items: [] };
+  for (const team of teams) {
+    const key = team.foreman_employee_id;
+    const group = key ? groups.get(key) : undefined;
+    if (group) {
+      group.items.push(team);
     } else {
-      groups.set(key, {
-        foremanId: foreman?.employee.id ?? null,
-        foremanName: foreman ? `${foreman.employee.first_name} ${foreman.employee.last_name}` : "No Foreman Assigned",
-        items: [item],
-      });
+      noForemanGroup.items.push(team);
     }
   }
-  return [...groups.values()].sort((a, b) => {
-    if (a.foremanId === null) return 1;
-    if (b.foremanId === null) return -1;
-    return a.foremanName.localeCompare(b.foremanName);
-  });
+
+  const sortedGroups = [...groups.values()].sort((a, b) => a.foremanName.localeCompare(b.foremanName));
+  return noForemanGroup.items.length > 0 ? [...sortedGroups, noForemanGroup] : sortedGroups;
 }
 
 export type DailyWorkforceSummary = {

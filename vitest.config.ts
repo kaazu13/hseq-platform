@@ -9,8 +9,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
+    // Milestone G, item 11: `*.dom.test.tsx` files opt into jsdom via a
+    // `// @vitest-environment jsdom` docblock (their first line) for real
+    // interaction tests (React Testing Library) — everything else (the
+    // vast majority: pure functions, schemas, DB invariants excluded
+    // below) stays on the fast, dependency-free "node" environment.
     environment: "node",
-    include: ["**/*.test.ts"],
+    include: ["**/*.test.ts", "**/*.dom.test.tsx"],
     exclude: ["node_modules/**", ".next/**", "tests/db/**", "tests/integration/**"],
   },
 });
