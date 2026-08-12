@@ -264,4 +264,101 @@ describe("worked hours invariants", () => {
     await deleteTestUser(employeeUserA.userId);
     await deleteTestUser(employeeUserB.userId);
   });
+
+  /** Item 1: marking an employee unavailable must zero their worked hours for that day — draft silently, submitted only with an audited reason — and re-marking them available never restores the old values. */
+  describe("item 1: unavailable attendance zeroes worked hours", () => {
+    it("marking an employee absent silently zeroes DRAFT (not yet submitted) hours and removes them from their team", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Absent Zero Draft Project");
+      const employeeId = await createTestEmployee(companyA.companyId, null, "Draft", "Zeroed");
+      const workDate = "2026-08-20";
+
+      await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 10 }])}::jsonb)`);
+      const [beforeAbsent] = await sql`select hours, status from worked_hours where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+      expect(Number(beforeAbsent.hours)).toBe(10);
+      expect(beforeAbsent.status).toBe("draft");
+
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent')`);
+
+      const [afterAbsent] = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+      expect(Number(afterAbsent.hours)).toBe(0);
+    });
+
+    it("marking an employee absent with SUBMITTED nonzero hours requires a reason, and zeroing is recorded as an audited correction with an employee notification", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Absent Zero Submitted Project");
+      const employeeUser = await createTestUser("Absent Submitted Employee");
+      await addMembership(companyA.companyId, employeeUser.userId, ["employee"]);
+      const employeeId = await createTestEmployee(companyA.companyId, employeeUser.userId, "Submitted", "Zeroed");
+      const workDate = "2026-08-20";
+
+      await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 8 }])}::jsonb)`);
+      await asUser(admin.userId, (tx) => tx`select * from submit_worked_hours(${projectId}, ${workDate})`);
+
+      // No reason -> rejected, nothing changed.
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent')`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+      const [stillEight] = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+      expect(Number(stillEight.hours)).toBe(8);
+
+      // With a reason -> succeeds, zeroes, and audits.
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent', null, 'Called in sick, confirmed by foreman')`);
+
+      const [zeroed] = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+      expect(Number(zeroed.hours)).toBe(0);
+
+      const [correction] = await sql`select category, previous_hours, new_hours, reason from worked_hours_corrections where employee_id = ${employeeId} and work_date = ${workDate}`;
+      expect(correction).toMatchObject({ category: "regular", reason: "Called in sick, confirmed by foreman" });
+      expect(Number(correction.previous_hours)).toBe(8);
+      expect(Number(correction.new_hours)).toBe(0);
+
+      const [notification] = await asUser(employeeUser.userId, (tx) => tx`select title from notifications where recipient_user_id = ${employeeUser.userId} and type = 'worked_hours_corrected' order by created_at desc limit 1`);
+      expect(notification).toBeDefined();
+
+      await deleteTestUser(employeeUser.userId);
+    });
+
+    it("absent -> present does NOT automatically restore the previous hours — a manager must deliberately re-enter them", async () => {
+      const projectId = await createTestProject(companyA.companyId, "No Auto Restore Project");
+      const employeeId = await createTestEmployee(companyA.companyId, null, "No", "Restore");
+      const workDate = "2026-08-20";
+
+      await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 8 }])}::jsonb)`);
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent')`);
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'present')`);
+
+      const [row] = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+      expect(Number(row.hours)).toBe(0);
+    });
+
+    it("cannot enter new nonzero worked hours while an employee is marked unavailable — a zero-value save is still allowed", async () => {
+      const projectId = await createTestProject(companyA.companyId, "No New Hours While Absent Project");
+      const employeeId = await createTestEmployee(companyA.companyId, null, "Locked", "Out");
+      const workDate = "2026-08-20";
+
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent')`);
+
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 5 }])}::jsonb)`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      // A zero-value save (a no-op / explicit re-zero) is not blocked.
+      await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 0 }])}::jsonb)`);
+    });
+
+    it("bulk_apply_worked_hours silently skips an employee marked unavailable rather than applying hours to them", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Bulk Apply Skips Unavailable Project");
+      const availableId = await createTestEmployee(companyA.companyId, null, "Bulk", "Available");
+      const absentId = await createTestEmployee(companyA.companyId, null, "Bulk", "Absent");
+      const workDate = "2026-08-20";
+
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${absentId}, ${workDate}, 'absent')`);
+      await asUser(admin.userId, (tx) => tx`select * from bulk_apply_worked_hours(${projectId}, ${workDate}, 'regular', 8, ${[availableId, absentId]})`);
+
+      const [availableRow] = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${availableId} and work_date = ${workDate}`;
+      expect(Number(availableRow.hours)).toBe(8);
+
+      const absentRow = await sql`select hours from worked_hours where project_id = ${projectId} and employee_id = ${absentId} and work_date = ${workDate}`;
+      expect(absentRow).toHaveLength(0); // never even created a draft row for them
+    });
+  });
 });

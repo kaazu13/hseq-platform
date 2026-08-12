@@ -11,14 +11,18 @@ import { canManageDailyWorkforce } from "./permissions";
 import {
   setDailyAttendanceStatusSchema,
   dailyTeamFormSchema,
+  createDailyTeamSchema,
+  reorderDailyTeamsSchema,
   moveDailyTeamMemberSchema,
   unlockDailyTeamsSchema,
   type SetDailyAttendanceStatusInput,
   type DailyTeamFormInput,
+  type CreateDailyTeamInput,
+  type ReorderDailyTeamsInput,
   type MoveDailyTeamMemberInput,
   type UnlockDailyTeamsInput,
 } from "./validation";
-import type { DailyAttendance, DailyTeam, DailyTeamMember } from "./types";
+import type { DailyAttendance, DailyTeam, DailyTeamMember, DailyTeamShift } from "./types";
 
 /**
  * Server Functions for the Daily Workforce / Today's Teams domain — same
@@ -82,6 +86,7 @@ export async function setDailyAttendanceStatus(
       target_work_date: workDate,
       target_status: parsed.data.status,
       target_note: (parsed.data.note ?? null) as string,
+      target_reason: (parsed.data.reason ?? null) as string,
     })
     .single();
 
@@ -94,6 +99,7 @@ export async function setDailyAttendanceStatus(
   }
 
   revalidateDailyWorkforcePaths(companyId, projectId);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/worked-hours`);
   return { ok: true, data: { attendance: data.attendance, removedFromTeamId: data.removed_from_team_id } };
 }
 
@@ -119,7 +125,7 @@ export async function saveDailyTeam(
       target_project_id: projectId,
       target_work_date: workDate,
       target_name: parsed.data.name,
-      target_shift: (parsed.data.shift ?? null) as string,
+      target_shift: (parsed.data.shift ?? null) as DailyTeamShift,
       target_work_area: (parsed.data.workArea ?? null) as string,
       target_activity: (parsed.data.activity ?? null) as string,
     })
@@ -135,6 +141,65 @@ export async function saveDailyTeam(
 
   revalidateDailyWorkforcePaths(companyId, projectId);
   return { ok: true, data: { dailyTeamId: (data as DailyTeam).id } };
+}
+
+/** Item 9: the ONLY way to create a NEW Today's Team — name, shift, and an eligible foreman are all required, atomically (create_daily_team_with_foreman()). */
+export async function createDailyTeam(companyId: string, projectId: string, workDate: string, input: CreateDailyTeamInput): Promise<ActionResult<{ dailyTeamId: string }>> {
+  const parsed = createDailyTeamSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireDailyWorkforceManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .rpc("create_daily_team_with_foreman", {
+      target_project_id: projectId,
+      target_work_date: workDate,
+      target_name: parsed.data.name,
+      target_shift: parsed.data.shift as DailyTeamShift,
+      target_foreman_employee_id: parsed.data.foremanEmployeeId,
+      target_work_area: (parsed.data.workArea ?? null) as string,
+      target_activity: (parsed.data.activity ?? null) as string,
+    })
+    .single();
+
+  if (error || !data) {
+    if (error && isRlsViolation(error)) forbidden();
+    if (error && isRaisedException(error)) {
+      return { ok: false, error: { code: "validation_error", message: error.message } };
+    }
+    return { ok: false, error: { code: "server_error", message: "Couldn't create the team. Try again." } };
+  }
+
+  revalidateDailyWorkforcePaths(companyId, projectId);
+  return { ok: true, data: { dailyTeamId: (data as DailyTeam).id } };
+}
+
+/** Item 4: persists drag-reordered card positions — DISPLAY ORDER ONLY, never touches membership/shift/foreman/work_area/activity. */
+export async function reorderDailyTeams(companyId: string, projectId: string, workDate: string, input: ReorderDailyTeamsInput): Promise<ActionResult<null>> {
+  const parsed = reorderDailyTeamsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Invalid order.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireDailyWorkforceManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("reorder_daily_teams", {
+    target_project_id: projectId,
+    target_work_date: workDate,
+    target_ordered_team_ids: parsed.data.orderedTeamIds,
+  });
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    return { ok: false, error: { code: "server_error", message: "Couldn't save the new order. Try again." } };
+  }
+
+  revalidateDailyWorkforcePaths(companyId, projectId);
+  return { ok: true, data: null };
 }
 
 /**

@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { HardHat, Lock } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
-import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
-import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
+import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays } from "@/modules/daily-workforce/queries";
+import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
+import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
+import { DAILY_TEAM_SHIFT_LABELS, type DailyTeamShift } from "@/modules/daily-workforce/types";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
-import { DailyTeamCard } from "@/modules/daily-workforce/components/daily-team-card";
-import { DailyWorkforceRoster } from "@/modules/daily-workforce/components/daily-workforce-roster";
+import { DailyTeamsGrid } from "@/modules/daily-workforce/components/daily-teams-grid";
 import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/export-daily-teams-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -29,7 +30,7 @@ function formatWorkDate(value: string): string {
   return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-function groupByShift<T extends { shift: string | null }>(items: T[]): { shift: string | null; items: T[] }[] {
+function groupByShift<T extends { shift: DailyTeamShift | null }>(items: T[]): { shift: DailyTeamShift | null; items: T[] }[] {
   const groups = new Map<string, T[]>();
   for (const item of items) {
     const key = item.shift ?? "";
@@ -37,7 +38,7 @@ function groupByShift<T extends { shift: string | null }>(items: T[]): { shift: 
   }
   return [...groups.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([shift, groupItems]) => ({ shift: shift || null, items: groupItems }));
+    .map(([shift, groupItems]) => ({ shift: (shift || null) as DailyTeamShift | null, items: groupItems }));
 }
 
 /**
@@ -64,13 +65,8 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
     notFound();
   }
 
-  const [roleNames, myProjectRoles, hasProjectAccess] = await Promise.all([
-    getUserRoleNames(companyId),
-    getMyProjectAssignmentRoles(companyId, projectId, user.id),
-    isCallerProjectAccessible(projectId),
-  ]);
+  const [roleNames, myProjectRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
   const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
-  const canViewBroadly = canViewDailyWorkforceBroadly(roleNames, hasProjectAccess);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/teams`;
   const todayDate = todayIsoDate();
@@ -118,10 +114,15 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
 
   const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayDate;
 
-  const [teams, workforce] = await Promise.all([listDailyTeamsForDate(companyId, projectId, workDate), listWorkforceForDate(companyId, projectId, workDate)]);
+  const [teams, workforce, lmraCountsByTeamIdMap] = await Promise.all([
+    listDailyTeamsForDate(companyId, projectId, workDate),
+    listWorkforceForDate(companyId, projectId, workDate),
+    listLmraCountsByDailyTeamId(companyId, projectId, workDate),
+  ]);
   const hasOpenTeams = teams.some((team) => team.status === "open");
   const hasLockedTeams = teams.some((team) => team.status === "locked");
   const shiftGroups = groupByShift(teams);
+  const lmraCountsByTeamId = Object.fromEntries(lmraCountsByTeamIdMap);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -150,6 +151,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
         hasOpenTeams={hasOpenTeams}
         hasLockedTeams={hasLockedTeams}
         canManage={canManage}
+        workforce={workforce}
       />
 
       {teams.length === 0 ? (
@@ -158,21 +160,18 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
         <div className="flex flex-col gap-6">
           {shiftGroups.map((group) => (
             <div key={group.shift ?? "__none"} className="flex flex-col gap-3">
-              <SectionHeader title={group.shift ?? "Unassigned shift"} />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {group.items.map((team) => (
-                  <DailyTeamCard key={team.id} companyId={companyId} projectId={projectId} workDate={workDate} team={team} workforce={workforce} canManage={canManage} />
-                ))}
-              </div>
+              <SectionHeader title={group.shift ? DAILY_TEAM_SHIFT_LABELS[group.shift] : "Unassigned shift"} />
+              <DailyTeamsGrid
+                companyId={companyId}
+                projectId={projectId}
+                workDate={workDate}
+                canManage={canManage}
+                teams={group.items}
+                workforce={workforce}
+                lmraCountsByTeamId={lmraCountsByTeamId}
+              />
             </div>
           ))}
-        </div>
-      )}
-
-      {(canManage || canViewBroadly) && (
-        <div className="flex flex-col gap-3">
-          <SectionHeader title="Workforce" description="Every project roster employee's status for this day." />
-          <DailyWorkforceRoster companyId={companyId} projectId={projectId} workDate={workDate} workforce={workforce} canManage={canManage} />
         </div>
       )}
     </div>

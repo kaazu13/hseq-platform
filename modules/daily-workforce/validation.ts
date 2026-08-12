@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalText } from "@/lib/validation";
+import { DAILY_TEAM_SHIFTS } from "./types";
 
 const DAILY_ATTENDANCE_STATUS_VALUES = ["not_set", "present", "absent", "sick", "leave", "training", "off_site"] as const;
 
@@ -7,17 +8,37 @@ const DAILY_ATTENDANCE_STATUS_VALUES = ["not_set", "present", "absent", "sick", 
 export const setDailyAttendanceStatusSchema = z.object({
   status: z.enum(DAILY_ATTENDANCE_STATUS_VALUES),
   note: optionalText,
+  /** Only actually enforced server-side when required (a closed absence day, or zeroing already-submitted worked hours — item 1) — kept optional here, same "reason is only enforced server-side" convention as modules/worked-hours/validation.ts. */
+  reason: optionalText,
 });
 export type SetDailyAttendanceStatusInput = z.infer<typeof setDailyAttendanceStatusSchema>;
 
-/** Create/edit a Today's Team's own fields — General section only, mirrors modules/teams/validation.ts's teamFormSchema shape. */
+const dailyTeamShiftSchema = z.enum(DAILY_TEAM_SHIFTS as [string, ...string[]]);
+
+/** Edit an EXISTING Today's Team's own fields — General section only, mirrors modules/teams/validation.ts's teamFormSchema shape. Shift stays optional here (a legacy team may have none); item 9's create path uses createDailyTeamSchema below instead. */
 export const dailyTeamFormSchema = z.object({
   name: z.string().trim().min(1, "Team name is required").max(100, "Keep it under 100 characters"),
-  shift: optionalText,
+  shift: dailyTeamShiftSchema.optional(),
   workArea: optionalText,
   activity: optionalText,
 });
 export type DailyTeamFormInput = z.infer<typeof dailyTeamFormSchema>;
+
+/** Item 9: creating a NEW Today's Team — name, shift, and foreman are all required; work area/activity stay optional. */
+export const createDailyTeamSchema = z.object({
+  name: z.string().trim().min(1, "Team name is required").max(100, "Keep it under 100 characters"),
+  shift: dailyTeamShiftSchema,
+  foremanEmployeeId: z.string().uuid("Pick a foreman"),
+  workArea: optionalText,
+  activity: optionalText,
+});
+export type CreateDailyTeamInput = z.infer<typeof createDailyTeamSchema>;
+
+/** Item 4: persists drag-reordered card positions — the ordered list of every team id for that (project, work_date). */
+export const reorderDailyTeamsSchema = z.object({
+  orderedTeamIds: z.array(z.string().uuid()).min(1),
+});
+export type ReorderDailyTeamsInput = z.infer<typeof reorderDailyTeamsSchema>;
 
 const TEAM_MEMBER_ROLE_VALUES = ["member", "foreman"] as const;
 

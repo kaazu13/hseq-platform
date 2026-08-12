@@ -6,7 +6,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Lock, LockOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { lockDailyTeams, unlockDailyTeams } from "@/modules/daily-workforce/actions";
-import { DailyTeamFormDialog } from "@/modules/daily-workforce/components/daily-team-form-dialog";
+import { CreateDailyTeamDialog } from "@/modules/daily-workforce/components/create-daily-team-dialog";
+import type { EmployeeDailyState } from "@/modules/daily-workforce/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ type DailyTeamsHeaderProps = {
   hasOpenTeams: boolean;
   hasLockedTeams: boolean;
   canManage: boolean;
+  workforce: EmployeeDailyState[];
 };
 
 function shiftDate(dateStr: string, days: number): string {
@@ -32,7 +34,7 @@ function shiftDate(dateStr: string, days: number): string {
 }
 
 /** Today's Teams' date navigation + [ Lock Today's Teams ] / unlock lifecycle controls — see this milestone's Phase C example UX. */
-export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, todayDate, hasOpenTeams, hasLockedTeams, canManage }: DailyTeamsHeaderProps) {
+export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, todayDate, hasOpenTeams, hasLockedTeams, canManage, workforce }: DailyTeamsHeaderProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
@@ -118,7 +120,7 @@ export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, tod
         </div>
       </div>
 
-      {canManage && <DailyTeamFormDialog companyId={companyId} projectId={projectId} workDate={workDate} open={createOpen} onOpenChange={setCreateOpen} />}
+      {canManage && <CreateDailyTeamDialog companyId={companyId} projectId={projectId} workDate={workDate} workforce={workforce} open={createOpen} onOpenChange={setCreateOpen} />}
 
       <AlertDialog open={unlockOpen} onOpenChange={setUnlockOpen}>
         <AlertDialogContent>

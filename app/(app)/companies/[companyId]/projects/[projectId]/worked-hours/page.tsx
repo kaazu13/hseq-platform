@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
+import { dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import { listWorkedHoursForDate, listWorkedHoursForPeriod, listProjectRosterEmployees, listWorkedHoursArchiveDays, listOpenWorkedHoursDiscrepancies } from "@/modules/worked-hours/queries";
 import { canManageWorkedHours } from "@/modules/worked-hours/permissions";
 import { BulkApplyHoursBar } from "@/modules/worked-hours/components/bulk-apply-hours-bar";
-import { WorkedHoursRow } from "@/modules/worked-hours/components/worked-hours-row";
+import { WorkedHoursTodayView, type WorkedHoursTodayRow } from "@/modules/worked-hours/components/worked-hours-today-view";
 import { SubmitWorkedHoursButton } from "@/modules/worked-hours/components/submit-worked-hours-button";
 import { DiscrepancyReviewItem } from "@/modules/worked-hours/components/discrepancy-review-item";
 import { WorkedHoursExportDialog } from "@/modules/worked-hours/components/worked-hours-export-dialog";
@@ -167,8 +168,20 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
   // this date even if their team assignment has since changed.
   const assignedEmployeeIds = new Set(workforce.filter((state) => state.assignedTeam).map((state) => state.employee.id));
   const relevantEmployees = workforce.filter((state) => assignedEmployeeIds.has(state.employee.id) || hoursByEmployeeId.has(state.employee.id));
+  // Item 1: never apply bulk hours to someone marked unavailable —
+  // set_daily_attendance_status()/bulk_apply_worked_hours() already
+  // enforce this server-side; excluding them here too means the bar's own
+  // "Apply to N employees" count is honest about who will actually
+  // receive it.
+  const eligibleForBulkApply = relevantEmployees.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus));
 
   const draftCount = existingHours.filter((row) => row.status === "draft").length;
+
+  const tableRows: WorkedHoursTodayRow[] = relevantEmployees.map((state) => ({
+    employee: state.employee,
+    workedHours: hoursByEmployeeId.get(state.employee.id) ?? null,
+    attendanceStatus: state.attendanceStatus,
+  }));
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -195,24 +208,12 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
         </div>
       )}
 
-      <BulkApplyHoursBar companyId={companyId} projectId={projectId} workDate={workDate} employeeIds={relevantEmployees.map((state) => state.employee.id)} />
+      <BulkApplyHoursBar companyId={companyId} projectId={projectId} workDate={workDate} employeeIds={eligibleForBulkApply.map((state) => state.employee.id)} />
 
       {relevantEmployees.length === 0 ? (
         <EmptyState icon={Clock} title="No workforce recorded for this day" description="Assign workers to Today's Teams, or add hours directly once someone has been recorded for this date." className="flex-1" />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {relevantEmployees.map((state) => (
-            <WorkedHoursRow
-              key={state.employee.id}
-              companyId={companyId}
-              projectId={projectId}
-              workDate={workDate}
-              employee={state.employee}
-              workedHours={hoursByEmployeeId.get(state.employee.id) ?? null}
-              canManage={canManage}
-            />
-          ))}
-        </div>
+        <WorkedHoursTodayView companyId={companyId} projectId={projectId} workDate={workDate} rows={tableRows} canManage={canManage} />
       )}
     </div>
   );

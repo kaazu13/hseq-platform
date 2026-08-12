@@ -32,6 +32,8 @@ export function MarkAbsentDialog({ companyId, projectId, workDate, isClosed, ros
   const [status, setStatus] = useState<DailyAttendanceStatus>("absent");
   const [note, setNote] = useState("");
   const [reason, setReason] = useState("");
+  const [needsReason, setNeedsReason] = useState(false);
+  const [serverMessage, setServerMessage] = useState<string | null>(null);
 
   function submit() {
     if (!employeeId) {
@@ -45,6 +47,16 @@ export function MarkAbsentDialog({ companyId, projectId, workDate, isClosed, ros
     startTransition(async () => {
       const result = await correctAbsenceStatus(companyId, projectId, employeeId, workDate, { status, note: note || undefined, reason: reason || undefined });
       if (!result.ok) {
+        // Item 1: marking someone absent/unavailable can require a reason
+        // because it will zero out already-submitted worked hours — the
+        // server is the source of truth for when that applies; retry
+        // in place with the reason field revealed instead of a second
+        // round trip to pre-check.
+        if (result.error.message.toLowerCase().includes("reason is required")) {
+          setNeedsReason(true);
+          setServerMessage(result.error.message);
+          return;
+        }
         toast.error(result.error.message);
         return;
       }
@@ -53,6 +65,8 @@ export function MarkAbsentDialog({ companyId, projectId, workDate, isClosed, ros
       setEmployeeId(null);
       setNote("");
       setReason("");
+      setNeedsReason(false);
+      setServerMessage(null);
       router.refresh();
     });
   }
@@ -92,6 +106,13 @@ export function MarkAbsentDialog({ companyId, projectId, workDate, isClosed, ros
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="mark-absent-reason">Reason (required — this day is closed)</Label>
               <Input id="mark-absent-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} />
+            </div>
+          )}
+          {!isClosed && needsReason && (
+            <div className="flex flex-col gap-1.5 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+              {serverMessage && <p className="text-sm text-destructive">{serverMessage}</p>}
+              <Label htmlFor="mark-absent-hours-reason">Reason</Label>
+              <Input id="mark-absent-hours-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={2000} aria-invalid={!reason.trim()} />
             </div>
           )}
         </div>

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { dailyAttendancePermitsWork, employeeIsAvailableForAssignment, summarizeDailyWorkforce, DAILY_ATTENDANCE_STATUSES_PERMITTING_WORK, DAILY_ATTENDANCE_STATUSES } from "./types";
-import type { DailyAttendanceStatus } from "./types";
+import { dailyAttendancePermitsWork, employeeIsAvailableForAssignment, summarizeDailyWorkforce, summarizeWorkforceByStatus, DAILY_ATTENDANCE_STATUSES_PERMITTING_WORK, DAILY_ATTENDANCE_STATUSES } from "./types";
+import type { DailyAttendanceStatus, DailyTeamShift } from "./types";
 
-function state(attendanceStatus: DailyAttendanceStatus, assignedTeam: { id: string; name: string; shift: string | null } | null = null) {
+function state(attendanceStatus: DailyAttendanceStatus, assignedTeam: { id: string; name: string; shift: DailyTeamShift | null } | null = null) {
   return { attendanceStatus, assignedTeam };
 }
 
@@ -67,5 +67,25 @@ describe("summarizeDailyWorkforce", () => {
   it("returns all zeros for an empty roster", () => {
     const summary = summarizeDailyWorkforce([]);
     expect(summary).toEqual({ rosterSize: 0, presentCount: 0, unavailableCount: 0, notAssignedCount: 0, assignedCount: 0, incompleteAttendanceCount: 0 });
+  });
+});
+
+describe("summarizeWorkforceByStatus — item 11's clickable summary counters", () => {
+  it("breaks out absent/leave/sick/other-unavailable into distinct counts, never one blended 'unavailable' bucket", () => {
+    const team = { id: "t1", name: "Team Alpha", shift: null };
+    const counts = summarizeWorkforceByStatus([
+      state("present", team),
+      state("present", null),
+      state("absent", null),
+      state("leave", null),
+      state("sick", null),
+      state("training", null),
+      state("off_site", null),
+    ]);
+    expect(counts).toEqual({ present: 2, assigned: 1, notAssigned: 1, absent: 1, leave: 1, sick: 1, otherUnavailable: 2 });
+  });
+
+  it("returns all zeros for an empty roster", () => {
+    expect(summarizeWorkforceByStatus([])).toEqual({ present: 0, assigned: 0, notAssigned: 0, absent: 0, leave: 0, sick: 0, otherUnavailable: 0 });
   });
 });

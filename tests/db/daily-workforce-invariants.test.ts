@@ -9,6 +9,7 @@ import {
   addMembership,
   createTestEmployee,
   createTestProject,
+  createTestTeam,
   UNIQUE_VIOLATION,
   FK_VIOLATION,
   RAISED_EXCEPTION,
@@ -49,7 +50,7 @@ describe("daily workforce invariants", () => {
 
     await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent')`);
 
-    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Team A200', 'Day Shift', 'A200', 'Scaffold Assembly')`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Team A200', 'day', 'A200', 'Scaffold Assembly')`);
 
     await expect(
       asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${employeeId}, 'member')`),
@@ -61,7 +62,7 @@ describe("daily workforce invariants", () => {
     const employeeId = await createTestEmployee(companyA.companyId, null, "Assigned", "Employee");
     const workDate = "2026-08-10";
 
-    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Team Removal', 'Day Shift', null, null)`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Team Removal', 'day', null, null)`);
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${employeeId}, 'member')`);
 
     const [openBefore] = await sql`select id from daily_team_members where daily_team_id = ${team.id} and employee_id = ${employeeId} and removed_at is null`;
@@ -82,8 +83,8 @@ describe("daily workforce invariants", () => {
     const employeeId = await createTestEmployee(companyA.companyId, null, "One", "Slot");
     const workDate = "2026-08-10";
 
-    const [teamAlpha] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Slot Alpha', 'Day Shift', null, null)`);
-    const [teamBravo] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Slot Bravo', 'Day Shift', null, null)`);
+    const [teamAlpha] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Slot Alpha', 'day', null, null)`);
+    const [teamBravo] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Slot Bravo', 'day', null, null)`);
 
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamAlpha.id}, ${employeeId}, 'member')`);
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamBravo.id}, ${employeeId}, 'member')`);
@@ -103,7 +104,7 @@ describe("daily workforce invariants", () => {
     const employeeId = await createTestEmployee(companyA.companyId, null, "Locked", "Member");
     const workDate = "2026-08-10";
 
-    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Locked Team', 'Day Shift', null, null)`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Locked Team', 'day', null, null)`);
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${employeeId}, 'member')`);
 
     await asUser(admin.userId, (tx) => tx`select * from lock_daily_teams(${projectId}, ${workDate})`);
@@ -111,14 +112,14 @@ describe("daily workforce invariants", () => {
     expect(lockedTeam.status).toBe("locked");
 
     // Moving the member away (which closes the existing open row) is rejected once locked.
-    const [otherTeam] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Other Team', 'Day Shift', null, null)`);
+    const [otherTeam] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Other Team', 'day', null, null)`);
     await expect(
       asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${otherTeam.id}, ${employeeId}, 'member')`),
     ).rejects.toMatchObject(RAISED_EXCEPTION);
 
     // Editing the locked team's own fields is rejected too.
     await expect(
-      asUser(admin.userId, (tx) => tx`select * from save_daily_team(${team.id}, ${projectId}, ${workDate}, 'Renamed While Locked', 'Day Shift', null, null)`),
+      asUser(admin.userId, (tx) => tx`select * from save_daily_team(${team.id}, ${projectId}, ${workDate}, 'Renamed While Locked', 'day', null, null)`),
     ).rejects.toMatchObject(RAISED_EXCEPTION);
   });
 
@@ -127,7 +128,7 @@ describe("daily workforce invariants", () => {
     const employeeId = await createTestEmployee(companyA.companyId, null, "Post", "Lock");
     const workDate = "2026-08-10";
 
-    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Post Lock Team', 'Day Shift', null, null)`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Post Lock Team', 'day', null, null)`);
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${employeeId}, 'member')`);
     await asUser(admin.userId, (tx) => tx`select * from lock_daily_teams(${projectId}, ${workDate})`);
 
@@ -146,7 +147,7 @@ describe("daily workforce invariants", () => {
   it("unlocking requires a non-blank reason", async () => {
     const projectId = await createTestProject(companyA.companyId, "Unlock Reason Project");
     const workDate = "2026-08-10";
-    await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'To Lock', 'Day Shift', null, null)`);
+    await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'To Lock', 'day', null, null)`);
     await asUser(admin.userId, (tx) => tx`select * from lock_daily_teams(${projectId}, ${workDate})`);
 
     await expect(
@@ -157,7 +158,7 @@ describe("daily workforce invariants", () => {
   it("unlocking (with a reason) reopens the day, preserves the original lock audit fields, and records an audit_events row", async () => {
     const projectId = await createTestProject(companyA.companyId, "Unlock Audit Project");
     const workDate = "2026-08-10";
-    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Unlock Audit Team', 'Day Shift', null, null)`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Unlock Audit Team', 'day', null, null)`);
     await asUser(admin.userId, (tx) => tx`select * from lock_daily_teams(${projectId}, ${workDate})`);
     const [lockedTeam] = await sql`select locked_at, locked_by from daily_teams where id = ${team.id}`;
 
@@ -180,7 +181,7 @@ describe("daily workforce invariants", () => {
     const employeeTwo = await createTestEmployee(companyA.companyId, null, "Archive", "Two");
     const workDate = "2026-08-10";
 
-    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Archive Team', 'Day Shift', 'A200', 'Scaffold Assembly')`);
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Archive Team', 'day', 'A200', 'Scaffold Assembly')`);
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${employeeOne}, 'foreman')`);
     await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${employeeTwo}, 'member')`);
     await asUser(admin.userId, (tx) => tx`select * from lock_daily_teams(${projectId}, ${workDate})`);
@@ -208,7 +209,7 @@ describe("daily workforce invariants", () => {
   it("two daily teams cannot share the same (project, date, name) — the same-day name-uniqueness constraint", async () => {
     const projectId = await createTestProject(companyA.companyId, "Duplicate Name Project");
     const workDate = "2026-08-10";
-    await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Duplicate Name', 'Day Shift', null, null)`);
+    await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Duplicate Name', 'day', null, null)`);
 
     await expect(
       sql`insert into daily_teams (company_id, project_id, work_date, name) values (${companyA.companyId}, ${projectId}, ${workDate}, 'Duplicate Name')`,
@@ -230,5 +231,166 @@ describe("daily workforce invariants", () => {
     expect(visible.map((r) => r.employee_id)).toEqual([employeeId]);
 
     await deleteTestUser(employeeUser.userId);
+  });
+
+  /** Creates an employee who genuinely holds the project's Foreman role — company-wide `foreman` membership role AND an open team_assignments row with assignment_role='foreman' on the project, exactly what is_eligible_scaffold_foreman() checks (reused, not reinvented, by items 7/8/9). */
+  async function createTestForeman(companyId: string, projectId: string, firstName: string, lastName: string) {
+    const user = await createTestUser(`${firstName} ${lastName}`);
+    await addMembership(companyId, user.userId, ["foreman"]);
+    const employeeId = await createTestEmployee(companyId, user.userId, firstName, lastName);
+    const teamId = await createTestTeam(companyId, projectId, `${firstName} Legacy Team`);
+    await sql`insert into team_assignments (company_id, project_id, team_id, employee_id, assignment_role) values (${companyId}, ${projectId}, ${teamId}, ${employeeId}, 'foreman')`;
+    return { userId: user.userId, employeeId };
+  }
+
+  it("item 7: list_eligible_scaffold_foremen only returns employees who genuinely hold the project's Foreman role", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Foreman Eligibility Project");
+    const foreman = await createTestForeman(companyA.companyId, projectId, "Real", "Foreman");
+    const plainEmployeeId = await createTestEmployee(companyA.companyId, null, "Plain", "Worker");
+
+    const eligible = await asUser(admin.userId, (tx) => tx`select id from list_eligible_scaffold_foremen(${companyA.companyId}, ${projectId})`);
+    const eligibleIds = eligible.map((row) => row.id);
+    expect(eligibleIds).toContain(foreman.employeeId);
+    expect(eligibleIds).not.toContain(plainEmployeeId);
+
+    await deleteTestUser(foreman.userId);
+  });
+
+  it("item 7: assigning a non-foreman employee as the 'foreman' role on a daily team is rejected at the database level", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Foreman Role Enforcement Project");
+    const plainEmployeeId = await createTestEmployee(companyA.companyId, null, "Not", "AForeman");
+    const workDate = "2026-08-20";
+
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Team Enforcement', 'day', null, null)`);
+
+    await expect(
+      asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${plainEmployeeId}, 'foreman')`),
+    ).rejects.toMatchObject(RAISED_EXCEPTION);
+  });
+
+  it("item 9: create_daily_team_with_foreman requires a valid shift and an eligible foreman, atomically", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Atomic Team Creation Project");
+    const foreman = await createTestForeman(companyA.companyId, projectId, "Atomic", "Foreman");
+    const plainEmployeeId = await createTestEmployee(companyA.companyId, null, "Ineligible", "Foreman");
+    const workDate = "2026-08-20";
+
+    // Missing shift.
+    await expect(
+      asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'No Shift Team', null, ${foreman.employeeId}, null, null)`),
+    ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+    // Non-eligible foreman.
+    await expect(
+      asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'Bad Foreman Team', 'day', ${plainEmployeeId}, null, null)`),
+    ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+    // No team was left behind by either failed attempt (atomicity — a failed foreman assignment must not leave an orphaned team row).
+    const orphaned = await sql`select id from daily_teams where project_id = ${projectId} and work_date = ${workDate}`;
+    expect(orphaned).toHaveLength(0);
+
+    // Valid creation succeeds and the foreman is immediately, atomically assigned.
+    const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'Valid Team', 'day', ${foreman.employeeId}, 'A1', 'Assembly')`);
+    const [membership] = await sql`select role from daily_team_members where daily_team_id = ${team.id} and employee_id = ${foreman.employeeId} and removed_at is null`;
+    expect(membership.role).toBe("foreman");
+
+    await deleteTestUser(foreman.userId);
+  });
+
+  it("item 6/7: an already-assigned foreman cannot head a second team in the same project/date/shift slot", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Foreman Double-Book Project");
+    const foreman = await createTestForeman(companyA.companyId, projectId, "Double", "Booked");
+    const workDate = "2026-08-20";
+
+    await asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'First Team', 'day', ${foreman.employeeId}, null, null)`);
+
+    await expect(
+      asUser(admin.userId, (tx) => tx`select * from create_daily_team_with_foreman(${projectId}, ${workDate}, 'Second Team', 'day', ${foreman.employeeId}, null, null)`),
+    ).rejects.toMatchObject(UNIQUE_VIOLATION);
+
+    await deleteTestUser(foreman.userId);
+  });
+
+  it("item 4: reorder_daily_teams changes display_order only — never membership, shift, foreman, or work_area/activity", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Reorder Project");
+    const foreman = await createTestForeman(companyA.companyId, projectId, "Reorder", "Foreman");
+    const workDate = "2026-08-20";
+
+    const [teamA] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Reorder A', 'day', 'AreaA', 'ActivityA')`);
+    const [teamB] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Reorder B', 'day', 'AreaB', 'ActivityB')`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamA.id}, ${foreman.employeeId}, 'foreman')`);
+
+    expect(teamA.display_order).toBe(0);
+    expect(teamB.display_order).toBe(1);
+
+    await asUser(admin.userId, (tx) => tx`select * from reorder_daily_teams(${projectId}, ${workDate}, ${[teamB.id, teamA.id]})`);
+
+    const [reorderedA] = await sql`select display_order, name, shift, work_area, activity from daily_teams where id = ${teamA.id}`;
+    const [reorderedB] = await sql`select display_order, name, shift, work_area, activity from daily_teams where id = ${teamB.id}`;
+    expect(reorderedB.display_order).toBe(0);
+    expect(reorderedA.display_order).toBe(1);
+    // Every other field is byte-for-byte unchanged.
+    expect(reorderedA).toMatchObject({ name: "Reorder A", shift: "day", work_area: "AreaA", activity: "ActivityA" });
+    expect(reorderedB).toMatchObject({ name: "Reorder B", shift: "day", work_area: "AreaB", activity: "ActivityB" });
+
+    const [foremanMembership] = await sql`select removed_at from daily_team_members where daily_team_id = ${teamA.id} and employee_id = ${foreman.employeeId}`;
+    expect(foremanMembership.removed_at).toBeNull();
+
+    await deleteTestUser(foreman.userId);
+  });
+
+  it("item 6: a worker already assigned to one team is rejected by a raw duplicate insert into a second team for the same slot, even bypassing move_daily_team_member() entirely", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Raw Insert Double Assignment Project");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Raw", "Insert");
+    const workDate = "2026-08-20";
+
+    const [teamA] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Raw A', 'day', null, null)`);
+    const [teamB] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Raw B', 'day', null, null)`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamA.id}, ${employeeId}, 'member')`);
+
+    await expect(
+      sql`insert into daily_team_members (company_id, project_id, work_date, daily_team_id, employee_id, role) values (${companyA.companyId}, ${projectId}, ${workDate}, ${teamB.id}, ${employeeId}, 'member')`,
+    ).rejects.toMatchObject(UNIQUE_VIOLATION);
+  });
+
+  it("item 5: an LMRA created with a daily_team_id is precisely linked — a different team on the same project/day is never marked complete", async () => {
+    const projectId = await createTestProject(companyA.companyId, "LMRA Link Project");
+    const worker = await createTestUser("LMRA Link Worker");
+    await addMembership(companyA.companyId, worker.userId, ["employee"]);
+    const workerEmployeeId = await createTestEmployee(companyA.companyId, worker.userId, "LMRA", "LinkWorker");
+    await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${workerEmployeeId}, 'member')`;
+    const workDate = "2026-08-20";
+
+    const [teamWithLmra] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Has LMRA', 'day', null, null)`);
+    const [teamWithoutLmra] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'No LMRA', 'day', null, null)`);
+
+    const hazardTypes = [
+      "working_at_height", "falling_objects", "line_of_fire", "manual_material_handling", "lifting_operations",
+      "mobile_equipment_mewp", "weather_conditions", "access_egress", "housekeeping", "tools_equipment",
+      "simultaneous_operations", "other",
+    ];
+    const hazards = hazardTypes.map((hazard_type) => ({
+      hazard_type,
+      is_applicable: false,
+      controls: null,
+      selected_controls: [],
+      responsible_person_id: null,
+      controls_confirmed: false,
+      other_description: null,
+    }));
+
+    const [assessment] = await asUser(
+      worker.userId,
+      (tx) =>
+        tx`select * from create_lmra_assessment(${companyA.companyId}, ${projectId}, 'Area 1', 'Activity 1', ${workDate}, 'day', ${workerEmployeeId}, null, null, ${[]}, ${JSON.stringify(hazards)}::jsonb, false, 'go', null, ${teamWithLmra.id})`,
+    );
+    expect(assessment.daily_team_id).toBe(teamWithLmra.id);
+
+    const linked = await sql`select id, daily_team_id from lmra_assessments where daily_team_id = ${teamWithLmra.id} and archived_at is null`;
+    expect(linked.map((row) => row.id)).toContain(assessment.id);
+
+    const linkedToOther = await sql`select id from lmra_assessments where daily_team_id = ${teamWithoutLmra.id} and archived_at is null`;
+    expect(linkedToOther).toHaveLength(0);
+
+    await deleteTestUser(worker.userId);
   });
 });

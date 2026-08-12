@@ -138,6 +138,7 @@ export async function createLmraComplete(companyId: string, input: LmraCreateFor
     target_submit: parsed.data.submit,
     target_result: parsed.data.result,
     target_stop_work_reason: (parsed.data.result === "no_go" ? (parsed.data.stopWorkReason ?? null) : null) as string,
+    target_daily_team_id: (parsed.data.dailyTeamId ?? null) as string,
   });
 
   if (error || !data) {

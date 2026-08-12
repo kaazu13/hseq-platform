@@ -91,12 +91,14 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
   // genuinely belongs to THIS project on the given date — an unrecognized/
   // cross-project id silently falls back to an empty participant list.
   let initialParticipantIds: string[] = [];
+  let initialDailyTeamId: string | undefined;
   if (params.dailyTeamId) {
     const teamWorkDate = params.workDate && /^\d{4}-\d{2}-\d{2}$/.test(params.workDate) ? params.workDate : todayDate;
     const teams = await listDailyTeamsForDate(currentCompanyId, currentProjectId, teamWorkDate);
     const team = teams.find((candidate) => candidate.id === params.dailyTeamId);
     if (team) {
       initialParticipantIds = [...team.foremen, ...team.workers].map((member) => member.employee.id);
+      initialDailyTeamId = team.id;
     }
   }
 
@@ -115,6 +117,7 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
           participantIds={initialParticipantIds}
           isElevated={isElevated}
           myEmployeeId={myEmployeeId}
+          dailyTeamId={initialDailyTeamId}
         />
       </div>
     </div>

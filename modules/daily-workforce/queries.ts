@@ -128,12 +128,13 @@ export async function listWorkforceForDate(companyId: string, projectId: string,
   const employeeIds = [...new Set((roster ?? []).map((row) => row.employee_id))];
   if (employeeIds.length === 0) return [];
 
-  const [{ data: employees, error: employeesError }, { data: attendance, error: attendanceError }, { data: memberships, error: membershipsError }, { data: teams, error: teamsError }] =
+  const [{ data: employees, error: employeesError }, { data: attendance, error: attendanceError }, { data: memberships, error: membershipsError }, { data: teams, error: teamsError }, foremanIds] =
     await Promise.all([
       supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds }),
       supabase.from("daily_attendance").select("employee_id, status, note").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate).in("employee_id", employeeIds),
       supabase.from("daily_team_members").select("employee_id, daily_team_id, shift").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate).is("removed_at", null).in("employee_id", employeeIds),
       supabase.from("daily_teams").select("id, name").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate),
+      listEligibleForemanIds(companyId, projectId),
     ]);
 
   if (employeesError) throw employeesError;
@@ -154,12 +155,29 @@ export async function listWorkforceForDate(companyId: string, projectId: string,
         attendanceStatus: attendanceRow?.status ?? "not_set",
         attendanceNote: attendanceRow?.note ?? null,
         assignedTeam: membership ? { id: membership.daily_team_id, name: teamNameById.get(membership.daily_team_id) ?? "Unknown team", shift: membership.shift } : null,
+        isEligibleForeman: foremanIds.has(employee.id),
       };
     })
     .sort((a, b) => {
       const lastNameCompare = a.employee.last_name.localeCompare(b.employee.last_name);
       return lastNameCompare !== 0 ? lastNameCompare : a.employee.first_name.localeCompare(b.employee.first_name);
     });
+}
+
+/**
+ * Employee ids who genuinely hold the project's real Foreman role — reuses
+ * is_eligible_scaffold_foreman()'s exact eligibility rule (company-wide
+ * `foreman` role AND an open Foreman team_assignments row on this
+ * project), the SAME check the Scaffold Register's own foreman picker
+ * already relies on (supabase/migrations/20260805090000_scaffold_team_and_dimensions.sql)
+ * — items 7/8's "use the EXISTING role catalogue, do not invent a new
+ * Foreman role" requirement.
+ */
+export async function listEligibleForemanIds(companyId: string, projectId: string): Promise<Set<string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_foremen", { target_organization_id: companyId, target_project_id: projectId });
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.id));
 }
 
 /** One employee's resolved daily state for a single date — the Employee Dashboard's "Today" card data source. */
@@ -186,11 +204,14 @@ export async function getEmployeeDailyState(companyId: string, projectId: string
     if (team) assignedTeam = { id: team.id, name: team.name, shift: membership.shift };
   }
 
+  const foremanIds = await listEligibleForemanIds(companyId, projectId);
+
   return {
     employee,
     attendanceStatus: attendanceRow?.status ?? "not_set",
     attendanceNote: attendanceRow?.note ?? null,
     assignedTeam,
+    isEligibleForeman: foremanIds.has(employee.id),
   };
 }
 

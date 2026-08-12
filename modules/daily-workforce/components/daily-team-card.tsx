@@ -20,6 +20,8 @@ type DailyTeamCardProps = {
   team: DailyTeamWithMembers;
   workforce: EmployeeDailyState[];
   canManage: boolean;
+  /** Item 5: non-archived LMRA ids already created for this EXACT team/day, if any. */
+  lmraIds?: string[];
 };
 
 /**
@@ -30,7 +32,7 @@ type DailyTeamCardProps = {
  * even a manage-tier user cannot edit a locked day without first calling
  * unlock (a day-level action, not per-team — see the page header).
  */
-export function DailyTeamCard({ companyId, projectId, workDate, team, workforce, canManage }: DailyTeamCardProps) {
+export function DailyTeamCard({ companyId, projectId, workDate, team, workforce, canManage, lmraIds = [] }: DailyTeamCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
@@ -151,10 +153,23 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
           {totalCount} {totalCount === 1 ? "worker" : "workers"}
         </span>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/lmra/new?dailyTeamId=${team.id}&workDate=${workDate}`} />}>
-            <ShieldCheck />
-            LMRA
-          </Button>
+          {lmraIds.length > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
+              render={<Link href={`/lmra/${lmraIds[0]}`} />}
+              className="text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              <ShieldCheck />
+              LMRA{lmraIds.length > 1 ? ` (${lmraIds.length})` : ""}
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/lmra/new?dailyTeamId=${team.id}&workDate=${workDate}`} />}>
+              <ShieldCheck />
+              LMRA
+            </Button>
+          )}
           <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/observations/new?projectId=${projectId}&dailyTeamId=${team.id}`} />}>
             <Eye />
             Observation
@@ -169,7 +184,9 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
           onOpenChange={(open) => !open && setPickerMode(null)}
           title={pickerMode === "foreman" ? `Assign foreman — ${team.name}` : `Add worker — ${team.name}`}
           workforce={workforce}
+          mode={pickerMode === "foreman" ? "foreman" : "worker"}
           currentTeamId={team.id}
+          currentTeamName={team.name}
           onSelect={handleAssign}
         />
       )}

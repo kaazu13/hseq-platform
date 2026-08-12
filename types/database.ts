@@ -671,7 +671,7 @@ export type Database = {
           removed_at: string | null
           removed_by: string | null
           role: Database["public"]["Enums"]["team_assignment_role"]
-          shift: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
           work_date: string
         }
         Insert: {
@@ -685,7 +685,7 @@ export type Database = {
           removed_at?: string | null
           removed_by?: string | null
           role?: Database["public"]["Enums"]["team_assignment_role"]
-          shift?: string | null
+          shift?: Database["public"]["Enums"]["lmra_shift"] | null
           work_date: string
         }
         Update: {
@@ -699,7 +699,7 @@ export type Database = {
           removed_at?: string | null
           removed_by?: string | null
           role?: Database["public"]["Enums"]["team_assignment_role"]
-          shift?: string | null
+          shift?: Database["public"]["Enums"]["lmra_shift"] | null
           work_date?: string
         }
         Relationships: [
@@ -752,7 +752,7 @@ export type Database = {
           locked_by: string | null
           name: string
           project_id: string
-          shift: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
           status: Database["public"]["Enums"]["daily_team_status"]
           unlock_reason: string | null
           unlocked_at: string | null
@@ -773,7 +773,7 @@ export type Database = {
           locked_by?: string | null
           name: string
           project_id: string
-          shift?: string | null
+          shift?: Database["public"]["Enums"]["lmra_shift"] | null
           status?: Database["public"]["Enums"]["daily_team_status"]
           unlock_reason?: string | null
           unlocked_at?: string | null
@@ -794,7 +794,7 @@ export type Database = {
           locked_by?: string | null
           name?: string
           project_id?: string
-          shift?: string | null
+          shift?: Database["public"]["Enums"]["lmra_shift"] | null
           status?: Database["public"]["Enums"]["daily_team_status"]
           unlock_reason?: string | null
           unlocked_at?: string | null
@@ -1197,6 +1197,7 @@ export type Database = {
           completed_by_employee_id: string
           created_at: string
           created_by: string | null
+          daily_team_id: string | null
           id: string
           notes: string | null
           project_id: string
@@ -1224,6 +1225,7 @@ export type Database = {
           completed_by_employee_id: string
           created_at?: string
           created_by?: string | null
+          daily_team_id?: string | null
           id?: string
           notes?: string | null
           project_id: string
@@ -1251,6 +1253,7 @@ export type Database = {
           completed_by_employee_id?: string
           created_at?: string
           created_by?: string | null
+          daily_team_id?: string | null
           id?: string
           notes?: string | null
           project_id?: string
@@ -1291,6 +1294,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lmra_assessments_daily_team_fk"
+            columns: ["daily_team_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "daily_teams"
+            referencedColumns: ["id", "company_id"]
           },
           {
             foreignKeyName: "lmra_assessments_organization_id_fkey"
@@ -4256,10 +4266,49 @@ export type Database = {
         }
         Returns: number
       }
+      create_daily_team_with_foreman: {
+        Args: {
+          target_activity?: string
+          target_foreman_employee_id: string
+          target_name: string
+          target_project_id: string
+          target_shift: Database["public"]["Enums"]["lmra_shift"]
+          target_work_area?: string
+          target_work_date: string
+        }
+        Returns: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_lmra_assessment: {
         Args: {
           target_company_id: string
           target_completed_by_employee_id: string
+          target_daily_team_id?: string
           target_hazards: Json
           target_notes: string
           target_participant_employee_ids: string[]
@@ -4281,6 +4330,7 @@ export type Database = {
           completed_by_employee_id: string
           created_at: string
           created_by: string | null
+          daily_team_id: string | null
           id: string
           notes: string | null
           project_id: string
@@ -4582,6 +4632,10 @@ export type Database = {
           profile_id: string
         }[]
       }
+      lmra_shift_sort_key: {
+        Args: { target_shift: Database["public"]["Enums"]["lmra_shift"] }
+        Returns: string
+      }
       lock_daily_teams: {
         Args: { target_project_id: string; target_work_date: string }
         Returns: {
@@ -4595,7 +4649,7 @@ export type Database = {
           locked_by: string | null
           name: string
           project_id: string
-          shift: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
           status: Database["public"]["Enums"]["daily_team_status"]
           unlock_reason: string | null
           unlocked_at: string | null
@@ -4651,7 +4705,7 @@ export type Database = {
           removed_at: string | null
           removed_by: string | null
           role: Database["public"]["Enums"]["team_assignment_role"]
-          shift: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
           work_date: string
         }
         SetofOptions: {
@@ -4769,6 +4823,40 @@ export type Database = {
           to: "daily_attendance_day_locks"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      reorder_daily_teams: {
+        Args: {
+          target_ordered_team_ids: string[]
+          target_project_id: string
+          target_work_date: string
+        }
+        Returns: {
+          activity: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          name: string
+          project_id: string
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
+          status: Database["public"]["Enums"]["daily_team_status"]
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_area: string | null
+          work_date: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "daily_teams"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       reorder_teams: {
@@ -5110,7 +5198,7 @@ export type Database = {
           target_daily_team_id: string
           target_name: string
           target_project_id: string
-          target_shift?: string
+          target_shift?: Database["public"]["Enums"]["lmra_shift"]
           target_work_area?: string
           target_work_date: string
         }
@@ -5125,7 +5213,7 @@ export type Database = {
           locked_by: string | null
           name: string
           project_id: string
-          shift: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
           status: Database["public"]["Enums"]["daily_team_status"]
           unlock_reason: string | null
           unlocked_at: string | null
@@ -5295,7 +5383,7 @@ export type Database = {
           locked_by: string | null
           name: string
           project_id: string
-          shift: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"] | null
           status: Database["public"]["Enums"]["daily_team_status"]
           unlock_reason: string | null
           unlocked_at: string | null
@@ -5332,6 +5420,7 @@ export type Database = {
           completed_by_employee_id: string
           created_at: string
           created_by: string | null
+          daily_team_id: string | null
           id: string
           notes: string | null
           project_id: string

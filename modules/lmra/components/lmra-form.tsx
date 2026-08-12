@@ -29,6 +29,8 @@ type LmraFormProps = {
       /** Whether the caller may set completed-by to someone other than themselves (HSE Manager/Foreman) — an ordinary worker never sees this field as editable. */
       isElevated: boolean;
       myEmployeeId: string | null;
+      /** Item 5: pins this LMRA to the exact Today's Team card it was started from (never re-resolved by name/date later) — set only when arriving via "[ LMRA ]" on a team card. */
+      dailyTeamId?: string;
       assessment?: undefined;
       hazardsEditable?: undefined;
     }
@@ -102,6 +104,7 @@ export function LmraForm(props: LmraFormProps) {
           result,
           stopWorkReason,
           confirmed: submit ? confirmed : true,
+          dailyTeamId: props.dailyTeamId,
         });
         if (!result_.ok) {
           setFormError(result_.error.message);

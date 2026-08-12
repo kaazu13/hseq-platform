@@ -24,6 +24,34 @@ export type LmraListFilters = {
   dateTo?: string;
 };
 
+/**
+ * Item 5: which Today's Teams (by daily_team_id) already have a non-
+ * archived LMRA created for that EXACT team — the precise link
+ * lmra_assessments.daily_team_id now provides (supabase/migrations/20260820092000_lmra_daily_team_link.sql),
+ * never a fuzzy participant/work-area/date match that could mark an
+ * unrelated team green. Returns each linked team's LMRA ids so the card
+ * can link straight to the (single, or first-of-several) assessment.
+ */
+export async function listLmraCountsByDailyTeamId(companyId: string, projectId: string, workDate: string): Promise<Map<string, string[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lmra_assessments")
+    .select("id, daily_team_id")
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("work_date", workDate)
+    .is("archived_at", null)
+    .not("daily_team_id", "is", null);
+  if (error) throw error;
+
+  const byTeamId = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    if (!row.daily_team_id) continue;
+    byTeamId.set(row.daily_team_id, [...(byTeamId.get(row.daily_team_id) ?? []), row.id]);
+  }
+  return byTeamId;
+}
+
 /** Assessments visible to the caller in `companyId` — RLS (lmra_assessments_select) does the real scoping. Newest work_date first. */
 export async function listLmraAssessments(companyId: string, filters: LmraListFilters = {}): Promise<LmraAssessment[]> {
   const supabase = await createClient();

@@ -94,6 +94,8 @@ export const lmraCreateFormSchema = z
     result: z.enum(RESULT_VALUES),
     stopWorkReason: optionalNotes(LMRA_STOP_WORK_REASON_MAX_LENGTH),
     confirmed: z.boolean(),
+    /** Item 5: which Today's Team card this LMRA was started from, if any — see modules/lmra/components/lmra-form.tsx's own comment. */
+    dailyTeamId: z.string().uuid().optional(),
   })
   .refine((data) => !data.submit || data.confirmed, {
     message: "Confirm that the hazards and control measures have been discussed before saving",

@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { listDailyTeamsForDate } from "./queries";
 import type { DailyTeamWithMembers } from "./types";
+import { DAILY_TEAM_SHIFT_LABELS } from "./types";
 import type { WorkedHoursMatrixRow, WorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_SHORT_LABELS } from "@/modules/worked-hours/types";
 import { formatWorkedHoursPeriodLabel, listPeriodDates, type WorkedHoursPeriod } from "@/modules/worked-hours/period";
@@ -57,7 +58,7 @@ export async function formatDailyTeamsWorkbook(companyName: string, projectName:
       company: companyName,
       project: projectName,
       date: workDate,
-      shift: team.shift ?? "",
+      shift: team.shift ? DAILY_TEAM_SHIFT_LABELS[team.shift] : "",
       team: team.name,
       workArea: team.work_area ?? "",
       activity: team.activity ?? "",

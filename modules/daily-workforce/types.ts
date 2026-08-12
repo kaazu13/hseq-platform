@@ -1,4 +1,5 @@
 import type { Database, Enums } from "@/types/database";
+import { LMRA_SHIFTS, LMRA_SHIFT_LABELS, type LmraShift } from "@/modules/lmra/types";
 
 /**
  * Daily Workforce / Attendance + Today's Teams — see
@@ -15,6 +16,18 @@ export type DailyTeamMember = Database["public"]["Tables"]["daily_team_members"]
 export type DailyAttendanceStatus = Enums<"daily_attendance_status">;
 export type DailyTeamStatus = Enums<"daily_team_status">;
 export type DailyTeamMemberRole = Enums<"team_assignment_role">;
+
+/**
+ * daily_teams.shift/daily_team_members.shift became controlled
+ * (supabase/migrations/20260820090000_daily_team_shift_and_assignment_fixes.sql)
+ * — reusing the SAME `lmra_shift` enum LMRA already used, rather than a
+ * second, parallel controlled vocabulary. Re-exported here under a
+ * daily-workforce-local name for readability at call sites; the type and
+ * label map are identical to modules/lmra/types.ts's own.
+ */
+export type DailyTeamShift = LmraShift;
+export const DAILY_TEAM_SHIFTS: DailyTeamShift[] = LMRA_SHIFTS;
+export const DAILY_TEAM_SHIFT_LABELS: Record<DailyTeamShift, string> = LMRA_SHIFT_LABELS;
 
 export const DAILY_ATTENDANCE_STATUSES: DailyAttendanceStatus[] = ["not_set", "present", "absent", "sick", "leave", "training", "off_site"];
 
@@ -68,7 +81,9 @@ export type EmployeeDailyState = {
   attendanceStatus: DailyAttendanceStatus;
   attendanceNote: string | null;
   /** The daily team (if any) this employee is currently assigned to for this date/shift. */
-  assignedTeam: { id: string; name: string; shift: string | null } | null;
+  assignedTeam: { id: string; name: string; shift: DailyTeamShift | null } | null;
+  /** Holds the project's real, existing Foreman role (is_eligible_scaffold_foreman()) — items 7/8's "foreman picker only shows foremen / worker picker excludes foremen" filtering key. Never invented from a UI label. */
+  isEligibleForeman: boolean;
 };
 
 /** True when an employee's current daily state permits assigning them to a team — mirrors dailyAttendancePermitsWork(), applied to the resolved state rather than a raw status. */
@@ -95,5 +110,28 @@ export function summarizeDailyWorkforce(workforce: Pick<EmployeeDailyState, "att
     assignedCount: workforce.filter((state) => state.assignedTeam !== null).length,
     notAssignedCount: workforce.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus) && state.assignedTeam === null).length,
     incompleteAttendanceCount: workforce.filter((state) => state.attendanceStatus === "not_set").length,
+  };
+}
+
+/** Item 11's clickable summary counters — Present / Assigned / Not Assigned / Absent / Leave / Sick / Other unavailable (training+off_site), each a distinct, useful filter rather than one blended "unavailable" bucket. */
+export type WorkforceStatusCounts = {
+  present: number;
+  assigned: number;
+  notAssigned: number;
+  absent: number;
+  leave: number;
+  sick: number;
+  otherUnavailable: number;
+};
+
+export function summarizeWorkforceByStatus(workforce: Pick<EmployeeDailyState, "attendanceStatus" | "assignedTeam">[]): WorkforceStatusCounts {
+  return {
+    present: workforce.filter((state) => state.attendanceStatus === "present").length,
+    assigned: workforce.filter((state) => state.assignedTeam !== null).length,
+    notAssigned: workforce.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus) && state.assignedTeam === null).length,
+    absent: workforce.filter((state) => state.attendanceStatus === "absent").length,
+    leave: workforce.filter((state) => state.attendanceStatus === "leave").length,
+    sick: workforce.filter((state) => state.attendanceStatus === "sick").length,
+    otherUnavailable: workforce.filter((state) => state.attendanceStatus === "training" || state.attendanceStatus === "off_site").length,
   };
 }

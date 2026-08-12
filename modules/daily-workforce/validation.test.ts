@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { setDailyAttendanceStatusSchema, dailyTeamFormSchema, moveDailyTeamMemberSchema, unlockDailyTeamsSchema } from "./validation";
+import { setDailyAttendanceStatusSchema, dailyTeamFormSchema, createDailyTeamSchema, reorderDailyTeamsSchema, moveDailyTeamMemberSchema, unlockDailyTeamsSchema } from "./validation";
 
 describe("setDailyAttendanceStatusSchema", () => {
   it("accepts every one of the 7 controlled statuses", () => {
@@ -12,13 +12,13 @@ describe("setDailyAttendanceStatusSchema", () => {
     expect(setDailyAttendanceStatusSchema.safeParse({ status: "on_leave" }).success).toBe(false);
   });
 
-  it("allows note to be omitted", () => {
+  it("allows note/reason to be omitted", () => {
     expect(setDailyAttendanceStatusSchema.safeParse({ status: "present" }).success).toBe(true);
   });
 });
 
 describe("dailyTeamFormSchema", () => {
-  const VALID = { name: "Team A200", shift: "Day Shift", workArea: "A200", activity: "Scaffold Assembly" };
+  const VALID = { name: "Team A200", shift: "day", workArea: "A200", activity: "Scaffold Assembly" };
 
   it("accepts a fully populated valid input", () => {
     expect(dailyTeamFormSchema.safeParse(VALID).success).toBe(true);
@@ -29,8 +29,55 @@ describe("dailyTeamFormSchema", () => {
     expect(dailyTeamFormSchema.safeParse({ ...VALID, name: "   " }).success).toBe(false);
   });
 
-  it("allows shift/workArea/activity to be omitted", () => {
+  it("allows shift/workArea/activity to be omitted — the edit path never forces a shift on a legacy team", () => {
     expect(dailyTeamFormSchema.safeParse({ name: "Team A200" }).success).toBe(true);
+  });
+
+  it("rejects a shift outside the controlled day/night/late values", () => {
+    expect(dailyTeamFormSchema.safeParse({ ...VALID, shift: "Day Shift" }).success).toBe(false);
+  });
+});
+
+describe("createDailyTeamSchema — item 9: name, shift, and foreman are all required", () => {
+  const FOREMAN_ID = "123e4567-e89b-42d3-a456-426614174002";
+  const VALID = { name: "Team A200", shift: "day", foremanEmployeeId: FOREMAN_ID, workArea: "A200", activity: "Scaffold Assembly" };
+
+  it("accepts a fully populated valid input", () => {
+    expect(createDailyTeamSchema.safeParse(VALID).success).toBe(true);
+  });
+
+  it("accepts with workArea/activity omitted", () => {
+    expect(createDailyTeamSchema.safeParse({ name: "Team A200", shift: "day", foremanEmployeeId: FOREMAN_ID }).success).toBe(true);
+  });
+
+  it("rejects a missing shift", () => {
+    expect(createDailyTeamSchema.safeParse({ name: "Team A200", foremanEmployeeId: FOREMAN_ID }).success).toBe(false);
+  });
+
+  it("rejects a missing foreman", () => {
+    expect(createDailyTeamSchema.safeParse({ name: "Team A200", shift: "day" }).success).toBe(false);
+  });
+
+  it("rejects a non-uuid foremanEmployeeId", () => {
+    expect(createDailyTeamSchema.safeParse({ ...VALID, foremanEmployeeId: "not-a-uuid" }).success).toBe(false);
+  });
+
+  it("rejects a blank name", () => {
+    expect(createDailyTeamSchema.safeParse({ ...VALID, name: "" }).success).toBe(false);
+  });
+});
+
+describe("reorderDailyTeamsSchema", () => {
+  it("accepts a non-empty list of team ids", () => {
+    expect(reorderDailyTeamsSchema.safeParse({ orderedTeamIds: ["123e4567-e89b-42d3-a456-426614174000"] }).success).toBe(true);
+  });
+
+  it("rejects an empty list", () => {
+    expect(reorderDailyTeamsSchema.safeParse({ orderedTeamIds: [] }).success).toBe(false);
+  });
+
+  it("rejects a non-uuid entry", () => {
+    expect(reorderDailyTeamsSchema.safeParse({ orderedTeamIds: ["not-a-uuid"] }).success).toBe(false);
   });
 });
 
