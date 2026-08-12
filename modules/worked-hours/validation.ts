@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { optionalText } from "@/lib/validation";
-import { WORKED_HOURS_MIN, WORKED_HOURS_MAX, WORKED_HOURS_EMPLOYEE_SCOPES } from "./types";
+import { WORKED_HOURS_MIN, WORKED_HOURS_MAX, WORKED_HOURS_EMPLOYEE_SCOPES, WORKED_HOURS_CATEGORIES } from "./types";
 
 const hoursField = z
   .string()
@@ -12,16 +12,47 @@ const hoursField = z
   }, `Hours must be between ${WORKED_HOURS_MIN} and ${WORKED_HOURS_MAX}`)
   .transform((value) => Number(value));
 
-/** `upsertWorkedHours` Server Function input — reason is required only when correcting already-submitted hours (validate_scaffold_inspection_update()-style server-side enforcement is the real gate; this just catches the common case earlier). */
-export const upsertWorkedHoursSchema = z.object({
-  hours: hoursField,
-  note: optionalText,
-  reason: optionalText,
-});
-export type UpsertWorkedHoursInput = z.input<typeof upsertWorkedHoursSchema>;
+/** A single category's hours field — same bounds as hoursField, but zero-defaulting an empty string rather than rejecting it (a blank category input just means "0 hours for this category," not a validation error — every category field is optional in the form). */
+const categoryHoursField = z
+  .string()
+  .trim()
+  .transform((value) => (value === "" ? "0" : value))
+  .refine((value) => {
+    const num = Number(value);
+    return Number.isFinite(num) && num >= WORKED_HOURS_MIN && num <= WORKED_HOURS_MAX;
+  }, `Hours must be between ${WORKED_HOURS_MIN} and ${WORKED_HOURS_MAX}`)
+  .transform((value) => Number(value));
 
-/** `bulkApplyWorkedHours` Server Function input — "Apply [X] hours to all". */
+/**
+ * `upsertWorkedHoursCategories` Server Function input (Worked Hours V2,
+ * Phase 1-2) — one entry per controlled category, reason required only
+ * when correcting an already-submitted day (the server/RPC-side check is
+ * the real gate; this is the client-side usability layer). The <=24 total
+ * check here is the UI-side half of the "must never exceed 24.0 hours"
+ * invariant — sync_worked_hours_total()'s trigger is the always-enforced
+ * database-side half, regardless of what this schema does or doesn't catch.
+ */
+export const upsertWorkedHoursCategoriesSchema = z
+  .object({
+    categories: z.object({
+      regular: categoryHoursField,
+      overtime: categoryHoursField,
+      night: categoryHoursField,
+      travel: categoryHoursField,
+      other: categoryHoursField,
+    }),
+    note: optionalText,
+    reason: optionalText,
+  })
+  .refine((data) => WORKED_HOURS_CATEGORIES.reduce((sum, category) => sum + data.categories[category], 0) <= WORKED_HOURS_MAX, {
+    message: `Total hours across all categories cannot exceed ${WORKED_HOURS_MAX}.0`,
+    path: ["categories"],
+  });
+export type UpsertWorkedHoursCategoriesInput = z.input<typeof upsertWorkedHoursCategoriesSchema>;
+
+/** `bulkApplyWorkedHours` Server Function input — "Apply [X] [Category] to all". */
 export const bulkApplyWorkedHoursSchema = z.object({
+  category: z.enum(WORKED_HOURS_CATEGORIES as [string, ...string[]]),
   hours: hoursField,
   employeeIds: z.array(z.string().uuid()).min(1, "Select at least one employee"),
 });

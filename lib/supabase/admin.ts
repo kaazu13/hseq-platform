@@ -16,6 +16,29 @@ import type { Database } from "@/types/database";
  * "whoever is currently logged in." Callers stay responsible for scoping
  * every query themselves (e.g. `.eq("company_id", ...)`), the same
  * discipline RLS would otherwise provide.
+ *
+ * ONE deliberate, reviewed exception to "never from a path reachable by a
+ * regular/anonymous request": app/share/[token]/pdf/route.tsx (Toolbox
+ * Meeting/Safety Flash passthrough branch only). That route independently
+ * re-validates the share token via the anon-safe resolve_public_report()
+ * RPC FIRST — the exact same authorization boundary every other public
+ * share type already relies on — and only after that succeeds uses this
+ * client to mint a single short-lived (60s) signed URL for the ONE,
+ * server-resolved (never client-supplied) object path. This replaced a
+ * standing anon Storage RLS grant that allowed enumerating every
+ * currently-shared document platform-wide via the raw Storage API — see
+ * supabase/migrations/20260819090000_fix_share_storage_enumeration.sql's
+ * header comment for the full incident/reasoning. Do not add a second
+ * "convenient" usage site without the same independent-authorization-first
+ * property this one has.
+ *
+ * NOT used for Platform Admin session revocation: @supabase/auth-js's
+ * `auth.admin.signOut()` takes the TARGET USER'S OWN JWT as its argument,
+ * not a user id — an admin cannot legitimately obtain that, so this
+ * client offers no real "revoke this user's session by id" capability.
+ * See modules/platform-admin/actions.ts's revokeUserSessions() for the
+ * disclosed limitation and the actual (application-level, not token-
+ * level) enforcement this codebase relies on instead.
  */
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

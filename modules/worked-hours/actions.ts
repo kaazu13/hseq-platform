@@ -9,16 +9,16 @@ import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/sup
 import { getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { canManageWorkedHours } from "./permissions";
 import {
-  upsertWorkedHoursSchema,
+  upsertWorkedHoursCategoriesSchema,
   bulkApplyWorkedHoursSchema,
   reportWorkedHoursDiscrepancySchema,
   resolveWorkedHoursDiscrepancySchema,
-  type UpsertWorkedHoursInput,
+  type UpsertWorkedHoursCategoriesInput,
   type BulkApplyWorkedHoursInput,
   type ReportWorkedHoursDiscrepancyInput,
   type ResolveWorkedHoursDiscrepancyInput,
 } from "./validation";
-import type { WorkedHours, WorkedHoursDiscrepancy } from "./types";
+import { WORKED_HOURS_CATEGORIES, type WorkedHours, type WorkedHoursDiscrepancy } from "./types";
 
 /**
  * Server Functions for the Worked Hours domain — same fixed recipe as
@@ -47,14 +47,22 @@ function revalidateWorkedHoursPaths(companyId: string, projectId: string) {
 }
 
 /**
- * The sole write path for worked_hours' hours/note — upsert_worked_hours().
- * Create or a free draft edit needs no reason; correcting an already-
- * SUBMITTED row requires one (validated both here and, authoritatively,
- * inside the RPC) and atomically records a worked_hours_corrections row
- * plus a "Worked hours updated" notification to the employee.
+ * The sole write path for a day's category breakdown — upsert_worked_hours_categories()
+ * (Worked Hours V2, Phase 1-2). Create or a free draft edit needs no
+ * reason; correcting an already-SUBMITTED day requires one (validated
+ * both here and, authoritatively, inside the RPC) and atomically records
+ * a worked_hours_corrections row per changed category plus a "Worked
+ * hours updated" notification. The <=24h total across all categories is
+ * enforced by the database trigger regardless of what reaches here.
  */
-export async function upsertWorkedHours(companyId: string, projectId: string, employeeId: string, workDate: string, input: UpsertWorkedHoursInput): Promise<ActionResult<WorkedHours>> {
-  const parsed = upsertWorkedHoursSchema.safeParse(input);
+export async function upsertWorkedHoursCategories(
+  companyId: string,
+  projectId: string,
+  employeeId: string,
+  workDate: string,
+  input: UpsertWorkedHoursCategoriesInput,
+): Promise<ActionResult<WorkedHours>> {
+  const parsed = upsertWorkedHoursCategoriesSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the hours entered.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
@@ -62,12 +70,14 @@ export async function upsertWorkedHours(companyId: string, projectId: string, em
   await requireWorkedHoursManageAccess(companyId, projectId);
   const supabase = await createClient();
 
+  const categories = WORKED_HOURS_CATEGORIES.map((category) => ({ category, hours: parsed.data.categories[category] }));
+
   const { data, error } = await supabase
-    .rpc("upsert_worked_hours", {
+    .rpc("upsert_worked_hours_categories", {
       target_project_id: projectId,
       target_employee_id: employeeId,
       target_work_date: workDate,
-      target_hours: parsed.data.hours,
+      target_categories: categories,
       target_note: (parsed.data.note ?? null) as string,
       target_reason: (parsed.data.reason ?? null) as string,
     })
@@ -85,7 +95,7 @@ export async function upsertWorkedHours(companyId: string, projectId: string, em
   return { ok: true, data: data as WorkedHours };
 }
 
-/** "Apply [X] hours to all" — bulk_apply_worked_hours(); already-submitted rows are left untouched by the RPC itself. */
+/** "Apply [X] [Category] to all" — bulk_apply_worked_hours(); already-submitted rows, and any employee for whom this would exceed the 24h/day cap, are left untouched by the RPC itself. */
 export async function bulkApplyWorkedHours(companyId: string, projectId: string, workDate: string, input: BulkApplyWorkedHoursInput): Promise<ActionResult<null>> {
   const parsed = bulkApplyWorkedHoursSchema.safeParse(input);
   if (!parsed.success) {
@@ -98,6 +108,7 @@ export async function bulkApplyWorkedHours(companyId: string, projectId: string,
   const { error } = await supabase.rpc("bulk_apply_worked_hours", {
     target_project_id: projectId,
     target_work_date: workDate,
+    target_category: parsed.data.category as "regular" | "overtime" | "night" | "travel" | "other",
     target_hours: parsed.data.hours,
     target_employee_ids: parsed.data.employeeIds,
   });

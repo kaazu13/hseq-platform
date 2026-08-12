@@ -6,9 +6,11 @@ import { resolveCurrentProject } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { listWorkedHoursHistoryForEmployee, listMyWorkedHoursDiscrepancies, listWorkedHoursCorrections } from "@/modules/worked-hours/queries";
 import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, type WorkedHoursPeriodMode } from "@/modules/worked-hours/period";
+import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, toWorkedHoursCategoryBreakdown, sumWorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { MyHoursRow } from "@/modules/worked-hours/components/my-hours-row";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Card, CardContent } from "@/components/ui/card";
 
 type MyHoursPageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -85,6 +87,10 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   const discrepancyByWorkedHoursId = new Map(discrepancies.map((discrepancy) => [discrepancy.worked_hours_id, discrepancy]));
 
   const totalHours = rows.reduce((sum, row) => sum + Number(row.hours), 0);
+  const periodCategoryTotals = toWorkedHoursCategoryBreakdown([]);
+  for (const row of rows) {
+    for (const category of WORKED_HOURS_CATEGORIES) periodCategoryTotals[category] += row.breakdown[category];
+  }
   const basePath = "/my-hours";
   const prevDate = shiftDate(anchorDate, mode, -1);
   const nextDate = shiftDate(anchorDate, mode, 1);
@@ -122,10 +128,29 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
       {rows.length === 0 ? (
         <EmptyState icon={Clock} title="No hours recorded" description="Nothing has been recorded for this period yet." className="flex-1" />
       ) : (
-        <div className="flex flex-col gap-2">
-          {rows.map((row) => (
-            <MyHoursRow key={row.id} companyId={currentCompanyId} workedHours={row} corrections={correctionsByWorkedHoursId.get(row.id) ?? []} discrepancy={discrepancyByWorkedHoursId.get(row.id) ?? null} />
-          ))}
+        <div className="flex flex-col gap-4">
+          {mode !== "day" && (
+            <Card>
+              <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 pt-4 sm:grid-cols-3">
+                {WORKED_HOURS_CATEGORIES.map((category) => (
+                  <div key={category} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-muted-foreground">{WORKED_HOURS_CATEGORY_LABELS[category]}</span>
+                    <span className="font-medium tabular-nums">{periodCategoryTotals[category].toFixed(1)} h</span>
+                  </div>
+                ))}
+                <div className="col-span-2 flex items-center justify-between gap-2 border-t pt-2 text-sm sm:col-span-3">
+                  <span className="font-semibold">Grand total</span>
+                  <span className="text-lg font-semibold tabular-nums">{sumWorkedHoursCategoryBreakdown(periodCategoryTotals).toFixed(1)} h</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {rows.map((row) => (
+              <MyHoursRow key={row.id} companyId={currentCompanyId} workedHours={row} corrections={correctionsByWorkedHoursId.get(row.id) ?? []} discrepancy={discrepancyByWorkedHoursId.get(row.id) ?? null} />
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -6,7 +6,8 @@ import { requireCompanyMembership, requireAnyRole, requireUser } from "@/lib/aut
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRaisedException, isRlsViolation } from "@/lib/supabase/errors";
-import { updateOwnProfileFormSchema } from "./validation";
+import { updateOwnProfileFormSchema, updateCompanyNameSchema, type UpdateCompanyNameInput } from "./validation";
+import { validateCompanyLogoFile, buildCompanyLogoObjectPath, uploadCompanyLogo as uploadCompanyLogoToStorage, removeCompanyLogo as removeCompanyLogoFromStorage } from "@/lib/storage/company-logos";
 import type { Database } from "@/types/database";
 
 /**
@@ -123,5 +124,101 @@ export async function setMembershipStatus(companyId: string, membershipId: strin
   });
 
   revalidatePath("/admin/members");
+  return { ok: true, data: null };
+}
+
+/**
+ * Company Settings — "[ Rename company ]" (Phase 15). Gated by the SAME
+ * `companies_update_managers` RLS as the logo actions below
+ * (company_admin/operations_manager) — see
+ * supabase/migrations/20260819096000_company_branding.sql's header
+ * comment for why `companies` never had an UPDATE policy at all before
+ * this milestone.
+ */
+export async function updateCompanyName(companyId: string, input: UpdateCompanyNameInput): Promise<ActionResult<null>> {
+  const parsed = updateCompanyNameSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireAnyRole(companyId, ["company_admin", "operations_manager"]);
+  const supabase = await createClient();
+  const { error } = await supabase.from("companies").update({ name: parsed.data.name }).eq("id", companyId);
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    return { ok: false, error: { code: "server_error", message: "Couldn't rename the company. Try again." } };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { ok: true, data: null };
+}
+
+/**
+ * "[ Upload logo ]" (Phase 15-16) — validates the file (lib/storage/
+ * company-logos.ts's decoded-image check, not extension/MIME alone),
+ * uploads to a randomized, non-guessable object path, updates
+ * companies.logo_storage_path, and only THEN removes the previous object
+ * (if any) — "replace old logo safely... remove orphaned old files where
+ * appropriate," in that order so a failed upload never leaves the company
+ * with no logo at all.
+ */
+export async function uploadCompanyLogo(companyId: string, formData: FormData): Promise<ActionResult<{ logoStoragePath: string }>> {
+  await requireAnyRole(companyId, ["company_admin", "operations_manager"]);
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false, error: { code: "validation_error", message: "No file was provided." } };
+  }
+
+  const validation = await validateCompanyLogoFile(file);
+  if (!validation.ok) {
+    return { ok: false, error: { code: "validation_error", message: validation.message } };
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase.from("companies").select("logo_storage_path").eq("id", companyId).maybeSingle();
+
+  const objectPath = buildCompanyLogoObjectPath(companyId, file.type);
+  const uploadResult = await uploadCompanyLogoToStorage(supabase, objectPath, file);
+  if (!uploadResult.ok) {
+    return { ok: false, error: { code: "server_error", message: uploadResult.message } };
+  }
+
+  const { error } = await supabase.from("companies").update({ logo_storage_path: objectPath }).eq("id", companyId);
+  if (error) {
+    await removeCompanyLogoFromStorage(supabase, objectPath);
+    if (isRlsViolation(error)) forbidden();
+    return { ok: false, error: { code: "server_error", message: "Couldn't save the logo. Try again." } };
+  }
+
+  if (existing?.logo_storage_path) {
+    await removeCompanyLogoFromStorage(supabase, existing.logo_storage_path);
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+  return { ok: true, data: { logoStoragePath: objectPath } };
+}
+
+export async function removeCompanyLogo(companyId: string): Promise<ActionResult<null>> {
+  await requireAnyRole(companyId, ["company_admin", "operations_manager"]);
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase.from("companies").select("logo_storage_path").eq("id", companyId).maybeSingle();
+
+  const { error } = await supabase.from("companies").update({ logo_storage_path: null }).eq("id", companyId);
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    return { ok: false, error: { code: "server_error", message: "Couldn't remove the logo. Try again." } };
+  }
+
+  if (existing?.logo_storage_path) {
+    await removeCompanyLogoFromStorage(supabase, existing.logo_storage_path);
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
   return { ok: true, data: null };
 }

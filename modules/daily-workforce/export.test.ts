@@ -88,27 +88,41 @@ describe("formatDailyTeamsWorkbook", () => {
   });
 });
 
+const ZERO_CATEGORY_TOTALS = { regular: 0, overtime: 0, night: 0, travel: 0, other: 0 };
+
 describe("buildWorkedHoursMatrixWorkbook", () => {
-  it("lays out one row per employee with hours under the matching date column, plus Role/Total Hours/Days Worked and a totals row", async () => {
+  it("lays out one row per employee with hours under the matching date column, plus Role/category totals/Grand Total/Days Worked and a totals row", async () => {
     const period = { mode: "week" as const, fromDate: "2026-08-01", toDate: "2026-08-03" };
     const buffer = await buildWorkedHoursMatrixWorkbook("Northstar", "North Plant Expansion", period, [
-      { employee: employee("e1", "Karl", "Andersson", "Scaffolder"), hoursByDate: { "2026-08-01": 8, "2026-08-02": 8 }, totalHours: 16 },
+      {
+        employee: employee("e1", "Karl", "Andersson", "Scaffolder"),
+        hoursByDate: { "2026-08-01": 8, "2026-08-02": 8 },
+        categoryTotals: { ...ZERO_CATEGORY_TOTALS, regular: 14, overtime: 2 },
+        totalHours: 16,
+      },
     ]);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
     const sheet = workbook.worksheets[0];
 
     // Row 4 is the column header row (rows 1-3 are the title/project/period
-    // lines); columns are Employee, Role, one per date in range, Total
-    // Hours, Days Worked.
+    // lines); columns are Employee, Role, one per date in range, then
+    // Regular/Overtime/Night/Travel/Other Total, Grand Total, Days Worked.
     expect(sheet.getRow(4).getCell(1).value).toBe("Employee");
     expect(sheet.getRow(4).getCell(2).value).toBe("Role");
+    expect(sheet.getRow(4).getCell(6).value).toBe("Regular Total");
+    expect(sheet.getRow(4).getCell(7).value).toBe("Overtime Total");
+    expect(sheet.getRow(4).getCell(11).value).toBe("Grand Total");
+    expect(sheet.getRow(4).getCell(12).value).toBe("Days Worked");
+
     expect(sheet.getRow(5).getCell(1).value).toBe("Karl Andersson");
     expect(sheet.getRow(5).getCell(2).value).toBe("Scaffolder");
-    // Employee(1) + Role(2) + 3 dates(3-5) + Total Hours = column 6.
-    expect(sheet.getRow(5).getCell(6).value).toBe(16);
-    // Days Worked = column 7 — 2 days had hours > 0 out of the 3-day range.
-    expect(sheet.getRow(5).getCell(7).value).toBe(2);
+    // Employee(1) + Role(2) + 3 dates(3-5) + Regular(6) = 14.
+    expect(sheet.getRow(5).getCell(6).value).toBe(14);
+    expect(sheet.getRow(5).getCell(7).value).toBe(2); // Overtime Total
+    expect(sheet.getRow(5).getCell(11).value).toBe(16); // Grand Total
+    // Days Worked = column 12 — 2 days had hours > 0 out of the 3-day range.
+    expect(sheet.getRow(5).getCell(12).value).toBe(2);
     const totalsRowValues = (sheet.getRow(6).values as unknown[]).slice(1);
     expect(totalsRowValues[0]).toBe("TOTAL");
   });
@@ -116,29 +130,30 @@ describe("buildWorkedHoursMatrixWorkbook", () => {
   it("never emits a date column outside the resolved period, even if a row's hoursByDate has a stray out-of-range key", async () => {
     const period = { mode: "day" as const, fromDate: "2026-08-10", toDate: "2026-08-10" };
     const buffer = await buildWorkedHoursMatrixWorkbook("Northstar", "North Plant Expansion", period, [
-      { employee: employee("e2", "Anders", "Holm"), hoursByDate: { "2026-08-10": 8, "2026-09-01": 99 }, totalHours: 8 },
+      { employee: employee("e2", "Anders", "Holm"), hoursByDate: { "2026-08-10": 8, "2026-09-01": 99 }, categoryTotals: { ...ZERO_CATEGORY_TOTALS, regular: 8 }, totalHours: 8 },
     ]);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
     const sheet = workbook.worksheets[0];
-    // Employee, Role, one date column, Total Hours, Days Worked = 5 columns.
-    expect(sheet.getRow(4).actualCellCount).toBe(5);
+    // Employee, Role, one date column, 5 category totals, Grand Total, Days Worked = 10 columns.
+    expect(sheet.getRow(4).actualCellCount).toBe(10);
     expect(sheet.getRow(4).getCell(3).value).toBe("08-10");
   });
 });
 
 describe("buildDailyWorkedHoursWorkbook", () => {
-  it("includes company/project/date on every row plus a totals row", async () => {
+  it("includes company/project/date/category breakdown on every row plus a totals row", async () => {
     const buffer = await buildDailyWorkedHoursWorkbook("Northstar", "North Plant Expansion", "2026-08-10", [
-      { employee: { first_name: "Karl", last_name: "Andersson" }, hours: 8, note: null, status: "submitted" },
-      { employee: { first_name: "Anders", last_name: "Holm" }, hours: 7.5, note: "Left early", status: "draft" },
+      { employee: { first_name: "Karl", last_name: "Andersson" }, hours: 8, note: null, status: "submitted", breakdown: { ...ZERO_CATEGORY_TOTALS, regular: 8 } },
+      { employee: { first_name: "Anders", last_name: "Holm" }, hours: 7.5, note: "Left early", status: "draft", breakdown: { ...ZERO_CATEGORY_TOTALS, regular: 6, overtime: 1.5 } },
     ]);
     const rows = await loadFirstSheetRows(buffer);
     expect(rows).toHaveLength(4); // header + 2 rows + totals
-    expect(rows[1]).toEqual(["Northstar", "North Plant Expansion", "2026-08-10", "Karl Andersson", "8", "Submitted", ""]);
-    expect(rows[2][5]).toBe("Draft");
-    expect(rows[2][6]).toBe("Left early");
+    // Columns: Company, Project, Date, Employee, Regular, Overtime, Night, Travel, Other, Total, Status, Note.
+    expect(rows[0]).toEqual(["Company", "Project", "Date", "Employee", "Regular", "Overtime", "Night", "Travel", "Other", "Total", "Status", "Note"]);
+    expect(rows[1]).toEqual(["Northstar", "North Plant Expansion", "2026-08-10", "Karl Andersson", "8", "0", "0", "0", "0", "8", "Submitted", ""]);
+    expect(rows[2]).toEqual(["Northstar", "North Plant Expansion", "2026-08-10", "Anders Holm", "6", "1.5", "0", "0", "0", "7.5", "Draft", "Left early"]);
     expect(rows[3][3]).toBe("TOTAL");
-    expect(rows[3][4]).toBe("15.5");
+    expect(rows[3][9]).toBe("15.5");
   });
 });

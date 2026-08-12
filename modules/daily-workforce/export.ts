@@ -1,7 +1,8 @@
 import ExcelJS from "exceljs";
 import { listDailyTeamsForDate } from "./queries";
 import type { DailyTeamWithMembers } from "./types";
-import type { WorkedHoursMatrixRow } from "@/modules/worked-hours/types";
+import type { WorkedHoursMatrixRow, WorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
+import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_SHORT_LABELS } from "@/modules/worked-hours/types";
 import { formatWorkedHoursPeriodLabel, listPeriodDates, type WorkedHoursPeriod } from "@/modules/worked-hours/period";
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F2937" } };
@@ -75,17 +76,23 @@ export async function formatDailyTeamsWorkbook(companyName: string, projectName:
 }
 
 /**
- * Week/Month Worked Hours export (Phase 7) — a payroll-checking matrix:
- * Employee | Role | one column per calendar date in the resolved period |
- * Total Hours | Days Worked. Every date column comes from
- * listPeriodDates(period) — never a date outside the resolved [fromDate,
- * toDate] range, even if a caller's `rows` somehow contained one (a stray
- * hoursByDate key outside the period is simply never read). Role uses
- * `position_title` (get_basic_employee_info()'s narrow, approved column
- * set has no employee_number — see modules/employees/employee-options.ts's
- * header comment; deliberately not widening that SECURITY DEFINER
- * function's return shape just for this export). No raw UUIDs or
- * database-internal fields appear anywhere in the sheet.
+ * Week/Month Worked Hours export (Phase 7, extended for Worked Hours V2's
+ * categories in Phase 3) — a payroll-checking matrix: Employee | Role |
+ * one column per calendar date in the resolved period (each cell is that
+ * day's TOTAL across every category — the per-category date-by-date
+ * breakdown would make a month sheet unreadably wide, 5 categories x 31
+ * days; see this function's own "Do not create an unreadable spreadsheet"
+ * constraint) | Regular Total | Overtime Total | Night Total | Travel
+ * Total | Other Total | Grand Total | Days Worked. Every date column
+ * comes from listPeriodDates(period) — never a date outside the resolved
+ * [fromDate, toDate] range, even if a caller's `rows` somehow contained
+ * one (a stray hoursByDate key outside the period is simply never read).
+ * Role uses `position_title` (get_basic_employee_info()'s narrow,
+ * approved column set has no employee_number — see
+ * modules/employees/employee-options.ts's header comment; deliberately
+ * not widening that SECURITY DEFINER function's return shape just for
+ * this export). No raw UUIDs or database-internal fields appear anywhere
+ * in the sheet.
  */
 export async function buildWorkedHoursMatrixWorkbook(companyName: string, projectName: string, period: WorkedHoursPeriod, rows: WorkedHoursMatrixRow[]): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -106,7 +113,8 @@ export async function buildWorkedHoursMatrixWorkbook(companyName: string, projec
     { header: "Employee", key: "employee", width: 24 },
     { header: "Role", key: "role", width: 18 },
     ...dates.map((date) => ({ header: date.slice(5), key: date, width: 8 })),
-    { header: "Total Hours", key: "total", width: 12 },
+    ...WORKED_HOURS_CATEGORIES.map((category) => ({ header: `${WORKED_HOURS_CATEGORY_SHORT_LABELS[category]} Total`, key: `categoryTotal_${category}`, width: 13 })),
+    { header: "Grand Total", key: "total", width: 12 },
     { header: "Days Worked", key: "daysWorked", width: 12 },
   ];
   sheet.columns = columns;
@@ -125,6 +133,7 @@ export async function buildWorkedHoursMatrixWorkbook(companyName: string, projec
       total: row.totalHours,
       daysWorked: dates.filter((date) => (row.hoursByDate[date] ?? 0) > 0).length,
     };
+    for (const category of WORKED_HOURS_CATEGORIES) rowData[`categoryTotal_${category}`] = row.categoryTotals[category];
     for (const date of dates) {
       const hours = row.hoursByDate[date];
       if (hours !== undefined) rowData[date] = hours;
@@ -132,22 +141,24 @@ export async function buildWorkedHoursMatrixWorkbook(companyName: string, projec
     sheet.addRow(rowData);
   }
 
-  const totalsRow = sheet.addRow({
+  const totalsRow: Record<string, string | number> = {
     employee: "TOTAL",
     total: rows.reduce((sum, row) => sum + row.totalHours, 0),
     daysWorked: rows.reduce((sum, row) => sum + dates.filter((date) => (row.hoursByDate[date] ?? 0) > 0).length, 0),
-  });
-  totalsRow.font = { bold: true };
+  };
+  for (const category of WORKED_HOURS_CATEGORIES) totalsRow[`categoryTotal_${category}`] = rows.reduce((sum, row) => sum + row.categoryTotals[category], 0);
+  const totalsRowRef = sheet.addRow(totalsRow);
+  totalsRowRef.font = { bold: true };
 
   return workbook.xlsx.writeBuffer();
 }
 
-/** Single-day Worked Hours export — employee, hours, note, status. */
+/** Single-day Worked Hours export — employee, each hour category, total, note, status (Worked Hours V2, Phase 3). */
 export async function buildDailyWorkedHoursWorkbook(
   companyName: string,
   projectName: string,
   workDate: string,
-  rows: { employee: { first_name: string; last_name: string }; hours: number; note: string | null; status: string }[],
+  rows: { employee: { first_name: string; last_name: string }; hours: string | number; note: string | null; status: string; breakdown: WorkedHoursCategoryBreakdown }[],
 ): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "HSEQ Platform";
@@ -159,7 +170,8 @@ export async function buildDailyWorkedHoursWorkbook(
     { header: "Project", key: "project", width: 24 },
     { header: "Date", key: "date", width: 14 },
     { header: "Employee", key: "employee", width: 24 },
-    { header: "Hours", key: "hours", width: 10 },
+    ...WORKED_HOURS_CATEGORIES.map((category) => ({ header: WORKED_HOURS_CATEGORY_SHORT_LABELS[category], key: `category_${category}`, width: 11 })),
+    { header: "Total", key: "hours", width: 10 },
     { header: "Status", key: "status", width: 12 },
     { header: "Note", key: "note", width: 30 },
   ];
@@ -169,19 +181,23 @@ export async function buildDailyWorkedHoursWorkbook(
   headerRow.fill = HEADER_FILL;
 
   for (const row of rows) {
-    sheet.addRow({
+    const rowData: Record<string, string | number> = {
       company: companyName,
       project: projectName,
       date: workDate,
       employee: `${row.employee.first_name} ${row.employee.last_name}`,
-      hours: row.hours,
+      hours: Number(row.hours),
       status: row.status === "submitted" ? "Submitted" : "Draft",
       note: row.note ?? "",
-    });
+    };
+    for (const category of WORKED_HOURS_CATEGORIES) rowData[`category_${category}`] = row.breakdown[category];
+    sheet.addRow(rowData);
   }
 
-  const totalsRow = sheet.addRow({ employee: "TOTAL", hours: rows.reduce((sum, row) => sum + row.hours, 0) });
-  totalsRow.font = { bold: true };
+  const totalsRow: Record<string, string | number> = { employee: "TOTAL", hours: rows.reduce((sum, row) => sum + Number(row.hours), 0) };
+  for (const category of WORKED_HOURS_CATEGORIES) totalsRow[`category_${category}`] = rows.reduce((sum, row) => sum + row.breakdown[category], 0);
+  const totalsRowRef = sheet.addRow(totalsRow);
+  totalsRowRef.font = { bold: true };
 
   return workbook.xlsx.writeBuffer();
 }

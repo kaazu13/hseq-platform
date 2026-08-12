@@ -82,18 +82,22 @@ export async function listActiveCompaniesForUser(
  * `resolveCurrentCompany()` below) independently; without this, each
  * authenticated page load re-ran this query twice.
  */
-export const getCurrentUserProfile = cache(async (userId: string): Promise<Profile | null> => {
-  const supabase = await createClient();
+export const getCurrentUserProfile = cache(
+  async (
+    userId: string,
+  ): Promise<Pick<Profile, "id" | "full_name" | "phone" | "active_company_id" | "active_project_id" | "user_number" | "created_at" | "updated_at"> | null> => {
+    const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, phone, active_company_id, active_project_id, user_number, created_at, updated_at")
-    .eq("id", userId)
-    .maybeSingle();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, phone, active_company_id, active_project_id, user_number, created_at, updated_at")
+      .eq("id", userId)
+      .maybeSingle();
 
-  if (error) throw error;
-  return data;
-});
+    if (error) throw error;
+    return data;
+  },
+);
 
 export type CurrentCompanyResolution = {
   companies: CompanySummary[];

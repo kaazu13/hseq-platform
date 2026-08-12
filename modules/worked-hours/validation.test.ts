@@ -1,53 +1,69 @@
 import { describe, it, expect } from "vitest";
-import { upsertWorkedHoursSchema, bulkApplyWorkedHoursSchema, reportWorkedHoursDiscrepancySchema, resolveWorkedHoursDiscrepancySchema, workedHoursExportQuerySchema } from "./validation";
+import { upsertWorkedHoursCategoriesSchema, bulkApplyWorkedHoursSchema, reportWorkedHoursDiscrepancySchema, resolveWorkedHoursDiscrepancySchema, workedHoursExportQuerySchema } from "./validation";
 
-describe("upsertWorkedHoursSchema", () => {
-  it("accepts a valid hours string and transforms it to a number", () => {
-    const result = upsertWorkedHoursSchema.safeParse({ hours: "8" });
+const ZERO_CATEGORIES = { regular: "0", overtime: "0", night: "0", travel: "0", other: "0" };
+
+describe("upsertWorkedHoursCategoriesSchema", () => {
+  it("accepts a valid category breakdown and transforms each value to a number", () => {
+    const result = upsertWorkedHoursCategoriesSchema.safeParse({ categories: { ...ZERO_CATEGORIES, regular: "8", overtime: "2" } });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.hours).toBe(8);
+    if (result.success) {
+      expect(result.data.categories.regular).toBe(8);
+      expect(result.data.categories.overtime).toBe(2);
+    }
   });
 
-  it("accepts the inclusive bounds 0 and 24", () => {
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "0" }).success).toBe(true);
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "24" }).success).toBe(true);
+  it("treats a blank category field as 0, not an error", () => {
+    const result = upsertWorkedHoursCategoriesSchema.safeParse({ categories: { ...ZERO_CATEGORIES, regular: "" } });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.categories.regular).toBe(0);
   });
 
-  it("rejects hours outside 0-24", () => {
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "-1" }).success).toBe(false);
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "24.5" }).success).toBe(false);
+  it("rejects a single category value outside 0-24", () => {
+    expect(upsertWorkedHoursCategoriesSchema.safeParse({ categories: { ...ZERO_CATEGORIES, regular: "-1" } }).success).toBe(false);
+    expect(upsertWorkedHoursCategoriesSchema.safeParse({ categories: { ...ZERO_CATEGORIES, regular: "24.5" } }).success).toBe(false);
   });
 
-  it("rejects a non-numeric hours value", () => {
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "abc" }).success).toBe(false);
+  it("rejects a non-numeric category value", () => {
+    expect(upsertWorkedHoursCategoriesSchema.safeParse({ categories: { ...ZERO_CATEGORIES, regular: "abc" } }).success).toBe(false);
   });
 
-  it("rejects a blank hours value", () => {
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "" }).success).toBe(false);
+  it("rejects a total across all categories exceeding 24.0 — the critical invariant", () => {
+    const result = upsertWorkedHoursCategoriesSchema.safeParse({ categories: { regular: "20", overtime: "10", night: "0", travel: "0", other: "0" } });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a total of exactly 24.0", () => {
+    const result = upsertWorkedHoursCategoriesSchema.safeParse({ categories: { regular: "20", overtime: "4", night: "0", travel: "0", other: "0" } });
+    expect(result.success).toBe(true);
   });
 
   it("allows note/reason to be omitted — reason is only enforced server-side when correcting submitted hours", () => {
-    expect(upsertWorkedHoursSchema.safeParse({ hours: "7.5" }).success).toBe(true);
+    expect(upsertWorkedHoursCategoriesSchema.safeParse({ categories: { ...ZERO_CATEGORIES, regular: "7.5" } }).success).toBe(true);
   });
 });
 
 describe("bulkApplyWorkedHoursSchema", () => {
   const EMPLOYEE_ID = "123e4567-e89b-42d3-a456-426614174000";
 
-  it("accepts a valid hours value with at least one employee", () => {
-    expect(bulkApplyWorkedHoursSchema.safeParse({ hours: "10", employeeIds: [EMPLOYEE_ID] }).success).toBe(true);
+  it("accepts a valid category/hours value with at least one employee", () => {
+    expect(bulkApplyWorkedHoursSchema.safeParse({ category: "regular", hours: "10", employeeIds: [EMPLOYEE_ID] }).success).toBe(true);
+  });
+
+  it("rejects a category outside the fixed list", () => {
+    expect(bulkApplyWorkedHoursSchema.safeParse({ category: "vacation", hours: "10", employeeIds: [EMPLOYEE_ID] }).success).toBe(false);
   });
 
   it("rejects an empty employeeIds array — must select at least one employee", () => {
-    expect(bulkApplyWorkedHoursSchema.safeParse({ hours: "10", employeeIds: [] }).success).toBe(false);
+    expect(bulkApplyWorkedHoursSchema.safeParse({ category: "regular", hours: "10", employeeIds: [] }).success).toBe(false);
   });
 
   it("rejects a non-uuid entry in employeeIds", () => {
-    expect(bulkApplyWorkedHoursSchema.safeParse({ hours: "10", employeeIds: ["not-a-uuid"] }).success).toBe(false);
+    expect(bulkApplyWorkedHoursSchema.safeParse({ category: "regular", hours: "10", employeeIds: ["not-a-uuid"] }).success).toBe(false);
   });
 
-  it("rejects out-of-bounds hours same as upsertWorkedHoursSchema", () => {
-    expect(bulkApplyWorkedHoursSchema.safeParse({ hours: "25", employeeIds: [EMPLOYEE_ID] }).success).toBe(false);
+  it("rejects out-of-bounds hours", () => {
+    expect(bulkApplyWorkedHoursSchema.safeParse({ category: "regular", hours: "25", employeeIds: [EMPLOYEE_ID] }).success).toBe(false);
   });
 });
 

@@ -6,6 +6,7 @@ import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/quer
 import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
 import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
+import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
 import { DailyTeamCard } from "@/modules/daily-workforce/components/daily-team-card";
 import { DailyWorkforceRoster } from "@/modules/daily-workforce/components/daily-workforce-roster";
 import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/export-daily-teams-button";
@@ -79,6 +80,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Today's Teams" description={`${project.name} — archive of past workforce allocations.`} />
+        <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="teams" />
         <div className="flex items-center gap-2">
           <Link href={basePath} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
             Today
@@ -128,6 +130,8 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
         description={`${formatWorkDate(workDate)} · ${project.name}`}
         actions={<ExportDailyTeamsButton companyId={companyId} projectId={projectId} workDate={workDate} className="print:hidden" />}
       />
+
+      <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="teams" />
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">Today</span>

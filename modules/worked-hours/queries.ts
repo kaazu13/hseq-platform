@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { AppNotification, WorkedHoursMatrixRow, WorkedHours, WorkedHoursCorrection, WorkedHoursDiscrepancy, WorkedHoursWithEmployee } from "./types";
+import type { AppNotification, WorkedHoursMatrixRow, WorkedHours, WorkedHoursBreakdown, WorkedHoursCorrection, WorkedHoursDiscrepancy, WorkedHoursWithEmployee, WorkedHoursCategoryBreakdown } from "./types";
+import { toWorkedHoursCategoryBreakdown } from "./types";
 import type { BasicEmployee } from "@/modules/daily-workforce/types";
 
 /**
@@ -8,7 +9,22 @@ import type { BasicEmployee } from "@/modules/daily-workforce/types";
  * other module this session.
  */
 
-/** Every worked_hours row for (project, work_date), resolved with each employee's display name — the Worked Hours day view's single data source. */
+/** Every worked_hours_breakdown row for a set of worked_hours ids, grouped by worked_hours_id — the shared helper every category-aware query below uses to attach a full breakdown to its parent row(s). */
+async function listBreakdownByWorkedHoursId(companyId: string, workedHoursIds: string[]): Promise<Map<string, WorkedHoursBreakdown[]>> {
+  const map = new Map<string, WorkedHoursBreakdown[]>();
+  if (workedHoursIds.length === 0) return map;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("worked_hours_breakdown").select("*").eq("company_id", companyId).in("worked_hours_id", workedHoursIds);
+  if (error) throw error;
+  for (const row of data ?? []) {
+    const bucket = map.get(row.worked_hours_id) ?? [];
+    bucket.push(row);
+    map.set(row.worked_hours_id, bucket);
+  }
+  return map;
+}
+
+/** Every worked_hours row for (project, work_date), resolved with each employee's display name and full category breakdown — the Worked Hours day view's single data source. */
 export async function listWorkedHoursForDate(companyId: string, projectId: string, workDate: string): Promise<WorkedHoursWithEmployee[]> {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
@@ -20,13 +36,15 @@ export async function listWorkedHoursForDate(companyId: string, projectId: strin
   if (error) throw error;
   if (!rows || rows.length === 0) return [];
 
-  const employeeIds = [...new Set(rows.map((row) => row.employee_id))];
-  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
+  const [{ data: employees, error: employeesError }, breakdownByWorkedHoursId] = await Promise.all([
+    supabase.rpc("get_basic_employee_info", { target_employee_ids: [...new Set(rows.map((row) => row.employee_id))] }),
+    listBreakdownByWorkedHoursId(companyId, rows.map((row) => row.id)),
+  ]);
   if (employeesError) throw employeesError;
   const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
 
   return rows
-    .map((row) => ({ ...row, employee: employeeById.get(row.employee_id) }))
+    .map((row) => ({ ...row, employee: employeeById.get(row.employee_id), breakdown: toWorkedHoursCategoryBreakdown(breakdownByWorkedHoursId.get(row.id) ?? []) }))
     .filter((row): row is WorkedHoursWithEmployee => Boolean(row.employee))
     .sort((a, b) => {
       const lastNameCompare = a.employee.last_name.localeCompare(b.employee.last_name);
@@ -34,8 +52,8 @@ export async function listWorkedHoursForDate(companyId: string, projectId: strin
     });
 }
 
-/** A single employee's worked_hours row for a date — null if none recorded yet. */
-export async function getWorkedHours(companyId: string, projectId: string, employeeId: string, workDate: string): Promise<WorkedHours | null> {
+/** A single employee's worked_hours row for a date, with its full category breakdown — null if none recorded yet. */
+export async function getWorkedHours(companyId: string, projectId: string, employeeId: string, workDate: string): Promise<(WorkedHours & { breakdown: WorkedHoursCategoryBreakdown }) | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("worked_hours")
@@ -46,7 +64,11 @@ export async function getWorkedHours(companyId: string, projectId: string, emplo
     .eq("work_date", workDate)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  if (!data) return null;
+
+  const { data: breakdownRows, error: breakdownError } = await supabase.from("worked_hours_breakdown").select("*").eq("company_id", companyId).eq("worked_hours_id", data.id);
+  if (breakdownError) throw breakdownError;
+  return { ...data, breakdown: toWorkedHoursCategoryBreakdown(breakdownRows ?? []) };
 }
 
 /** The employee's most recently recorded worked_hours row for a project, regardless of date — the Employee Dashboard's "today's/latest credited hours" data source. */
@@ -104,27 +126,46 @@ export async function listProjectRosterEmployees(companyId: string, projectId: s
   return (employees ?? []).sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
 }
 
-/** Every worked_hours row for a project within [fromDate, toDate] inclusive, pivoted into one row per employee with hours keyed by date — the Worked Hours "This Month" view's and the Week/Month export's single data source. `employeeIds`, when given, restricts the result to exactly those employees (the "selected workers" export scope) — still always scoped to this one company/project regardless. */
+/** Every worked_hours row for a project within [fromDate, toDate] inclusive, pivoted into one row per employee with hours keyed by date PLUS a per-category total across the whole period — the Worked Hours "This Month" view's and the Week/Month export's single data source. `employeeIds`, when given, restricts the result to exactly those employees (the "selected workers" export scope) — still always scoped to this one company/project regardless. */
 export async function listWorkedHoursForPeriod(companyId: string, projectId: string, fromDate: string, toDate: string, employeeIds?: string[]): Promise<WorkedHoursMatrixRow[]> {
   const supabase = await createClient();
-  let query = supabase.from("worked_hours").select("employee_id, work_date, hours").eq("company_id", companyId).eq("project_id", projectId).gte("work_date", fromDate).lte("work_date", toDate);
+  let query = supabase.from("worked_hours").select("id, employee_id, work_date, hours").eq("company_id", companyId).eq("project_id", projectId).gte("work_date", fromDate).lte("work_date", toDate);
   if (employeeIds) query = query.in("employee_id", employeeIds);
   const { data: rows, error } = await query;
   if (error) throw error;
   if (!rows || rows.length === 0) return [];
 
-  const foundEmployeeIds = [...new Set(rows.map((row) => row.employee_id))];
-  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: foundEmployeeIds });
+  const [{ data: employees, error: employeesError }, { data: breakdownRows, error: breakdownError }] = await Promise.all([
+    supabase.rpc("get_basic_employee_info", { target_employee_ids: [...new Set(rows.map((row) => row.employee_id))] }),
+    supabase
+      .from("worked_hours_breakdown")
+      .select("worked_hours_id, category, hours")
+      .eq("company_id", companyId)
+      .in(
+        "worked_hours_id",
+        rows.map((row) => row.id),
+      ),
+  ]);
   if (employeesError) throw employeesError;
+  if (breakdownError) throw breakdownError;
   const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
+  const breakdownByWorkedHoursId = new Map<string, { category: string; hours: number }[]>();
+  for (const row of breakdownRows ?? []) {
+    const bucket = breakdownByWorkedHoursId.get(row.worked_hours_id) ?? [];
+    bucket.push({ category: row.category, hours: Number(row.hours) });
+    breakdownByWorkedHoursId.set(row.worked_hours_id, bucket);
+  }
 
   const byEmployeeId = new Map<string, WorkedHoursMatrixRow>();
   for (const row of rows) {
     const employee = employeeById.get(row.employee_id);
     if (!employee) continue;
-    const existing = byEmployeeId.get(row.employee_id) ?? { employee, hoursByDate: {}, totalHours: 0 };
+    const existing = byEmployeeId.get(row.employee_id) ?? { employee, hoursByDate: {}, categoryTotals: toWorkedHoursCategoryBreakdown([]), totalHours: 0 };
     existing.hoursByDate[row.work_date] = Number(row.hours);
     existing.totalHours += Number(row.hours);
+    for (const entry of breakdownByWorkedHoursId.get(row.id) ?? []) {
+      existing.categoryTotals[entry.category as keyof WorkedHoursCategoryBreakdown] += entry.hours;
+    }
     byEmployeeId.set(row.employee_id, existing);
   }
 
@@ -285,7 +326,7 @@ export async function getUnreadNotificationCount(): Promise<number> {
  * resolve it via getMyEmployeeId() first, same convention as every other
  * "my own data" query in this codebase; RLS backstops it regardless.
  */
-export async function listWorkedHoursHistoryForEmployee(companyId: string, projectId: string, employeeId: string, fromDate: string, toDate: string): Promise<WorkedHours[]> {
+export async function listWorkedHoursHistoryForEmployee(companyId: string, projectId: string, employeeId: string, fromDate: string, toDate: string): Promise<WorkedHoursWithEmployee[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("worked_hours")
@@ -297,5 +338,15 @@ export async function listWorkedHoursHistoryForEmployee(companyId: string, proje
     .lte("work_date", toDate)
     .order("work_date", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  if (!data || data.length === 0) return [];
+
+  const [{ data: employees, error: employeesError }, breakdownByWorkedHoursId] = await Promise.all([
+    supabase.rpc("get_basic_employee_info", { target_employee_ids: [employeeId] }),
+    listBreakdownByWorkedHoursId(companyId, data.map((row) => row.id)),
+  ]);
+  if (employeesError) throw employeesError;
+  const employee = employees?.[0];
+  if (!employee) return [];
+
+  return data.map((row) => ({ ...row, employee, breakdown: toWorkedHoursCategoryBreakdown(breakdownByWorkedHoursId.get(row.id) ?? []) }));
 }

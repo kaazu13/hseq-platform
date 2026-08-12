@@ -7,7 +7,7 @@ import { canManageWorkedHours } from "@/modules/worked-hours/permissions";
 import { workedHoursExportQuerySchema } from "@/modules/worked-hours/validation";
 import { buildDailyWorkedHoursWorkbook, buildWorkedHoursMatrixWorkbook } from "@/modules/daily-workforce/export";
 import { resolveWorkedHoursPeriod, buildWorkedHoursFilename } from "@/modules/worked-hours/period";
-import type { WorkedHoursMatrixRow } from "@/modules/worked-hours/types";
+import { toWorkedHoursCategoryBreakdown, type WorkedHoursMatrixRow, type WorkedHoursWithEmployee } from "@/modules/worked-hours/types";
 
 type RouteContext = { params: Promise<{ companyId: string; projectId: string }> };
 
@@ -61,29 +61,27 @@ export async function GET(request: Request, { params }: RouteContext) {
   const filename = buildWorkedHoursFilename(project.name, period);
 
   // Single-day export keeps the existing simple/readable row-per-employee
-  // format (Phase 7's explicit "keep Day export simple").
+  // format (Phase 7's explicit "keep Day export simple"), now with each
+  // hour category as its own column (Phase 3 of Worked Hours V2).
   if (period.mode === "day") {
     const hoursRows = await listWorkedHoursForDate(companyId, projectId, period.fromDate);
     const hoursByEmployeeId = new Map(hoursRows.map((row) => [row.employee_id, row]));
 
-    let dayRows: { employee: { first_name: string; last_name: string }; hours: number; note: string | null; status: string }[];
+    function emptyDayRow(employee: WorkedHoursWithEmployee["employee"]): Pick<WorkedHoursWithEmployee, "employee" | "hours" | "note" | "status" | "breakdown"> {
+      return { employee, hours: 0, note: null, status: "draft", breakdown: toWorkedHoursCategoryBreakdown([]) };
+    }
+
+    let dayRows: Pick<WorkedHoursWithEmployee, "employee" | "hours" | "note" | "status" | "breakdown">[];
     if (scope === "selected") {
       const eligible = await listProjectWorkersForPeriod(companyId, projectId, period.fromDate, period.toDate);
       const eligibleIds = new Set(eligible.map((employee) => employee.id));
       const validatedIds = (requestedEmployeeIds ?? []).filter((id) => eligibleIds.has(id));
-      dayRows = validatedIds.map((id) => {
-        const existing = hoursByEmployeeId.get(id);
-        const employee = existing?.employee ?? eligible.find((candidate) => candidate.id === id)!;
-        return { employee, hours: existing ? Number(existing.hours) : 0, note: existing?.note ?? null, status: existing?.status ?? "draft" };
-      });
+      dayRows = validatedIds.map((id) => hoursByEmployeeId.get(id) ?? emptyDayRow(eligible.find((candidate) => candidate.id === id)!));
     } else if (scope === "all_workers") {
       const eligible = await listProjectWorkersForPeriod(companyId, projectId, period.fromDate, period.toDate);
-      dayRows = eligible.map((employee) => {
-        const existing = hoursByEmployeeId.get(employee.id);
-        return { employee, hours: existing ? Number(existing.hours) : 0, note: existing?.note ?? null, status: existing?.status ?? "draft" };
-      });
+      dayRows = eligible.map((employee) => hoursByEmployeeId.get(employee.id) ?? emptyDayRow(employee));
     } else {
-      dayRows = hoursRows.map((row) => ({ employee: row.employee, hours: Number(row.hours), note: row.note, status: row.status }));
+      dayRows = hoursRows;
     }
 
     const buffer = await buildDailyWorkedHoursWorkbook(companyName, project.name, period.fromDate, dayRows);
@@ -106,13 +104,13 @@ export async function GET(request: Request, { params }: RouteContext) {
     // workers" should show everyone chosen, not just those with rows.
     const rowsByEmployeeId = new Map(rows.map((row) => [row.employee.id, row]));
     rows = validatedIds
-      .map((id) => rowsByEmployeeId.get(id) ?? { employee: eligible.find((employee) => employee.id === id)!, hoursByDate: {}, totalHours: 0 })
+      .map((id) => rowsByEmployeeId.get(id) ?? { employee: eligible.find((employee) => employee.id === id)!, hoursByDate: {}, categoryTotals: toWorkedHoursCategoryBreakdown([]), totalHours: 0 })
       .sort((a, b) => `${a.employee.last_name} ${a.employee.first_name}`.localeCompare(`${b.employee.last_name} ${b.employee.first_name}`));
   } else if (scope === "all_workers") {
     const eligible = await listProjectWorkersForPeriod(companyId, projectId, period.fromDate, period.toDate);
     const hoursRows = await listWorkedHoursForPeriod(companyId, projectId, period.fromDate, period.toDate);
     const hoursByEmployeeId = new Map(hoursRows.map((row) => [row.employee.id, row]));
-    rows = eligible.map((employee) => hoursByEmployeeId.get(employee.id) ?? { employee, hoursByDate: {}, totalHours: 0 });
+    rows = eligible.map((employee) => hoursByEmployeeId.get(employee.id) ?? { employee, hoursByDate: {}, categoryTotals: toWorkedHoursCategoryBreakdown([]), totalHours: 0 });
   } else {
     rows = await listWorkedHoursForPeriod(companyId, projectId, period.fromDate, period.toDate);
   }

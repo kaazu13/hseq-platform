@@ -134,6 +134,7 @@ export default async function DashboardPage() {
       employeeSection = (
         <EmployeeDashboardSection
           companyId={current.id}
+          projectId={effectiveProjectId}
           todayCard={todayCard}
           hoursThisWeek={hoursThisWeek}
           monthToDateHours={monthToDateHours}

@@ -1,0 +1,37 @@
+-- Operational Quality milestone, Phase 21 (MANDATORY security fix).
+--
+-- The anon SELECT policy `toolbox_documents_select_via_share` added in
+-- 20260817090000_report_pdf_export_and_sharing.sql granted the `anon` role
+-- a STANDING, un-token-scoped read grant on any storage.objects row
+-- covered by an active report_shares row. Because Supabase Storage's
+-- `list()` and `createSignedUrl()` operations both evaluate the SAME RLS
+-- SELECT policy as a per-row filter, and a Storage request carries no
+-- per-request secret (the anon key is a static, identical JWT for every
+-- caller — unlike resolve_public_report(), which takes the plaintext
+-- token as an explicit SQL argument), this meant ANY caller who queried
+-- the Supabase Storage REST API directly (bypassing this application
+-- entirely, using only the public anon key) could enumerate every
+-- currently actively-shared toolbox-meeting/safety-flash document's
+-- object path ACROSS EVERY COMPANY on the platform, then mint a signed
+-- URL for any of them — without ever holding that share's actual token.
+--
+-- Root-caused and disclosed in this session's Phase 12 security review
+-- (no `storage.create_signed_url`-equivalent SQL function exists in this
+-- project's `storage` schema — confirmed via pg_proc — so a per-token
+-- check cannot be pushed into Storage's own RLS evaluation at all).
+--
+-- Fix: remove the standing anon grant entirely. Anonymous document
+-- downloads for the two document-passthrough share types now go through
+-- app/share/[token]/pdf/route.tsx, which re-validates the token via the
+-- SAME anon-safe resolve_public_report() RPC every other share type
+-- already uses, and ONLY THEN mints a short-lived (60s) signed URL using
+-- the service-role client for the exact, server-resolved object path —
+-- never a client-supplied path, never a standing grant. This is the one
+-- deliberate, reviewed exception to lib/supabase/admin.ts's "never from a
+-- path reachable by an anonymous request" rule — the admin client is
+-- invoked only AFTER this application's own code has independently and
+-- authoritatively verified the token, exactly the same authorization
+-- boundary every other public share route already relies on; see that
+-- route's own comment for the full reasoning.
+drop policy if exists toolbox_documents_select_via_share on storage.objects;
+drop function if exists public.has_valid_toolbox_document_share(text);

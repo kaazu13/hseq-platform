@@ -13,6 +13,8 @@ import type { CorrectiveActionDetail } from "@/modules/corrective-actions/types"
 import { ReportDiscrepancyButton } from "@/modules/worked-hours/components/report-discrepancy-button";
 import { NotificationList } from "@/modules/worked-hours/components/notification-list";
 import { EmployeeTodaySafetySection } from "@/modules/daily-workforce/components/employee-today-safety-section";
+import { ReportAbsenceDialog } from "@/modules/absences/components/report-absence-dialog";
+import { RequestLeaveDialog } from "@/modules/leave-requests/components/request-leave-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +22,7 @@ import { SectionHeader } from "@/components/shared/section-header";
 
 type EmployeeDashboardSectionProps = {
   companyId: string;
+  projectId: string;
   todayCard: EmployeeTodayCard;
   hoursThisWeek: number;
   monthToDateHours: number;
@@ -55,6 +58,7 @@ function formatObservedAt(value: string): string {
  */
 export function EmployeeDashboardSection({
   companyId,
+  projectId,
   todayCard,
   hoursThisWeek,
   monthToDateHours,
@@ -121,6 +125,22 @@ export function EmployeeDashboardSection({
           )}
         </CardContent>
       </Card>
+
+      <div className="flex flex-col gap-2">
+        <SectionHeader title="Quick actions" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <ReportAbsenceDialog companyId={companyId} projectId={projectId} />
+          <RequestLeaveDialog companyId={companyId} projectId={projectId} />
+          <Button variant="outline" className="h-auto flex-col gap-1.5 py-4" nativeButton={false} render={<Link href="/my-hours" />}>
+            <Clock className="size-5" />
+            <span className="text-sm">View My Hours</span>
+          </Button>
+          <Button variant="outline" className="h-auto flex-col gap-1.5 py-4" nativeButton={false} render={<Link href="/observations" />}>
+            <Eye className="size-5" />
+            <span className="text-sm">My Observations</span>
+          </Button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>

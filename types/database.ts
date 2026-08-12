@@ -39,6 +39,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      absence_reports: {
+        Row: {
+          comment: string | null
+          company_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          reason: Database["public"]["Enums"]["absence_report_reason"]
+          reported_at: string
+          reported_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["absence_report_status"]
+          work_date: string
+        }
+        Insert: {
+          comment?: string | null
+          company_id: string
+          employee_id: string
+          id?: string
+          project_id: string
+          reason: Database["public"]["Enums"]["absence_report_reason"]
+          reported_at?: string
+          reported_by: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["absence_report_status"]
+          work_date: string
+        }
+        Update: {
+          comment?: string | null
+          company_id?: string
+          employee_id?: string
+          id?: string
+          project_id?: string
+          reason?: Database["public"]["Enums"]["absence_report_reason"]
+          reported_at?: string
+          reported_by?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["absence_report_status"]
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absence_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_reports_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "absence_reports_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "absence_reports_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "absence_reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_events: {
         Row: {
           action: Database["public"]["Enums"]["audit_action"]
@@ -138,6 +222,7 @@ export type Database = {
           deleted_at: string | null
           employee_number_prefix: string
           id: string
+          logo_storage_path: string | null
           name: string
           scaffold_inspection_validity_days: number | null
           slug: string
@@ -149,6 +234,7 @@ export type Database = {
           deleted_at?: string | null
           employee_number_prefix: string
           id?: string
+          logo_storage_path?: string | null
           name: string
           scaffold_inspection_validity_days?: number | null
           slug: string
@@ -160,6 +246,7 @@ export type Database = {
           deleted_at?: string | null
           employee_number_prefix?: string
           id?: string
+          logo_storage_path?: string | null
           name?: string
           scaffold_inspection_validity_days?: number | null
           slug?: string
@@ -447,6 +534,125 @@ export type Database = {
           {
             foreignKeyName: "daily_attendance_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_attendance_corrections: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          company_id: string
+          employee_id: string
+          id: string
+          new_status: Database["public"]["Enums"]["daily_attendance_status"]
+          previous_status: Database["public"]["Enums"]["daily_attendance_status"]
+          project_id: string
+          reason: string
+          work_date: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          company_id: string
+          employee_id: string
+          id?: string
+          new_status: Database["public"]["Enums"]["daily_attendance_status"]
+          previous_status: Database["public"]["Enums"]["daily_attendance_status"]
+          project_id: string
+          reason: string
+          work_date: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          company_id?: string
+          employee_id?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["daily_attendance_status"]
+          previous_status?: Database["public"]["Enums"]["daily_attendance_status"]
+          project_id?: string
+          reason?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_attendance_corrections_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_corrections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_attendance_day_locks: {
+        Row: {
+          company_id: string
+          id: string
+          locked_at: string
+          locked_by: string | null
+          project_id: string
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          locked_at?: string
+          locked_by?: string | null
+          project_id: string
+          unlock_reason?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          locked_at?: string
+          locked_by?: string | null
+          project_id?: string
+          unlock_reason?: string | null
+          unlocked_at?: string | null
+          unlocked_by?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_attendance_day_locks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_day_locks_locked_by_fkey"
+            columns: ["locked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_day_locks_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_day_locks_unlocked_by_fkey"
+            columns: ["unlocked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -812,6 +1018,170 @@ export type Database = {
           {
             foreignKeyName: "employees_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_request_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          comment: string | null
+          company_id: string
+          from_status:
+            | Database["public"]["Enums"]["leave_request_status"]
+            | null
+          id: string
+          leave_request_id: string
+          to_status: Database["public"]["Enums"]["leave_request_status"]
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          comment?: string | null
+          company_id: string
+          from_status?:
+            | Database["public"]["Enums"]["leave_request_status"]
+            | null
+          id?: string
+          leave_request_id: string
+          to_status: Database["public"]["Enums"]["leave_request_status"]
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          comment?: string | null
+          company_id?: string
+          from_status?:
+            | Database["public"]["Enums"]["leave_request_status"]
+            | null
+          id?: string
+          leave_request_id?: string
+          to_status?: Database["public"]["Enums"]["leave_request_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_request_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_request_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_request_history_leave_request_id_fkey"
+            columns: ["leave_request_id"]
+            isOneToOne: false
+            referencedRelation: "leave_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_requests: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_comment: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment: string | null
+          project_id: string
+          requested_at: string
+          requested_by: string
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          company_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employee_comment?: string | null
+          employee_id: string
+          end_date: string
+          id?: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment?: string | null
+          project_id: string
+          requested_at?: string
+          requested_by: string
+          start_date: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          company_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          employee_comment?: string | null
+          employee_id?: string
+          end_date?: string
+          id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"]
+          management_comment?: string | null
+          project_id?: string
+          requested_at?: string
+          requested_by?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["leave_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_requested_by_fkey"
+            columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1186,38 +1556,141 @@ export type Database = {
           },
         ]
       }
+      platform_super_admins: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_super_admins_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_super_admins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_warnings: {
+        Row: {
+          acknowledged_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_warnings_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_warnings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          accent_theme: Database["public"]["Enums"]["accent_theme"]
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at: string | null
+          account_status_changed_by: string | null
+          account_status_reason: string | null
           active_company_id: string | null
           active_project_id: string | null
           created_at: string
           full_name: string
           id: string
           phone: string | null
+          theme_mode: Database["public"]["Enums"]["theme_mode"]
           updated_at: string
           user_number: string
         }
         Insert: {
+          accent_theme?: Database["public"]["Enums"]["accent_theme"]
+          account_status?: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at?: string | null
+          account_status_changed_by?: string | null
+          account_status_reason?: string | null
           active_company_id?: string | null
           active_project_id?: string | null
           created_at?: string
           full_name: string
           id: string
           phone?: string | null
+          theme_mode?: Database["public"]["Enums"]["theme_mode"]
           updated_at?: string
           user_number: string
         }
         Update: {
+          accent_theme?: Database["public"]["Enums"]["accent_theme"]
+          account_status?: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at?: string | null
+          account_status_changed_by?: string | null
+          account_status_reason?: string | null
           active_company_id?: string | null
           active_project_id?: string | null
           created_at?: string
           full_name?: string
           id?: string
           phone?: string | null
+          theme_mode?: Database["public"]["Enums"]["theme_mode"]
           updated_at?: string
           user_number?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_account_status_changed_by_fkey"
+            columns: ["account_status_changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_active_organization_id_fkey"
             columns: ["active_company_id"]
@@ -2571,6 +3044,54 @@ export type Database = {
           },
         ]
       }
+      security_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          detail: string | null
+          event_type: Database["public"]["Enums"]["security_event_type"]
+          id: string
+          ip_address: unknown
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type: Database["public"]["Enums"]["security_event_type"]
+          id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: string | null
+          event_type?: Database["public"]["Enums"]["security_event_type"]
+          id?: string
+          ip_address?: unknown
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_assignments: {
         Row: {
           assigned_by: string | null
@@ -3214,8 +3735,84 @@ export type Database = {
           },
         ]
       }
+      worked_hours_breakdown: {
+        Row: {
+          category: Database["public"]["Enums"]["worked_hours_category"]
+          company_id: string
+          created_at: string
+          created_by: string | null
+          hours: number
+          id: string
+          project_id: string
+          updated_at: string
+          updated_by: string | null
+          worked_hours_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["worked_hours_category"]
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          hours: number
+          id?: string
+          project_id: string
+          updated_at?: string
+          updated_by?: string | null
+          worked_hours_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["worked_hours_category"]
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          hours?: number
+          id?: string
+          project_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          worked_hours_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worked_hours_breakdown_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_breakdown_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_breakdown_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "worked_hours_breakdown_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worked_hours_breakdown_worked_hours_fk"
+            columns: ["worked_hours_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "worked_hours"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
       worked_hours_corrections: {
         Row: {
+          category: Database["public"]["Enums"]["worked_hours_category"] | null
           changed_at: string
           changed_by: string
           company_id: string
@@ -3228,6 +3825,7 @@ export type Database = {
           worked_hours_id: string
         }
         Insert: {
+          category?: Database["public"]["Enums"]["worked_hours_category"] | null
           changed_at?: string
           changed_by: string
           company_id: string
@@ -3240,6 +3838,7 @@ export type Database = {
           worked_hours_id: string
         }
         Update: {
+          category?: Database["public"]["Enums"]["worked_hours_category"] | null
           changed_at?: string
           changed_by?: string
           company_id?: string
@@ -3357,6 +3956,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acknowledge_platform_warning: {
+        Args: { target_warning_id: string }
+        Returns: {
+          acknowledged_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string
+          reason: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "platform_warnings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       allocate_employee_number: {
         Args: { target_org_id: string }
         Returns: string
@@ -3368,6 +3984,41 @@ export type Database = {
       allocate_scaffold_number: {
         Args: { target_project_id: string }
         Returns: number
+      }
+      apply_leave_to_attendance: {
+        Args: {
+          target_request: Database["public"]["Tables"]["leave_requests"]["Row"]
+          target_status: Database["public"]["Enums"]["daily_attendance_status"]
+        }
+        Returns: undefined
+      }
+      approve_leave_request: {
+        Args: { target_comment?: string; target_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_comment: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment: string | null
+          project_id: string
+          requested_at: string
+          requested_by: string
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       assert_employee_eligible_for_assignment: {
         Args: { target_employee_id: string }
@@ -3397,6 +4048,31 @@ export type Database = {
         Args: { target_employee_id: string; target_organization_id: string }
         Returns: undefined
       }
+      ban_account: {
+        Args: { target_reason: string; target_user_id: string }
+        Returns: {
+          accent_theme: Database["public"]["Enums"]["accent_theme"]
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at: string | null
+          account_status_changed_by: string | null
+          account_status_reason: string | null
+          active_company_id: string | null
+          active_project_id: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          theme_mode: Database["public"]["Enums"]["theme_mode"]
+          updated_at: string
+          user_number: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       bootstrap_first_owner: {
         Args: {
           notes?: string
@@ -3422,8 +4098,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      bootstrap_first_platform_super_admin: {
+        Args: { notes?: string; target_user_id: string }
+        Returns: {
+          granted_at: string
+          granted_by: string | null
+          notes: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "platform_super_admins"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       bulk_apply_worked_hours: {
         Args: {
+          target_category: Database["public"]["Enums"]["worked_hours_category"]
           target_employee_ids: string[]
           target_hours: number
           target_project_id: string
@@ -3481,6 +4173,78 @@ export type Database = {
           target_toolbox_meeting_id: string
         }
         Returns: boolean
+      }
+      cancel_leave_request: {
+        Args: { target_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_comment: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment: string | null
+          project_id: string
+          requested_at: string
+          requested_by: string
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      close_absence_day: {
+        Args: { target_project_id: string; target_work_date: string }
+        Returns: {
+          company_id: string
+          id: string
+          locked_at: string
+          locked_by: string | null
+          project_id: string
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_attendance_day_locks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_absence_report: {
+        Args: { target_report_id: string }
+        Returns: {
+          comment: string | null
+          company_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          reason: Database["public"]["Enums"]["absence_report_reason"]
+          reported_at: string
+          reported_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["absence_report_status"]
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "absence_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       count_employees: {
         Args: {
@@ -3564,6 +4328,34 @@ export type Database = {
         }
         Returns: boolean
       }
+      deny_leave_request: {
+        Args: { target_comment: string; target_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_comment: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment: string | null
+          project_id: string
+          requested_at: string
+          requested_by: string
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       employee_has_any_company_role: {
         Args: {
           role_names: string[]
@@ -3642,6 +4434,13 @@ export type Database = {
           profile_id: string
         }[]
       }
+      get_basic_profile_info: {
+        Args: { target_company_id: string; target_user_ids: string[] }
+        Returns: {
+          full_name: string
+          id: string
+        }[]
+      }
       get_toolbox_authorized_employee_info: {
         Args: { target_employee_ids: string[] }
         Returns: {
@@ -3651,6 +4450,21 @@ export type Database = {
           last_name: string
           profile_id: string
         }[]
+      }
+      grant_platform_super_admin: {
+        Args: { notes?: string; target_user_id: string }
+        Returns: {
+          granted_at: string
+          granted_by: string | null
+          notes: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "platform_super_admins"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       has_any_company_role: {
         Args: { role_names: string[]; target_org_id: string }
@@ -3662,10 +4476,6 @@ export type Database = {
       }
       has_project_access: {
         Args: { target_project_id: string }
-        Returns: boolean
-      }
-      has_valid_toolbox_document_share: {
-        Args: { target_object_path: string }
         Returns: boolean
       }
       is_company_member: { Args: { target_org_id: string }; Returns: boolean }
@@ -3697,6 +4507,7 @@ export type Database = {
         Args: { target_lmra_id: string }
         Returns: boolean
       }
+      is_platform_super_admin: { Args: never; Returns: boolean }
       is_project_foreman: {
         Args: { target_project_id: string }
         Returns: boolean
@@ -3724,6 +4535,23 @@ export type Database = {
       is_toolbox_template_manage_tier: {
         Args: { target_organization_id: string }
         Returns: boolean
+      }
+      issue_platform_warning: {
+        Args: { target_reason: string; target_user_id: string }
+        Returns: {
+          acknowledged_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string
+          reason: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "platform_warnings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       list_eligible_scaffold_foremen: {
         Args: { target_organization_id: string; target_project_id: string }
@@ -3783,6 +4611,26 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      log_login_failed: {
+        Args: {
+          attempted_email?: string
+          target_ip?: unknown
+          target_user_agent?: string
+        }
+        Returns: undefined
+      }
+      log_login_success: {
+        Args: { target_ip?: unknown; target_user_agent?: string }
+        Returns: undefined
+      }
+      log_logout: {
+        Args: { target_ip?: unknown; target_user_agent?: string }
+        Returns: undefined
+      }
+      log_sessions_revoked: {
+        Args: { target_user_id: string }
+        Returns: undefined
       }
       move_daily_team_member: {
         Args: {
@@ -3844,6 +4692,85 @@ export type Database = {
         }
       }
       next_employee_number: { Args: { target_org_id: string }; Returns: string }
+      notify_project_managers: {
+        Args: {
+          notif_body: string
+          notif_link_path: string
+          notif_title: string
+          notif_type: string
+          target_company_id: string
+          target_project_id: string
+        }
+        Returns: undefined
+      }
+      platform_admin_get_memberships: {
+        Args: { target_user_id: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          membership_status: Database["public"]["Enums"]["membership_status"]
+          role_names: string[]
+        }[]
+      }
+      platform_admin_search_accounts: {
+        Args: { limit_count?: number; search_query?: string }
+        Returns: {
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_reason: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
+      reject_absence_report: {
+        Args: { target_report_id: string; target_review_note: string }
+        Returns: {
+          comment: string | null
+          company_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          reason: Database["public"]["Enums"]["absence_report_reason"]
+          reported_at: string
+          reported_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["absence_report_status"]
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "absence_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reopen_absence_day: {
+        Args: {
+          target_project_id: string
+          target_reason: string
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          id: string
+          locked_at: string
+          locked_by: string | null
+          project_id: string
+          unlock_reason: string | null
+          unlocked_at: string | null
+          unlocked_by: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_attendance_day_locks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reorder_teams: {
         Args: { target_project_id: string; target_team_ids: string[] }
         Returns: undefined
@@ -3969,6 +4896,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      report_absence: {
+        Args: {
+          target_comment?: string
+          target_employee_id: string
+          target_project_id: string
+          target_reason: Database["public"]["Enums"]["absence_report_reason"]
+          target_work_date: string
+        }
+        Returns: {
+          comment: string | null
+          company_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          reason: Database["public"]["Enums"]["absence_report_reason"]
+          reported_at: string
+          reported_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["absence_report_status"]
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "absence_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       report_worked_hours_discrepancy: {
         Args: { target_comment: string; target_worked_hours_id: string }
         Returns: {
@@ -4026,6 +4983,97 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      restore_account: {
+        Args: { target_reason?: string; target_user_id: string }
+        Returns: {
+          accent_theme: Database["public"]["Enums"]["accent_theme"]
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at: string | null
+          account_status_changed_by: string | null
+          account_status_reason: string | null
+          active_company_id: string | null
+          active_project_id: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          theme_mode: Database["public"]["Enums"]["theme_mode"]
+          updated_at: string
+          user_number: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resubmit_leave_request: {
+        Args: {
+          target_comment?: string
+          target_end_date: string
+          target_leave_type: Database["public"]["Enums"]["leave_type"]
+          target_request_id: string
+          target_start_date: string
+        }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_comment: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment: string | null
+          project_id: string
+          requested_at: string
+          requested_by: string
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      return_leave_request: {
+        Args: { target_comment: string; target_request_id: string }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          company_id: string
+          decided_at: string | null
+          decided_by: string | null
+          employee_comment: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          management_comment: string | null
+          project_id: string
+          requested_at: string
+          requested_by: string
+          start_date: string
+          status: Database["public"]["Enums"]["leave_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revoke_platform_super_admin: {
+        Args: { target_user_id: string }
+        Returns: undefined
       }
       revoke_report_share: {
         Args: { target_share_id: string }
@@ -4171,6 +5219,7 @@ export type Database = {
           target_employee_id: string
           target_note?: string
           target_project_id: string
+          target_reason?: string
           target_status: Database["public"]["Enums"]["daily_attendance_status"]
           target_work_date: string
         }
@@ -4202,6 +5251,31 @@ export type Database = {
           to: "worked_hours"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      suspend_account: {
+        Args: { target_reason: string; target_user_id: string }
+        Returns: {
+          accent_theme: Database["public"]["Enums"]["accent_theme"]
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_changed_at: string | null
+          account_status_changed_by: string | null
+          account_status_reason: string | null
+          active_company_id: string | null
+          active_project_id: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          theme_mode: Database["public"]["Enums"]["theme_mode"]
+          updated_at: string
+          user_number: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       unlock_daily_teams: {
@@ -4316,6 +5390,38 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      upsert_worked_hours_categories: {
+        Args: {
+          target_categories: Json
+          target_employee_id: string
+          target_note?: string
+          target_project_id: string
+          target_reason?: string
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          hours: number
+          id: string
+          note: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["worked_hours_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worked_hours"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       void_scaffold_inspection: {
         Args: { target_inspection_id: string; target_void_reason: string }
         Returns: {
@@ -4357,6 +5463,20 @@ export type Database = {
       }
     }
     Enums: {
+      absence_report_reason:
+        | "sick"
+        | "personal"
+        | "family_emergency"
+        | "transport_issue"
+        | "other"
+      absence_report_status: "pending" | "confirmed" | "rejected"
+      accent_theme:
+        | "default_blue"
+        | "safety_green"
+        | "steel_slate"
+        | "orange"
+        | "indigo_purple"
+      account_status: "active" | "suspended" | "banned"
       audit_action:
         | "create"
         | "update"
@@ -4420,6 +5540,13 @@ export type Database = {
         | "fit_for_work"
         | "incident_lessons_learned"
         | "other"
+      leave_request_status:
+        | "pending"
+        | "approved"
+        | "denied"
+        | "returned"
+        | "cancelled"
+      leave_type: "annual" | "sick" | "unpaid" | "compassionate" | "other"
       lmra_hazard_type:
         | "working_at_height"
         | "falling_objects"
@@ -4543,6 +5670,15 @@ export type Database = {
         | "loading_bay"
         | "temporary_roof"
         | "other"
+      security_event_type:
+        | "login_success"
+        | "login_failed"
+        | "logout"
+        | "account_suspended"
+        | "account_banned"
+        | "account_restored"
+        | "platform_warning_issued"
+        | "sessions_revoked"
       team_assignment_role: "member" | "foreman"
       team_color:
         | "gray"
@@ -4555,7 +5691,14 @@ export type Database = {
         | "cyan"
         | "brown"
       team_status: "active" | "archived"
+      theme_mode: "light" | "dark" | "system"
       toolbox_document_status: "active" | "archived"
+      worked_hours_category:
+        | "regular"
+        | "overtime"
+        | "night"
+        | "travel"
+        | "other"
       worked_hours_discrepancy_status: "open" | "accepted" | "rejected"
       worked_hours_status: "draft" | "submitted"
     }
@@ -4688,6 +5831,22 @@ export const Constants = {
   },
   public: {
     Enums: {
+      absence_report_reason: [
+        "sick",
+        "personal",
+        "family_emergency",
+        "transport_issue",
+        "other",
+      ],
+      absence_report_status: ["pending", "confirmed", "rejected"],
+      accent_theme: [
+        "default_blue",
+        "safety_green",
+        "steel_slate",
+        "orange",
+        "indigo_purple",
+      ],
+      account_status: ["active", "suspended", "banned"],
       audit_action: [
         "create",
         "update",
@@ -4757,6 +5916,14 @@ export const Constants = {
         "incident_lessons_learned",
         "other",
       ],
+      leave_request_status: [
+        "pending",
+        "approved",
+        "denied",
+        "returned",
+        "cancelled",
+      ],
+      leave_type: ["annual", "sick", "unpaid", "compassionate", "other"],
       lmra_hazard_type: [
         "working_at_height",
         "falling_objects",
@@ -4892,6 +6059,16 @@ export const Constants = {
         "temporary_roof",
         "other",
       ],
+      security_event_type: [
+        "login_success",
+        "login_failed",
+        "logout",
+        "account_suspended",
+        "account_banned",
+        "account_restored",
+        "platform_warning_issued",
+        "sessions_revoked",
+      ],
       team_assignment_role: ["member", "foreman"],
       team_color: [
         "gray",
@@ -4905,7 +6082,15 @@ export const Constants = {
         "brown",
       ],
       team_status: ["active", "archived"],
+      theme_mode: ["light", "dark", "system"],
       toolbox_document_status: ["active", "archived"],
+      worked_hours_category: [
+        "regular",
+        "overtime",
+        "night",
+        "travel",
+        "other",
+      ],
       worked_hours_discrepancy_status: ["open", "accepted", "rejected"],
       worked_hours_status: ["draft", "submitted"],
     },

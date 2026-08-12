@@ -37,12 +37,31 @@ import type { RoleName } from "@/modules/companies/types";
  * (once directly via `requireUser()`, again via `getUserRoleNames()`, which
  * also calls `requireUser()` internally) — memoizing here collapses those
  * into a single `supabase.auth.getUser()` round trip instead of two.
+ *
+ * Phase 12 (Platform Admin account controls): also re-checks
+ * `profiles.account_status` on every call, EVERY request — not only at
+ * login. "Account state must be enforced server-side. A banned/suspended
+ * user must not retain application access merely because an old session
+ * cookie still exists." A suspended/banned account is signed out on the
+ * spot and treated as unauthenticated for the rest of this request; since
+ * every protected page/action in this codebase funnels through
+ * requireUser()/requireCompanyMembership() (both built on this function),
+ * this one check is sufficient to deny access everywhere, not just at the
+ * login form.
  */
 export const getCurrentUser = cache(async (): Promise<User | null> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase.from("profiles").select("account_status").eq("id", user.id).maybeSingle();
+  if (profile && profile.account_status !== "active") {
+    await supabase.auth.signOut();
+    return null;
+  }
+
   return user;
 });
 
@@ -249,4 +268,26 @@ export async function getUserRoleNames(companyId: string): Promise<RoleName[]> {
 
   if (rolesError) throw rolesError;
   return (roles ?? []).map((role) => role.name as RoleName);
+}
+
+/**
+ * Requires the signed-in user to be a platform-level administrator (Phase
+ * 12) — a member of `platform_super_admins`, NOT a company_admin/
+ * operations_manager role, and NOT scoped to any one company/project.
+ * Calls `forbidden()` if not. Delegates to `is_platform_super_admin()`
+ * (the same SECURITY DEFINER helper every platform-admin RPC/RLS policy
+ * uses) via `.rpc()`, exactly mirroring `requireCompanyMembership()`'s own
+ * "one real check, reused everywhere" shape.
+ */
+export async function requirePlatformSuperAdmin(): Promise<{ user: User }> {
+  const { user } = await requireUser();
+  const supabase = await createClient();
+
+  const { data: isAdmin, error } = await supabase.rpc("is_platform_super_admin");
+  if (error) throw error;
+  if (!isAdmin) {
+    forbidden();
+  }
+
+  return { user };
 }
