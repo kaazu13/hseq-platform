@@ -101,6 +101,28 @@ export type EmployeeDailyState = {
   isEligibleForeman: boolean;
 };
 
+type ResolvedTeamRef = { id: string; name: string; shift: DailyTeamShift | null };
+
+/**
+ * Resolves ONE employee's `assignedTeam` from the two independent sources
+ * `listWorkforceForDate` looks up: an open `daily_team_members` row
+ * (worker) and/or leading a team as Foreman (`daily_teams.foreman_employee_id`
+ * — a direct column, entirely decoupled from `daily_team_members` since
+ * milestone G). Extracted as its own pure function so the fix for the
+ * "a Foreman running one or more of today's teams was invisible to
+ * `assignedTeam` and fell into Not Assigned instead of Assigned to Teams"
+ * bug — and the "one Foreman running MULTIPLE teams is still counted
+ * exactly once" requirement (item 13) — are independently unit-testable,
+ * separate from the live Supabase joins that produce `membership`/
+ * `foremanTeam` in the first place. Worker membership wins if both
+ * somehow exist (shouldn't normally happen — a Foreman isn't also
+ * expected to hold a worker row on their own team) but either source
+ * alone is sufficient proof of "assigned."
+ */
+export function resolveAssignedTeam(membership: ResolvedTeamRef | null, foremanTeam: ResolvedTeamRef | null): ResolvedTeamRef | null {
+  return membership ?? foremanTeam ?? null;
+}
+
 /** True when an employee's current daily state permits assigning them to a team — mirrors dailyAttendancePermitsWork(), applied to the resolved state rather than a raw status. */
 export function employeeIsAvailableForAssignment(state: Pick<EmployeeDailyState, "attendanceStatus">): boolean {
   return dailyAttendancePermitsWork(state.attendanceStatus);
@@ -147,21 +169,52 @@ export function groupTeamsByForemanRoster<T extends DailyTeamWithMembers>(roster
   return noForemanGroup.items.length > 0 ? [...sortedGroups, noForemanGroup] : sortedGroups;
 }
 
+/**
+ * The Project Dashboard's Daily Overview counting definitions (redesign —
+ * "make the daily overview reconcile logically" requirement). Every
+ * category is computed from the SAME per-employee `EmployeeDailyState`
+ * array (one entry per roster employee — see `listWorkforceForDate`'s own
+ * dedup-by-employee-id contract), so no employee can ever land in two
+ * mutually-exclusive buckets and no employee is ever counted twice:
+ *
+ * - `atWorkCount` — the real "who is actually working today" number. An
+ *   employee counts as At Work if their attendance status permits work
+ *   AND (they are assigned to a Today's Team — worker OR Foreman — OR
+ *   their attendance is explicitly marked `present`). This deliberately
+ *   does NOT require a PM to both assign someone to a team AND separately
+ *   mark them present — team assignment alone is sufficient evidence of
+ *   being at work. An `unavailable` status (absent/sick/leave/etc.)
+ *   always excludes an employee from At Work, even if a stale team
+ *   assignment still exists.
+ * - `assignedCount` — assigned to a Today's Team, worker or Foreman,
+ *   today. `EmployeeDailyState.assignedTeam` is resolved once per
+ *   employee (never once per team-row), so a Foreman running multiple
+ *   teams the same day is still counted exactly once here.
+ * - `notAssignedCount` — attendance permits work, but no team assignment
+ *   (worker or Foreman) exists yet. Mutually exclusive with `assignedCount`
+ *   by construction (`assignedTeam === null`).
+ * - `unavailableCount` — attendance status does not permit work (absent,
+ *   sick, leave, training, off_site). Mutually exclusive with both
+ *   `assignedCount`/`notAssignedCount`'s "permits work" branch.
+ * - `incompleteAttendanceCount` — attendance was never recorded at all
+ *   for this date (`not_set`) — a subset of whichever of the above
+ *   buckets `not_set` (a permits-work status) falls into, tracked
+ *   separately as its own action-required signal.
+ */
 export type DailyWorkforceSummary = {
   rosterSize: number;
-  presentCount: number;
+  atWorkCount: number;
   unavailableCount: number;
   notAssignedCount: number;
   assignedCount: number;
-  /** Attendance never recorded for this date at all — distinct from "not assigned" (which already has a permits-work status, just no team yet). The PM Daily Overview's "Incomplete daily workforce state" action-required card. */
   incompleteAttendanceCount: number;
 };
 
-/** Aggregates a day's full roster into the PM Daily Overview's "Today" counts (Phase 7) — the single source both the overview cards and (if ever needed elsewhere) any other daily-workforce summary should derive from, rather than re-deriving these filters ad hoc per caller. */
+/** Aggregates a day's full roster into the PM Daily Overview's "Today" counts — the single source both the overview cards and (if ever needed elsewhere) any other daily-workforce summary should derive from, rather than re-deriving these filters ad hoc per caller. See `DailyWorkforceSummary`'s own doc comment for the exact definition of each count. */
 export function summarizeDailyWorkforce(workforce: Pick<EmployeeDailyState, "attendanceStatus" | "assignedTeam">[]): DailyWorkforceSummary {
   return {
     rosterSize: workforce.length,
-    presentCount: workforce.filter((state) => state.attendanceStatus === "present").length,
+    atWorkCount: workforce.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus) && (state.assignedTeam !== null || state.attendanceStatus === "present")).length,
     unavailableCount: workforce.filter((state) => !dailyAttendancePermitsWork(state.attendanceStatus)).length,
     assignedCount: workforce.filter((state) => state.assignedTeam !== null).length,
     notAssignedCount: workforce.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus) && state.assignedTeam === null).length,

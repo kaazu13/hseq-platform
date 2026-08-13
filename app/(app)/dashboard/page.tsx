@@ -20,7 +20,7 @@ import {
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getMyEmployeeId, getEmployeeTodayCard } from "@/modules/daily-workforce/queries";
-import { getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listMyNotifications, listWorkedHoursForPeriod } from "@/modules/worked-hours/queries";
+import { getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listWorkedHoursForPeriod } from "@/modules/worked-hours/queries";
 import { resolveWorkedHoursPeriod, countDaysWorked } from "@/modules/worked-hours/period";
 import { listMyObservations } from "@/modules/observations/queries";
 import { listMyLmraAssessmentsForDate } from "@/modules/lmra/queries";
@@ -112,14 +112,13 @@ export default async function DashboardPage() {
       const today = new Date().toISOString().slice(0, 10);
       const weekPeriod = resolveWorkedHoursPeriod("week", today);
       const monthPeriod = resolveWorkedHoursPeriod("month", today);
-      const [todayCard, weekRows, monthToDateRows, latestWorkedHours, discrepancies, notifications, observations, todaysLmra, todaysToolboxMeetings, activeSafetyFlashes, myCorrectiveActions] =
+      const [todayCard, weekRows, monthToDateRows, latestWorkedHours, discrepancies, observations, todaysLmra, todaysToolboxMeetings, activeSafetyFlashes, myCorrectiveActions] =
         await Promise.all([
           getEmployeeTodayCard(current.id, effectiveProjectId, myEmployeeId, today),
           listWorkedHoursForPeriod(current.id, effectiveProjectId, weekPeriod.fromDate, weekPeriod.toDate, [myEmployeeId]),
           listWorkedHoursForPeriod(current.id, effectiveProjectId, monthPeriod.fromDate, today, [myEmployeeId]),
           getLatestWorkedHours(current.id, effectiveProjectId, myEmployeeId),
           listMyWorkedHoursDiscrepancies(current.id, myEmployeeId),
-          listMyNotifications(),
           listMyObservations(current.id, user.id, myEmployeeId),
           listMyLmraAssessmentsForDate(current.id, myEmployeeId, today),
           listToolboxMeetings(current.id, { projectId: effectiveProjectId, dateFrom: today, dateTo: today }),
@@ -135,13 +134,13 @@ export default async function DashboardPage() {
         <EmployeeDashboardSection
           companyId={current.id}
           projectId={effectiveProjectId}
+          myEmployeeId={myEmployeeId}
           todayCard={todayCard}
           hoursThisWeek={hoursThisWeek}
           monthToDateHours={monthToDateHours}
           daysWorkedThisMonth={daysWorkedThisMonth}
           latestWorkedHours={latestWorkedHours}
           discrepancies={discrepancies}
-          notifications={notifications}
           observations={observations}
           todaysLmra={todaysLmra}
           todaysToolboxMeetings={todaysToolboxMeetings}

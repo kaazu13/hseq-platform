@@ -59,3 +59,34 @@ export function dailyAttendanceStatusTone(status: string): SemanticTone {
       return "neutral";
   }
 }
+
+/** worked_hours.status -> semantic tone — submitted (finalized, credited) = positive; draft (entered but not yet finalized) = attention, same "needs follow-up but not itself a failure" treatment as dailyAttendanceStatusTone's sick/leave. */
+export function workedHoursStatusTone(status: string): SemanticTone {
+  return status === "submitted" ? "positive" : "attention";
+}
+
+/** lmra_status -> semantic tone — approved = positive; submitted = attention (awaiting review); rejected = negative; draft/archived = neutral (not yet a decision, or no longer live). */
+export function lmraStatusTone(status: string): SemanticTone {
+  switch (status) {
+    case "approved":
+      return "positive";
+    case "submitted":
+      return "attention";
+    case "rejected":
+      return "negative";
+    default:
+      return "neutral";
+  }
+}
+
+/** observation_type -> semantic tone — positive = positive; negative = negative; general = neutral. */
+export function observationTypeTone(observationType: string): SemanticTone {
+  switch (observationType) {
+    case "positive":
+      return "positive";
+    case "negative":
+      return "negative";
+    default:
+      return "neutral";
+  }
+}

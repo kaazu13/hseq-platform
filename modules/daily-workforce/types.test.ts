@@ -5,6 +5,7 @@ import {
   summarizeDailyWorkforce,
   summarizeWorkforceByStatus,
   groupTeamsByForemanRoster,
+  resolveAssignedTeam,
   DAILY_ATTENDANCE_STATUSES_PERMITTING_WORK,
   DAILY_ATTENDANCE_STATUSES,
 } from "./types";
@@ -65,24 +66,49 @@ describe("employeeIsAvailableForAssignment", () => {
   });
 });
 
-describe("summarizeDailyWorkforce", () => {
+describe("summarizeDailyWorkforce — Project Dashboard Daily Overview redesign", () => {
   const team = { id: "t1", name: "Team Alpha", shift: null };
 
   it("classifies present+assigned, present+unassigned, and unavailable correctly", () => {
     const workforce = [
-      state("present", team), // assigned
-      state("present", null), // not assigned (present, no team)
+      state("present", team), // assigned, at work
+      state("present", null), // not assigned, at work (present alone is sufficient)
       state("not_set", null), // not assigned (permits work, no team)
       state("absent", null), // unavailable
       state("sick", team), // unavailable, even though (unrealistically) still on a team
     ];
     const summary = summarizeDailyWorkforce(workforce);
     expect(summary.rosterSize).toBe(5);
-    expect(summary.presentCount).toBe(2);
+    expect(summary.atWorkCount).toBe(2);
     expect(summary.assignedCount).toBe(2);
     expect(summary.notAssignedCount).toBe(2);
     expect(summary.unavailableCount).toBe(2);
     expect(summary.incompleteAttendanceCount).toBe(1); // the single not_set row
+  });
+
+  it("'At Work' counts an employee assigned to a team even when NOT explicitly marked present — a PM should not have to both assign AND mark present", () => {
+    const summary = summarizeDailyWorkforce([state("not_set", team)]);
+    expect(summary.atWorkCount).toBe(1);
+    expect(summary.assignedCount).toBe(1);
+  });
+
+  it("'At Work' counts an employee marked present even with no team assignment", () => {
+    const summary = summarizeDailyWorkforce([state("present", null)]);
+    expect(summary.atWorkCount).toBe(1);
+    expect(summary.assignedCount).toBe(0);
+  });
+
+  it("'At Work' NEVER counts an unavailable employee, even with a (stale) team assignment", () => {
+    const summary = summarizeDailyWorkforce([state("absent", team), state("sick", team), state("leave", team)]);
+    expect(summary.atWorkCount).toBe(0);
+    expect(summary.assignedCount).toBe(3); // assignedCount is purely "has a team", independent of At Work
+  });
+
+  it("assignedCount and notAssignedCount are mutually exclusive and reconcile with rosterSize among permits-work employees", () => {
+    const workforce = [state("present", team), state("not_set", team), state("present", null), state("not_set", null), state("absent", null)];
+    const summary = summarizeDailyWorkforce(workforce);
+    const permitsWorkCount = summary.rosterSize - summary.unavailableCount;
+    expect(summary.assignedCount + summary.notAssignedCount).toBe(permitsWorkCount);
   });
 
   it("counts attendance never recorded (not_set) as incomplete, distinct from present-but-unassigned", () => {
@@ -93,7 +119,7 @@ describe("summarizeDailyWorkforce", () => {
 
   it("returns all zeros for an empty roster", () => {
     const summary = summarizeDailyWorkforce([]);
-    expect(summary).toEqual({ rosterSize: 0, presentCount: 0, unavailableCount: 0, notAssignedCount: 0, assignedCount: 0, incompleteAttendanceCount: 0 });
+    expect(summary).toEqual({ rosterSize: 0, atWorkCount: 0, unavailableCount: 0, notAssignedCount: 0, assignedCount: 0, incompleteAttendanceCount: 0 });
   });
 });
 
@@ -114,6 +140,38 @@ describe("summarizeWorkforceByStatus — item 11's clickable summary counters", 
 
   it("returns all zeros for an empty roster", () => {
     expect(summarizeWorkforceByStatus([])).toEqual({ present: 0, assigned: 0, notAssigned: 0, absent: 0, leave: 0, sick: 0, otherUnavailable: 0 });
+  });
+});
+
+describe("resolveAssignedTeam — the Foreman-under-count fix (item 13)", () => {
+  const workerTeam = { id: "w1", name: "Worker's Team", shift: null };
+  const foremanTeam = { id: "f1", name: "Foreman's Team", shift: null };
+
+  it("returns the worker membership team when it exists", () => {
+    expect(resolveAssignedTeam(workerTeam, null)).toEqual(workerTeam);
+  });
+
+  it("returns the Foreman's led team when there is no worker membership — this is the bug fix: a Foreman running a team was previously always null here", () => {
+    expect(resolveAssignedTeam(null, foremanTeam)).toEqual(foremanTeam);
+  });
+
+  it("prefers worker membership over Foreman leadership if both somehow exist", () => {
+    expect(resolveAssignedTeam(workerTeam, foremanTeam)).toEqual(workerTeam);
+  });
+
+  it("returns null when neither source has a team — genuinely not assigned", () => {
+    expect(resolveAssignedTeam(null, null)).toBeNull();
+  });
+
+  it("a Foreman leading MULTIPLE teams the same day still resolves to exactly one non-null assignedTeam — never double-counted downstream by summarizeDailyWorkforce's per-employee filter", () => {
+    // listWorkforceForDate's foremanTeamByEmployeeId map keeps only the
+    // FIRST team found per foreman id — resolveAssignedTeam only ever
+    // receives one candidate team either way, so there is no code path
+    // that could produce two assignedTeam entries for one employee.
+    const firstTeam = resolveAssignedTeam(null, foremanTeam);
+    const summary = summarizeDailyWorkforce([{ attendanceStatus: "present", assignedTeam: firstTeam }]);
+    expect(summary.assignedCount).toBe(1);
+    expect(summary.atWorkCount).toBe(1);
   });
 });
 

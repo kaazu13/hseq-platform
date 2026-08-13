@@ -656,6 +656,119 @@ describe("LMRA invariants (redesign)", () => {
     });
   });
 
+  describe("My LMRAs / All LMRAs list modes (navigation/context redesign, items 8-9)", () => {
+    // Mirrors modules/lmra/queries.ts's listMyLmraAssessments exactly: union
+    // of (completed_by_employee_id OR responsible_person_id), lmra_participants,
+    // and lmra_hazards.responsible_person_id — deduplicated by assessment id.
+    async function myLmraIds(projectId: string, employeeId: string): Promise<string[]> {
+      const owned = await sql`select id from lmra_assessments where project_id = ${projectId} and (completed_by_employee_id = ${employeeId} or responsible_person_id = ${employeeId})`;
+      const participant = await sql`select lmra_assessment_id as id from lmra_participants where employee_id = ${employeeId}`;
+      const hazardResponsible = await sql`select lmra_assessment_id as id from lmra_hazards where responsible_person_id = ${employeeId}`;
+      return [...new Set([...owned, ...participant, ...hazardResponsible].map((row) => row.id))];
+    }
+
+    it("My LMRAs includes an assessment where the employee is the completed-by person", async () => {
+      const projectId = await createTestProject(companyA.companyId, "My LMRAs Completed By Project");
+      const worker = await rosterEmployee(projectId, "MyLmraCompletedBy");
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${worker.employeeId}, null, null, ${[]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      const ids = await myLmraIds(projectId, worker.employeeId);
+      expect(ids).toContain(assessment.id);
+    });
+
+    it("My LMRAs includes an assessment where the employee is only a participant (Workers Involved), not the completer", async () => {
+      const projectId = await createTestProject(companyA.companyId, "My LMRAs Participant Project");
+      const completer = await rosterEmployee(projectId, "MyLmraCompleter");
+      const participant = await rosterEmployee(projectId, "MyLmraParticipant");
+      const [assessment] = await asUser(completer.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${completer.employeeId}, null, null, ${[completer.employeeId, participant.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      const completerIds = await myLmraIds(projectId, completer.employeeId);
+      const participantIds = await myLmraIds(projectId, participant.employeeId);
+      expect(completerIds).toContain(assessment.id);
+      expect(participantIds).toContain(assessment.id);
+    });
+
+    it("My LMRAs includes an assessment where the employee is the assessment-level responsible person", async () => {
+      const projectId = await createTestProject(companyA.companyId, "My LMRAs Responsible Project");
+      const completer = await rosterEmployee(projectId, "MyLmraRespCompleter");
+      const responsible = await rosterEmployee(projectId, "MyLmraResponsible");
+      const [assessment] = await asUser(completer.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${completer.employeeId}, ${responsible.employeeId}, null, ${[completer.employeeId, responsible.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      const ids = await myLmraIds(projectId, responsible.employeeId);
+      expect(ids).toContain(assessment.id);
+    });
+
+    it("My LMRAs includes an assessment where the employee is a hazard-level responsible person (via the lmra_hazards union branch, independent of the participant branch)", async () => {
+      // create_lmra_assessment requires every hazard-level responsible_person_id
+      // to also be a participant (20260823090000's atomicity check), so this
+      // exercises the hazard-responsible UNION branch specifically, even
+      // though — by that same rule — the employee is necessarily also a
+      // participant here.
+      const projectId = await createTestProject(companyA.companyId, "My LMRAs Hazard Responsible Project");
+      const completer = await rosterEmployee(projectId, "MyLmraHazCompleter");
+      const hazardResponsible = await rosterEmployee(projectId, "MyLmraHazResponsible");
+      const hazards = freshHazards({ hazardType: "housekeeping", isApplicable: true });
+      const hazardsWithResponsible = hazards.map((h) => (h.hazard_type === "housekeeping" ? { ...h, responsible_person_id: hazardResponsible.employeeId } : h));
+      const [assessment] = await asUser(completer.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${completer.employeeId}, null, null, ${[completer.employeeId, hazardResponsible.employeeId]}, ${JSON.stringify(hazardsWithResponsible)}::jsonb, false, 'go', null
+        )
+      `);
+      const ids = await myLmraIds(projectId, hazardResponsible.employeeId);
+      expect(ids).toContain(assessment.id);
+    });
+
+    it("deduplicates an employee who is BOTH completed-by AND a participant on the same assessment — never returned twice", async () => {
+      const projectId = await createTestProject(companyA.companyId, "My LMRAs Dedup Project");
+      const worker = await rosterEmployee(projectId, "MyLmraDedup");
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      const ids = await myLmraIds(projectId, worker.employeeId);
+      expect(ids.filter((id) => id === assessment.id)).toHaveLength(1);
+    });
+
+    it("All LMRAs is scoped to the active project only — a different project's LMRA never appears, even in the same company", async () => {
+      const projectOne = await createTestProject(companyA.companyId, "All LMRAs Project One");
+      const projectTwo = await createTestProject(companyA.companyId, "All LMRAs Project Two");
+      const workerOne = await rosterEmployee(projectOne, "AllLmrasProjectOneWorker");
+      const workerTwo = await rosterEmployee(projectTwo, "AllLmrasProjectTwoWorker");
+
+      const [assessmentOne] = await asUser(workerOne.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectOne}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${workerOne.employeeId}, null, null, ${[]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      await asUser(workerTwo.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectTwo}, 'Area', 'Activity', '2026-08-20', 'day',
+          ${workerTwo.employeeId}, null, null, ${[]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+
+      // "All LMRAs" (listLmraAssessments with a forced projectId filter) — same shape as this query.
+      const allForProjectOne = await sql`select id from lmra_assessments where company_id = ${companyA.companyId} and project_id = ${projectOne}`;
+      expect(allForProjectOne.map((row) => row.id)).toEqual([assessmentOne.id]);
+    });
+  });
+
   it("cross-company isolation: a company B caller cannot create an LMRA in company A", async () => {
     const projectId = await createTestProject(companyA.companyId, "Cross Company Project");
     const bUser = await createTestUser("Company B Caller");

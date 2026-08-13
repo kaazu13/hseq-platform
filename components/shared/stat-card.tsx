@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SEMANTIC_TONE_TEXT_CLASSES, type SemanticTone } from "@/components/shared/status-tone";
 import { cn } from "@/lib/utils";
 
 type StatCardProps = {
@@ -8,7 +9,7 @@ type StatCardProps = {
   icon: LucideIcon;
   href?: string;
 } & (
-  | { variant: "live"; value: string | number; hint?: string }
+  | { variant: "live"; value: string | number; hint?: string; tone?: SemanticTone }
   | { variant: "placeholder"; hint?: string }
 );
 
@@ -44,7 +45,7 @@ export function StatCard(props: StatCardProps) {
       </div>
       <div className="flex items-baseline gap-2">
         {isLive ? (
-          <span className="text-2xl font-semibold tabular-nums">{props.value}</span>
+          <span className={cn("text-2xl font-semibold tabular-nums", props.tone && SEMANTIC_TONE_TEXT_CLASSES[props.tone])}>{props.value}</span>
         ) : (
           <span className="text-2xl font-semibold text-muted-foreground/50" aria-hidden="true">
             —

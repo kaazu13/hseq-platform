@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CalendarCheck, Clock, Eye } from "lucide-react";
 import type { EmployeeTodayCard } from "@/modules/daily-workforce/queries";
 import { DAILY_ATTENDANCE_STATUS_LABELS, DAILY_TEAM_SHIFT_LABELS, dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
-import type { WorkedHours, WorkedHoursDiscrepancy, AppNotification } from "@/modules/worked-hours/types";
+import type { WorkedHours, WorkedHoursDiscrepancy } from "@/modules/worked-hours/types";
 import { WORKED_HOURS_DISCREPANCY_STATUS_LABELS } from "@/modules/worked-hours/types";
 import type { SafetyObservation } from "@/modules/observations/types";
 import { isPositiveObservation, OBSERVATION_CATEGORY_LABELS } from "@/modules/observations/types";
@@ -11,7 +11,6 @@ import type { ToolboxMeeting } from "@/modules/toolbox-meetings/types";
 import type { SafetyFlash } from "@/modules/safety-flash/types";
 import type { CorrectiveActionDetail } from "@/modules/corrective-actions/types";
 import { ReportDiscrepancyButton } from "@/modules/worked-hours/components/report-discrepancy-button";
-import { NotificationList } from "@/modules/worked-hours/components/notification-list";
 import { EmployeeTodaySafetySection } from "@/modules/daily-workforce/components/employee-today-safety-section";
 import { ReportAbsenceDialog } from "@/modules/absences/components/report-absence-dialog";
 import { RequestLeaveDialog } from "@/modules/leave-requests/components/request-leave-dialog";
@@ -23,13 +22,13 @@ import { SectionHeader } from "@/components/shared/section-header";
 type EmployeeDashboardSectionProps = {
   companyId: string;
   projectId: string;
+  myEmployeeId: string;
   todayCard: EmployeeTodayCard;
   hoursThisWeek: number;
   monthToDateHours: number;
   daysWorkedThisMonth: number;
   latestWorkedHours: WorkedHours | null;
   discrepancies: WorkedHoursDiscrepancy[];
-  notifications: AppNotification[];
   observations: SafetyObservation[];
   todaysLmra: LmraAssessment[];
   todaysToolboxMeetings: ToolboxMeeting[];
@@ -59,13 +58,13 @@ function formatObservedAt(value: string): string {
 export function EmployeeDashboardSection({
   companyId,
   projectId,
+  myEmployeeId,
   todayCard,
   hoursThisWeek,
   monthToDateHours,
   daysWorkedThisMonth,
   latestWorkedHours,
   discrepancies,
-  notifications,
   observations,
   todaysLmra,
   todaysToolboxMeetings,
@@ -242,14 +241,14 @@ export function EmployeeDashboardSection({
         </div>
       )}
 
-      <EmployeeTodaySafetySection todaysLmra={todaysLmra} todaysToolboxMeetings={todaysToolboxMeetings} activeSafetyFlashes={activeSafetyFlashes} myCorrectiveActions={myCorrectiveActions} />
-
-      {notifications.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <SectionHeader title="Notifications" />
-          <NotificationList notifications={notifications} compact />
-        </div>
-      )}
+      <EmployeeTodaySafetySection
+        myEmployeeId={myEmployeeId}
+        todaysLmra={todaysLmra}
+        todaysToolboxMeetings={todaysToolboxMeetings}
+        activeSafetyFlashes={activeSafetyFlashes}
+        myCorrectiveActions={myCorrectiveActions}
+        observationsAboutMe={observations.filter((observation) => observation.target_type === "employee" && observation.target_employee_id === myEmployeeId && observation.observer_id !== myEmployeeId)}
+      />
     </div>
   );
 }

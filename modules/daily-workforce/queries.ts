@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DailyAttendance, DailyTeam, DailyTeamMemberWithEmployee, DailyTeamWithMembers, DailyTeamForemanRosterEntry, EmployeeDailyState, BasicEmployee } from "./types";
+import type { DailyAttendance, DailyTeam, DailyTeamMemberWithEmployee, DailyTeamWithMembers, DailyTeamForemanRosterEntry, DailyTeamShift, EmployeeDailyState, BasicEmployee } from "./types";
+import { resolveAssignedTeam } from "./types";
 
 /**
  * Server-only data access for the Daily Workforce / Today's Teams domain —
@@ -168,7 +169,7 @@ export async function listWorkforceForDate(companyId: string, projectId: string,
       supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds }),
       supabase.from("daily_attendance").select("employee_id, status, note").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate).in("employee_id", employeeIds),
       supabase.from("daily_team_members").select("employee_id, daily_team_id, shift").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate).is("removed_at", null).in("employee_id", employeeIds),
-      supabase.from("daily_teams").select("id, name").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate),
+      supabase.from("daily_teams").select("id, name, foreman_employee_id, shift").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate),
       listEligibleForemanIds(companyId, projectId),
     ]);
 
@@ -181,15 +182,35 @@ export async function listWorkforceForDate(companyId: string, projectId: string,
   const membershipByEmployeeId = new Map((memberships ?? []).map((row) => [row.employee_id, row]));
   const teamNameById = new Map((teams ?? []).map((team) => [team.id, team.name]));
 
+  // A team's Foreman is a direct `daily_teams.foreman_employee_id` column,
+  // entirely decoupled from `daily_team_members` (see
+  // supabase/migrations/20260822090000_daily_team_foreman_roster.sql) — a
+  // Foreman leading one or more of today's teams was previously invisible
+  // to `assignedTeam` (only worker rows were ever consulted), so a Foreman
+  // actively running a team fell into "Not assigned" instead of "Assigned
+  // to teams". One map entry per Foreman employee id (a Foreman running
+  // multiple teams the same day just resolves to their first team here —
+  // this value only needs to prove "assigned to *a* team", never every
+  // team, so it can't double-count them).
+  const foremanTeamByEmployeeId = new Map<string, { id: string; name: string; shift: DailyTeamShift | null }>();
+  for (const team of teams ?? []) {
+    if (!team.foreman_employee_id || foremanTeamByEmployeeId.has(team.foreman_employee_id)) continue;
+    foremanTeamByEmployeeId.set(team.foreman_employee_id, { id: team.id, name: team.name, shift: team.shift });
+  }
+
   return (employees ?? [])
     .map((employee): EmployeeDailyState => {
       const attendanceRow = attendanceByEmployeeId.get(employee.id);
       const membership = membershipByEmployeeId.get(employee.id);
+      const assignedTeam = resolveAssignedTeam(
+        membership ? { id: membership.daily_team_id, name: teamNameById.get(membership.daily_team_id) ?? "Unknown team", shift: membership.shift } : null,
+        foremanTeamByEmployeeId.get(employee.id) ?? null,
+      );
       return {
         employee,
         attendanceStatus: attendanceRow?.status ?? "not_set",
         attendanceNote: attendanceRow?.note ?? null,
-        assignedTeam: membership ? { id: membership.daily_team_id, name: teamNameById.get(membership.daily_team_id) ?? "Unknown team", shift: membership.shift } : null,
+        assignedTeam,
         isEligibleForeman: foremanIds.has(employee.id),
       };
     })

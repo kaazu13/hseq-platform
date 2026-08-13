@@ -151,12 +151,30 @@ describe("NAV_GROUPS structure", () => {
   });
 });
 
-describe("milestone F item 8: 'Projects' stays a single, non-competing admin/list entry", () => {
-  it("exactly one 'Projects' nav item exists, pointing at the plain admin list — never a second everyday context selector", () => {
+describe("Navigation redesign item 4: the redundant 'Projects' operational nav entry is gone", () => {
+  it("no 'Projects' nav item exists anywhere — project administration is reached via Project Dashboard's 'Manage project' link, not a competing sidebar entry", () => {
     const projectsItems = ALL_NAV_ITEMS.filter((item) => item.label === "Projects");
-    expect(projectsItems).toHaveLength(1);
-    expect(projectsItems[0].href).toBe("/projects");
-    expect(projectsItems[0].buildHref).toBeUndefined();
+    expect(projectsItems).toHaveLength(0);
+  });
+
+  it("no empty 'Projects' nav group remains once its only items (Projects, Equipment) were removed/relocated", () => {
+    expect(NAV_GROUPS.some((group) => group.label === "Projects")).toBe(false);
+  });
+});
+
+describe("Navigation redesign item 5: Equipment moved under 'Planning & Daily'", () => {
+  it("Equipment is grouped under Planning & Daily, alongside Today's Teams/Worked Hours/Scaffold Register/Scaffold Inspections/LMRA", () => {
+    const group = NAV_GROUPS.find((g) => g.label === "Planning & Daily");
+    expect(group).toBeDefined();
+    expect(group!.items.map((item) => item.label)).toEqual(
+      expect.arrayContaining(["Today's Teams", "Worked Hours", "Equipment", "Scaffold Register", "Scaffold Inspections", "LMRA"]),
+    );
+  });
+
+  it("Equipment no longer lives in any other group", () => {
+    const groupsWithEquipment = NAV_GROUPS.filter((group) => group.items.some((item) => item.label === "Equipment"));
+    expect(groupsWithEquipment).toHaveLength(1);
+    expect(groupsWithEquipment[0].label).toBe("Planning & Daily");
   });
 });
 

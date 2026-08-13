@@ -79,6 +79,50 @@ export async function listLmraAssessments(companyId: string, filters: LmraListFi
   return data ?? [];
 }
 
+/**
+ * "My LMRAs" (item 8) — every LMRA in `projectId` where `employeeId` is
+ * ANY of: the completed-by person, the assessment-level responsible
+ * person, a hazard-level responsible person, or a listed participant
+ * ("Workers Involved"). Four independent id-set lookups, unioned via a
+ * `Set` before the final fetch — the same dedup shape as
+ * `listLmraCandidateEmployeeIds`'s `[...new Set(...)]` convention — so an
+ * employee who is e.g. both completed-by AND a participant on the same
+ * assessment (the common case) is never returned twice. Always scoped to
+ * ONE project (the caller's active project), matching "All LMRAs" (item
+ * 8's "only the currently active project, never every project in the
+ * company") — this is a filter down to a determined id list, never a
+ * looser query than `listLmraAssessments`'s own company/project scoping,
+ * so RLS still applies identically.
+ */
+export async function listMyLmraAssessments(companyId: string, projectId: string, employeeId: string, filters: Omit<LmraListFilters, "projectId"> = {}): Promise<LmraAssessment[]> {
+  const supabase = await createClient();
+
+  const [{ data: ownedRows, error: ownedError }, { data: participantRows, error: participantError }, { data: hazardRows, error: hazardError }] = await Promise.all([
+    supabase.from("lmra_assessments").select("id").eq("company_id", companyId).eq("project_id", projectId).or(`completed_by_employee_id.eq.${employeeId},responsible_person_id.eq.${employeeId}`),
+    supabase.from("lmra_participants").select("lmra_assessment_id").eq("company_id", companyId).eq("employee_id", employeeId),
+    supabase.from("lmra_hazards").select("lmra_assessment_id").eq("company_id", companyId).eq("responsible_person_id", employeeId),
+  ]);
+  if (ownedError) throw ownedError;
+  if (participantError) throw participantError;
+  if (hazardError) throw hazardError;
+
+  const assessmentIds = new Set<string>();
+  for (const row of ownedRows ?? []) assessmentIds.add(row.id);
+  for (const row of participantRows ?? []) assessmentIds.add(row.lmra_assessment_id);
+  for (const row of hazardRows ?? []) assessmentIds.add(row.lmra_assessment_id);
+  if (assessmentIds.size === 0) return [];
+
+  let query = supabase.from("lmra_assessments").select("*").eq("company_id", companyId).eq("project_id", projectId).in("id", [...assessmentIds]);
+  if (filters.status) query = query.eq("status", filters.status as LmraAssessment["status"]);
+  if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
+  if (filters.dateFrom) query = query.gte("work_date", filters.dateFrom);
+  if (filters.dateTo) query = query.lte("work_date", filters.dateTo);
+
+  const { data, error } = await query.order("work_date", { ascending: false }).order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** A single assessment scoped to `companyId`, with completed-by/responsible-person/hazards/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own company-scoped lookup). Null if it doesn't exist, belongs to another company, or RLS hides it. */
 export async function getLmraAssessment(companyId: string, lmraId: string): Promise<LmraAssessmentDetail | null> {
   const supabase = await createClient();

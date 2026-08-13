@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck, Clock, Eye, HardHat, ListChecks, Lock, ShieldAlert, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CheckCircle2, Eye, FileClock, FileQuestion, HardHat, ListChecks, Lock, ShieldAlert, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatCard } from "@/components/shared/stat-card";
 
@@ -8,7 +8,7 @@ type ProjectDailyOverviewProps = {
   projectId: string;
   today: {
     rosterSize: number;
-    presentCount: number;
+    atWorkCount: number;
     unavailableCount: number;
     notAssignedCount: number;
     assignedCount: number;
@@ -46,7 +46,7 @@ type ProjectDailyOverviewProps = {
  */
 export function ProjectDailyOverview({ companyId, projectId, today, safety, actionRequired }: ProjectDailyOverviewProps) {
   const teamsHref = `/companies/${companyId}/projects/${projectId}/teams`;
-  const worksedHoursHref = `/companies/${companyId}/projects/${projectId}/worked-hours`;
+  const workedHoursHref = `/companies/${companyId}/projects/${projectId}/worked-hours`;
   const hasActionRequired = actionRequired.openHourDiscrepancies > 0 || actionRequired.overdueCorrectiveActions > 0 || actionRequired.incompleteAttendanceCount > 0;
 
   return (
@@ -54,10 +54,15 @@ export function ProjectDailyOverview({ companyId, projectId, today, safety, acti
       <div>
         <SectionHeader title="Today" description="Workforce and worked-hours state for today." className="mb-3" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard variant="live" label="Present" icon={UserCheck} value={today.presentCount} href={teamsHref} />
-          <StatCard variant="live" label="Absent / unavailable" icon={UserX} value={today.unavailableCount} href={teamsHref} />
-          <StatCard variant="live" label="Not assigned" icon={Users} value={today.notAssignedCount} href={teamsHref} hint="Available but no team yet" />
-          <StatCard variant="live" label="Assigned to teams" icon={HardHat} value={today.assignedCount} href={teamsHref} />
+          {/* "At Work" — assigned to a Today's Team (worker or Foreman) OR
+              explicitly marked present; never both required. See
+              modules/daily-workforce/types.ts's DailyWorkforceSummary doc
+              comment for the exact, reconciled definition of every count
+              on this row. */}
+          <StatCard variant="live" tone="positive" label="At Work" icon={UserCheck} value={today.atWorkCount} href={teamsHref} hint="Assigned to a team or marked present" />
+          <StatCard variant="live" tone="attention" label="Not assigned" icon={Users} value={today.notAssignedCount} href={teamsHref} hint="Available but no team yet" />
+          <StatCard variant="live" tone="negative" label="Absent / unavailable" icon={UserX} value={today.unavailableCount} href={teamsHref} />
+          <StatCard variant="live" tone="info" label="Assigned to teams" icon={HardHat} value={today.assignedCount} href={teamsHref} hint="Workers and Foremen" />
           <StatCard variant="live" label="Today's Teams" icon={CalendarCheck} value={today.teamCount} href={teamsHref} />
           <StatCard
             variant="live"
@@ -66,8 +71,15 @@ export function ProjectDailyOverview({ companyId, projectId, today, safety, acti
             value={today.teamCount === 0 ? "—" : today.allTeamsLocked ? "Locked" : today.anyTeamsOpen ? "Open" : "Mixed"}
             href={teamsHref}
           />
-          <StatCard variant="live" label="Hours submitted" icon={Clock} value={today.hoursSubmittedCount} href={worksedHoursHref} />
-          <StatCard variant="live" label="Hours not recorded" icon={Clock} value={today.hoursNotRecordedCount} href={worksedHoursHref} hint={`${today.hoursDraftCount} draft`} />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeader title="Worked hours" description="Today's worked-hours entry status, by employee." className="mb-3" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard variant="live" tone="positive" label="Submitted Hours" icon={CheckCircle2} value={today.hoursSubmittedCount} href={workedHoursHref} hint="Finalized for today" />
+          <StatCard variant="live" tone="attention" label="Draft Hours" icon={FileClock} value={today.hoursDraftCount} href={workedHoursHref} hint="Entered, not yet submitted" />
+          <StatCard variant="live" tone="attention" label="No Hours Recorded" icon={FileQuestion} value={today.hoursNotRecordedCount} href={workedHoursHref} hint="No entry for today at all" />
         </div>
       </div>
 
@@ -89,7 +101,7 @@ export function ProjectDailyOverview({ companyId, projectId, today, safety, acti
           <SectionHeader title="Action required" className="mb-3" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {actionRequired.openHourDiscrepancies > 0 && (
-              <StatCard variant="live" label="Open hour discrepancies" icon={AlertTriangle} value={actionRequired.openHourDiscrepancies} href={worksedHoursHref} />
+              <StatCard variant="live" label="Open hour discrepancies" icon={AlertTriangle} value={actionRequired.openHourDiscrepancies} href={workedHoursHref} />
             )}
             {actionRequired.overdueCorrectiveActions > 0 && (
               <StatCard variant="live" label="Overdue corrective actions" icon={AlertTriangle} value={actionRequired.overdueCorrectiveActions} href="/observations?overdueOnly=true" />

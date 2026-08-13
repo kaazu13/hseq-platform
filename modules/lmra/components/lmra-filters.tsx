@@ -4,25 +4,26 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { LMRA_STATUSES, LMRA_STATUS_LABELS } from "@/modules/lmra/types";
-import type { Project } from "@/modules/projects/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const FILTER_KEYS = ["workArea", "status", "projectId", "dateFrom", "dateTo"] as const;
+const FILTER_KEYS = ["workArea", "status", "dateFrom", "dateTo"] as const;
 
 /**
  * URL-search-param-driven filters for the LMRA list — same pattern as
  * modules/employees/components/employee-filters.tsx (see that file's
- * header comment for the controlled-input rationale). Covers the
- * milestone's "filtering by ... project, work area, date, and status"
- * requirement; company is implicit (the current company context,
- * same as every other list in this app), and "company" isn't a concept this
- * schema models separately from company/project — see the milestone
- * report for that disclosure.
+ * header comment for the controlled-input rationale). Covers work area,
+ * status, and date. No project selector — item 7's fix: the project is
+ * always the caller's active project (resolved server-side by the page),
+ * never a client-chosen one, and never a raw project id shown to the
+ * user. `mode` (My/All LMRAs) is a separate, deliberately un-clearable
+ * query param the page itself renders links for — omitted from
+ * `FILTER_KEYS` so "Clear filters" resets search/status/date without also
+ * bouncing the caller out of whichever list mode they're viewing.
  */
-export function LmraFilters({ projects }: { projects: Project[] }) {
+export function LmraFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -78,20 +79,6 @@ export function LmraFilters({ projects }: { projects: Project[] }) {
           aria-label="Search work area"
         />
       </div>
-
-      <Select value={searchParams.get("projectId") ?? "all"} onValueChange={(value) => setParam("projectId", value)}>
-        <SelectTrigger className="w-full sm:w-48" aria-label="Filter by project">
-          <SelectValue placeholder="All projects" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All projects</SelectItem>
-          {projects.map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
 
       <Select value={searchParams.get("status") ?? "all"} onValueChange={(value) => setParam("status", value)}>
         <SelectTrigger className="w-full sm:w-40" aria-label="Filter by status">

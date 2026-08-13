@@ -137,27 +137,6 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Projects",
-    items: [
-      {
-        label: "Projects",
-        href: "/projects",
-        icon: FolderKanban,
-        status: "available",
-        description:
-          "The contracted jobs and sites your company is executing, with Team management and status tracking from planning through archived.",
-      },
-      {
-        label: "Equipment",
-        href: "/equipment",
-        icon: Wrench,
-        status: "planned",
-        description:
-          "Tools, machinery, and site equipment — assignment, condition, and maintenance history.",
-      },
-    ],
-  },
-  {
     label: "Planning & Daily",
     items: [
       {
@@ -178,6 +157,14 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Credited hours per employee per day — draft/submitted lifecycle, independent of Today's Teams locking. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/worked-hours`,
         matchSegment: "worked-hours",
+      },
+      {
+        label: "Equipment",
+        href: "/equipment",
+        icon: Wrench,
+        status: "planned",
+        description:
+          "Tools, machinery, and site equipment — assignment, condition, and maintenance history.",
       },
       {
         label: "Scaffold Register",

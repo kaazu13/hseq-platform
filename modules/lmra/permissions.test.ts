@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canCreateLmra, canManageLmra, canArchiveLmra } from "./permissions";
+import { canCreateLmra, canManageLmra, canArchiveLmra, canViewAllProjectLmra } from "./permissions";
 
 describe("canCreateLmra", () => {
   it("allows an HSE Manager regardless of project access/foreman standing", () => {
@@ -58,5 +58,29 @@ describe("canArchiveLmra", () => {
     expect(canArchiveLmra(["company_admin"])).toBe(false);
     expect(canArchiveLmra(["operations_manager"])).toBe(false);
     expect(canArchiveLmra([])).toBe(false);
+  });
+});
+
+describe("canViewAllProjectLmra — item 9's 'All LMRAs' tab gate", () => {
+  it("allows a project Foreman regardless of company-wide role", () => {
+    expect(canViewAllProjectLmra(["employee"], true)).toBe(true);
+  });
+
+  it("allows hseq_manager, company_admin, operations_manager, and project_manager without needing foreman standing", () => {
+    expect(canViewAllProjectLmra(["hseq_manager"], false)).toBe(true);
+    expect(canViewAllProjectLmra(["company_admin"], false)).toBe(true);
+    expect(canViewAllProjectLmra(["operations_manager"], false)).toBe(true);
+    expect(canViewAllProjectLmra(["project_manager"], false)).toBe(true);
+  });
+
+  it("denies an ordinary employee with neither foreman standing nor an authorized management role — My LMRAs only", () => {
+    expect(canViewAllProjectLmra(["employee"], false)).toBe(false);
+    expect(canViewAllProjectLmra([], false)).toBe(false);
+  });
+
+  it("denies roles this app doesn't treat as project-wide LMRA management, even though RLS itself would technically allow the underlying read for any project member — never silently broadened", () => {
+    expect(canViewAllProjectLmra(["inspector"], false)).toBe(false);
+    expect(canViewAllProjectLmra(["planner"], false)).toBe(false);
+    expect(canViewAllProjectLmra(["recruiter"], false)).toBe(false);
   });
 });

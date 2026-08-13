@@ -37,3 +37,21 @@ export function canManageLmra(roleNames: RoleName[], isProjectForeman: boolean, 
 export function canArchiveLmra(roleNames: RoleName[]): boolean {
   return roleNames.includes("hseq_manager");
 }
+
+/**
+ * The "All LMRAs" list mode gate (Today's Teams/LMRA UX redesign, item 9).
+ * RLS (`lmra_assessments_select`) already lets ANY project member read
+ * every LMRA on a project they're assigned to — deliberately broader than
+ * what this app chooses to SURFACE as a distinct "All LMRAs" tab, since an
+ * ordinary employee's own operational need is "my own LMRAs," not a
+ * project-wide list. This function mirrors the exact "company-level
+ * authorized management" role set `app/(app)/lmra/new/page.tsx`'s
+ * `canSelectAnyTeam` already established for a closely related "see more
+ * than just my own" LMRA capability — reusing that precedent rather than
+ * inventing a new set. Foreman is judged per-project (`isProjectForeman`,
+ * resolved server-side), never a client-trusted flag. This is a UI-gating
+ * function only, never broadens the underlying RLS read.
+ */
+export function canViewAllProjectLmra(roleNames: RoleName[], isProjectForeman: boolean): boolean {
+  return isProjectForeman || roleNames.includes("hseq_manager") || roleNames.includes("company_admin") || roleNames.includes("operations_manager") || roleNames.includes("project_manager");
+}

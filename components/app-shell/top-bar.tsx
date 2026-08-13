@@ -1,20 +1,24 @@
-import Link from "next/link";
-import { Bell, Search } from "lucide-react";
-import { getUnreadNotificationCount } from "@/modules/worked-hours/queries";
+import { Search } from "lucide-react";
+import { getUnreadNotificationCount, listMyNotifications } from "@/modules/worked-hours/queries";
+import { NotificationBell } from "@/components/app-shell/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumbs } from "@/components/app-shell/breadcrumbs";
 
+const NOTIFICATION_PREVIEW_LIMIT = 5;
+
 /**
  * Persistent top bar — see docs/UI_GUIDELINES.md §4. Global search remains
  * a UI placeholder only (out of this milestone's scope); the notifications
- * bell is now real (Phase 6) — a Server Component so the unread count is
- * fetched fresh on every navigation, same "no client-only parallel state"
- * principle as the rest of this milestone.
+ * bell is a real compact dropdown (item 3) — a Server Component so the
+ * unread count and preview list are fetched fresh on every navigation,
+ * same "no client-only parallel state" principle as the rest of this
+ * milestone. The bell is now the primary notification UX — the dashboard's
+ * own Notifications card was removed (item 2) since it duplicated this.
  */
 export async function TopBar() {
-  const unreadCount = await getUnreadNotificationCount();
+  const [unreadCount, notifications] = await Promise.all([getUnreadNotificationCount(), listMyNotifications(NOTIFICATION_PREVIEW_LIMIT)]);
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 print:hidden">
@@ -36,22 +40,7 @@ export async function TopBar() {
             ⌘K
           </kbd>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          nativeButton={false}
-          render={<Link href="/notifications" />}
-          aria-label={unreadCount > 0 ? `Notifications — ${unreadCount} unread` : "Notifications"}
-          title="Notifications"
-          className="relative"
-        >
-          <Bell />
-          {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </Button>
+        <NotificationBell unreadCount={unreadCount} notifications={notifications} />
       </div>
     </header>
   );
