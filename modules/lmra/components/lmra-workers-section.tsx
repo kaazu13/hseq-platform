@@ -18,6 +18,8 @@ type LmraWorkersSectionProps = {
   readOnly?: boolean;
   /** Item 2: only HSE Manager/project Foreman (the existing elevated-access tier) may browse and pick ANY project team — an ordinary employee only ever gets "Add My Today's Team". */
   canSelectAnyTeam?: boolean;
+  /** Bug fix: fired with the resolved team's id whenever "Add My Today's Team"/"Select Today's Team" is used — the caller (LmraForm) is responsible for actually persisting it as the LMRA's daily_team_id. Optional for the same read-only-render reason as onChange. */
+  onTeamLinked?: (dailyTeamId: string) => void;
 };
 
 /**
@@ -29,12 +31,14 @@ type LmraWorkersSectionProps = {
  * plain array-union, since EmployeeMultiSelect's onChange already treats
  * the id list as a set of distinct values.
  */
-export function LmraWorkersSection({ companyId, projectId, workDate, options, selectedIds, onChange, readOnly, canSelectAnyTeam }: LmraWorkersSectionProps) {
-  function handleAddTeam(employeeIds: string[]) {
-    if (!onChange) return;
-    const merged = new Set(selectedIds);
-    for (const id of employeeIds) merged.add(id);
-    onChange([...merged]);
+export function LmraWorkersSection({ companyId, projectId, workDate, options, selectedIds, onChange, readOnly, canSelectAnyTeam, onTeamLinked }: LmraWorkersSectionProps) {
+  function handleAddTeam(employeeIds: string[], dailyTeamId: string) {
+    if (onChange) {
+      const merged = new Set(selectedIds);
+      for (const id of employeeIds) merged.add(id);
+      onChange([...merged]);
+    }
+    onTeamLinked?.(dailyTeamId);
   }
 
   return (

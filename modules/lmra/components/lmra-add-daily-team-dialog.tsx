@@ -14,7 +14,8 @@ type LmraAddDailyTeamDialogProps = {
   projectId: string;
   /** The LMRA's OWN work date — Today's Teams for THAT date, not necessarily today's calendar date, so a backdated LMRA correctly resolves that day's historical roster (never re-resolved from a "current" team). */
   workDate: string;
-  onAddTeam: (employeeIds: string[]) => void;
+  /** Bug fix: also carries the selected team's id — the caller must set daily_team_id on the LMRA, never merely add its members as participants. */
+  onAddTeam: (employeeIds: string[], dailyTeamId: string) => void;
 };
 
 /**
@@ -60,7 +61,7 @@ export function LmraAddDailyTeamDialog({ open, onOpenChange, companyId, projectI
 
   function handleSelect(team: DailyTeamWithMembers) {
     const employeeIds = [...(team.foreman ? [team.foreman.id] : []), ...team.workers.map((member) => member.employee.id)];
-    onAddTeam(employeeIds);
+    onAddTeam(employeeIds, team.id);
     onOpenChange(false);
   }
 

@@ -130,6 +130,8 @@ export const lmraEditFormSchema = z
     notes: optionalNotes(LMRA_NOTES_MAX_LENGTH),
     participantEmployeeIds: lmraParticipantsFormSchema,
     hazards: lmraHazardsFormSchema,
+    /** Bug fix: undefined means "leave the existing daily_team_id link untouched" (update_lmra_assessment() coalesces against the current value) — set only when "Add My Today's Team"/"Select Today's Team" is used while editing a still-linkable draft. */
+    dailyTeamId: z.string().uuid().optional(),
   })
   .refine((data) => data.responsiblePersonId === null || data.participantEmployeeIds.includes(data.responsiblePersonId), {
     message: "The person responsible for the work must be one of Workers involved",

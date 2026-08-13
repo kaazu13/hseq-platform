@@ -77,6 +77,15 @@ export function LmraForm(props: LmraFormProps) {
   const [result, setResult] = useState<LmraResult>("go");
   const [stopWorkReason, setStopWorkReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  // Bug fix: this used to be read directly off `props.dailyTeamId` at save
+  // time — a static prop only ever populated via the `?dailyTeamId=` query
+  // param path (clicking "[ LMRA ]" on a Today's Team card). "Add My
+  // Today's Team"/"Select Today's Team" never had any way to communicate
+  // the team they resolved back up to this component, so an LMRA created
+  // via either of those never got daily_team_id set — exactly why Today's
+  // Teams' completion indicator stayed neutral for it. State now, wired to
+  // LmraWorkersSection's onTeamLinked below.
+  const [dailyTeamId, setDailyTeamId] = useState<string | undefined>(props.mode === "create" ? props.dailyTeamId : props.assessment.daily_team_id ?? undefined);
 
   const canPickCompletedBy = props.mode === "create" && props.isElevated;
   const hazardsEditable = props.mode === "create" || props.hazardsEditable;
@@ -101,6 +110,15 @@ export function LmraForm(props: LmraFormProps) {
     return fieldErrors[name];
   }
 
+  function handleWorkDateChange(nextWorkDate: string) {
+    setWorkDate(nextWorkDate);
+    // A daily_team_id link is only ever valid for the team's OWN work_date
+    // (the create/update RPCs enforce this server-side too) — changing the
+    // date invalidates whatever team was previously resolved, so clear it
+    // rather than let a stale link fail confusingly at save time.
+    setDailyTeamId(undefined);
+  }
+
   function handleSave(submit: boolean) {
     setFormError(null);
     setFieldErrors({});
@@ -122,7 +140,7 @@ export function LmraForm(props: LmraFormProps) {
           result,
           stopWorkReason,
           confirmed: submit ? confirmed : true,
-          dailyTeamId: props.dailyTeamId,
+          dailyTeamId,
         });
         if (!result_.ok) {
           setFormError(result_.error.message);
@@ -138,6 +156,7 @@ export function LmraForm(props: LmraFormProps) {
           notes,
           participantEmployeeIds: participantIds,
           hazards: hazardRows,
+          dailyTeamId,
         });
         if (!result_.ok) {
           setFormError(result_.error.message);
@@ -191,7 +210,7 @@ export function LmraForm(props: LmraFormProps) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="workDate">Date</Label>
-            <Input id="workDate" type="date" required value={workDate} onChange={(event) => setWorkDate(event.target.value)} aria-invalid={Boolean(fieldError("workDate"))} />
+            <Input id="workDate" type="date" required value={workDate} onChange={(event) => handleWorkDateChange(event.target.value)} aria-invalid={Boolean(fieldError("workDate"))} />
             {fieldError("workDate") && <p className="text-sm text-destructive">{fieldError("workDate")}</p>}
           </div>
 
@@ -258,6 +277,7 @@ export function LmraForm(props: LmraFormProps) {
         onChange={handleParticipantIdsChange}
         readOnly={!hazardsEditable}
         canSelectAnyTeam={canSelectAnyTeam}
+        onTeamLinked={setDailyTeamId}
       />
 
       <LmraHazardsAndControls rows={hazardRows} onChange={setHazardRows} candidates={participantCandidates} readOnly={!hazardsEditable} />

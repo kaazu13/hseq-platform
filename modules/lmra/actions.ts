@@ -103,7 +103,7 @@ function formatWorkDateForMessage(workDate: string): string {
   return new Date(`${workDate}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-export type MyTodaysTeamResult = { employeeIds: string[]; teamName: string };
+export type MyTodaysTeamResult = { employeeIds: string[]; teamName: string; dailyTeamId: string };
 
 /**
  * Item 2: "Add My Today's Team" — resolves the CALLING employee's own
@@ -145,7 +145,7 @@ export async function getMyTodaysTeamForLmra(companyId: string, projectId: strin
   }
 
   const employeeIds = buildMyTodaysTeamParticipantIds(team, myEmployeeId);
-  return { ok: true, data: { employeeIds, teamName: team.name } };
+  return { ok: true, data: { employeeIds, teamName: team.name, dailyTeamId: team.id } };
 }
 
 /**
@@ -200,6 +200,7 @@ export async function createLmraComplete(companyId: string, input: LmraCreateFor
   }
 
   revalidatePath("/lmra");
+  revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/teams`);
   redirect(`/lmra/${data.id}`);
 }
 
@@ -237,6 +238,7 @@ export async function updateLmraComplete(companyId: string, lmraId: string, proj
       controls_confirmed: h.controlsConfirmed,
       other_description: h.otherDescription || null,
     })),
+    target_daily_team_id: (parsed.data.dailyTeamId ?? null) as string,
   });
 
   if (error || !data) {
@@ -249,6 +251,7 @@ export async function updateLmraComplete(companyId: string, lmraId: string, proj
 
   revalidatePath("/lmra");
   revalidatePath(`/lmra/${lmraId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
   redirect(`/lmra/${lmraId}`);
 }
 

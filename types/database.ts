@@ -5571,6 +5571,7 @@ export type Database = {
       }
       update_lmra_assessment: {
         Args: {
+          target_daily_team_id?: string
           target_hazards: Json
           target_lmra_id: string
           target_notes: string

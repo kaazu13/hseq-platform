@@ -9,6 +9,7 @@ import {
   addMembership,
   createTestEmployee,
   createTestProject,
+  createTestTeam,
   RAISED_EXCEPTION,
   CHECK_VIOLATION,
 } from "./helpers";
@@ -407,6 +408,251 @@ describe("LMRA invariants (redesign)", () => {
           )
         `),
       ).rejects.toMatchObject(RAISED_EXCEPTION);
+    });
+  });
+
+  describe("Today's Teams LMRA completion indicator regression — daily_team_id linking", () => {
+    /** Creates a real daily_teams row for (project, workDate), with an eligible Foreman + one worker, mirroring the Today's Team system's own real shape (not lmra's — see modules/daily-workforce). */
+    async function makeDailyTeam(projectId: string, workDate: string, name: string, foremanEmployeeId: string, workerEmployeeId: string) {
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${foremanEmployeeId})`);
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foremanEmployeeId}, ${name}, 'day', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${workerEmployeeId}, 'member')`);
+      return team.id as string;
+    }
+
+    /** A genuinely eligible Foreman — same helper shape as tests/db/daily-workforce-invariants.test.ts's own createTestForeman. */
+    async function foremanEmployee(projectId: string, firstName: string, lastName: string) {
+      const user = await createTestUser(`${firstName} ${lastName}`);
+      await addMembership(companyA.companyId, user.userId, ["foreman"]);
+      const employeeId = await createTestEmployee(companyA.companyId, user.userId, firstName, lastName);
+      const teamId = await createTestTeam(companyA.companyId, projectId, `${firstName} Legacy Team`);
+      await sql`insert into team_assignments (company_id, project_id, team_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${teamId}, ${employeeId}, 'foreman')`;
+      return { userId: user.userId, employeeId };
+    }
+
+    it("create_lmra_assessment persists the exact target_daily_team_id — the 'LMRA from Team card' and both quick-add paths all funnel through this one write", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Daily Team Link Project");
+      const workDate = "2026-08-20";
+      const foreman = await foremanEmployee(projectId, "Link", "Foreman");
+      const worker = await rosterEmployee(projectId, "LinkWorker");
+      const teamId = await makeDailyTeam(projectId, workDate, "Team Link A", foreman.employeeId, worker.employeeId);
+
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamId}
+        )
+      `);
+
+      expect(assessment.daily_team_id).toBe(teamId);
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("rejects a target_daily_team_id belonging to a DIFFERENT project (same company) — never trust an id without row validation", async () => {
+      const projectA = await createTestProject(companyA.companyId, "Link Wrong Project A");
+      const projectB = await createTestProject(companyA.companyId, "Link Wrong Project B");
+      const workDate = "2026-08-20";
+      const foreman = await foremanEmployee(projectB, "Wrong", "Project");
+      const workerB = await rosterEmployee(projectB, "WrongProjectWorkerB");
+      const teamIdOnProjectB = await makeDailyTeam(projectB, workDate, "Team On B", foreman.employeeId, workerB.employeeId);
+      const workerA = await rosterEmployee(projectA, "WrongProjectWorkerA");
+
+      await expect(
+        asUser(workerA.userId, (tx) => tx`
+          select * from create_lmra_assessment(
+            ${companyA.companyId}, ${projectA}, 'Area', 'Activity', ${workDate}, 'day',
+            ${workerA.employeeId}, null, null, ${[workerA.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamIdOnProjectB}
+          )
+        `),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("rejects a target_daily_team_id whose own work_date does not match the LMRA's work_date", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Link Wrong Date Project");
+      const teamDate = "2026-08-20";
+      const lmraDate = "2026-08-21";
+      const foreman = await foremanEmployee(projectId, "Wrong", "Date");
+      const worker = await rosterEmployee(projectId, "WrongDateWorker");
+      const teamId = await makeDailyTeam(projectId, teamDate, "Team Wrong Date", foreman.employeeId, worker.employeeId);
+
+      await expect(
+        asUser(worker.userId, (tx) => tx`
+          select * from create_lmra_assessment(
+            ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${lmraDate}, 'day',
+            ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamId}
+          )
+        `),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("update_lmra_assessment PRESERVES the existing daily_team_id when target_daily_team_id is omitted/null — editing never silently unlinks", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Link Preserve Project");
+      const workDate = "2026-08-20";
+      const foreman = await foremanEmployee(projectId, "Preserve", "Link");
+      const worker = await rosterEmployee(projectId, "PreserveWorker");
+      const teamId = await makeDailyTeam(projectId, workDate, "Team Preserve", foreman.employeeId, worker.employeeId);
+
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamId}
+        )
+      `);
+      expect(assessment.daily_team_id).toBe(teamId);
+
+      const [updated] = await asUser(worker.userId, (tx) => tx`
+        select * from update_lmra_assessment(
+          ${assessment.id}, 'New Area', 'Activity', ${workDate}, 'day', null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb
+        )
+      `);
+      expect(updated.daily_team_id).toBe(teamId);
+      expect(updated.work_area).toBe("New Area");
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("update_lmra_assessment can EXPLICITLY (re)link a draft to a valid team for the same work_date", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Link Relink Project");
+      const workDate = "2026-08-20";
+      const worker = await rosterEmployee(projectId, "RelinkWorker");
+      const foreman = await foremanEmployee(projectId, "Relink", "Foreman");
+      const teamId = await makeDailyTeam(projectId, workDate, "Team Relink", foreman.employeeId, worker.employeeId);
+
+      // Created with no team link at all (e.g. manual participant entry, no quick-add button used).
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+      expect(assessment.daily_team_id).toBeNull();
+
+      const [updated] = await asUser(worker.userId, (tx) => tx`
+        select * from update_lmra_assessment(
+          ${assessment.id}, 'Area', 'Activity', ${workDate}, 'day', null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, ${teamId}
+        )
+      `);
+      expect(updated.daily_team_id).toBe(teamId);
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("the exact reported regression: employee on Team A on date X creates an LMRA linked to Team A -> Team A's LMRA count is 1, and a second unrelated Team B stays at 0", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Regression Repro Project");
+      const workDate = "2026-08-20";
+      const foremanA = await foremanEmployee(projectId, "TeamA", "Foreman");
+      const foremanB = await foremanEmployee(projectId, "TeamB", "Foreman");
+      const employee = await rosterEmployee(projectId, "ReproEmployee");
+      const otherWorkerB = await rosterEmployee(projectId, "ReproOtherWorkerB");
+
+      // 1. Employee belongs to Team A on date X.
+      const teamAId = await makeDailyTeam(projectId, workDate, "Team A", foremanA.employeeId, employee.employeeId);
+      const teamBId = await makeDailyTeam(projectId, workDate, "Team B", foremanB.employeeId, otherWorkerB.employeeId);
+
+      // Resolve "my today's team" exactly the way getMyTodaysTeamForLmra does: a membership lookup for (project, work_date, employee_id).
+      const [membership] = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = ${workDate} and employee_id = ${employee.employeeId} and removed_at is null`;
+      expect(membership.daily_team_id).toBe(teamAId);
+
+      // 2/3. Employee creates an LMRA using "Add My Today's Team" — the fixed app code now passes the resolved daily_team_id straight through to create_lmra_assessment.
+      const [assessment] = await asUser(employee.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${workDate}, 'day',
+          ${employee.employeeId}, null, null, ${[employee.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, true, 'go', null, ${membership.daily_team_id}
+        )
+      `);
+      expect(assessment.status).toBe("submitted");
+      expect(assessment.daily_team_id).toBe(teamAId);
+
+      // 4/5. Re-query Team A — exactly listLmraCountsByDailyTeamId's own query shape — count is 1.
+      const teamACounts = await sql`select id from lmra_assessments where company_id = ${companyA.companyId} and project_id = ${projectId} and work_date = ${workDate} and archived_at is null and daily_team_id = ${teamAId}`;
+      expect(teamACounts).toHaveLength(1);
+      expect(teamACounts[0].id).toBe(assessment.id);
+
+      // Team B (a real, different team on the exact same project/date) must stay at 0 — never a false positive from a same-project/same-date coincidence.
+      const teamBCounts = await sql`select id from lmra_assessments where company_id = ${companyA.companyId} and project_id = ${projectId} and work_date = ${workDate} and archived_at is null and daily_team_id = ${teamBId}`;
+      expect(teamBCounts).toHaveLength(0);
+
+      await deleteTestUser(foremanA.userId);
+      await deleteTestUser(foremanB.userId);
+    });
+
+    it("an Approved/Go LMRA still counts (status is never part of the daily_team_id completion filter)", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Approved Counts Project");
+      const workDate = "2026-08-20";
+      const foreman = await foremanEmployee(projectId, "Approved", "Foreman");
+      const worker = await rosterEmployee(projectId, "ApprovedWorker");
+      const teamId = await makeDailyTeam(projectId, workDate, "Approved Team", foreman.employeeId, worker.employeeId);
+      const hseqAdmin = await createTestUser("Approved Counts HSEQ Manager");
+      await addMembership(companyA.companyId, hseqAdmin.userId, ["hseq_manager"]);
+
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, true, 'go', null, ${teamId}
+        )
+      `);
+      await asUser(hseqAdmin.userId, (tx) => tx`update lmra_assessments set status = 'approved', reviewed_by = ${hseqAdmin.userId}, reviewed_at = now(), approved_at = now() where id = ${assessment.id}`);
+
+      const counted = await sql`select status from lmra_assessments where daily_team_id = ${teamId} and work_date = ${workDate} and archived_at is null`;
+      expect(counted).toHaveLength(1);
+      expect(counted[0].status).toBe("approved");
+
+      await deleteTestUser(foreman.userId);
+      await deleteTestUser(hseqAdmin.userId);
+    });
+
+    it("an archived LMRA for that team no longer counts", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Archived Excluded Project");
+      const workDate = "2026-08-20";
+      const foreman = await foremanEmployee(projectId, "Archived", "Foreman");
+      const worker = await rosterEmployee(projectId, "ArchivedWorker");
+      const teamId = await makeDailyTeam(projectId, workDate, "Archived Team", foreman.employeeId, worker.employeeId);
+      const hseqAdmin = await createTestUser("Archived Excluded HSEQ Manager");
+      await addMembership(companyA.companyId, hseqAdmin.userId, ["hseq_manager"]);
+
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, true, 'go', null, ${teamId}
+        )
+      `);
+      await asUser(hseqAdmin.userId, (tx) => tx`update lmra_assessments set status = 'archived', archived_by = ${hseqAdmin.userId}, archived_at = now() where id = ${assessment.id}`);
+
+      const counted = await sql`select id from lmra_assessments where daily_team_id = ${teamId} and work_date = ${workDate} and archived_at is null`;
+      expect(counted).toHaveLength(0);
+
+      await deleteTestUser(foreman.userId);
+      await deleteTestUser(hseqAdmin.userId);
+    });
+
+    it("two LMRAs for the same team/date both count (count = 2) — never restricted to one per day", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Two LMRAs Project");
+      const workDate = "2026-08-20";
+      const foreman = await foremanEmployee(projectId, "TwoLmras", "Foreman");
+      const worker = await rosterEmployee(projectId, "TwoLmrasWorker");
+      const teamId = await makeDailyTeam(projectId, workDate, "Two LMRAs Team", foreman.employeeId, worker.employeeId);
+
+      await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area 1', 'Activity 1', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamId}
+        )
+      `);
+      await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area 2', 'Activity 2', ${workDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamId}
+        )
+      `);
+
+      const counted = await sql`select id from lmra_assessments where daily_team_id = ${teamId} and work_date = ${workDate} and archived_at is null`;
+      expect(counted).toHaveLength(2);
+
+      await deleteTestUser(foreman.userId);
     });
   });
 

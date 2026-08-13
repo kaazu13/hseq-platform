@@ -10,7 +10,8 @@ type LmraAddMyTeamButtonProps = {
   projectId: string;
   /** The LMRA's OWN work date — the caller's ACTUAL historical team roster for that exact date, never a "current" team re-resolved later. */
   workDate: string;
-  onAddTeam: (employeeIds: string[]) => void;
+  /** Bug fix: also carries the resolved daily_team_id — this button used to ONLY add participants, which is exactly why Today's Teams' LMRA indicator never turned green for LMRAs created this way (create_lmra_assessment's daily_team_id stayed null). */
+  onAddTeam: (employeeIds: string[], dailyTeamId: string) => void;
 };
 
 /**
@@ -18,9 +19,11 @@ type LmraAddMyTeamButtonProps = {
  * One click resolves the LOGGED-IN employee's own Today's Team for this
  * LMRA's (company, project, work_date) and adds its Foreman, every current
  * worker, and the employee themselves to Workers Involved — deduplicated
- * by the caller (LmraWorkersSection). No team list/picker: unlike "Select
- * Today's Team" (elevated roles only), this never exposes every project
- * team to an ordinary employee.
+ * by the caller (LmraWorkersSection) — AND links this LMRA to that exact
+ * team (daily_team_id), which is what actually makes Today's Teams'
+ * completion indicator turn green for it. No team list/picker: unlike
+ * "Select Today's Team" (elevated roles only), this never exposes every
+ * project team to an ordinary employee.
  */
 export function LmraAddMyTeamButton({ companyId, projectId, workDate, onAddTeam }: LmraAddMyTeamButtonProps) {
   const [isPending, startTransition] = useTransition();
@@ -34,7 +37,7 @@ export function LmraAddMyTeamButton({ companyId, projectId, workDate, onAddTeam 
         setError(result.error.message);
         return;
       }
-      onAddTeam(result.data.employeeIds);
+      onAddTeam(result.data.employeeIds, result.data.dailyTeamId);
     });
   }
 
