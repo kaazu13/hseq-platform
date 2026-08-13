@@ -6,12 +6,13 @@ import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/quer
 import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
-import { groupTeamsByForemanRoster } from "@/modules/daily-workforce/types";
+import { groupTeamsByForemanRoster, DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
 import { ForemanSection } from "@/modules/daily-workforce/components/foreman-section";
 import { AddForemanButton } from "@/modules/daily-workforce/components/add-foreman-button";
 import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/export-daily-teams-button";
+import { CopyTeamsDialog } from "@/modules/daily-workforce/components/copy-teams-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -89,7 +90,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
                     {day.locked && (
                       <Badge variant="secondary" className="gap-1">
                         <Lock className="size-3" />
-                        Locked
+                        {DAILY_TEAM_STATUS_LABELS.locked}
                       </Badge>
                     )}
                   </CardContent>
@@ -146,7 +147,12 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
       />
 
       {foremanGroups.length === 0 ? (
-        <EmptyState icon={HardHat} title="No foremen added for this day yet" description={canManage ? "Add a foreman below to start building today's teams." : "No foremen have been added for this day yet."} />
+        <EmptyState
+          icon={HardHat}
+          title="No foremen added for this day yet"
+          description={canManage ? "Add a foreman below to start building today's teams, or copy a previous day's structure." : "No foremen have been added for this day yet."}
+          action={canManage ? <CopyTeamsDialog companyId={companyId} projectId={projectId} destinationWorkDate={workDate} /> : undefined}
+        />
       ) : (
         <div className="flex flex-col gap-6">
           {foremanGroups.map((group) => (

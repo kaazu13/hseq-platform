@@ -5,7 +5,7 @@ import { getProject } from "@/modules/projects/queries";
 import { isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
 import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
 import { getMyProjectAssignmentRoles } from "@/modules/projects/queries";
-import { buildDailyTeamsWorkbook } from "@/modules/daily-workforce/export";
+import { buildDailyTeamsWorkbook, sanitizeExcelFilename } from "@/modules/daily-workforce/export";
 
 type RouteContext = { params: Promise<{ companyId: string; projectId: string }> };
 
@@ -40,14 +40,17 @@ export async function GET(request: Request, { params }: RouteContext) {
   const workDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : new Date().toISOString().slice(0, 10);
 
   const supabase = await createClient();
-  const { data: company } = await supabase.from("companies").select("name").eq("id", companyId).maybeSingle();
+  const [{ data: company }, { data: exporterProfile }] = await Promise.all([
+    supabase.from("companies").select("name").eq("id", companyId).maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+  ]);
 
-  const buffer = await buildDailyTeamsWorkbook(companyId, projectId, company?.name ?? "Company", project.name, workDate);
+  const buffer = await buildDailyTeamsWorkbook(companyId, projectId, company?.name ?? "Company", project.name, workDate, exporterProfile?.full_name ?? undefined);
 
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="todays-teams-${project.name.replace(/[^a-z0-9]+/gi, "-")}-${workDate}.xlsx"`,
+      "Content-Disposition": `attachment; filename="${sanitizeExcelFilename(`${project.name} - Today's Teams - ${workDate}`)}"`,
     },
   });
 }

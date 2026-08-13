@@ -29,6 +29,12 @@ export type DailyTeamShift = LmraShift;
 export const DAILY_TEAM_SHIFTS: DailyTeamShift[] = LMRA_SHIFTS;
 export const DAILY_TEAM_SHIFT_LABELS: Record<DailyTeamShift, string> = LMRA_SHIFT_LABELS;
 
+/** Item 3: centralized so "Locked"/"Open" is never hand-rolled per call site — see daily-team-card.tsx, daily-teams-header.tsx, project-daily-overview.tsx, and modules/daily-workforce/export.ts, all of which previously duplicated this independently. */
+export const DAILY_TEAM_STATUS_LABELS: Record<DailyTeamStatus, string> = {
+  open: "Open",
+  locked: "Locked",
+};
+
 export const DAILY_ATTENDANCE_STATUSES: DailyAttendanceStatus[] = ["not_set", "present", "absent", "sick", "leave", "training", "off_site"];
 
 export const DAILY_ATTENDANCE_STATUS_LABELS: Record<DailyAttendanceStatus, string> = {
@@ -231,6 +237,37 @@ export type WorkforceStatusCounts = {
   leave: number;
   sick: number;
   otherUnavailable: number;
+};
+
+/** One skipped worker (Copy Teams, item 9) — the destination-date reason a source-team worker was NOT copied. */
+export type CopyDailyTeamsSkippedWorker = {
+  employeeId: string;
+  name: string;
+  reason: "already_assigned" | "unavailable" | "other";
+  teamName: string;
+  attendanceStatus?: DailyAttendanceStatus | null;
+  detail?: string;
+};
+
+/** One source team that could not be copied because its Foreman is unavailable on the destination date (item 8) — never silently created without a valid Foreman. */
+export type CopyDailyTeamsAttentionTeam = {
+  sourceTeamName: string;
+  foremanEmployeeId: string;
+  foremanName: string;
+  reason: "foreman_unavailable";
+};
+
+/** The per-destination-date result of `copy_daily_teams_to_date` (items 6-10) — one of these per date in the requested range. */
+export type CopyDailyTeamsResult = {
+  destinationWorkDate: string;
+  skippedExisting: boolean;
+  teamsCreated: number;
+  workersAssigned: number;
+  workersSkippedUnavailable: number;
+  workersSkippedAlreadyAssigned: number;
+  teamsRequiringAttention: number;
+  skippedWorkerDetails: CopyDailyTeamsSkippedWorker[];
+  attentionTeamDetails: CopyDailyTeamsAttentionTeam[];
 };
 
 export function summarizeWorkforceByStatus(workforce: Pick<EmployeeDailyState, "attendanceStatus" | "assignedTeam">[]): WorkforceStatusCounts {

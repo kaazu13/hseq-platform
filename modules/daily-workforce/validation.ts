@@ -79,3 +79,13 @@ export const unlockDailyTeamsSchema = z.object({
   reason: z.string().trim().min(1, "A reason is required").max(2000, "Keep it under 2000 characters"),
 });
 export type UnlockDailyTeamsInput = z.infer<typeof unlockDailyTeamsSchema>;
+
+/** "Copy Teams" (items 6-10) — one source date, one or more destination dates. `copyDailyTeams` calls `copy_daily_teams_to_date` once per destination date, so the date list itself is the only real input; the RPC re-validates every Foreman/worker against each destination date independently. */
+export const copyDailyTeamsSchema = z.object({
+  sourceWorkDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a source date"),
+  destinationWorkDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .min(1, "Pick at least one destination date")
+    .max(31, "Keep the destination range under 31 days"),
+});
+export type CopyDailyTeamsInput = z.infer<typeof copyDailyTeamsSchema>;

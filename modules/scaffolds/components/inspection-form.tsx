@@ -4,7 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { createInspection } from "@/modules/scaffolds/actions";
-import { SCAFFOLD_INSPECTION_REASONS, SCAFFOLD_INSPECTION_REASON_LABELS, type ScaffoldInspectionReason, type ScaffoldInspection } from "@/modules/scaffolds/types";
+import { SCAFFOLD_INSPECTION_REASONS, SCAFFOLD_INSPECTION_REASON_LABELS, SCAFFOLD_INSPECTION_STATUS_LABELS, type ScaffoldInspectionReason, type ScaffoldInspection } from "@/modules/scaffolds/types";
 import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export function InspectionForm({ companyId, scaffoldId, projectId, candidates, p
               <SelectContent>
                 {priorInspections.map((inspection) => (
                   <SelectItem key={inspection.id} value={inspection.id}>
-                    {new Date(inspection.inspected_at).toLocaleDateString()} — {inspection.status}
+                    {new Date(inspection.inspected_at).toLocaleDateString()} — {SCAFFOLD_INSPECTION_STATUS_LABELS[inspection.status]}
                   </SelectItem>
                 ))}
               </SelectContent>

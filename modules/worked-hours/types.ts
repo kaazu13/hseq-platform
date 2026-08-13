@@ -68,8 +68,9 @@ export const WORKED_HOURS_STATUS_LABELS: Record<WorkedHoursStatus, string> = {
   submitted: "Submitted",
 };
 
+/** Item 5: `open` displays as "In Review" — the raw enum value ("Open") read as unclear/inactive to both employees and managers; the actual state is "management is reviewing this," which "In Review" says directly. The underlying DB value stays `open` — only the label changes (docs/API_CONVENTIONS.md's "internal values remain unchanged unless a real schema change is necessary"). */
 export const WORKED_HOURS_DISCREPANCY_STATUS_LABELS: Record<WorkedHoursDiscrepancyStatus, string> = {
-  open: "Open",
+  open: "In Review",
   accepted: "Accepted",
   rejected: "Rejected",
 };

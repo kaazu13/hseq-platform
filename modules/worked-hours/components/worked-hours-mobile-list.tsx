@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useWorkedHoursRow } from "@/modules/worked-hours/use-worked-hours-row";
-import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, WORKED_HOURS_MAX, type WorkedHoursWithEmployee } from "@/modules/worked-hours/types";
+import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, WORKED_HOURS_STATUS_LABELS, WORKED_HOURS_MAX, type WorkedHoursWithEmployee } from "@/modules/worked-hours/types";
 import type { BasicEmployee } from "@/modules/daily-workforce/types";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,11 @@ function WorkedHoursMobileRow({ companyId, projectId, workDate, row, canManage }
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className={cn("text-sm font-semibold", overCap && "text-destructive")}>{total.toFixed(1)}h</span>
-          {row.workedHours ? <Badge variant={isSubmitted ? "default" : "secondary"}>{isSubmitted ? "Submitted" : "Draft"}</Badge> : <Badge variant="outline">Missing</Badge>}
+          {row.workedHours ? (
+            <StatusBadge tone={isSubmitted ? "positive" : "attention"}>{isSubmitted ? WORKED_HOURS_STATUS_LABELS.submitted : WORKED_HOURS_STATUS_LABELS.draft}</StatusBadge>
+          ) : (
+            <Badge variant="outline">Missing</Badge>
+          )}
           {Boolean(row.correctionCount) && (
             <Badge variant="outline" className="text-amber-700 dark:text-amber-400">
               Corrected{row.correctionCount! > 1 ? ` (${row.correctionCount})` : ""}

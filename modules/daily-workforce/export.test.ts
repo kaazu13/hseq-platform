@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import ExcelJS from "exceljs";
-import { formatDailyTeamsWorkbook, buildWorkedHoursMatrixWorkbook, buildDailyWorkedHoursWorkbook } from "./export";
+import { formatDailyTeamsWorkbook, buildWorkedHoursMatrixWorkbook, buildDailyWorkedHoursWorkbook, sanitizeExcelFilename } from "./export";
 import type { DailyTeamWithMembers, DailyTeamMemberWithEmployee } from "./types";
 
 function employee(id: string, firstName: string, lastName: string, positionTitle = ""): DailyTeamMemberWithEmployee["employee"] {
@@ -36,13 +36,27 @@ async function loadFirstSheetRows(buffer: ExcelJS.Buffer): Promise<string[][]> {
   return rows;
 }
 
-describe("formatDailyTeamsWorkbook", () => {
+/** Flattens every non-empty cell across the sheet into a plain string list — used for formatDailyTeamsWorkbook's grouped, variable-row-position layout, where asserting on a fixed row/column index would be brittle. */
+async function loadAllCellText(buffer: ExcelJS.Buffer): Promise<string[]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const sheet = workbook.worksheets[0];
+  const cells: string[] = [];
+  sheet.eachRow((row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      if (cell.value !== null && cell.value !== undefined && cell.value !== "") cells.push(String(cell.value));
+    });
+  });
+  return cells;
+}
+
+describe("formatDailyTeamsWorkbook — item 2's foreman-grouped, professionally formatted layout", () => {
   const team: DailyTeamWithMembers = {
     id: "t1",
     company_id: "c1",
     project_id: "p1",
     work_date: "2026-08-10",
-    name: "Team A200",
+    name: "team 1",
     shift: "day",
     work_area: "A200",
     activity: "Scaffold Assembly",
@@ -59,33 +73,96 @@ describe("formatDailyTeamsWorkbook", () => {
     updated_by: null,
     foreman_employee_id: "e1",
     foreman: employee("e1", "Karl", "Andersson"),
-    workers: [member("m2", "t1", "member", employee("e2", "Anders", "Holm"))],
+    workers: [member("m2", "t1", "member", employee("e2", "Anders", "Holm")), member("m3", "t1", "member", employee("e3", "Elin", "Forsberg"))],
   };
 
-  it("produces one row per team member, with company/project/date/shift repeated on every row", async () => {
-    const buffer = await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-10", [team]);
-    const rows = await loadFirstSheetRows(buffer);
-    // Header + 2 member rows (1 foreman, 1 worker).
-    expect(rows).toHaveLength(3);
-    const [, foremanRow, workerRow] = rows;
-    expect(foremanRow).toEqual(["Northstar", "North Plant Expansion", "2026-08-10", "Day Shift", "Team A200", "A200", "Scaffold Assembly", "Karl Andersson", "Foreman", "Open"]);
-    expect(workerRow[7]).toBe("Anders Holm");
-    expect(workerRow[8]).toBe("Member");
+  it("includes company name, project name, and the formatted date at the top", async () => {
+    const buffer = await formatDailyTeamsWorkbook("Northstar Scaffolding Test AB", "North Plant Expansion", "2026-08-13", [team]);
+    const cells = await loadAllCellText(buffer);
+    expect(cells).toContain("Northstar Scaffolding Test AB");
+    expect(cells).toContain("North Plant Expansion");
+    expect(cells.some((c) => c.includes("13 Aug 2026"))).toBe(true);
   });
 
-  it("shows Locked/Open status matching the team's own status", async () => {
-    const lockedBuffer = await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-10", [{ ...team, status: "locked" }]);
-    const rows = await loadFirstSheetRows(lockedBuffer);
-    expect(rows[1][9]).toBe("Locked");
+  it("includes an 'Exported by' line with the name and a timestamp, falling back to an em dash when no name is given", async () => {
+    const withName = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [team], "Erik Lindqvist"));
+    expect(withName.some((c) => c.startsWith("Exported by Erik Lindqvist ·"))).toBe(true);
+
+    const withoutName = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [team]));
+    expect(withoutName.some((c) => c.startsWith("Exported by — ·"))).toBe(true);
   });
 
-  it("emits a single row with blank employee/role for a team with no members, rather than omitting it entirely", async () => {
-    const emptyTeam: DailyTeamWithMembers = { ...team, foreman_employee_id: null, foreman: null, workers: [] };
-    const buffer = await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-10", [emptyTeam]);
-    const rows = await loadFirstSheetRows(buffer);
-    expect(rows).toHaveLength(2);
-    expect(rows[1][4]).toBe("Team A200");
-    expect(rows[1][7]).toBe("");
+  it("groups under 'FOREMAN: {name}', shows the team name, and lists Shift/Area/Activity/Status/Workers", async () => {
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [team]));
+    expect(cells).toContain("FOREMAN: Karl Andersson");
+    expect(cells).toContain("TEAM 1");
+    expect(cells).toContain("Shift: Day Shift");
+    expect(cells).toContain("Area: A200");
+    expect(cells).toContain("Activity: Scaffold Assembly");
+    expect(cells).toContain("Status: Open");
+    expect(cells).toContain("Workers: 2");
+    expect(cells).toContain("Anders Holm");
+    expect(cells).toContain("Elin Forsberg");
+  });
+
+  it("shows Locked status via the same centralized DAILY_TEAM_STATUS_LABELS used elsewhere in the app", async () => {
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [{ ...team, status: "locked" }]));
+    expect(cells).toContain("Status: Locked");
+  });
+
+  it("multiple Foremen each get their own heading, teams grouped under the correct one", async () => {
+    const teamTwo: DailyTeamWithMembers = {
+      ...team,
+      id: "t2",
+      name: "team 2",
+      foreman_employee_id: "e4",
+      foreman: employee("e4", "Peter", "Karlsson"),
+      workers: [member("m5", "t2", "member", employee("e5", "David", "Ekström"))],
+    };
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [team, teamTwo]));
+    expect(cells).toContain("FOREMAN: Karl Andersson");
+    expect(cells).toContain("FOREMAN: Peter Karlsson");
+    expect(cells.indexOf("FOREMAN: Karl Andersson")).toBeLessThan(cells.indexOf("TEAM 1"));
+    expect(cells.indexOf("FOREMAN: Peter Karlsson")).toBeLessThan(cells.indexOf("TEAM 2"));
+  });
+
+  it("a team with no foreman falls under 'No Foreman Assigned'", async () => {
+    const orphanTeam: DailyTeamWithMembers = { ...team, foreman_employee_id: null, foreman: null };
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [orphanTeam]));
+    expect(cells).toContain("FOREMAN: No Foreman Assigned");
+  });
+
+  it("a team with zero workers shows 'Workers: 0' and no worker names, never omitting the team block entirely", async () => {
+    const emptyTeam: DailyTeamWithMembers = { ...team, workers: [] };
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [emptyTeam]));
+    expect(cells).toContain("TEAM 1");
+    expect(cells).toContain("Workers: 0");
+    expect(cells).not.toContain("Anders Holm");
+  });
+
+  it("never renders a raw employee/team/company id anywhere in the sheet", async () => {
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", [team]));
+    const uuidLike = /^[0-9a-f-]{8,}$/i;
+    expect(cells.some((c) => uuidLike.test(c) && (c === team.id || c === "e1" || c === "e2"))).toBe(false);
+  });
+
+  it("says 'No teams recorded for this day' rather than an empty sheet when there are zero teams", async () => {
+    const cells = await loadAllCellText(await formatDailyTeamsWorkbook("Northstar", "North Plant Expansion", "2026-08-13", []));
+    expect(cells).toContain("No teams recorded for this day.");
+  });
+});
+
+describe("sanitizeExcelFilename", () => {
+  it("appends .xlsx if missing", () => {
+    expect(sanitizeExcelFilename("North Plant Expansion - Today's Teams - 2026-08-13")).toBe("North Plant Expansion - Today's Teams - 2026-08-13.xlsx");
+  });
+
+  it("strips filesystem/Content-Disposition-unsafe characters but keeps spaces and punctuation", () => {
+    expect(sanitizeExcelFilename('Weird: "Project" / Name? *.xlsx')).toBe("Weird- -Project- - Name- -.xlsx");
+  });
+
+  it("does not double the extension when already present", () => {
+    expect(sanitizeExcelFilename("Already Named.xlsx")).toBe("Already Named.xlsx");
   });
 });
 

@@ -17,6 +17,7 @@ import {
   reorderDailyTeamsSchema,
   moveDailyTeamMemberSchema,
   unlockDailyTeamsSchema,
+  copyDailyTeamsSchema,
   type SetDailyAttendanceStatusInput,
   type DailyTeamFormInput,
   type AddDailyTeamForemanInput,
@@ -25,8 +26,9 @@ import {
   type ReorderDailyTeamsInput,
   type MoveDailyTeamMemberInput,
   type UnlockDailyTeamsInput,
+  type CopyDailyTeamsInput,
 } from "./validation";
-import type { DailyAttendance, DailyTeam, DailyTeamMember, DailyTeamShift } from "./types";
+import type { DailyAttendance, DailyTeam, DailyTeamMember, DailyTeamShift, CopyDailyTeamsResult } from "./types";
 
 /**
  * Server Functions for the Daily Workforce / Today's Teams domain — same
@@ -428,4 +430,58 @@ export async function unlockDailyTeams(companyId: string, projectId: string, wor
 
   revalidateDailyWorkforcePaths(companyId, projectId);
   return { ok: true, data: null };
+}
+
+/**
+ * "Copy Teams" (items 6-10) — calls copy_daily_teams_to_date() once per
+ * destination date (never a multi-date loop inside SQL — see that
+ * function's own comment for why), sequentially so a lock/constraint
+ * conflict on one date can never race with another. Every destination
+ * date is validated and reported independently; a failure partway through
+ * the range still returns the results already collected rather than
+ * losing them, since each date's copy already committed as its own
+ * RPC call.
+ */
+export async function copyDailyTeams(companyId: string, projectId: string, input: CopyDailyTeamsInput): Promise<ActionResult<CopyDailyTeamsResult[]>> {
+  const parsed = copyDailyTeamsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Pick a source date and at least one destination date.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireDailyWorkforceManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const results: CopyDailyTeamsResult[] = [];
+  for (const destinationWorkDate of parsed.data.destinationWorkDates) {
+    const { data, error } = await supabase
+      .rpc("copy_daily_teams_to_date", {
+        target_project_id: projectId,
+        target_source_work_date: parsed.data.sourceWorkDate,
+        target_destination_work_date: destinationWorkDate,
+      })
+      .single();
+
+    if (error) {
+      if (isRlsViolation(error)) forbidden();
+      if (isRaisedException(error)) {
+        return { ok: false, error: { code: "validation_error", message: error.message } };
+      }
+      return { ok: false, error: { code: "server_error", message: "Couldn't finish copying teams. Try again." } };
+    }
+
+    results.push({
+      destinationWorkDate: data.destination_work_date,
+      skippedExisting: data.skipped_existing,
+      teamsCreated: data.teams_created,
+      workersAssigned: data.workers_assigned,
+      workersSkippedUnavailable: data.workers_skipped_unavailable,
+      workersSkippedAlreadyAssigned: data.workers_skipped_already_assigned,
+      teamsRequiringAttention: data.teams_requiring_attention,
+      skippedWorkerDetails: (data.skipped_worker_details ?? []) as CopyDailyTeamsResult["skippedWorkerDetails"],
+      attentionTeamDetails: (data.attention_team_details ?? []) as CopyDailyTeamsResult["attentionTeamDetails"],
+    });
+  }
+
+  revalidateDailyWorkforcePaths(companyId, projectId);
+  return { ok: true, data: results };
 }

@@ -1,21 +1,40 @@
 import ExcelJS from "exceljs";
 import { listDailyTeamsForDate } from "./queries";
 import type { DailyTeamWithMembers } from "./types";
-import { DAILY_TEAM_SHIFT_LABELS } from "./types";
+import { DAILY_TEAM_SHIFT_LABELS, DAILY_TEAM_STATUS_LABELS } from "./types";
 import type { WorkedHoursMatrixRow, WorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_SHORT_LABELS } from "@/modules/worked-hours/types";
 import { formatWorkedHoursPeriodLabel, listPeriodDates, type WorkedHoursPeriod } from "@/modules/worked-hours/period";
 
 const HEADER_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F2937" } };
 const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFFF" } };
+const MUTED_FONT: Partial<ExcelJS.Font> = { size: 9, color: { argb: "FF9CA3AF" } };
+const FOREMAN_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5E7EB" } };
+const TEAM_FILL: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3F4F6" } };
+const THIN_BORDER: Partial<ExcelJS.Border> = { style: "thin", color: { argb: "FFD1D5DB" } };
+
+function formatExportDate(value: string): string {
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+}
+
+/** Strips characters unsafe in a Content-Disposition filename or across Windows/macOS/Linux filesystems — spaces and most punctuation stay, only genuinely reserved characters are replaced. Mirrors modules/reports/pdf/render.ts's sanitizePdfFilename for the .xlsx case. */
+export function sanitizeExcelFilename(name: string): string {
+  const cleaned = name.replace(/[/\\:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim();
+  return cleaned.endsWith(".xlsx") ? cleaned : `${cleaned}.xlsx`;
+}
 
 /**
- * Excel export for Today's Teams (Phase H) — a professionally formatted
- * workbook, not a raw database dump: a header row with company/project/
- * date/shift, styled column headers, and one row per team member. Reused
- * identically for both the current day and any archived (locked) day —
- * the query itself already returns exactly what that day's teams looked
- * like, whether still open or locked.
+ * Excel export for Today's Teams — a professionally formatted workbook
+ * matching the page's own mental model (grouped by Foreman, one block per
+ * team), never a raw flat database dump. Reused identically for both the
+ * current day and any archived (locked) day — the query itself already
+ * returns exactly what that day's teams looked like, whether still open
+ * or locked; DAILY_TEAM_STATUS_LABELS is the same centralized label used
+ * everywhere else in the app (item 3), never a locally hand-rolled
+ * "Locked"/"Open" string. Company logo embedding is deliberately not
+ * implemented — consistent with every other export/PDF in this codebase
+ * (see modules/absences/export.ts's own header comment for the same
+ * disclosed limitation), not an oversight specific to this one.
  *
  * Split into a thin DB-fetching wrapper (this function) and a pure
  * formatter (formatDailyTeamsWorkbook below) purely so the formatting
@@ -23,55 +42,112 @@ const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: "FFFFFFF
  * a live database, same reasoning as every other "derive a display value
  * from already-fetched data" pure function in this codebase.
  */
-export async function buildDailyTeamsWorkbook(companyId: string, projectId: string, companyName: string, projectName: string, workDate: string): Promise<ExcelJS.Buffer> {
+export async function buildDailyTeamsWorkbook(companyId: string, projectId: string, companyName: string, projectName: string, workDate: string, exportedBy?: string): Promise<ExcelJS.Buffer> {
   const teams = await listDailyTeamsForDate(companyId, projectId, workDate);
-  return formatDailyTeamsWorkbook(companyName, projectName, workDate, teams);
+  return formatDailyTeamsWorkbook(companyName, projectName, workDate, teams, exportedBy);
 }
 
-export async function formatDailyTeamsWorkbook(companyName: string, projectName: string, workDate: string, teams: DailyTeamWithMembers[]): Promise<ExcelJS.Buffer> {
+type ForemanBlock = { foremanName: string; teams: DailyTeamWithMembers[] };
+
+/** Groups teams by their resolved Foreman, preserving first-appearance order, teams with no foreman trailing under "No Foreman Assigned" — export-local, since (unlike the page) there's no separate Foreman-roster query here, only the teams that actually exist for this day. */
+function groupTeamsByForeman(teams: DailyTeamWithMembers[]): ForemanBlock[] {
+  const order: string[] = [];
+  const blocks = new Map<string, ForemanBlock>();
+  let noForemanBlock: ForemanBlock | null = null;
+
+  for (const team of teams) {
+    if (!team.foreman) {
+      noForemanBlock ??= { foremanName: "No Foreman Assigned", teams: [] };
+      noForemanBlock.teams.push(team);
+      continue;
+    }
+    const key = team.foreman.id;
+    if (!blocks.has(key)) {
+      blocks.set(key, { foremanName: `${team.foreman.first_name} ${team.foreman.last_name}`, teams: [] });
+      order.push(key);
+    }
+    blocks.get(key)!.teams.push(team);
+  }
+
+  const result = order.map((key) => blocks.get(key)!);
+  return noForemanBlock ? [...result, noForemanBlock] : result;
+}
+
+export async function formatDailyTeamsWorkbook(companyName: string, projectName: string, workDate: string, teams: DailyTeamWithMembers[], exportedBy?: string): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "HSEQ Platform";
   workbook.created = new Date();
 
-  const sheet = workbook.addWorksheet("Today's Teams", { views: [{ state: "frozen", ySplit: 1 }] });
-  sheet.columns = [
-    { header: "Company", key: "company", width: 24 },
-    { header: "Project", key: "project", width: 24 },
-    { header: "Date", key: "date", width: 14 },
-    { header: "Shift", key: "shift", width: 14 },
-    { header: "Team", key: "team", width: 18 },
-    { header: "Work area", key: "workArea", width: 16 },
-    { header: "Activity", key: "activity", width: 20 },
-    { header: "Employee", key: "employee", width: 24 },
-    { header: "Role", key: "role", width: 12 },
-    { header: "Status", key: "status", width: 14 },
-  ];
+  const sheet = workbook.addWorksheet("Today's Teams", { views: [{ state: "frozen", ySplit: 6 }], pageSetup: { orientation: "portrait", fitToPage: true, fitToWidth: 1 } });
+  sheet.columns = [{ key: "a", width: 44 }, { key: "b", width: 20 }];
 
-  const headerRow = sheet.getRow(1);
-  headerRow.font = HEADER_FONT;
-  headerRow.fill = HEADER_FILL;
-  headerRow.alignment = { vertical: "middle" };
+  sheet.getCell("A1").value = companyName;
+  sheet.getCell("A1").font = { bold: true, size: 14 };
+  sheet.getCell("A2").value = projectName;
+  sheet.getCell("A2").font = { size: 12, color: { argb: "FF374151" } };
+  sheet.getCell("A3").value = `Today's Teams — ${formatExportDate(workDate)}`;
+  sheet.getCell("A3").font = { italic: true, color: { argb: "FF6B7280" } };
+  sheet.getCell("A5").value = `Exported by ${exportedBy ?? "—"} · ${new Date().toISOString().slice(0, 16).replace("T", " ")}`;
+  sheet.getCell("A5").font = MUTED_FONT;
 
-  for (const team of teams) {
-    const foremanRow = team.foreman ? [{ employee: team.foreman, roleLabel: "Foreman" }] : [];
-    const members = [...foremanRow, ...team.workers.map((m) => ({ employee: m.employee, roleLabel: "Member" }))];
-    const base = {
-      company: companyName,
-      project: projectName,
-      date: workDate,
-      shift: team.shift ? DAILY_TEAM_SHIFT_LABELS[team.shift] : "",
-      team: team.name,
-      workArea: team.work_area ?? "",
-      activity: team.activity ?? "",
-      status: team.status === "locked" ? "Locked" : "Open",
-    };
-    if (members.length === 0) {
-      sheet.addRow({ ...base, employee: "", role: "" });
-      continue;
+  let rowIndex = 7;
+  const foremanBlocks = groupTeamsByForeman(teams);
+
+  if (foremanBlocks.length === 0) {
+    sheet.getCell(`A${rowIndex}`).value = "No teams recorded for this day.";
+    sheet.getCell(`A${rowIndex}`).font = { italic: true, color: { argb: "FF6B7280" } };
+  }
+
+  for (const block of foremanBlocks) {
+    const foremanRow = sheet.getRow(rowIndex);
+    foremanRow.getCell(1).value = `FOREMAN: ${block.foremanName}`;
+    foremanRow.getCell(1).font = { bold: true, size: 12 };
+    sheet.mergeCells(rowIndex, 1, rowIndex, 2);
+    for (let col = 1; col <= 2; col++) foremanRow.getCell(col).fill = FOREMAN_FILL;
+    rowIndex += 2;
+
+    for (const team of block.teams) {
+      const teamNameRow = sheet.getRow(rowIndex);
+      teamNameRow.getCell(1).value = team.name.toUpperCase();
+      teamNameRow.getCell(1).font = { bold: true };
+      sheet.mergeCells(rowIndex, 1, rowIndex, 2);
+      teamNameRow.getCell(1).fill = TEAM_FILL;
+      teamNameRow.getCell(2).fill = TEAM_FILL;
+      rowIndex += 1;
+
+      const fields: [string, string][] = [
+        ["Shift", team.shift ? DAILY_TEAM_SHIFT_LABELS[team.shift] : "—"],
+        ["Area", team.work_area ?? "—"],
+        ["Activity", team.activity ?? "—"],
+        ["Status", DAILY_TEAM_STATUS_LABELS[team.status]],
+        ["Workers", String(team.workers.length)],
+      ];
+      for (const [label, value] of fields) {
+        sheet.getCell(`A${rowIndex}`).value = `${label}: ${value}`;
+        rowIndex += 1;
+      }
+
+      if (team.workers.length > 0) {
+        sheet.getCell(`A${rowIndex}`).value = "Workers";
+        sheet.getCell(`A${rowIndex}`).font = { italic: true, color: { argb: "FF6B7280" } };
+        rowIndex += 1;
+        for (const worker of team.workers) {
+          sheet.getCell(`A${rowIndex}`).value = `${worker.employee.first_name} ${worker.employee.last_name}`;
+          rowIndex += 1;
+        }
+      }
+
+      const blockEndRow = rowIndex - 1;
+      const blockStartRow = blockEndRow - fields.length - (team.workers.length > 0 ? 1 + team.workers.length : 0) + 1;
+      for (let r = blockStartRow; r <= blockEndRow; r++) {
+        for (let col = 1; col <= 2; col++) {
+          sheet.getCell(r, col).border = { top: THIN_BORDER, bottom: THIN_BORDER, left: THIN_BORDER, right: THIN_BORDER };
+        }
+      }
+
+      rowIndex += 1;
     }
-    for (const member of members) {
-      sheet.addRow({ ...base, employee: `${member.employee.first_name} ${member.employee.last_name}`, role: member.roleLabel });
-    }
+    rowIndex += 1;
   }
 
   return workbook.xlsx.writeBuffer();

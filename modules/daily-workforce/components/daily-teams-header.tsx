@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 import { lockDailyTeams, unlockDailyTeams } from "@/modules/daily-workforce/actions";
+import { DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +100,7 @@ export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, tod
           {hasLockedTeams && !hasOpenTeams && (
             <Badge variant="secondary" className="gap-1">
               <Lock className="size-3" />
-              Locked
+              {DAILY_TEAM_STATUS_LABELS.locked}
             </Badge>
           )}
           {canManage && hasOpenTeams && (

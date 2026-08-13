@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, Lock, Pencil, Plus, ShieldCheck, UserCog, X } from "lucide-react";
 import { toast } from "sonner";
 import { moveDailyTeamMember, removeDailyTeamMember, updateDailyTeam } from "@/modules/daily-workforce/actions";
-import { DAILY_TEAM_SHIFT_LABELS, type DailyTeamWithMembers, type EmployeeDailyState } from "@/modules/daily-workforce/types";
+import { DAILY_TEAM_SHIFT_LABELS, DAILY_TEAM_STATUS_LABELS, type DailyTeamWithMembers, type EmployeeDailyState } from "@/modules/daily-workforce/types";
 import type { DailyTeamLmraSummary } from "@/modules/lmra/queries";
 import { LMRA_STATUS_LABELS } from "@/modules/lmra/types";
 import { DailyTeamFormDialog } from "@/modules/daily-workforce/components/daily-team-form-dialog";
@@ -120,7 +120,7 @@ export function DailyTeamCard({ companyId, projectId, workDate, team, workforce,
               {isLocked && (
                 <Badge variant="secondary" className="gap-1 text-xs">
                   <Lock className="size-3" />
-                  Locked
+                  {DAILY_TEAM_STATUS_LABELS.locked}
                 </Badge>
               )}
             </div>

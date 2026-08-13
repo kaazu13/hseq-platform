@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { WorkedHoursWithEmployee, WorkedHoursCorrection, WorkedHoursDiscrepancy } from "@/modules/worked-hours/types";
-import { WORKED_HOURS_DISCREPANCY_STATUS_LABELS, WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, WORKED_HOURS_CATEGORY_SHORT_LABELS } from "@/modules/worked-hours/types";
+import { WORKED_HOURS_DISCREPANCY_STATUS_LABELS, WORKED_HOURS_STATUS_LABELS, WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, WORKED_HOURS_CATEGORY_SHORT_LABELS } from "@/modules/worked-hours/types";
 import { ReportDiscrepancyButton } from "@/modules/worked-hours/components/report-discrepancy-button";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { workedHoursStatusTone, workedHoursDiscrepancyStatusTone } from "@/components/shared/status-tone";
 import { Badge } from "@/components/ui/badge";
 
 type MyHoursRowProps = {
@@ -51,13 +53,13 @@ export function MyHoursRow({ companyId, workedHours, corrections, discrepancy }:
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="text-sm font-semibold tabular-nums">Total {workedHours.hours}h</span>
-          <Badge variant={workedHours.status === "submitted" ? "default" : "secondary"}>{workedHours.status === "submitted" ? "Submitted" : "Draft"}</Badge>
+          <StatusBadge tone={workedHoursStatusTone(workedHours.status)}>{WORKED_HOURS_STATUS_LABELS[workedHours.status]}</StatusBadge>
           {corrections.length > 0 && (
             <Badge variant="outline" className="text-amber-700 dark:text-amber-400">
               Corrected
             </Badge>
           )}
-          {hasOpenDiscrepancy && <Badge variant="secondary">{WORKED_HOURS_DISCREPANCY_STATUS_LABELS.open}</Badge>}
+          {hasOpenDiscrepancy && <StatusBadge tone={workedHoursDiscrepancyStatusTone("open")}>{WORKED_HOURS_DISCREPANCY_STATUS_LABELS.open}</StatusBadge>}
         </div>
       </button>
 
@@ -88,7 +90,7 @@ export function MyHoursRow({ companyId, workedHours, corrections, discrepancy }:
 
           {discrepancy && (
             <div className="flex flex-wrap items-center gap-2 border-t pt-2">
-              <Badge variant="secondary">{WORKED_HOURS_DISCREPANCY_STATUS_LABELS[discrepancy.status]}</Badge>
+              <StatusBadge tone={workedHoursDiscrepancyStatusTone(discrepancy.status)}>{WORKED_HOURS_DISCREPANCY_STATUS_LABELS[discrepancy.status]}</StatusBadge>
               <span className="text-xs text-muted-foreground">{discrepancy.comment}</span>
             </div>
           )}

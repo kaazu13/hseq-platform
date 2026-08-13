@@ -1,8 +1,9 @@
 "use client";
 
 import { useWorkedHoursRow } from "@/modules/worked-hours/use-worked-hours-row";
-import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_SHORT_LABELS, WORKED_HOURS_MAX, type WorkedHoursWithEmployee } from "@/modules/worked-hours/types";
+import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_SHORT_LABELS, WORKED_HOURS_STATUS_LABELS, WORKED_HOURS_MAX, type WorkedHoursWithEmployee } from "@/modules/worked-hours/types";
 import type { BasicEmployee } from "@/modules/daily-workforce/types";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,7 +79,11 @@ function WorkedHoursTableRow({ companyId, projectId, workDate, row, canManage }:
       </td>
       <td className="p-2">
         <div className="flex flex-wrap items-center gap-1">
-          {row.workedHours ? <Badge variant={isSubmitted ? "default" : "secondary"}>{isSubmitted ? "Submitted" : "Draft"}</Badge> : <Badge variant="outline">Missing</Badge>}
+          {row.workedHours ? (
+            <StatusBadge tone={isSubmitted ? "positive" : "attention"}>{isSubmitted ? WORKED_HOURS_STATUS_LABELS.submitted : WORKED_HOURS_STATUS_LABELS.draft}</StatusBadge>
+          ) : (
+            <Badge variant="outline">Missing</Badge>
+          )}
           {Boolean(row.correctionCount) && (
             <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400" title="This day's hours have been corrected since first submitted — see /my-hours for the full history">
               Corrected{row.correctionCount! > 1 ? ` (${row.correctionCount})` : ""}

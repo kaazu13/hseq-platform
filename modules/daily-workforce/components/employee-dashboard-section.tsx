@@ -3,7 +3,9 @@ import { CalendarCheck, Clock, Eye } from "lucide-react";
 import type { EmployeeTodayCard } from "@/modules/daily-workforce/queries";
 import { DAILY_ATTENDANCE_STATUS_LABELS, DAILY_TEAM_SHIFT_LABELS, dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import type { WorkedHours, WorkedHoursDiscrepancy } from "@/modules/worked-hours/types";
-import { WORKED_HOURS_DISCREPANCY_STATUS_LABELS } from "@/modules/worked-hours/types";
+import { WORKED_HOURS_DISCREPANCY_STATUS_LABELS, WORKED_HOURS_STATUS_LABELS } from "@/modules/worked-hours/types";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { workedHoursDiscrepancyStatusTone } from "@/components/shared/status-tone";
 import type { SafetyObservation } from "@/modules/observations/types";
 import { isPositiveObservation, OBSERVATION_CATEGORY_LABELS } from "@/modules/observations/types";
 import type { LmraAssessment } from "@/modules/lmra/types";
@@ -185,7 +187,7 @@ export function EmployeeDashboardSection({
             {latestWorkedHours && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <span className="text-sm text-muted-foreground">
-                  Latest: {latestWorkedHours.hours}h on {latestWorkedHours.work_date} ({latestWorkedHours.status === "submitted" ? "Submitted" : "Draft"})
+                  Latest: {latestWorkedHours.hours}h on {latestWorkedHours.work_date} ({WORKED_HOURS_STATUS_LABELS[latestWorkedHours.status]})
                 </span>
                 <ReportDiscrepancyButton companyId={companyId} workedHoursId={latestWorkedHours.id} />
               </div>
@@ -233,7 +235,7 @@ export function EmployeeDashboardSection({
               <Card key={d.id}>
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-4">
                   <span className="text-sm">{d.comment}</span>
-                  <Badge variant="secondary">{WORKED_HOURS_DISCREPANCY_STATUS_LABELS[d.status]}</Badge>
+                  <StatusBadge tone={workedHoursDiscrepancyStatusTone(d.status)}>{WORKED_HOURS_DISCREPANCY_STATUS_LABELS[d.status]}</StatusBadge>
                 </CardContent>
               </Card>
             ))}

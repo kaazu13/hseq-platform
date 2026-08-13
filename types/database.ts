@@ -4372,6 +4372,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      copy_daily_teams_to_date: {
+        Args: {
+          target_destination_work_date: string
+          target_project_id: string
+          target_source_work_date: string
+        }
+        Returns: {
+          attention_team_details: Json
+          destination_work_date: string
+          skipped_existing: boolean
+          skipped_worker_details: Json
+          teams_created: number
+          teams_requiring_attention: number
+          workers_assigned: number
+          workers_skipped_already_assigned: number
+          workers_skipped_unavailable: number
+        }[]
+      }
       count_employees: {
         Args: {
           include_archived?: boolean
@@ -4864,6 +4882,17 @@ export type Database = {
         }
       }
       next_employee_number: { Args: { target_org_id: string }; Returns: string }
+      notify_employee: {
+        Args: {
+          notif_body: string
+          notif_link_path: string
+          notif_title: string
+          notif_type: string
+          target_company_id: string
+          target_recipient_employee_id: string
+        }
+        Returns: undefined
+      }
       notify_project_managers: {
         Args: {
           notif_body: string

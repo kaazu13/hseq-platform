@@ -79,6 +79,18 @@ export function lmraStatusTone(status: string): SemanticTone {
   }
 }
 
+/** worked_hours_discrepancy status -> semantic tone (item 5) — open ("In Review") = attention; accepted = positive; rejected = negative. */
+export function workedHoursDiscrepancyStatusTone(status: string): SemanticTone {
+  switch (status) {
+    case "accepted":
+      return "positive";
+    case "rejected":
+      return "negative";
+    default:
+      return "attention";
+  }
+}
+
 /** observation_type -> semantic tone — positive = positive; negative = negative; general = neutral. */
 export function observationTypeTone(observationType: string): SemanticTone {
   switch (observationType) {

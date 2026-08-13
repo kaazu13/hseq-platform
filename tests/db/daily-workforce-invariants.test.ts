@@ -751,4 +751,181 @@ describe("daily workforce invariants", () => {
     await deleteTestUser(foreman.userId);
     await deleteTestUser(otherForeman.userId);
   });
+
+  describe("copy_daily_teams_to_date — Copy Teams (items 6-10)", () => {
+    it("copies a Foreman's team and its available workers onto a clean destination date, and assigns/team-changed notifications are created", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Copy Happy Path Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "Copy", "Foreman");
+      const worker = await createTestUser("Copy Worker");
+      await addMembership(companyA.companyId, worker.userId, ["employee"]);
+      const workerId = await createTestEmployee(companyA.companyId, worker.userId, "Copy", "Worker");
+      await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${workerId}, 'member')`;
+      const sourceDate = "2026-08-10";
+      const destinationDate = "2026-08-11";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId})`);
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId}, 'Copy Source Team', 'day', 'A100', 'Scaffolding')`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${sourceDate}, ${team.id}, ${workerId}, 'member')`);
+
+      const [result] = await asUser(admin.userId, (tx) => tx`select * from copy_daily_teams_to_date(${projectId}, ${sourceDate}, ${destinationDate})`);
+      expect(result.skipped_existing).toBe(false);
+      expect(result.teams_created).toBe(1);
+      expect(result.workers_assigned).toBe(1);
+      expect(result.workers_skipped_unavailable).toBe(0);
+      expect(result.teams_requiring_attention).toBe(0);
+
+      const [copiedTeam] = await sql`select id, name, shift, work_area, activity, foreman_employee_id from daily_teams where project_id = ${projectId} and work_date = ${destinationDate}`;
+      expect(copiedTeam).toMatchObject({ name: "Copy Source Team", shift: "day", work_area: "A100", activity: "Scaffolding", foreman_employee_id: foreman.employeeId });
+
+      const copiedMembers = await sql`select employee_id from daily_team_members where daily_team_id = ${copiedTeam.id} and removed_at is null`;
+      expect(copiedMembers.map((m) => m.employee_id)).toEqual([workerId]);
+
+      const notifications = await sql`select type, recipient_user_id from notifications where type = 'daily_team_assigned' and recipient_user_id = ${worker.userId}`;
+      expect(notifications).toHaveLength(1);
+
+      await deleteTestUser(foreman.userId);
+      await deleteTestUser(worker.userId);
+    });
+
+    it("skips a worker who is marked unavailable (e.g. absent) on the destination date, and reports the exact reason", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Copy Unavailable Worker Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "CopyUnavail", "Foreman");
+      const workerId = await createTestEmployee(companyA.companyId, null, "Unavailable", "OnDestination");
+      await sql`insert into project_assignments (company_id, project_id, employee_id, assignment_role) values (${companyA.companyId}, ${projectId}, ${workerId}, 'member')`;
+      const sourceDate = "2026-08-10";
+      const destinationDate = "2026-08-12";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId})`);
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId}, 'Unavail Source Team', 'day', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${sourceDate}, ${team.id}, ${workerId}, 'member')`);
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${workerId}, ${destinationDate}, 'absent')`);
+
+      const [result] = await asUser(admin.userId, (tx) => tx`select * from copy_daily_teams_to_date(${projectId}, ${sourceDate}, ${destinationDate})`);
+      expect(result.teams_created).toBe(1);
+      expect(result.workers_assigned).toBe(0);
+      expect(result.workers_skipped_unavailable).toBe(1);
+      const details = result.skipped_worker_details as { employeeId: string; reason: string }[];
+      expect(details).toHaveLength(1);
+      expect(details[0]).toMatchObject({ employeeId: workerId, reason: "unavailable" });
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("an unavailable source Foreman means that team is entirely skipped and reported as 'requires attention' — never created without a valid foreman", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Copy Foreman Unavailable Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "GoingAbsent", "Foreman");
+      const sourceDate = "2026-08-10";
+      const destinationDate = "2026-08-13";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId})`);
+      await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId}, 'Foreman Unavail Team', 'day', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${foreman.employeeId}, ${destinationDate}, 'sick')`);
+
+      const [result] = await asUser(admin.userId, (tx) => tx`select * from copy_daily_teams_to_date(${projectId}, ${sourceDate}, ${destinationDate})`);
+      expect(result.teams_created).toBe(0);
+      expect(result.teams_requiring_attention).toBe(1);
+      const attention = result.attention_team_details as { reason: string; foremanEmployeeId: string }[];
+      expect(attention[0]).toMatchObject({ reason: "foreman_unavailable", foremanEmployeeId: foreman.employeeId });
+
+      const teamsOnDestination = await sql`select id from daily_teams where project_id = ${projectId} and work_date = ${destinationDate}`;
+      expect(teamsOnDestination).toHaveLength(0);
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("a destination date that already has teams is skipped wholesale by default — never silently overwritten", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Copy Skip Existing Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "SkipExisting", "Foreman");
+      const sourceDate = "2026-08-10";
+      const destinationDate = "2026-08-14";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId})`);
+      await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${sourceDate}, ${foreman.employeeId}, 'Skip Source Team', 'day', null, null)`);
+      // The destination day already has its OWN independent team.
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${destinationDate}, ${foreman.employeeId})`);
+      const [existingTeam] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${destinationDate}, ${foreman.employeeId}, 'Pre-Existing Team', 'night', null, null)`);
+
+      const [result] = await asUser(admin.userId, (tx) => tx`select * from copy_daily_teams_to_date(${projectId}, ${sourceDate}, ${destinationDate})`);
+      expect(result.skipped_existing).toBe(true);
+      expect(result.teams_created).toBe(0);
+
+      const stillThere = await sql`select id, name from daily_teams where project_id = ${projectId} and work_date = ${destinationDate}`;
+      expect(stillThere).toHaveLength(1);
+      expect(stillThere[0].id).toBe(existingTeam.id);
+      expect(stillThere[0].name).toBe("Pre-Existing Team"); // untouched, never overwritten
+
+      await deleteTestUser(foreman.userId);
+    });
+  });
+
+  describe("daily_team_members_notify_assignment trigger — items 13/14", () => {
+    it("does not create a second notification for an idempotent re-save (same team, same role)", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Notify Idempotent Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "Idempotent", "Foreman");
+      const worker = await createTestUser("Idempotent Worker");
+      await addMembership(companyA.companyId, worker.userId, ["employee"]);
+      const workerId = await createTestEmployee(companyA.companyId, worker.userId, "Idempotent", "Worker");
+      const workDate = "2026-08-15";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${foreman.employeeId})`);
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foreman.employeeId}, 'Idempotent Team', 'day', null, null)`);
+
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${workerId}, 'member')`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${workerId}, 'member')`);
+
+      const notifications = await sql`select id from notifications where type = 'daily_team_assigned' and recipient_user_id = ${worker.userId}`;
+      expect(notifications).toHaveLength(1);
+
+      await deleteTestUser(foreman.userId);
+      await deleteTestUser(worker.userId);
+    });
+
+    it("notifies 'daily_team_changed' (not 'daily_team_assigned') when moved to a genuinely different team", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Notify Team Change Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "TeamChange", "Foreman");
+      const worker = await createTestUser("Team Change Worker");
+      await addMembership(companyA.companyId, worker.userId, ["employee"]);
+      const workerId = await createTestEmployee(companyA.companyId, worker.userId, "TeamChange", "Worker");
+      const workDate = "2026-08-16";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${foreman.employeeId})`);
+      const [teamAlpha] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foreman.employeeId}, 'Alpha', 'day', null, null)`);
+      const [teamBravo] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foreman.employeeId}, 'Bravo', 'day', null, null)`);
+
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamAlpha.id}, ${workerId}, 'member')`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${teamBravo.id}, ${workerId}, 'member')`);
+
+      const assigned = await sql`select id from notifications where type = 'daily_team_assigned' and recipient_user_id = ${worker.userId}`;
+      expect(assigned).toHaveLength(1); // the first move
+      const changed = await sql`select body from notifications where type = 'daily_team_changed' and recipient_user_id = ${worker.userId}`;
+      expect(changed).toHaveLength(1);
+      expect(changed[0].body).toContain("Alpha");
+      expect(changed[0].body).toContain("Bravo");
+
+      await deleteTestUser(foreman.userId);
+      await deleteTestUser(worker.userId);
+    });
+
+    it("closing and reinserting into the SAME team never notifies, even when done directly (bypassing move_daily_team_member's own early-return) — the trigger's own old-vs-new comparison is what actually prevents it, not just the RPC's optimization", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Notify Role Change Project");
+      const foreman = await createTestForeman(companyA.companyId, projectId, "RoleChange", "Foreman");
+      const worker = await createTestUser("Role Change Worker");
+      await addMembership(companyA.companyId, worker.userId, ["employee"]);
+      const workerId = await createTestEmployee(companyA.companyId, worker.userId, "RoleChange", "Worker");
+      const workDate = "2026-08-17";
+
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${foreman.employeeId})`);
+      const [team] = await asUser(admin.userId, (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foreman.employeeId}, 'Role Change Team', 'day', null, null)`);
+      await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${team.id}, ${workerId}, 'member')`);
+
+      const beforeCount = await sql`select count(*)::int as count from notifications where recipient_user_id = ${worker.userId}`;
+      await sql`update daily_team_members set removed_at = now() where daily_team_id = ${team.id} and employee_id = ${workerId} and removed_at is null`;
+      await sql`insert into daily_team_members (company_id, project_id, work_date, daily_team_id, employee_id, role, created_by) values (${companyA.companyId}, ${projectId}, ${workDate}, ${team.id}, ${workerId}, 'member', ${admin.userId})`;
+      const afterCount = await sql`select count(*)::int as count from notifications where recipient_user_id = ${worker.userId}`;
+      expect(afterCount[0].count).toBe(beforeCount[0].count);
+
+      await deleteTestUser(foreman.userId);
+      await deleteTestUser(worker.userId);
+    });
+  });
 });
