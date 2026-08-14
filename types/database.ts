@@ -1093,6 +1093,386 @@ export type Database = {
           },
         ]
       }
+      equipment_assignments: {
+        Row: {
+          company_id: string
+          condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
+          condition_at_return:
+            | Database["public"]["Enums"]["equipment_condition"]
+            | null
+          created_at: string
+          employee_id: string
+          equipment_item_id: string
+          expected_return_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          note: string | null
+          quantity: number
+          return_note: string | null
+          returned_at: string | null
+          returned_by: string | null
+          status: Database["public"]["Enums"]["equipment_assignment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
+          condition_at_return?:
+            | Database["public"]["Enums"]["equipment_condition"]
+            | null
+          created_at?: string
+          employee_id: string
+          equipment_item_id: string
+          expected_return_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          note?: string | null
+          quantity?: number
+          return_note?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          status?: Database["public"]["Enums"]["equipment_assignment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          condition_at_issue?: Database["public"]["Enums"]["equipment_condition"]
+          condition_at_return?:
+            | Database["public"]["Enums"]["equipment_condition"]
+            | null
+          created_at?: string
+          employee_id?: string
+          equipment_item_id?: string
+          expected_return_at?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          note?: string | null
+          quantity?: number
+          return_note?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          status?: Database["public"]["Enums"]["equipment_assignment_status"]
+          tracking_mode?: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_assignments_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "equipment_assignments_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_assignments_item_fk"
+            columns: ["equipment_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "equipment_assignments_returned_by_fkey"
+            columns: ["returned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_history: {
+        Row: {
+          actor: string | null
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          equipment_item_id: string
+          event: Database["public"]["Enums"]["equipment_history_event"]
+          from_status: string | null
+          id: string
+          note: string | null
+          quantity: number | null
+          to_status: string | null
+        }
+        Insert: {
+          actor?: string | null
+          company_id: string
+          created_at?: string
+          employee_id?: string | null
+          equipment_item_id: string
+          event: Database["public"]["Enums"]["equipment_history_event"]
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          quantity?: number | null
+          to_status?: string | null
+        }
+        Update: {
+          actor?: string | null
+          company_id?: string
+          created_at?: string
+          employee_id?: string | null
+          equipment_item_id?: string
+          event?: Database["public"]["Enums"]["equipment_history_event"]
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          quantity?: number | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_history_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_history_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "equipment_history_item_fk"
+            columns: ["equipment_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
+      equipment_items: {
+        Row: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          available_quantity?: number
+          category: string
+          company_id: string
+          condition?: Database["public"]["Enums"]["equipment_condition"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          location?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name: string
+          notes?: string | null
+          project_id?: string | null
+          quantity?: number
+          reference_number?: string | null
+          specification?: string | null
+          status?: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          available_quantity?: number
+          category?: string
+          company_id?: string
+          condition?: Database["public"]["Enums"]["equipment_condition"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          location?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name?: string
+          notes?: string | null
+          project_id?: string | null
+          quantity?: number
+          reference_number?: string | null
+          specification?: string | null
+          status?: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode?: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_items_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "equipment_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          employee_id: string
+          equipment_item_id: string | null
+          fulfilled_assignment_id: string | null
+          id: string
+          item_description: string
+          project_id: string
+          quantity: number
+          reason: string
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          employee_id: string
+          equipment_item_id?: string | null
+          fulfilled_assignment_id?: string | null
+          id?: string
+          item_description: string
+          project_id: string
+          quantity?: number
+          reason: string
+          specification?: string | null
+          status?: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_comment?: string | null
+          employee_id?: string
+          equipment_item_id?: string | null
+          fulfilled_assignment_id?: string | null
+          id?: string
+          item_description?: string
+          project_id?: string
+          quantity?: number
+          reason?: string
+          specification?: string | null
+          status?: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_requests_assignment_fk"
+            columns: ["fulfilled_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_requests_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "equipment_requests_item_fk"
+            columns: ["equipment_item_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "equipment_requests_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
       leave_request_history: {
         Row: {
           changed_at: string
@@ -4118,6 +4498,33 @@ export type Database = {
         }
         Returns: undefined
       }
+      approve_equipment_request: {
+        Args: { target_comment?: string; target_request_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          employee_id: string
+          equipment_item_id: string | null
+          fulfilled_assignment_id: string | null
+          id: string
+          item_description: string
+          project_id: string
+          quantity: number
+          reason: string
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       approve_leave_request: {
         Args: { target_comment?: string; target_request_id: string }
         Returns: {
@@ -4300,6 +4707,33 @@ export type Database = {
         }
         Returns: boolean
       }
+      cancel_equipment_request: {
+        Args: { target_request_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          employee_id: string
+          equipment_item_id: string | null
+          fulfilled_assignment_id: string | null
+          id: string
+          item_description: string
+          project_id: string
+          quantity: number
+          reason: string
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       cancel_leave_request: {
         Args: { target_request_id: string }
         Returns: {
@@ -4439,6 +4873,54 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_equipment_item: {
+        Args: {
+          target_category: string
+          target_company_id: string
+          target_condition?: Database["public"]["Enums"]["equipment_condition"]
+          target_description?: string
+          target_location?: string
+          target_manufacturer?: string
+          target_model?: string
+          target_name: string
+          target_notes?: string
+          target_project_id: string
+          target_quantity?: number
+          target_reference_number?: string
+          target_specification?: string
+          target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_lmra_assessment: {
         Args: {
           target_company_id: string
@@ -4512,6 +4994,33 @@ export type Database = {
           target_status: Database["public"]["Enums"]["daily_attendance_status"]
         }
         Returns: boolean
+      }
+      deny_equipment_request: {
+        Args: { target_comment: string; target_request_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          employee_id: string
+          equipment_item_id: string | null
+          fulfilled_assignment_id: string | null
+          id: string
+          item_description: string
+          project_id: string
+          quantity: number
+          reason: string
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       deny_leave_request: {
         Args: { target_comment: string; target_request_id: string }
@@ -4684,6 +5193,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_equipment_manage_tier: {
+        Args: { target_company_id: string; target_project_id: string }
+        Returns: boolean
+      }
       is_own_employee: {
         Args: { target_employee_id: string }
         Returns: boolean
@@ -4720,6 +5233,46 @@ export type Database = {
       is_toolbox_template_manage_tier: {
         Args: { target_organization_id: string }
         Returns: boolean
+      }
+      issue_equipment: {
+        Args: {
+          target_condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
+          target_employee_id: string
+          target_expected_return_at?: string
+          target_issued_at?: string
+          target_item_id: string
+          target_note?: string
+          target_quantity: number
+          target_request_id?: string
+        }
+        Returns: {
+          company_id: string
+          condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
+          condition_at_return:
+            | Database["public"]["Enums"]["equipment_condition"]
+            | null
+          created_at: string
+          employee_id: string
+          equipment_item_id: string
+          expected_return_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          note: string | null
+          quantity: number
+          return_note: string | null
+          returned_at: string | null
+          returned_by: string | null
+          status: Database["public"]["Enums"]["equipment_assignment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       issue_platform_warning: {
         Args: { target_reason: string; target_user_id: string }
@@ -4822,6 +5375,80 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: undefined
       }
+      mark_equipment_damaged: {
+        Args: {
+          target_item_id: string
+          target_note: string
+          target_quantity: number
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mark_equipment_lost: {
+        Args: {
+          target_item_id: string
+          target_note: string
+          target_quantity: number
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       move_daily_team_member: {
         Args: {
           target_daily_team_id: string
@@ -4923,6 +5550,43 @@ export type Database = {
           full_name: string
           id: string
         }[]
+      }
+      recover_equipment: {
+        Args: {
+          target_item_id: string
+          target_note: string
+          target_quantity: number
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       reject_absence_report: {
         Args: { target_report_id: string; target_review_note: string }
@@ -5287,6 +5951,103 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      retire_equipment_item: {
+        Args: { target_item_id: string; target_note: string }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      return_equipment: {
+        Args: {
+          target_assignment_id: string
+          target_condition_at_return: Database["public"]["Enums"]["equipment_condition"]
+          target_note?: string
+          target_returned_at?: string
+          target_returned_quantity: number
+        }
+        Returns: {
+          company_id: string
+          condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
+          condition_at_return:
+            | Database["public"]["Enums"]["equipment_condition"]
+            | null
+          created_at: string
+          employee_id: string
+          equipment_item_id: string
+          expected_return_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          note: string | null
+          quantity: number
+          return_note: string | null
+          returned_at: string | null
+          returned_by: string | null
+          status: Database["public"]["Enums"]["equipment_assignment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      return_equipment_request: {
+        Args: { target_comment: string; target_request_id: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_comment: string | null
+          employee_id: string
+          equipment_item_id: string | null
+          fulfilled_assignment_id: string | null
+          id: string
+          item_description: string
+          project_id: string
+          quantity: number
+          reason: string
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_request_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       return_leave_request: {
         Args: { target_comment: string; target_request_id: string }
         Returns: {
@@ -5473,6 +6234,39 @@ export type Database = {
           removed_from_team_id: string
         }[]
       }
+      set_equipment_out_of_service: {
+        Args: { target_item_id: string; target_note: string }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_worked_hours: {
         Args: { target_project_id: string; target_work_date: string }
         Returns: {
@@ -5594,6 +6388,51 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "daily_teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_equipment_item: {
+        Args: {
+          target_category: string
+          target_description?: string
+          target_item_id: string
+          target_location?: string
+          target_manufacturer?: string
+          target_model?: string
+          target_name: string
+          target_notes?: string
+          target_project_id: string
+          target_reference_number?: string
+          target_specification?: string
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          reference_number: string | null
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -5809,6 +6648,42 @@ export type Database = {
         | "end_of_contract"
         | "other"
       employment_status: "active" | "inactive" | "on_leave" | "terminated"
+      equipment_assignment_status:
+        | "active"
+        | "returned"
+        | "lost"
+        | "written_off"
+      equipment_condition:
+        | "new"
+        | "good"
+        | "worn"
+        | "damaged"
+        | "requires_inspection"
+      equipment_history_event:
+        | "added"
+        | "edited"
+        | "issued"
+        | "returned"
+        | "damaged"
+        | "lost"
+        | "recovered"
+        | "out_of_service"
+        | "retired"
+      equipment_request_status:
+        | "pending"
+        | "approved"
+        | "denied"
+        | "fulfilled"
+        | "cancelled"
+        | "returned"
+      equipment_status:
+        | "available"
+        | "issued"
+        | "reserved"
+        | "out_of_service"
+        | "lost"
+        | "retired"
+      equipment_tracking_mode: "serialized" | "quantity"
       hseq_document_category:
         | "working_at_height"
         | "line_of_fire"
@@ -6184,6 +7059,47 @@ export const Constants = {
         "other",
       ],
       employment_status: ["active", "inactive", "on_leave", "terminated"],
+      equipment_assignment_status: [
+        "active",
+        "returned",
+        "lost",
+        "written_off",
+      ],
+      equipment_condition: [
+        "new",
+        "good",
+        "worn",
+        "damaged",
+        "requires_inspection",
+      ],
+      equipment_history_event: [
+        "added",
+        "edited",
+        "issued",
+        "returned",
+        "damaged",
+        "lost",
+        "recovered",
+        "out_of_service",
+        "retired",
+      ],
+      equipment_request_status: [
+        "pending",
+        "approved",
+        "denied",
+        "fulfilled",
+        "cancelled",
+        "returned",
+      ],
+      equipment_status: [
+        "available",
+        "issued",
+        "reserved",
+        "out_of_service",
+        "lost",
+        "retired",
+      ],
+      equipment_tracking_mode: ["serialized", "quantity"],
       hseq_document_category: [
         "working_at_height",
         "line_of_fire",

@@ -27,6 +27,7 @@ import { listMyLmraAssessmentsForDate } from "@/modules/lmra/queries";
 import { listToolboxMeetings } from "@/modules/toolbox-meetings/queries";
 import { listActiveSafetyFlashesForEmployee } from "@/modules/safety-flash/queries";
 import { listMyCorrectiveActions } from "@/modules/corrective-actions/queries";
+import { listEquipmentCandidateItems } from "@/modules/equipment/queries";
 import { EmployeeDashboardSection } from "@/modules/daily-workforce/components/employee-dashboard-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,7 +113,7 @@ export default async function DashboardPage() {
       const today = new Date().toISOString().slice(0, 10);
       const weekPeriod = resolveWorkedHoursPeriod("week", today);
       const monthPeriod = resolveWorkedHoursPeriod("month", today);
-      const [todayCard, weekRows, monthToDateRows, latestWorkedHours, discrepancies, observations, todaysLmra, todaysToolboxMeetings, activeSafetyFlashes, myCorrectiveActions] =
+      const [todayCard, weekRows, monthToDateRows, latestWorkedHours, discrepancies, observations, todaysLmra, todaysToolboxMeetings, activeSafetyFlashes, myCorrectiveActions, equipmentCandidateItems] =
         await Promise.all([
           getEmployeeTodayCard(current.id, effectiveProjectId, myEmployeeId, today),
           listWorkedHoursForPeriod(current.id, effectiveProjectId, weekPeriod.fromDate, weekPeriod.toDate, [myEmployeeId]),
@@ -124,6 +125,7 @@ export default async function DashboardPage() {
           listToolboxMeetings(current.id, { projectId: effectiveProjectId, dateFrom: today, dateTo: today }),
           listActiveSafetyFlashesForEmployee(current.id, effectiveProjectId),
           listMyCorrectiveActions(current.id, myEmployeeId),
+          listEquipmentCandidateItems(current.id, effectiveProjectId),
         ]);
 
       const hoursThisWeek = weekRows[0]?.totalHours ?? 0;
@@ -146,6 +148,7 @@ export default async function DashboardPage() {
           todaysToolboxMeetings={todaysToolboxMeetings}
           activeSafetyFlashes={activeSafetyFlashes}
           myCorrectiveActions={myCorrectiveActions}
+          equipmentCandidateItems={equipmentCandidateItems}
         />
       );
     }

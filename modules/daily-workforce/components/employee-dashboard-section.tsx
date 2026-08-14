@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarCheck, Clock, Eye } from "lucide-react";
+import { CalendarCheck, Clock, Eye, Wrench } from "lucide-react";
 import type { EmployeeTodayCard } from "@/modules/daily-workforce/queries";
 import { DAILY_ATTENDANCE_STATUS_LABELS, DAILY_TEAM_SHIFT_LABELS, dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import type { WorkedHours, WorkedHoursDiscrepancy } from "@/modules/worked-hours/types";
@@ -16,6 +16,8 @@ import { ReportDiscrepancyButton } from "@/modules/worked-hours/components/repor
 import { EmployeeTodaySafetySection } from "@/modules/daily-workforce/components/employee-today-safety-section";
 import { ReportAbsenceDialog } from "@/modules/absences/components/report-absence-dialog";
 import { RequestLeaveDialog } from "@/modules/leave-requests/components/request-leave-dialog";
+import { RequestEquipmentDialog } from "@/modules/equipment/components/request-equipment-dialog";
+import type { EquipmentItem } from "@/modules/equipment/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +38,7 @@ type EmployeeDashboardSectionProps = {
   todaysToolboxMeetings: ToolboxMeeting[];
   activeSafetyFlashes: SafetyFlash[];
   myCorrectiveActions: CorrectiveActionDetail[];
+  equipmentCandidateItems: EquipmentItem[];
 };
 
 function formatObservedAt(value: string): string {
@@ -72,6 +75,7 @@ export function EmployeeDashboardSection({
   todaysToolboxMeetings,
   activeSafetyFlashes,
   myCorrectiveActions,
+  equipmentCandidateItems,
 }: EmployeeDashboardSectionProps) {
   const canWork = dailyAttendancePermitsWork(todayCard.attendanceStatus);
   const positiveCount = observations.filter((o) => isPositiveObservation(o)).length;
@@ -151,9 +155,14 @@ export function EmployeeDashboardSection({
 
       <div className="flex flex-col gap-2">
         <SectionHeader title="Quick actions" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <ReportAbsenceDialog companyId={companyId} projectId={projectId} />
           <RequestLeaveDialog companyId={companyId} projectId={projectId} />
+          <RequestEquipmentDialog companyId={companyId} projectId={projectId} candidateItems={equipmentCandidateItems} />
+          <Button variant="outline" className="h-auto flex-col gap-1.5 py-4" nativeButton={false} render={<Link href="/my-equipment" />}>
+            <Wrench className="size-5" />
+            <span className="text-sm">My Equipment</span>
+          </Button>
           <Button variant="outline" className="h-auto flex-col gap-1.5 py-4" nativeButton={false} render={<Link href="/my-hours" />}>
             <Clock className="size-5" />
             <span className="text-sm">View My Hours</span>

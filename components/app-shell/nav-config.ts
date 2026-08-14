@@ -162,9 +162,11 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Equipment",
         href: "/equipment",
         icon: Wrench,
-        status: "planned",
+        status: "available",
         description:
-          "Tools, machinery, and site equipment — assignment, condition, and maintenance history.",
+          "Company and project equipment — inventory, issuance, employee requests, returns, and full history. Scoped to your currently selected project.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/equipment`,
+        matchSegment: "equipment",
       },
       {
         label: "Scaffold Register",
