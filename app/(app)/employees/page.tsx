@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { UserPlus, Users } from "lucide-react";
+import { UserPlus, Upload, Users } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listEmployees, countEmployees, getEmployeeRoleInfoBulk } from "@/modules/employees/queries";
@@ -90,10 +90,16 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
         description="Company employment records for your company."
         actions={
           canManage ? (
-            <Button size="sm" nativeButton={false} render={<Link href="/employees/new" />}>
-              <UserPlus />
-              Add employee
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/employees/import" />}>
+                <Upload />
+                Import
+              </Button>
+              <Button size="sm" nativeButton={false} render={<Link href="/employees/new" />}>
+                <UserPlus />
+                Add employee
+              </Button>
+            </div>
           ) : undefined
         }
       />

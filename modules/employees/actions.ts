@@ -5,7 +5,7 @@ import { redirect, forbidden } from "next/navigation";
 import { requireAnyRole, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
-import { flattenFieldErrors, isUniqueViolation, isRlsViolation } from "@/lib/supabase/errors";
+import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
 import type { RoleName } from "@/modules/companies/types";
 import { EMPLOYEE_WRITE_ROLES, assignableRoleNamesFor } from "./permissions";
 import {
@@ -18,8 +18,9 @@ import {
   type EndEmploymentFormInput,
   type RehireFormInput,
 } from "./validation";
-import { getEmployee } from "./queries";
+import { getEmployee, listAllRoles } from "./queries";
 import type { Employee } from "./types";
+import { parseEmployeeImportWorkbook, MAX_IMPORT_FILE_SIZE_BYTES, type ImportPreview, type ImportRow } from "./import";
 
 /**
  * Server Functions for the employees domain — follow the fixed recipe in
@@ -819,4 +820,66 @@ export async function removeEmployeeRole(
 
   revalidatePath(`/employees/${encodeURIComponent(employee.employee_number)}`);
   return { ok: true, data: null };
+}
+
+/**
+ * Items 9/10 — bulk employee import, step 1: parse and validate a
+ * `.xlsx` upload SERVER-SIDE, returning a preview. Never commits anything
+ * — the caller shows this to the user (valid/warning/error counts, an
+ * error list) before deciding whether to import. Treats the file as
+ * untrusted input: extension/size/row/cell-length caps are all enforced
+ * here BEFORE the workbook is even parsed (see modules/employees/import.ts's
+ * header comment for the rest of the untrusted-input handling).
+ */
+export async function previewEmployeeImport(companyId: string, formData: FormData): Promise<ActionResult<ImportPreview>> {
+  await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false, error: { code: "validation_error", message: "No file was provided." } };
+  }
+  if (!file.name.toLowerCase().endsWith(".xlsx")) {
+    return { ok: false, error: { code: "validation_error", message: "Only .xlsx files are accepted." } };
+  }
+  if (file.size > MAX_IMPORT_FILE_SIZE_BYTES) {
+    return { ok: false, error: { code: "validation_error", message: `File is too large — the limit is ${Math.round(MAX_IMPORT_FILE_SIZE_BYTES / (1024 * 1024))} MB.` } };
+  }
+
+  const allRoles = await listAllRoles();
+  const buffer = await file.arrayBuffer();
+  const result = await parseEmployeeImportWorkbook(buffer, allRoles);
+  if (!result.ok) {
+    return { ok: false, error: { code: "validation_error", message: result.message } };
+  }
+
+  return { ok: true, data: result.preview };
+}
+
+export type CommitEmployeeImportResult = { rowIndex: number; employeeId: string; employeeNumber: string; invitationId: string | null; invitationToken: string | null }[];
+
+/** Items 9/10, step 2 — commits ONLY the rows the caller has already reviewed (never re-reads the file). All-or-nothing: import_employees_bulk() rolls back entirely if any row fails its own server-side re-validation. */
+export async function commitEmployeeImport(companyId: string, projectId: string | null, rows: ImportRow[]): Promise<ActionResult<CommitEmployeeImportResult>> {
+  await requireAnyRole(companyId, EMPLOYEE_WRITE_ROLES);
+
+  if (rows.length === 0) {
+    return { ok: false, error: { code: "validation_error", message: "No rows to import." } };
+  }
+
+  const supabase = await createClient();
+  const payload = rows.map((row) => ({ firstName: row.firstName, lastName: row.lastName, email: row.email, phone: row.phone, positionTitle: row.positionTitle, roleName: row.roleName }));
+  const { data, error } = await supabase.rpc("import_employees_bulk", { target_company_id: companyId, target_project_id: projectId as string, rows: payload });
+
+  if (error || !data) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't import employees. Try again." } };
+  }
+
+  revalidatePath("/employees");
+  revalidatePath("/admin/members");
+  revalidatePath("/onboarding");
+  return {
+    ok: true,
+    data: data.map((row) => ({ rowIndex: row.row_index, employeeId: row.employee_id, employeeNumber: row.employee_number, invitationId: row.invitation_id, invitationToken: row.invitation_token })),
+  };
 }

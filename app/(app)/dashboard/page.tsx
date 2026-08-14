@@ -11,7 +11,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import {
   countActiveMembers,
   getCurrentUserProfile,
@@ -19,6 +19,11 @@ import {
 } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { createClient } from "@/lib/supabase/server";
+import { canAdministerCompany } from "@/modules/admin/permissions";
+import { isCurrentUserPlatformSuperAdmin } from "@/modules/platform-admin/queries";
+import { getOnboardingChecklist } from "@/modules/onboarding/queries";
+import { isOnboardingCoreComplete } from "@/modules/onboarding/types";
+import { OnboardingBanner } from "@/modules/onboarding/components/onboarding-banner";
 import { getMyEmployeeId, getEmployeeTodayCard } from "@/modules/daily-workforce/queries";
 import { getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listWorkedHoursForPeriod } from "@/modules/worked-hours/queries";
 import { resolveWorkedHoursPeriod, countDaysWorked } from "@/modules/worked-hours/period";
@@ -56,30 +61,54 @@ const COMPANY_STATUS_TONE: Record<string, StatusTone> = {
  */
 export default async function DashboardPage() {
   const { user } = await requireUser();
-  const [{ companies, currentCompanyId }, profile] = await Promise.all([
+  const [{ companies, currentCompanyId }, profile, isPlatformSuperAdmin] = await Promise.all([
     resolveCurrentCompany(user.id),
     getCurrentUserProfile(user.id),
+    isCurrentUserPlatformSuperAdmin(),
   ]);
 
   const displayName = profile?.full_name?.trim() || user.email?.split("@")[0] || "there";
 
   if (companies.length === 0) {
+    // Item 19 — a safe state, no platform data exposed. A platform super
+    // admin with zero memberships (e.g. right after being granted access,
+    // before creating or joining any company) gets a real next step;
+    // anyone else is told to wait for an administrator, honestly — this
+    // platform has no self-serve company creation for non-admins.
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into a company." />
         <EmptyState
           icon={Users}
-          title="You're not part of a company yet"
-          description="Companies are set up manually for now. Once an administrator adds your account to one, it will appear here automatically — no action needed on your end."
+          title="No active company membership found"
+          description={
+            isPlatformSuperAdmin
+              ? "You're not a member of any company yet. As a platform administrator, you can create one from Platform Admin."
+              : "Once a company administrator adds your account to a company, it will appear here automatically — no action needed on your end."
+          }
           className="flex-1"
         />
+        {isPlatformSuperAdmin && (
+          <Button size="sm" nativeButton={false} render={<Link href="/platform-admin/companies/new" />} className="w-fit">
+            <Plus />
+            Create Company
+          </Button>
+        )}
       </div>
     );
   }
 
   const current = companies.find((company) => company.id === currentCompanyId) ?? companies[0];
-  const memberCount = await countActiveMembers(current.id);
+  const [memberCount, roleNames] = await Promise.all([countActiveMembers(current.id), getUserRoleNames(current.id)]);
   const companyTone = COMPANY_STATUS_TONE[current.status] ?? "neutral";
+
+  // Item 26 — the banner disappears once onboarding's core is done, so it
+  // never nags a company that no longer needs it; only company management
+  // ever sees it at all (an employee's dashboard is never cluttered with
+  // company-setup guidance that isn't theirs to act on).
+  const canSeeOnboarding = canAdministerCompany(roleNames);
+  const onboardingChecklist = canSeeOnboarding ? await getOnboardingChecklist(current.id) : null;
+  const showOnboardingBanner = onboardingChecklist !== null && !isOnboardingCoreComplete(onboardingChecklist);
 
   // Post-login/post-company-switch project resolution: exactly one
   // accessible project auto-selects (persisted directly here — idempotent,
@@ -98,6 +127,18 @@ export default async function DashboardPage() {
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title={`Welcome back, ${displayName}`} description={`Choose which ${current.name} project to work in.`} />
         <ProjectSelectorCard companyId={current.id} projects={projects} />
+      </div>
+    );
+  } else if (!currentProjectId && projects.length === 0 && !canSeeOnboarding) {
+    // Item 18 — valid company membership, but no accessible project at
+    // all. Never crashes, never guesses, never shows unrelated company
+    // data — a safe, explicit state with the right next step for a
+    // non-manager (management gets the onboarding banner below instead,
+    // which already covers "create/assign a project").
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title={`Welcome back, ${displayName}`} description={current.name} />
+        <EmptyState icon={FolderKanban} title="You are not currently assigned to a project" description="Contact your company administrator to be added to a project." className="flex-1" />
       </div>
     );
   }
@@ -172,6 +213,8 @@ export default async function DashboardPage() {
           </>
         }
       />
+
+      {showOnboardingBanner && onboardingChecklist && <OnboardingBanner checklist={onboardingChecklist} />}
 
       {employeeSection}
 

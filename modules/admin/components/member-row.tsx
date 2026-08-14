@@ -17,6 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertTriangle } from "lucide-react";
 
 type RoleOption = { id: string; name: string; display_label: string };
 
@@ -40,15 +42,25 @@ export function MemberRow({
   const [selectedAssignmentRole, setSelectedAssignmentRole] = useState<(typeof PROJECT_ASSIGNMENT_ROLES)[number]>("member");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<MembershipStatus | null>(null);
 
   const displayName = member.employee ? `${member.employee.firstName} ${member.employee.lastName}` : null;
 
-  function handleStatusChange(status: MembershipStatus) {
+  function commitStatusChange(status: MembershipStatus) {
     setError(null);
     startTransition(async () => {
       const result = await setMembershipStatus(companyId, member.membershipId, status);
       if (!result.ok) setError(result.error.message);
     });
+  }
+
+  /** Item 23 — a member whose linked employee still has active issued equipment gets an explicit confirmation step before suspend/remove, rather than either silently blocking the action or losing track of what's still out with them. */
+  function handleStatusChange(status: MembershipStatus) {
+    if ((status === "suspended" || status === "removed") && member.activeEquipmentCount > 0) {
+      setPendingStatusChange(status);
+      return;
+    }
+    commitStatusChange(status);
   }
 
   function handleAssignRole() {
@@ -135,6 +147,19 @@ export function MemberRow({
               </Badge>
             ))}
           </div>
+        )}
+
+        {member.activeEquipmentCount > 0 && (
+          <Alert>
+            <AlertTriangle className="size-4" />
+            <AlertDescription>
+              This employee still has {member.activeEquipmentCount} issued equipment {member.activeEquipmentCount === 1 ? "item" : "items"}.{" "}
+              <Link href="/employees" className="underline underline-offset-2">
+                Review before suspending or removing
+              </Link>
+              .
+            </AlertDescription>
+          </Alert>
         )}
 
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
@@ -230,6 +255,35 @@ export function MemberRow({
           </div>
         )}
       </CardContent>
+
+      <AlertDialog open={pendingStatusChange !== null} onOpenChange={(open) => !open && setPendingStatusChange(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Still has issued equipment</AlertDialogTitle>
+            <AlertDialogDescription>
+              {displayName ?? "This person"} currently has {member.activeEquipmentCount} issued equipment {member.activeEquipmentCount === 1 ? "item" : "items"}.{" "}
+              {pendingStatusChange === "removed" ? "Removing" : "Suspending"} their membership does not automatically return it — check the Employee record or Equipment → Issued after confirming.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" disabled={isPending} onClick={() => setPendingStatusChange(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => {
+                if (pendingStatusChange) commitStatusChange(pendingStatusChange);
+                setPendingStatusChange(null);
+              }}
+            >
+              {isPending ? "Saving…" : `Confirm ${pendingStatusChange === "removed" ? "removal" : "suspension"}`}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

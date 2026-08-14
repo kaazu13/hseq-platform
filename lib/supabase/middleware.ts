@@ -26,8 +26,13 @@ import { NextResponse, type NextRequest } from "next/server";
 // (app/share/[token]/**) — deliberately public; its own authorization is
 // entirely the token itself (resolve_public_report()), never company/
 // project membership — see supabase/migrations/20260817090000_report_pdf_export_and_sharing.sql's
-// header comment.
-const PUBLIC_PATHS = ["/login", "/unauthorized", "/forbidden", "/share"];
+// header comment. "/accept-invite" (app/accept-invite/[token]/**) is the
+// SAME pattern for onboarding item 16 — an invitee following an
+// invitation link has no session yet by definition, so this route must be
+// reachable unauthenticated; its own authorization is the invitation
+// token itself (resolve_invitation_preview()/accept_invitation()), never
+// company/project membership.
+const PUBLIC_PATHS = ["/login", "/unauthorized", "/forbidden", "/share", "/accept-invite"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

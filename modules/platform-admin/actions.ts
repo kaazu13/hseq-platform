@@ -5,22 +5,30 @@ import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRaisedException } from "@/lib/supabase/errors";
+import { searchPlatformAccounts } from "./queries";
+import type { PlatformAccountSearchResult } from "./types";
 import {
   suspendAccountSchema,
   banAccountSchema,
   restoreAccountSchema,
   issuePlatformWarningSchema,
   adminUpdateUserNameSchema,
+  createCompanySchema,
+  grantCompanyMembershipSchema,
   type SuspendAccountInput,
   type BanAccountInput,
   type RestoreAccountInput,
   type IssuePlatformWarningInput,
   type AdminUpdateUserNameInput,
+  type CreateCompanyInput,
+  type GrantCompanyMembershipInput,
 } from "./validation";
 import type { Database } from "@/types/database";
+import type { Company } from "@/modules/companies/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type PlatformWarning = Database["public"]["Tables"]["platform_warnings"]["Row"];
+type CompanyMembership = Database["public"]["Tables"]["company_memberships"]["Row"];
 
 /**
  * Server Functions for Platform Administrator account/security controls
@@ -177,4 +185,67 @@ export async function grantPlatformSuperAdmin(targetUserId: string): Promise<Act
   }
   revalidatePlatformAdminPaths();
   return { ok: true, data: null };
+}
+
+/** A thin client-callable wrapper over the (already Server-only) searchPlatformAccounts query — lets the Create Company wizard's "existing account" picker search live, not just filter an initial snapshot. */
+export async function searchAccountsForCompanyCreation(query: string): Promise<PlatformAccountSearchResult[]> {
+  await requirePlatformSuperAdmin();
+  return searchPlatformAccounts(query || null, 30);
+}
+
+/**
+ * Onboarding item 1 — "[ Create Company ]". Platform-super-admin-only;
+ * create_company() (supabase/migrations/20260829090000_onboarding.sql)
+ * independently re-checks is_platform_super_admin() as a SECURITY DEFINER
+ * function (the caller is, correctly, not yet a member of the company
+ * being created, so plain RLS can't gate this the way every other
+ * mutation in this codebase is gated) — this app-layer check is a fast
+ * pre-filter, not the only gate. Slug/employee-number-prefix are derived
+ * safely server-side when omitted (kebab-case + dedup, uppercase-alnum
+ * fallback respectively) — never invented client-side.
+ */
+export async function createCompany(input: CreateCompanyInput): Promise<ActionResult<Company>> {
+  const parsed = createCompanySchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("create_company", { target_name: parsed.data.name, target_slug: parsed.data.slug, target_employee_number_prefix: parsed.data.employeeNumberPrefix })
+    .single();
+  if (error || !data) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't create the company. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data };
+}
+
+/**
+ * Onboarding item 2, path A — an EXISTING platform account, added directly
+ * to a company with the given role(s). No invitation token/round-trip
+ * (a platform super admin already vouches for the account's identity —
+ * same trust level as grantPlatformSuperAdmin above).
+ */
+export async function platformAdminGrantCompanyMembership(companyId: string, input: GrantCompanyMembershipInput): Promise<ActionResult<CompanyMembership>> {
+  const parsed = grantCompanyMembershipSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("platform_admin_grant_company_membership", { target_company_id: companyId, target_user_id: parsed.data.userId, target_role_names: parsed.data.roleNames })
+    .single();
+  if (error || !data) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't add that account to the company. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data };
 }

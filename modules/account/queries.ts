@@ -136,6 +136,8 @@ export type CompanyMemberOverview = {
   employee: AccountOverviewCore["employee"];
   roles: AccountRole[];
   projectAssignments: AccountProjectAssignment[];
+  /** Onboarding item 23 — how many equipment_assignments are currently active for this member's linked employee. Surfaced as a warning before suspending/removing them; 0 for a member with no linked employee. */
+  activeEquipmentCount: number;
 };
 
 /**
@@ -216,6 +218,20 @@ export async function listCompanyMembersOverview(companyId: string): Promise<Com
     }
   }
 
+  const activeEquipmentCountByEmployeeId = new Map<string, number>();
+  if (employeeIds.length > 0) {
+    const { data: equipmentAssignments, error: equipmentError } = await supabase
+      .from("equipment_assignments")
+      .select("employee_id")
+      .eq("company_id", companyId)
+      .in("employee_id", employeeIds)
+      .eq("status", "active");
+    if (equipmentError) throw equipmentError;
+    for (const row of equipmentAssignments ?? []) {
+      activeEquipmentCountByEmployeeId.set(row.employee_id, (activeEquipmentCountByEmployeeId.get(row.employee_id) ?? 0) + 1);
+    }
+  }
+
   return memberships.map((m) => {
     const employee = employeeByProfileId.get(m.user_id) ?? null;
     return {
@@ -223,6 +239,7 @@ export async function listCompanyMembersOverview(companyId: string): Promise<Com
       userId: m.user_id,
       status: m.status,
       roles: rolesByMembershipId.get(m.id) ?? [],
+      activeEquipmentCount: employee ? (activeEquipmentCountByEmployeeId.get(employee.id) ?? 0) : 0,
       employee: employee
         ? {
             id: employee.id,

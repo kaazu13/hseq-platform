@@ -3,6 +3,22 @@ import type { PlatformAccountSearchResult, PlatformAccountMembership, SecurityEv
 
 /** Server-only data access for Platform Administrator views (Phases 12-14). Every RPC here is itself gated by is_platform_super_admin() server-side — these are thin wrappers, not an independent authorization layer. */
 
+/**
+ * Non-throwing "is the CURRENT caller a platform super admin" check — used
+ * purely for UI decisions (showing the /platform-admin nav link and the
+ * Onboarding "Create Company" entry point to the right people) where a
+ * boolean is what's needed, not requirePlatformSuperAdmin()'s throw/forbid
+ * behavior. Every actual mutation still goes through requirePlatformSuperAdmin()
+ * or a SECURITY DEFINER RPC's own is_platform_super_admin() check — this
+ * is never the authorization boundary itself.
+ */
+export async function isCurrentUserPlatformSuperAdmin(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("is_platform_super_admin");
+  if (error) return false;
+  return data ?? false;
+}
+
 export async function searchPlatformAccounts(query: string | null, limit = 50): Promise<PlatformAccountSearchResult[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("platform_admin_search_accounts", { search_query: query ?? undefined, limit_count: limit });

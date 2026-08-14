@@ -1,4 +1,5 @@
-import { ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { Building2, ShieldAlert } from "lucide-react";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { searchPlatformAccounts, getPlatformAccountMemberships, listSecurityEventsForUser, listPlatformWarningsForUser } from "@/modules/platform-admin/queries";
 import { ACCOUNT_STATUS_LABELS, SECURITY_EVENT_TYPE_LABELS } from "@/modules/platform-admin/types";
@@ -6,6 +7,7 @@ import { AccountActions } from "@/modules/platform-admin/components/account-acti
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
@@ -46,7 +48,16 @@ export default async function PlatformAdminPage({ searchParams }: PlatformAdminP
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Platform Administration" description="Account and security controls — platform-wide, not scoped to one company." />
+      <PageHeader
+        title="Platform Administration"
+        description="Account and security controls — platform-wide, not scoped to one company."
+        actions={
+          <Button size="sm" nativeButton={false} render={<Link href="/platform-admin/companies/new" />}>
+            <Building2 />
+            Create Company
+          </Button>
+        }
+      />
 
       <form action={`/platform-admin`} method="GET" className="flex max-w-sm items-center gap-2">
         <Input name="q" defaultValue={query ?? ""} placeholder="Search by name or email…" />

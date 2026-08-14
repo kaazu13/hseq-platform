@@ -281,6 +281,112 @@ export type Database = {
           },
         ]
       }
+      company_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          created_at: string
+          email: string
+          employee_id: string | null
+          expires_at: string
+          full_name: string
+          id: string
+          invited_by: string | null
+          project_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          role_names: string[]
+          status: Database["public"]["Enums"]["company_invitation_status"]
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          employee_id?: string | null
+          expires_at?: string
+          full_name: string
+          id?: string
+          invited_by?: string | null
+          project_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_names: string[]
+          status?: Database["public"]["Enums"]["company_invitation_status"]
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          employee_id?: string | null
+          expires_at?: string
+          full_name?: string
+          id?: string
+          invited_by?: string | null
+          project_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_names?: string[]
+          status?: Database["public"]["Enums"]["company_invitation_status"]
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_invitations_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_invitations_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "company_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_invitations_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "company_invitations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_memberships: {
         Row: {
           company_id: string
@@ -4415,6 +4521,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { target_token: string }; Returns: Json }
       acknowledge_platform_warning: {
         Args: { target_warning_id: string }
         Returns: {
@@ -4834,6 +4941,31 @@ export type Database = {
         }
         Returns: number
       }
+      create_company: {
+        Args: {
+          target_employee_number_prefix?: string
+          target_name: string
+          target_slug?: string
+        }
+        Returns: {
+          created_at: string
+          deleted_at: string | null
+          employee_number_prefix: string
+          id: string
+          logo_storage_path: string | null
+          name: string
+          scaffold_inspection_validity_days: number | null
+          slug: string
+          status: Database["public"]["Enums"]["company_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "companies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_daily_team_for_foreman: {
         Args: {
           target_activity?: string
@@ -4920,6 +5052,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_invitation: {
+        Args: {
+          target_company_id: string
+          target_email: string
+          target_employee_id?: string
+          target_full_name: string
+          target_project_id?: string
+          target_role_names: string[]
+        }
+        Returns: {
+          invitation: Database["public"]["Tables"]["company_invitations"]["Row"]
+          token: string
+        }[]
       }
       create_lmra_assessment: {
         Args: {
@@ -5171,6 +5317,20 @@ export type Database = {
       has_project_access: {
         Args: { target_project_id: string }
         Returns: boolean
+      }
+      import_employees_bulk: {
+        Args: {
+          rows: Json
+          target_company_id: string
+          target_project_id: string
+        }
+        Returns: {
+          employee_id: string
+          employee_number: string
+          invitation_id: string
+          invitation_token: string
+          row_index: number
+        }[]
       }
       is_company_member: { Args: { target_org_id: string }; Returns: boolean }
       is_daily_team_foreman: {
@@ -5540,6 +5700,31 @@ export type Database = {
           role_names: string[]
         }[]
       }
+      platform_admin_grant_company_membership: {
+        Args: {
+          target_company_id: string
+          target_role_names: string[]
+          target_user_id: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       platform_admin_search_accounts: {
         Args: { limit_count?: number; search_query?: string }
         Returns: {
@@ -5858,6 +6043,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resend_invitation: {
+        Args: { target_invitation_id: string }
+        Returns: {
+          invitation: Database["public"]["Tables"]["company_invitations"]["Row"]
+          token: string
+        }[]
+      }
+      resolve_invitation_preview: {
+        Args: { target_token: string }
+        Returns: Json
+      }
       resolve_public_report: { Args: { target_token: string }; Returns: Json }
       resolve_scaffold_inspection_validity_days: {
         Args: { target_project_id: string }
@@ -6072,6 +6268,35 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "leave_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revoke_invitation: {
+        Args: { target_invitation_id: string; target_reason?: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          company_id: string
+          created_at: string
+          email: string
+          employee_id: string | null
+          expires_at: string
+          full_name: string
+          id: string
+          invited_by: string | null
+          project_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          role_names: string[]
+          status: Database["public"]["Enums"]["company_invitation_status"]
+          token_hash: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_invitations"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -6617,6 +6842,7 @@ export type Database = {
         | "archive"
         | "end_employment"
         | "rehire"
+      company_invitation_status: "pending" | "accepted" | "revoked"
       company_status: "trial" | "active" | "suspended"
       corrective_action_priority: "low" | "medium" | "high" | "critical"
       corrective_action_status:
@@ -7024,6 +7250,7 @@ export const Constants = {
         "end_employment",
         "rehire",
       ],
+      company_invitation_status: ["pending", "accepted", "revoked"],
       company_status: ["trial", "active", "suspended"],
       corrective_action_priority: ["low", "medium", "high", "critical"],
       corrective_action_status: [
