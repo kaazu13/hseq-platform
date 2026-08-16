@@ -121,4 +121,53 @@ describe("cross-company isolation", () => {
     const rows = await asUser(userA.userId, (tx) => tx`select id from companies where id = ${companyB.companyId}`);
     expect(rows).toHaveLength(0);
   });
+
+  describe("account_status RLS enforcement", () => {
+    // Regression for a real, live-confirmed security gap (full operational
+    // audit): profiles.account_status ('suspended'/'banned') was only
+    // checked by getCurrentUser() at the Next.js app layer — no RLS policy
+    // anywhere checked it. A suspended user's still-valid JWT (or even a
+    // freshly re-obtained one, since Supabase Auth's own login endpoint
+    // has no idea this app-level column exists) retained full RLS read/write
+    // access to everything is_company_member()/is_platform_super_admin()
+    // would otherwise allow, completely bypassing the app-layer sign-out.
+    // Fixed in 20260830094000_account_status_rls_enforcement.sql by folding
+    // an account_status = 'active' check into those two shared, universally-
+    // depended-on identity helpers — this test exercises is_company_member()
+    // (used by the overwhelming majority of RLS policies in this schema).
+    it("a suspended user's ACTIVE company membership no longer grants RLS access, even though the row itself is untouched", async () => {
+      const suspendedEmployeeId = await createTestEmployee(companyA.companyId, null, "Soon", "Suspended");
+
+      const before = await asUser(userA.userId, (tx) => tx`select id from employees where id = ${suspendedEmployeeId}`);
+      expect(before).toHaveLength(1);
+
+      await sql`update profiles set account_status = 'suspended', account_status_changed_at = now(), account_status_reason = 'test' where id = ${userA.userId}`;
+
+      // Same still-active company_memberships row, same still-valid
+      // identity — only account_status changed. RLS must now deny them
+      // exactly as if they had no membership at all.
+      const afterSuspend = await asUser(userA.userId, (tx) => tx`select id from employees where id = ${suspendedEmployeeId}`);
+      expect(afterSuspend).toHaveLength(0);
+
+      const [membershipRow] = await sql`select status from company_memberships where company_id = ${companyA.companyId} and user_id = ${userA.userId}`;
+      expect(membershipRow.status).toBe("active"); // the membership itself is untouched — this is account_status doing the denying, not a side effect
+
+      // Restore, so this test doesn't poison userA for any test file order
+      // dependency (afterAll deletes the user regardless, but keep the
+      // invariant explicit and self-contained).
+      await sql`update profiles set account_status = 'active', account_status_changed_at = now(), account_status_reason = null where id = ${userA.userId}`;
+      const afterRestore = await asUser(userA.userId, (tx) => tx`select id from employees where id = ${suspendedEmployeeId}`);
+      expect(afterRestore).toHaveLength(1);
+    });
+
+    it("a banned user is denied identically to a suspended one", async () => {
+      const bannedEmployeeId = await createTestEmployee(companyA.companyId, null, "Soon", "Banned");
+      await sql`update profiles set account_status = 'banned', account_status_changed_at = now(), account_status_reason = 'test' where id = ${userA.userId}`;
+
+      const rows = await asUser(userA.userId, (tx) => tx`select id from employees where id = ${bannedEmployeeId}`);
+      expect(rows).toHaveLength(0);
+
+      await sql`update profiles set account_status = 'active', account_status_changed_at = now(), account_status_reason = null where id = ${userA.userId}`;
+    });
+  });
 });

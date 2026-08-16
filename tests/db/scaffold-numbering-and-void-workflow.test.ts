@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { sql, asUser, createTestCompany, deleteTestCompany, createTestUser, deleteTestUser, addMembership, createTestProject, RAISED_EXCEPTION } from "./helpers";
+import {
+  sql,
+  asUser,
+  createTestCompany,
+  deleteTestCompany,
+  createTestUser,
+  deleteTestUser,
+  addMembership,
+  createTestProject,
+  createTestEmployee,
+  createTestTeam,
+  RAISED_EXCEPTION,
+} from "./helpers";
 
 /**
  * Scaffold-number allocation (per-project, concurrency-safe counter table —
@@ -109,5 +121,90 @@ describe("scaffold inspection void workflow — table-level constraints", () => 
     await expect(
       asUser(admin.userId, (tx) => tx`select void_scaffold_inspection(gen_random_uuid(), '')`),
     ).rejects.toMatchObject(RAISED_EXCEPTION);
+  });
+
+  /** A genuinely eligible Responsible Foreman — company-wide 'foreman' role AND an active team_assignments row on the project, exactly what is_eligible_scaffold_foreman()/validate_scaffold_insert() require. Same shape as tests/db/daily-workforce-invariants.test.ts's own createTestForeman. */
+  async function createTestForeman(companyId: string, projectId: string, firstName: string, lastName: string) {
+    const user = await createTestUser(`${firstName} ${lastName}`);
+    await addMembership(companyId, user.userId, ["foreman"]);
+    const employeeId = await createTestEmployee(companyId, user.userId, firstName, lastName);
+    const teamId = await createTestTeam(companyId, projectId, `${firstName} Legacy Team`);
+    await sql`insert into team_assignments (company_id, project_id, team_id, employee_id, assignment_role) values (${companyId}, ${projectId}, ${teamId}, ${employeeId}, 'foreman')`;
+    return { userId: user.userId, employeeId };
+  }
+
+  describe("audit fix (20260830099000): scaffold_inspection_items cannot be edited once the parent inspection is voided", () => {
+    async function makeDraftInspection(projectId: string, foremanEmployeeId: string, tagNumber: string) {
+      const [scaffold] = await sql`
+        insert into scaffolds (company_id, project_id, tag_number, work_area, scaffold_type, intended_use, max_load_class, responsible_foreman_id)
+        values (${company.companyId}, ${projectId}, ${tagNumber}, 'Area 1', 'independent', 'General access', 'Light Duty 2.0 kN/m2', ${foremanEmployeeId})
+        returning id
+      `;
+      const [inspection] = await sql`
+        insert into scaffold_inspections (company_id, scaffold_id, project_id, inspection_reason, inspector_id)
+        values (${company.companyId}, ${scaffold.id}, ${projectId}, 'routine_inspection', ${foremanEmployeeId})
+        returning id
+      `;
+      const [item] = await sql`select id, item_type from scaffold_inspection_items where scaffold_inspection_id = ${inspection.id} limit 1`;
+      return { inspectionId: inspection.id as string, itemId: item.id as string, itemType: item.item_type as string };
+    }
+
+    it("save_scaffold_inspection_items on a VOIDED draft is rejected — status stays 'draft' when voided, so the checklist edit guard must check voided_at explicitly, not just status", async () => {
+      const projectId = await createTestProject(company.companyId, "Voided Checklist Edit Project");
+      const foreman = await createTestForeman(company.companyId, projectId, "Voided", "Checklist");
+      const { inspectionId, itemType } = await makeDraftInspection(projectId, foreman.employeeId, "TAG-VOID-1");
+
+      await asUser(admin.userId, (tx) => tx`select void_scaffold_inspection(${inspectionId}, 'Mistaken entry')`);
+      const [voided] = await sql`select status, voided_at from scaffold_inspections where id = ${inspectionId}`;
+      expect(voided.status).toBe("draft"); // deliberately unchanged — voiding is not a status transition
+      expect(voided.voided_at).not.toBeNull();
+
+      await expect(
+        asUser(
+          admin.userId,
+          (tx) => tx`
+            select save_scaffold_inspection_items(${inspectionId}, ${JSON.stringify([
+              { item_type: itemType, result: "defect_found", comment: "attempted edit after void", required_corrective_action: "fix it", severity: "low" },
+            ])}::jsonb)
+          `,
+        ),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("a raw UPDATE directly on scaffold_inspection_items (bypassing save_scaffold_inspection_items entirely) is rejected once the parent is voided", async () => {
+      const projectId = await createTestProject(company.companyId, "Voided Checklist Raw Update Project");
+      const foreman = await createTestForeman(company.companyId, projectId, "RawVoid", "Checklist");
+      const { inspectionId, itemId } = await makeDraftInspection(projectId, foreman.employeeId, "TAG-VOID-2");
+
+      await asUser(admin.userId, (tx) => tx`select void_scaffold_inspection(${inspectionId}, 'Mistaken entry')`);
+
+      await expect(sql`update scaffold_inspection_items set result = 'defect_found' where id = ${itemId}`).rejects.toMatchObject(RAISED_EXCEPTION);
+      const [unchanged] = await sql`select result from scaffold_inspection_items where id = ${itemId}`;
+      expect(unchanged.result).toBeNull();
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("the checklist on a genuinely non-voided draft is still freely editable (no regression)", async () => {
+      const projectId = await createTestProject(company.companyId, "Non Voided Checklist Edit Project");
+      const foreman = await createTestForeman(company.companyId, projectId, "NotVoided", "Checklist");
+      const { inspectionId, itemType, itemId } = await makeDraftInspection(projectId, foreman.employeeId, "TAG-VOID-3");
+
+      await asUser(
+        admin.userId,
+        (tx) => tx`
+          select save_scaffold_inspection_items(${inspectionId}, ${JSON.stringify([
+            { item_type: itemType, result: "acceptable", comment: "legit edit, not voided", required_corrective_action: null, severity: null },
+          ])}::jsonb)
+        `,
+      );
+
+      const [row] = await sql`select result, comment from scaffold_inspection_items where id = ${itemId}`;
+      expect(row).toMatchObject({ result: "acceptable", comment: "legit edit, not voided" });
+
+      await deleteTestUser(foreman.userId);
+    });
   });
 });

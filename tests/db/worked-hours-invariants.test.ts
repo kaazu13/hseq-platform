@@ -345,6 +345,36 @@ describe("worked hours invariants", () => {
       await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 0 }])}::jsonb)`);
     });
 
+    it("audit fix (20260830098000): a raw INSERT/UPDATE directly on worked_hours_breakdown (bypassing upsert_worked_hours_categories entirely) is rejected for a nonzero value while the employee is marked unavailable", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Raw Breakdown Write While Absent Project");
+      const employeeId = await createTestEmployee(companyA.companyId, null, "Raw", "Absent");
+      const workDate = "2026-08-20";
+
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'absent')`);
+      // Create the parent worked_hours + a zero-value breakdown row via the RPC (allowed even while absent).
+      const [wh] = await asUser(admin.userId, (tx) => tx`select * from upsert_worked_hours_categories(${projectId}, ${employeeId}, ${workDate}, ${JSON.stringify([{ category: "regular", hours: 0 }])}::jsonb)`);
+      const [breakdownRow] = await sql`select id from worked_hours_breakdown where worked_hours_id = ${wh.id} and category = 'regular'`;
+
+      // Raw UPDATE to a nonzero value, entirely bypassing the RPC, is rejected.
+      await expect(sql`update worked_hours_breakdown set hours = 6 where id = ${breakdownRow.id}`).rejects.toMatchObject(RAISED_EXCEPTION);
+      const [unchanged] = await sql`select hours from worked_hours_breakdown where id = ${breakdownRow.id}`;
+      expect(Number(unchanged.hours)).toBe(0);
+
+      // A raw UPDATE that keeps it at zero (a no-op re-zero) is still allowed, same as the RPC's own rule.
+      await sql`update worked_hours_breakdown set hours = 0 where id = ${breakdownRow.id}`;
+
+      // A raw INSERT of a brand-new category row with a nonzero value is rejected too.
+      await expect(
+        sql`insert into worked_hours_breakdown (company_id, project_id, worked_hours_id, category, hours) values (${companyA.companyId}, ${projectId}, ${wh.id}, 'overtime', 3)`,
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      // Once the employee is available again, a raw UPDATE with a nonzero value succeeds — this is defense-in-depth, not a blanket freeze on the row.
+      await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'present')`);
+      await sql`update worked_hours_breakdown set hours = 7.5 where id = ${breakdownRow.id}`;
+      const [changed] = await sql`select hours from worked_hours_breakdown where id = ${breakdownRow.id}`;
+      expect(Number(changed.hours)).toBe(7.5);
+    });
+
     it("bulk_apply_worked_hours silently skips an employee marked unavailable rather than applying hours to them", async () => {
       const projectId = await createTestProject(companyA.companyId, "Bulk Apply Skips Unavailable Project");
       const availableId = await createTestEmployee(companyA.companyId, null, "Bulk", "Available");

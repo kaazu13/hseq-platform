@@ -525,4 +525,30 @@ describe("equipment invariants", () => {
       expect(events.map((r) => r.event)).toEqual(["added", "issued", "returned", "damaged"]);
     });
   });
+
+  describe("input length backstops", () => {
+    // Regression for a real operational-audit finding: Equipment V2
+    // (20260827090000_equipment.sql) shipped after the platform-wide
+    // input-length-backstop sweep (20260818091000_input_length_backstops.sql)
+    // and was never retrofitted — a ~50,000-character equipment_requests
+    // .item_description was accepted by a raw insert, bypassing the
+    // client-side Zod limit entirely. Fixed in
+    // 20260830093000_equipment_input_length_backstops.sql.
+    it("equipment_items text columns reject an oversized value at the DB layer", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Oversized Item Project");
+      const huge = "A".repeat(50000);
+      await expect(
+        asUser(admin.userId, (tx) => tx`select * from create_equipment_item(${companyA.companyId}, ${projectId}, 'quantity', 'PPE', ${huge}, null, null, null, null, null, 1, 'new', null, null)`),
+      ).rejects.toMatchObject(CHECK_VIOLATION);
+    });
+
+    it("equipment_requests.item_description rejects an oversized value at the DB layer", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Oversized Request Project");
+      const worker = await rosterEmployee(companyA.companyId, projectId, "OversizedRequestWorker");
+      const huge = "A".repeat(50000);
+      await expect(
+        sql`insert into equipment_requests (company_id, project_id, employee_id, item_description, quantity, reason) values (${companyA.companyId}, ${projectId}, ${worker.employeeId}, ${huge}, 1, 'Abuse test')`,
+      ).rejects.toMatchObject(CHECK_VIOLATION);
+    });
+  });
 });

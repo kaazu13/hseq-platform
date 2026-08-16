@@ -12,6 +12,7 @@ import {
   roleId,
   getMembershipId,
   RLS_VIOLATION,
+  RAISED_EXCEPTION,
 } from "./helpers";
 
 /**
@@ -139,6 +140,46 @@ describe("role permissions", () => {
       expect(rows).toHaveLength(1);
       await sql`delete from membership_roles where id = ${rows[0].id}`; // clean up
     });
+
+    describe("audit fix (20260830100000): cannot change a Company Manager's membership status", () => {
+      it("CANNOT suspend a company_admin's membership, even when a second company_admin exists (so this is not merely the pre-existing last-admin guard)", async () => {
+        const secondAdmin = await createTestUser("Second Company Manager (WC Suspend Attempt)");
+        await addMembership(company.companyId, secondAdmin.userId, ["company_admin"]);
+
+        await expect(
+          asUser(workforceCoordinator.userId, (tx) =>
+            tx`update company_memberships set status = 'suspended' where user_id = ${secondAdmin.userId} and company_id = ${company.companyId} returning id`,
+          ),
+        ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+        const [row] = await sql`select status from company_memberships where user_id = ${secondAdmin.userId} and company_id = ${company.companyId}`;
+        expect(row.status).toBe("active");
+
+        await deleteTestUser(secondAdmin.userId);
+      });
+
+      it("a fellow company_admin (not operations_manager alone) CAN suspend another company_admin's membership — only the pure-WC actor is restricted", async () => {
+        const secondAdmin = await createTestUser("Second Company Manager (CM Suspend)");
+        await addMembership(company.companyId, secondAdmin.userId, ["company_admin"]);
+
+        const rows = await asUser(companyManager.userId, (tx) =>
+          tx`update company_memberships set status = 'suspended' where user_id = ${secondAdmin.userId} and company_id = ${company.companyId} returning id`,
+        );
+        expect(rows).toHaveLength(1);
+
+        await deleteTestUser(secondAdmin.userId);
+      });
+
+      it("a pure operations_manager CAN still suspend a plain (non-company_admin) member's membership — the new restriction is scoped to company_admin targets only", async () => {
+        const rows = await asUser(workforceCoordinator.userId, (tx) =>
+          tx`update company_memberships set status = 'suspended' where user_id = ${targetOfRoleChanges.userId} and company_id = ${company.companyId} returning id`,
+        );
+        expect(rows).toHaveLength(1);
+
+        // Revert — targetOfRoleChanges is a shared fixture reused by other tests in this file.
+        await sql`update company_memberships set status = 'active' where user_id = ${targetOfRoleChanges.userId} and company_id = ${company.companyId}`;
+      });
+    });
   });
 
   describe("Project Manager permissions", () => {
@@ -241,6 +282,32 @@ describe("role permissions", () => {
         tx`delete from membership_roles where id = ${assignment.id} returning id`,
       );
       expect(rows).toHaveLength(0);
+    });
+
+    it("audit fix (20260830101000): a legitimate role removal succeeds without RLS recursion", async () => {
+      // Regression for a real, pre-existing bug: membership_roles_delete_managers'
+      // "preserve at least one company_admin" guard used to query
+      // membership_roles again as a plain inline subquery from within
+      // membership_roles' own DELETE policy, causing Postgres to raise
+      // "42P17 infinite recursion detected in policy" on EVERY delete
+      // attempt — not just company_admin removals. Give targetOfRoleChanges
+      // a second, redundant role and remove it as companyManager; this
+      // must complete cleanly (not throw), proving the fix
+      // (count_active_company_admin_memberships(), a SECURITY DEFINER
+      // helper) actually stopped the recursion rather than merely masking
+      // it for the one path the two tests above happen to exercise.
+      const membershipId = await getMembershipId(company.companyId, targetOfRoleChanges.userId);
+      const plannerRoleId = await roleId("planner");
+      const [redundantRole] = await sql`
+        insert into membership_roles (company_id, membership_id, role_id) values (${company.companyId}, ${membershipId}, ${plannerRoleId})
+        returning id
+      `;
+
+      const rows = await asUser(companyManager.userId, (tx) => tx`delete from membership_roles where id = ${redundantRole.id} returning id`);
+      expect(rows).toHaveLength(1);
+
+      const [stillThere] = await sql`select id from membership_roles where id = ${redundantRole.id}`;
+      expect(stillThere).toBeUndefined();
     });
   });
 });

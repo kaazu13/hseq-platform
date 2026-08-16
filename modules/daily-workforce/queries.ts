@@ -389,14 +389,25 @@ export type DailyTeamsArchiveDay = {
  * workers · Locked"). `locked` is true only when EVERY team for that date
  * is locked (a day only reads as fully "Locked" once nothing on it is
  * still open).
+ *
+ * Performance fix (operational audit): this previously fetched EVERY
+ * daily_teams row in the project's entire history unconditionally, then
+ * slice()d to `limit` distinct dates only after loading all of it —
+ * unbounded growth as a real project accumulates months/years of daily
+ * records. Same `limit * 3` calendar-day lookback bound as
+ * listWorkedHoursArchiveDays (modules/worked-hours/queries.ts), for the
+ * same reasoning.
  */
 export async function listDailyTeamsArchiveDays(companyId: string, projectId: string, limit = 60): Promise<DailyTeamsArchiveDay[]> {
   const supabase = await createClient();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - limit * 3);
   const { data: teams, error: teamsError } = await supabase
     .from("daily_teams")
     .select("id, work_date, status")
     .eq("company_id", companyId)
     .eq("project_id", projectId)
+    .gte("work_date", cutoff.toISOString().slice(0, 10))
     .order("work_date", { ascending: false });
   if (teamsError) throw teamsError;
   if (!teams || teams.length === 0) return [];

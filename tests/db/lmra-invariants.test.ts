@@ -409,6 +409,32 @@ describe("LMRA invariants (redesign)", () => {
         `),
       ).rejects.toMatchObject(RAISED_EXCEPTION);
     });
+
+    it("audit fix (20260830096000): a raw UPDATE setting responsible_person_id directly (bypassing create_lmra_assessment/update_lmra_assessment entirely) is rejected unless the new value is one of THIS assessment's own participants", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Raw Update Responsible Not Participant Project");
+      const completer = await rosterEmployee(projectId, "RawRPCompleter");
+      const outsider = await rosterEmployee(projectId, "RawRPOutsider");
+
+      const [assessment] = await asUser(completer.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', '2026-08-10', 'day',
+          ${completer.employeeId}, null, null, ${[completer.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null
+        )
+      `);
+
+      // outsider is project-rostered (would pass the OLDER, broader project-roster
+      // check) but was never added to THIS assessment's lmra_participants.
+      await expect(
+        sql`update lmra_assessments set responsible_person_id = ${outsider.employeeId} where id = ${assessment.id}`,
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+      const [unchanged] = await sql`select responsible_person_id from lmra_assessments where id = ${assessment.id}`;
+      expect(unchanged.responsible_person_id).toBeNull();
+
+      // The legitimate case — the assessment's own completer, who IS a participant — still works via a raw UPDATE too.
+      await sql`update lmra_assessments set responsible_person_id = ${completer.employeeId} where id = ${assessment.id}`;
+      const [changed] = await sql`select responsible_person_id from lmra_assessments where id = ${assessment.id}`;
+      expect(changed.responsible_person_id).toBe(completer.employeeId);
+    });
   });
 
   describe("Today's Teams LMRA completion indicator regression — daily_team_id linking", () => {
@@ -485,6 +511,32 @@ describe("LMRA invariants (redesign)", () => {
           )
         `),
       ).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      await deleteTestUser(foreman.userId);
+    });
+
+    it("audit fix (20260830097000): a raw UPDATE setting daily_team_id directly (bypassing both RPCs entirely) is rejected when the team's own project/work_date does not match the assessment's", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Raw Update Link Wrong Date Project");
+      const correctDate = "2026-08-20";
+      const wrongDate = "2026-08-21";
+      const foreman = await foremanEmployee(projectId, "RawLink", "Wrong");
+      const worker = await rosterEmployee(projectId, "RawLinkWorker");
+      // Two real daily_teams rows for the SAME project, different work_date.
+      const teamOnCorrectDate = await makeDailyTeam(projectId, correctDate, "Raw Link Correct Date Team", foreman.employeeId, worker.employeeId);
+      const teamOnWrongDate = await makeDailyTeam(projectId, wrongDate, "Raw Link Wrong Date Team", foreman.employeeId, worker.employeeId);
+
+      const [assessment] = await asUser(worker.userId, (tx) => tx`
+        select * from create_lmra_assessment(
+          ${companyA.companyId}, ${projectId}, 'Area', 'Activity', ${correctDate}, 'day',
+          ${worker.employeeId}, null, null, ${[worker.employeeId]}, ${JSON.stringify(freshHazards())}::jsonb, false, 'go', null, ${teamOnCorrectDate}
+        )
+      `);
+
+      await expect(
+        sql`update lmra_assessments set daily_team_id = ${teamOnWrongDate} where id = ${assessment.id}`,
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+      const [unchanged] = await sql`select daily_team_id from lmra_assessments where id = ${assessment.id}`;
+      expect(unchanged.daily_team_id).toBe(teamOnCorrectDate);
 
       await deleteTestUser(foreman.userId);
     });

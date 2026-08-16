@@ -4,6 +4,7 @@ import { sql, createTestCompany, deleteTestCompany, addMembership, createTestEmp
 import { createIntegrationTestUser, deleteIntegrationTestUser, signInAs, clearTestCookies } from "./helpers";
 import { createEmployee, updateEmployee } from "@/modules/employees/actions";
 import { setTeamAssignment } from "@/modules/teams/actions";
+import { requireProjectAccess } from "@/lib/auth/session";
 
 /**
  * Priority 3 — Server Action integration tests. A small, REPRESENTATIVE
@@ -129,6 +130,38 @@ describe("Server Action integration", () => {
     expect(rows[0].end_at).not.toBeNull();
     expect(rows[1].team_id).toBe(teamBravo);
     expect(rows[1].end_at).toBeNull();
+
+    clearTestCookies();
+  });
+
+  it("requireProjectAccess: a company_admin is never blocked from a project they hold no individual assignment to", async () => {
+    // Regression for a real bug found in the full operational audit: every
+    // project-scoped page guard calls requireProjectAccess(projectId) bare,
+    // which only checks project_assignments/team_assignments — its own
+    // docstring always promised a company-wide manager role bypasses this,
+    // mirroring every project-scoped RLS policy's `has_any_company_role(...)
+    // OR has_project_access(...)` shape, but the implementation never
+    // actually did it. A company_admin with zero individual project_assignments
+    // or team_assignments rows for a project in their own company got a raw
+    // 403 trying to view it (confirmed live on Today's Teams and, per the
+    // same shared guard, every other project-scoped page — worked hours,
+    // absences, leave, workforce, equipment, scaffolds).
+    const projectId = await createTestProject(companyA.companyId, "Unassigned Access Project");
+    // Deliberately NO project_assignments/team_assignments row for adminUserId here.
+
+    await signInAs(adminEmail, password); // company_admin of Company A only
+
+    await expect(requireProjectAccess(projectId)).resolves.toEqual({ user: expect.objectContaining({ id: adminUserId }), projectId });
+
+    clearTestCookies();
+  });
+
+  it("requireProjectAccess: a plain employee with no assignment and no company-wide role is still rejected", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Still Rejected Project");
+
+    await signInAs(plainEmail, password); // plain 'employee' role only, no assignment to this project
+
+    await expect(requireProjectAccess(projectId)).rejects.toThrow("NEXT_FORBIDDEN");
 
     clearTestCookies();
   });

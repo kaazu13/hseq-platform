@@ -63,8 +63,16 @@ export async function listLmraCountsByDailyTeamId(companyId: string, projectId: 
   return byTeamId;
 }
 
-/** Assessments visible to the caller in `companyId` — RLS (lmra_assessments_select) does the real scoping. Newest work_date first. */
-export async function listLmraAssessments(companyId: string, filters: LmraListFilters = {}): Promise<LmraAssessment[]> {
+/**
+ * Assessments visible to the caller in `companyId` — RLS
+ * (lmra_assessments_select) does the real scoping. Newest work_date first.
+ * `limit`, when passed, is applied at the DB query level (not a
+ * fetch-everything-then-slice in JS) — added so listRecentLmraForOverview()
+ * below can bound its own query directly; the main LMRA list page
+ * (app/(app)/lmra/page.tsx) never passes one, so its existing full-history
+ * behavior when no date filter is applied is unchanged by this.
+ */
+export async function listLmraAssessments(companyId: string, filters: LmraListFilters = {}, limit?: number): Promise<LmraAssessment[]> {
   const supabase = await createClient();
   let query = supabase.from("lmra_assessments").select("*").eq("company_id", companyId);
 
@@ -73,6 +81,7 @@ export async function listLmraAssessments(companyId: string, filters: LmraListFi
   if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
   if (filters.dateFrom) query = query.gte("work_date", filters.dateFrom);
   if (filters.dateTo) query = query.lte("work_date", filters.dateTo);
+  if (limit) query = query.limit(limit);
 
   const { data, error } = await query.order("work_date", { ascending: false }).order("created_at", { ascending: false });
   if (error) throw error;
@@ -303,9 +312,11 @@ export async function getLmraOverviewCounts(companyId: string, projectId?: strin
  * filters (project/work area/status/date) and ordering as `listLmraAssessments`
  * (the LMRA list page itself), just capped to `limit`. A thin wrapper rather
  * than a separate query so the two lists can never drift in what "recent"
- * means.
+ * means. Performance fix (operational audit): `limit` is now passed
+ * through to the DB query itself (`listLmraAssessments`'s `limit` param)
+ * instead of fetching the caller's ENTIRE unfiltered LMRA history and
+ * slicing to `limit` afterward in JS.
  */
 export async function listRecentLmraForOverview(companyId: string, filters: LmraListFilters, limit: number): Promise<LmraAssessment[]> {
-  const results = await listLmraAssessments(companyId, filters);
-  return results.slice(0, limit);
+  return listLmraAssessments(companyId, filters, limit);
 }

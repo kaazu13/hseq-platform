@@ -200,11 +200,31 @@ export async function requireAnyRole(
  * this project at all," never "does this project belong to the company
  * named in this specific URL."
  */
+const PROJECT_ACCESS_COMPANY_WIDE_ROLES: RoleName[] = ["company_admin", "operations_manager"];
+
 export async function requireProjectAccess(
   projectId: string,
 ): Promise<{ user: User; projectId: string }> {
   const { user } = await requireUser();
   const supabase = await createClient();
+
+  // The docstring above has always promised a company-wide manager role
+  // bypasses the per-project assignment check (mirroring every
+  // project-scoped RLS policy's own `has_any_company_role(...) OR
+  // has_project_access(...)` shape) — this resolves the project's
+  // company_id and checks that first, so a company_admin/operations_manager
+  // is never blocked from a project they weren't individually assigned to,
+  // exactly as `has_project_access()`'s own comment says every RLS policy
+  // already ORs it with. `has_project_access()` itself deliberately stays
+  // narrow (see its comment) — the bypass belongs here, at the same layer
+  // every RLS policy already puts it.
+  const { data: project } = await supabase.from("projects").select("company_id").eq("id", projectId).maybeSingle();
+  if (project?.company_id) {
+    const roleNames = await getUserRoleNames(project.company_id);
+    if (roleNames.some((name) => PROJECT_ACCESS_COMPANY_WIDE_ROLES.includes(name))) {
+      return { user, projectId };
+    }
+  }
 
   const { data: hasAccess, error } = await supabase.rpc("has_project_access", {
     target_project_id: projectId,

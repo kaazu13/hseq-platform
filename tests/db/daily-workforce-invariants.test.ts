@@ -144,6 +144,29 @@ describe("daily workforce invariants", () => {
     expect(membership.removed_at).toBeNull();
   });
 
+  it("marking an employee holding two open team rows on the same date (different shifts) unavailable removes both, without crashing on a multi-row RETURNING", async () => {
+    const projectId = await createTestProject(companyA.companyId, "Double Shift Project");
+    const employeeId = await createTestEmployee(companyA.companyId, null, "Double", "Shift");
+    const workDate = "2026-08-10";
+
+    const [dayTeam] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Day Shift Team', 'day', null, null)`);
+    const [nightTeam] = await asUser(admin.userId, (tx) => tx`select * from save_daily_team(null, ${projectId}, ${workDate}, 'Night Shift Team', 'night', null, null)`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${dayTeam.id}, ${employeeId}, 'member')`);
+    await asUser(admin.userId, (tx) => tx`select * from move_daily_team_member(${projectId}, ${workDate}, ${nightTeam.id}, ${employeeId}, 'member')`);
+
+    const openRowsBefore = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = ${workDate} and employee_id = ${employeeId} and removed_at is null`;
+    expect(openRowsBefore).toHaveLength(2);
+
+    // Must not raise "query returned more than one row" — both open teams are still OPEN here, so both rows should be removed.
+    await asUser(admin.userId, (tx) => tx`select * from set_daily_attendance_status(${projectId}, ${employeeId}, ${workDate}, 'sick')`);
+
+    const openRowsAfter = await sql`select daily_team_id from daily_team_members where project_id = ${projectId} and work_date = ${workDate} and employee_id = ${employeeId} and removed_at is null`;
+    expect(openRowsAfter).toHaveLength(0);
+
+    const [attendance] = await sql`select status from daily_attendance where project_id = ${projectId} and employee_id = ${employeeId} and work_date = ${workDate}`;
+    expect(attendance.status).toBe("sick");
+  });
+
   it("unlocking requires a non-blank reason", async () => {
     const projectId = await createTestProject(companyA.companyId, "Unlock Reason Project");
     const workDate = "2026-08-10";
@@ -562,6 +585,36 @@ describe("daily workforce invariants", () => {
       await expect(
         asUser(admin.userId, (tx) => tx`select * from update_daily_team_with_foreman(${team.id}, ${projectId}, ${workDate}, 'Invalid Foreman Team', 'day', ${plainEmployeeId}, null, null)`),
       ).rejects.toMatchObject(RAISED_EXCEPTION);
+    });
+
+    it("audit fix (20260830095000): a raw UPDATE setting foreman_employee_id directly (bypassing update_daily_team_with_foreman()/create_daily_team_for_foreman() entirely) is re-validated for eligibility at the trigger level — but an unrelated field edit with the foreman untouched is still freely allowed", async () => {
+      const projectId = await createTestProject(companyA.companyId, "Foreman Direct Update Project");
+      const workDate = "2026-08-20";
+      const foreman = await createTestForeman(companyA.companyId, projectId, "Direct", "Update");
+      const plainEmployeeId = await createTestEmployee(companyA.companyId, null, "Not", "Eligible");
+      await asUser(admin.userId, (tx) => tx`select * from add_daily_team_foreman(${projectId}, ${workDate}, ${foreman.employeeId})`);
+      const [team] = await asUser(
+        admin.userId,
+        (tx) => tx`select * from create_daily_team_for_foreman(${projectId}, ${workDate}, ${foreman.employeeId}, 'Direct Update Team', 'day', null, null)`,
+      );
+
+      // A raw UPDATE bypassing both RPCs entirely, setting foreman_employee_id to an
+      // ineligible employee, is rejected by validate_daily_team_update() itself —
+      // mirrors validate_scaffold_update()'s identical responsible_foreman_id re-check.
+      await expect(sql`update daily_teams set foreman_employee_id = ${plainEmployeeId} where id = ${team.id}`).rejects.toMatchObject(
+        RAISED_EXCEPTION,
+      );
+      const [unchanged] = await sql`select foreman_employee_id from daily_teams where id = ${team.id}`;
+      expect(unchanged.foreman_employee_id).toBe(foreman.employeeId);
+
+      // An unrelated field edit (name), foreman column untouched, is still freely allowed —
+      // this fix does not re-validate eligibility on every edit, only when the foreman
+      // column itself actually changes.
+      await sql`update daily_teams set name = 'Renamed Directly' where id = ${team.id}`;
+      const [renamed] = await sql`select name, foreman_employee_id from daily_teams where id = ${team.id}`;
+      expect(renamed).toMatchObject({ name: "Renamed Directly", foreman_employee_id: foreman.employeeId });
+
+      await deleteTestUser(foreman.userId);
     });
 
     it("rejects a shift change that would conflict with another team's current member, atomically — nothing is partially updated, and the conflicting worker is unaffected", async () => {

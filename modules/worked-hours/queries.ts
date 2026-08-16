@@ -231,14 +231,30 @@ export type WorkedHoursArchiveDay = {
   submittedCount: number;
 };
 
-/** Every distinct date this project has recorded worked hours, newest first — the Worked Hours Archive view's list. */
+/**
+ * Every distinct date this project has recorded worked hours, newest first
+ * — the Worked Hours Archive view's list. Performance fix (operational
+ * audit): this previously fetched EVERY worked_hours row in the project's
+ * entire history unconditionally, then slice()d to `limit` distinct dates
+ * only after loading and aggregating all of it in memory — unbounded
+ * growth as a real project accumulates months/years of daily records. A
+ * `limit * 3` calendar-day lookback window bounds the query itself (a
+ * generous multiplier so gaps — weekends, non-working days — don't starve
+ * a project of its full requested archive depth) while still returning
+ * the same shape for any real, actively-used project; a long-dormant
+ * project's very old history simply won't appear in this recent-archive
+ * view, which matches the view's own purpose.
+ */
 export async function listWorkedHoursArchiveDays(companyId: string, projectId: string, limit = 60): Promise<WorkedHoursArchiveDay[]> {
   const supabase = await createClient();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - limit * 3);
   const { data: rows, error } = await supabase
     .from("worked_hours")
     .select("work_date, hours, status")
     .eq("company_id", companyId)
     .eq("project_id", projectId)
+    .gte("work_date", cutoff.toISOString().slice(0, 10))
     .order("work_date", { ascending: false });
   if (error) throw error;
   if (!rows || rows.length === 0) return [];
