@@ -188,6 +188,14 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Credited hours per employee per day — draft/submitted lifecycle, independent of Today's Teams locking. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/worked-hours`,
         matchSegment: "worked-hours",
+        roles: NON_EMPLOYEE_ROLES,
+      },
+      {
+        label: "My Hours",
+        href: "/my-hours",
+        icon: Clock,
+        status: "available",
+        description: "Your own worked hours — Day/Week/Month totals, category breakdown, correction history, and discrepancy reporting.",
       },
       {
         label: "Equipment",

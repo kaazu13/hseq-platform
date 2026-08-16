@@ -1,9 +1,11 @@
 import { PackageCheck } from "lucide-react";
 import type { EquipmentAssignmentWithDetail } from "@/modules/equipment/types";
-import { EQUIPMENT_ASSIGNMENT_STATUS_LABELS, EQUIPMENT_CONDITION_LABELS } from "@/modules/equipment/types";
+import { EQUIPMENT_ASSIGNMENT_STATUS_LABELS, EQUIPMENT_CONDITION_LABELS, describeEquipmentExpiry } from "@/modules/equipment/types";
 import { ReturnEquipmentDialog } from "@/modules/equipment/components/return-equipment-dialog";
+import { EditAssignmentExpiryDialog } from "@/modules/equipment/components/edit-assignment-expiry-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { SEMANTIC_TONE_TEXT_CLASSES } from "@/components/shared/status-tone";
 import { Card, CardContent } from "@/components/ui/card";
 
 function formatDate(value: string | null): string {
@@ -19,27 +21,35 @@ export function EquipmentIssuedView({ companyId, projectId, assignments, canMana
 
   return (
     <div className="flex flex-col gap-3">
-      {assignments.map((assignment) => (
-        <Card key={assignment.id}>
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-semibold">
-                {assignment.item.name}
-                {assignment.item.reference_number ? ` (${assignment.item.reference_number})` : ""}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {assignment.employee.first_name} {assignment.employee.last_name} · Qty {assignment.quantity} · Issued {formatDate(assignment.issued_at)}
-                {assignment.expected_return_at ? ` · Due back ${formatDate(assignment.expected_return_at)}` : ""}
-              </span>
-              <span className="text-xs text-muted-foreground">Condition at issue: {EQUIPMENT_CONDITION_LABELS[assignment.condition_at_issue]}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <StatusBadge tone={assignment.status === "active" ? "info" : assignment.status === "returned" ? "positive" : "negative"}>{EQUIPMENT_ASSIGNMENT_STATUS_LABELS[assignment.status]}</StatusBadge>
-              {canManage && assignment.status === "active" && <ReturnEquipmentDialog companyId={companyId} projectId={projectId} assignment={assignment} itemName={assignment.item.name} />}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {assignments.map((assignment) => {
+        const expiry = describeEquipmentExpiry(assignment.expires_at);
+        return (
+          <Card key={assignment.id}>
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-semibold">
+                  {assignment.item.name}
+                  {assignment.item.reference_number ? ` (${assignment.item.reference_number})` : ""}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {assignment.employee.first_name} {assignment.employee.last_name} · Qty {assignment.quantity} · Issued {formatDate(assignment.issued_at)}
+                  {assignment.expected_return_at ? ` · Due back ${formatDate(assignment.expected_return_at)}` : ""}
+                </span>
+                <span className="text-xs text-muted-foreground">Condition at issue: {EQUIPMENT_CONDITION_LABELS[assignment.condition_at_issue]}</span>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                  <span className="text-muted-foreground">{assignment.expires_at ? `Validity: expires ${formatDate(assignment.expires_at)}` : "Validity: No expiry set"}</span>
+                  {assignment.expires_at && <span className={SEMANTIC_TONE_TEXT_CLASSES[expiry.tone]}>{expiry.label}</span>}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <StatusBadge tone={assignment.status === "active" ? "info" : assignment.status === "returned" ? "positive" : "negative"}>{EQUIPMENT_ASSIGNMENT_STATUS_LABELS[assignment.status]}</StatusBadge>
+                {canManage && assignment.status === "active" && <EditAssignmentExpiryDialog companyId={companyId} projectId={projectId} assignment={assignment} itemName={assignment.item.name} />}
+                {canManage && assignment.status === "active" && <ReturnEquipmentDialog companyId={companyId} projectId={projectId} assignment={assignment} itemName={assignment.item.name} />}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

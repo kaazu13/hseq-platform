@@ -19,6 +19,7 @@ export const createEquipmentItemSchema = z.object({
   condition: conditionSchema,
   location: optionalText,
   notes: optionalText,
+  defaultValidityDays: z.coerce.number().int().min(1).max(36500).optional(),
 });
 export type CreateEquipmentItemInput = z.infer<typeof createEquipmentItemSchema>;
 
@@ -33,6 +34,7 @@ export const updateEquipmentItemSchema = z.object({
   specification: optionalText,
   location: optionalText,
   notes: optionalText,
+  defaultValidityDays: z.coerce.number().int().min(1).max(36500).optional(),
 });
 export type UpdateEquipmentItemInput = z.infer<typeof updateEquipmentItemSchema>;
 
@@ -47,8 +49,24 @@ export const issueEquipmentSchema = z.object({
     .optional()
     .or(z.literal("")),
   note: optionalText,
+  expiresAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
+  useDefaultValidity: z.boolean().optional(),
 });
 export type IssueEquipmentInput = z.infer<typeof issueEquipmentSchema>;
+
+export const updateEquipmentAssignmentExpirySchema = z.object({
+  expiresAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
+  reason: optionalText,
+});
+export type UpdateEquipmentAssignmentExpiryInput = z.infer<typeof updateEquipmentAssignmentExpirySchema>;
 
 export const returnEquipmentSchema = z.object({
   returnedQuantity: z.coerce.number().int().min(1).max(100000),

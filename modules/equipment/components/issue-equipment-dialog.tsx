@@ -10,6 +10,7 @@ import { EquipmentItemCombobox, toEquipmentItemOptions, type EquipmentItemOption
 import { EmployeeCombobox } from "@/components/shared/employee-combobox";
 import type { EmployeeOption } from "@/modules/employees/employee-options";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,8 +54,11 @@ export function IssueEquipmentDialog({ companyId, projectId, items, employees, f
   const [issuedAt, setIssuedAt] = useState(todayIso());
   const [expectedReturnAt, setExpectedReturnAt] = useState("");
   const [note, setNote] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [useDefaultValidity, setUseDefaultValidity] = useState(true);
 
   const selectedItem: EquipmentItemOption | undefined = itemOptions.find((option) => option.value === itemId);
+  const selectedFullItem = items.find((candidate) => candidate.id === itemId);
   const isLocked = Boolean(fulfillRequest);
 
   function handleSubmit() {
@@ -75,6 +79,8 @@ export function IssueEquipmentDialog({ companyId, projectId, items, employees, f
           issuedAt,
           expectedReturnAt: expectedReturnAt || undefined,
           note: note || undefined,
+          expiresAt: expiresAt || undefined,
+          useDefaultValidity,
         },
         fulfillRequest?.id,
       );
@@ -155,6 +161,24 @@ export function IssueEquipmentDialog({ companyId, projectId, items, employees, f
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="issue-note">Note</Label>
             <Textarea id="issue-note" rows={2} value={note} onChange={(event) => setNote(event.target.value)} />
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-md border p-3">
+            <Label>Validity / expiry</Label>
+            {selectedFullItem?.default_validity_days ? (
+              <div className="flex items-start gap-2">
+                <Checkbox id="issue-use-default-validity" checked={useDefaultValidity} onCheckedChange={(checked) => setUseDefaultValidity(checked === true)} />
+                <Label htmlFor="issue-use-default-validity" className="font-normal">
+                  Use this item&apos;s default validity ({selectedFullItem.default_validity_days} days from the issue date)
+                </Label>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">This item has no default validity — set an expiry below, or leave blank for none.</p>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="issue-expires-at">{selectedFullItem?.default_validity_days && useDefaultValidity ? "Override expiry (optional)" : "Expiry date (optional)"}</Label>
+              <Input id="issue-expires-at" type="date" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} />
+            </div>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

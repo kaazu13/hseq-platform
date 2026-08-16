@@ -312,3 +312,18 @@ export async function requirePlatformSuperAdmin(): Promise<{ user: User }> {
 
   return { user };
 }
+
+/**
+ * Non-throwing "is the signed-in caller a platform-level administrator"
+ * check — same underlying `is_platform_super_admin()` RPC as
+ * `requirePlatformSuperAdmin()`, for call sites that need to OR a
+ * platform-wide bypass into an otherwise company-scoped permission check
+ * (e.g. Part 9's equipment/PPE "platform_super_admin: global authority")
+ * rather than unconditionally denying.
+ */
+export async function isPlatformSuperAdmin(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("is_platform_super_admin");
+  if (error) throw error;
+  return data ?? false;
+}

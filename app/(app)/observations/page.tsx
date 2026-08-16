@@ -74,7 +74,7 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <CreateSuccessToast paramName="created" buildMessage={() => "Observation submitted successfully."} buildViewHref={(id) => `/observations/${id}`} viewLabel="View observation" />
+      <CreateSuccessToast paramName="created" message="Observation submitted successfully." viewHrefTemplate="/observations/{value}" viewLabel="View observation" />
       <PageHeader
         title={isPlainEmployee ? "My Observations" : "Safety Observations"}
         description={isPlainEmployee ? "Safety observations that are about you." : "Site safety observations — positive recognition and safety issues."}

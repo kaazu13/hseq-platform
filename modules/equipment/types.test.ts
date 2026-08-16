@@ -4,6 +4,7 @@ import {
   equipmentConditionTone,
   equipmentRequestStatusTone,
   equipmentIssuedQuantity,
+  describeEquipmentExpiry,
   EQUIPMENT_STATUSES,
   EQUIPMENT_CONDITIONS,
   EQUIPMENT_REQUEST_STATUSES,
@@ -78,6 +79,42 @@ describe("equipmentIssuedQuantity", () => {
 
   it("never goes negative even if available_quantity is somehow greater (defensive floor)", () => {
     expect(equipmentIssuedQuantity({ quantity: 3, available_quantity: 5 })).toBe(0);
+  });
+});
+
+describe("describeEquipmentExpiry — Part 8's exact semantic rules", () => {
+  const today = new Date("2026-08-16T12:00:00Z");
+
+  it("no expiry set -> gray/neutral", () => {
+    expect(describeEquipmentExpiry(null, today)).toEqual({ label: "No expiry set", tone: "neutral" });
+  });
+
+  it("more than 30 days remaining -> plain 'N days remaining', positive/green", () => {
+    // 2026-08-16 + 128 days = 2026-12-22
+    expect(describeEquipmentExpiry("2026-12-22", today)).toEqual({ label: "128 days remaining", tone: "positive" });
+  });
+
+  it("exactly 31 days remaining is still the green/positive branch (boundary)", () => {
+    expect(describeEquipmentExpiry("2026-09-16", today)).toEqual({ label: "31 days remaining", tone: "positive" });
+  });
+
+  it("30 days or fewer remaining -> 'Expires in N days', attention/orange", () => {
+    // 2026-08-16 + 18 days = 2026-09-03
+    expect(describeEquipmentExpiry("2026-09-03", today)).toEqual({ label: "Expires in 18 days", tone: "attention" });
+  });
+
+  it("expiring today (0 days remaining) is still the orange 'expires in' branch, not expired", () => {
+    expect(describeEquipmentExpiry("2026-08-16", today)).toEqual({ label: "Expires in 0 days", tone: "attention" });
+  });
+
+  it("already past -> 'Expired N days ago', negative/red", () => {
+    // 2026-08-16 - 4 days = 2026-08-12
+    expect(describeEquipmentExpiry("2026-08-12", today)).toEqual({ label: "Expired 4 days ago", tone: "negative" });
+  });
+
+  it("singular day wording for exactly 1", () => {
+    expect(describeEquipmentExpiry("2026-08-17", today)).toEqual({ label: "Expires in 1 day", tone: "attention" });
+    expect(describeEquipmentExpiry("2026-08-15", today)).toEqual({ label: "Expired 1 day ago", tone: "negative" });
   });
 });
 

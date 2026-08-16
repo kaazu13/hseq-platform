@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, forbidden } from "next/navigation";
 import { UserX } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
@@ -46,6 +46,15 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
   }
 
   const [roleNames, myProjectRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
+  // Employee-role correction pass 2: this page had no role gate at all —
+  // any project member, including a plain employee, could reach it by URL
+  // and see every OTHER employee's absence status, self-reported absence
+  // reports, and an always-rendered Export button. Every other role's
+  // behavior here is deliberately left untouched — this task is scoped to
+  // Employee only.
+  if (isEmployeeOnlyAccount(roleNames)) {
+    forbidden();
+  }
   const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
 
   const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayIsoDate();

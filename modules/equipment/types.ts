@@ -72,6 +72,7 @@ export const EQUIPMENT_HISTORY_EVENT_LABELS: Record<EquipmentHistoryEvent, strin
   recovered: "Recovered",
   out_of_service: "Out of service",
   retired: "Retired",
+  expiry_updated: "Expiry updated",
 };
 
 /**
@@ -140,7 +141,41 @@ export function equipmentIssuedQuantity(item: Pick<EquipmentItem, "quantity" | "
 export type EquipmentAssignmentWithDetail = EquipmentAssignment & {
   employee: BasicEmployee;
   item: Pick<EquipmentItem, "id" | "name" | "reference_number" | "category" | "tracking_mode">;
+  issuedByName: string | null;
 };
+
+/**
+ * Part 8: expiry/days-remaining display — exact semantic rules, fixed
+ * colors never bound to the user's accent theme (SemanticTone, same
+ * convention as every other status in this codebase). `today` is
+ * injectable for tests; defaults to the real current date.
+ *
+ * >30 days remaining -> "128 days remaining" (positive/green, implicit
+ * valid). <=30 days remaining (including 0, i.e. expires today) ->
+ * "Expires in N days" (attention/orange). Already past -> "Expired N days
+ * ago" (negative/red). No expiry set -> "No expiry set" (neutral/gray).
+ */
+export function describeEquipmentExpiry(expiresAt: string | null, today: Date = new Date()): { label: string; tone: "positive" | "attention" | "negative" | "neutral" } {
+  if (!expiresAt) {
+    return { label: "No expiry set", tone: "neutral" };
+  }
+
+  // Local calendar-date arithmetic (UTC midnight anchors, matching this
+  // codebase's established `${value}T00:00:00Z` convention) — never
+  // affected by the caller's wall-clock time of day.
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const expiresUtc = Date.parse(`${expiresAt}T00:00:00Z`);
+  const daysRemaining = Math.round((expiresUtc - todayUtc) / 86_400_000);
+
+  if (daysRemaining < 0) {
+    const daysAgo = -daysRemaining;
+    return { label: `Expired ${daysAgo} ${daysAgo === 1 ? "day" : "days"} ago`, tone: "negative" };
+  }
+  if (daysRemaining <= 30) {
+    return { label: `Expires in ${daysRemaining} ${daysRemaining === 1 ? "day" : "days"}`, tone: "attention" };
+  }
+  return { label: `${daysRemaining} days remaining`, tone: "positive" };
+}
 
 export type EquipmentRequestWithDetail = EquipmentRequest & {
   employee: BasicEmployee;

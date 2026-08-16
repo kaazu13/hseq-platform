@@ -1277,6 +1277,7 @@ export type Database = {
           employee_id: string
           equipment_item_id: string
           expected_return_at: string | null
+          expires_at: string | null
           id: string
           issued_at: string
           issued_by: string | null
@@ -1299,6 +1300,7 @@ export type Database = {
           employee_id: string
           equipment_item_id: string
           expected_return_at?: string | null
+          expires_at?: string | null
           id?: string
           issued_at?: string
           issued_by?: string | null
@@ -1321,6 +1323,7 @@ export type Database = {
           employee_id?: string
           equipment_item_id?: string
           expected_return_at?: string | null
+          expires_at?: string | null
           id?: string
           issued_at?: string
           issued_by?: string | null
@@ -1451,6 +1454,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -1475,6 +1479,7 @@ export type Database = {
           condition?: Database["public"]["Enums"]["equipment_condition"]
           created_at?: string
           created_by?: string | null
+          default_validity_days?: number | null
           description?: string | null
           id?: string
           location?: string | null
@@ -1499,6 +1504,7 @@ export type Database = {
           condition?: Database["public"]["Enums"]["equipment_condition"]
           created_at?: string
           created_by?: string | null
+          default_validity_days?: number | null
           description?: string | null
           id?: string
           location?: string | null
@@ -5324,6 +5330,7 @@ export type Database = {
           target_category: string
           target_company_id: string
           target_condition?: Database["public"]["Enums"]["equipment_condition"]
+          target_default_validity_days?: number
           target_description?: string
           target_location?: string
           target_manufacturer?: string
@@ -5344,6 +5351,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -5520,6 +5528,14 @@ export type Database = {
           target_employee_id: string
           target_organization_id: string
         }
+        Returns: boolean
+      }
+      employee_is_involved_in_lmra: {
+        Args: { target_employee_id: string; target_lmra_assessment_id: string }
+        Returns: boolean
+      }
+      employee_is_on_daily_team: {
+        Args: { target_daily_team_id: string }
         Returns: boolean
       }
       employee_matches_filters: {
@@ -5729,11 +5745,13 @@ export type Database = {
           target_condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
           target_employee_id: string
           target_expected_return_at?: string
+          target_expires_at?: string
           target_issued_at?: string
           target_item_id: string
           target_note?: string
           target_quantity: number
           target_request_id?: string
+          target_use_default_validity?: boolean
         }
         Returns: {
           company_id: string
@@ -5745,6 +5763,7 @@ export type Database = {
           employee_id: string
           equipment_item_id: string
           expected_return_at: string | null
+          expires_at: string | null
           id: string
           issued_at: string
           issued_by: string | null
@@ -5879,6 +5898,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -5916,6 +5936,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -6264,6 +6285,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -6671,6 +6693,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -6712,6 +6735,7 @@ export type Database = {
           employee_id: string
           equipment_item_id: string
           expected_return_at: string | null
+          expires_at: string | null
           id: string
           issued_at: string
           issued_by: string | null
@@ -6983,6 +7007,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -7149,9 +7174,46 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_equipment_assignment_expiry: {
+        Args: {
+          target_assignment_id: string
+          target_expires_at?: string
+          target_reason?: string
+        }
+        Returns: {
+          company_id: string
+          condition_at_issue: Database["public"]["Enums"]["equipment_condition"]
+          condition_at_return:
+            | Database["public"]["Enums"]["equipment_condition"]
+            | null
+          created_at: string
+          employee_id: string
+          equipment_item_id: string
+          expected_return_at: string | null
+          expires_at: string | null
+          id: string
+          issued_at: string
+          issued_by: string | null
+          note: string | null
+          quantity: number
+          return_note: string | null
+          returned_at: string | null
+          returned_by: string | null
+          status: Database["public"]["Enums"]["equipment_assignment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_equipment_item: {
         Args: {
           target_category: string
+          target_default_validity_days?: number
           target_description?: string
           target_item_id: string
           target_location?: string
@@ -7171,6 +7233,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          default_validity_days: number | null
           description: string | null
           id: string
           location: string | null
@@ -7464,6 +7527,7 @@ export type Database = {
         | "recovered"
         | "out_of_service"
         | "retired"
+        | "expiry_updated"
       equipment_request_status:
         | "pending"
         | "approved"
@@ -7886,6 +7950,7 @@ export const Constants = {
         "recovered",
         "out_of_service",
         "retired",
+        "expiry_updated",
       ],
       equipment_request_status: [
         "pending",

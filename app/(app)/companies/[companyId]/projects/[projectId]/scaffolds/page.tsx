@@ -66,8 +66,8 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <CreateSuccessToast
         paramName="created"
-        buildMessage={(id, params) => `Scaffold ${params.get("tag") ?? ""} registered successfully.`}
-        buildViewHref={(id) => `${basePath}/${id}`}
+        message="Scaffold {param:tag} registered successfully."
+        viewHrefTemplate={`${basePath}/{value}`}
         viewLabel="View scaffold"
       />
       <PageHeader

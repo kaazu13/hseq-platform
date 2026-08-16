@@ -43,6 +43,7 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
   const [condition, setCondition] = useState(item?.condition ?? "new");
   const [location, setLocation] = useState(item?.location ?? "");
   const [notes, setNotes] = useState(item?.notes ?? "");
+  const [defaultValidityDays, setDefaultValidityDays] = useState(item?.default_validity_days ? String(item.default_validity_days) : "");
 
   function handleSubmit() {
     setError(null);
@@ -60,6 +61,7 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
             specification: specification || undefined,
             location: location || undefined,
             notes: notes || undefined,
+            defaultValidityDays: defaultValidityDays ? Number(defaultValidityDays) : undefined,
           })
         : await createEquipmentItem(companyId, projectId, {
             projectId: targetProjectId,
@@ -75,6 +77,7 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
             condition: condition as EquipmentItem["condition"],
             location: location || undefined,
             notes: notes || undefined,
+            defaultValidityDays: defaultValidityDays ? Number(defaultValidityDays) : undefined,
           });
 
       if (!result.ok) {
@@ -222,6 +225,19 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
                 <SelectItem value="company">Company-wide inventory</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="eq-default-validity">Default validity (days)</Label>
+            <Input
+              id="eq-default-validity"
+              type="number"
+              min={1}
+              max={36500}
+              value={defaultValidityDays}
+              onChange={(event) => setDefaultValidityDays(event.target.value)}
+              placeholder="Leave blank for no expiry (e.g. 365 for annual PPE)"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

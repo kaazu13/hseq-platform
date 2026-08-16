@@ -5,7 +5,7 @@ import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { listWorkedHoursHistoryForEmployee, listMyWorkedHoursDiscrepancies, listWorkedHoursCorrections } from "@/modules/worked-hours/queries";
-import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, type WorkedHoursPeriodMode } from "@/modules/worked-hours/period";
+import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, countDaysWorked, type WorkedHoursPeriodMode } from "@/modules/worked-hours/period";
 import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, toWorkedHoursCategoryBreakdown, sumWorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { MyHoursRow } from "@/modules/worked-hours/components/my-hours-row";
 import { PageHeader } from "@/components/shared/page-header";
@@ -88,9 +88,12 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
 
   const totalHours = rows.reduce((sum, row) => sum + Number(row.hours), 0);
   const periodCategoryTotals = toWorkedHoursCategoryBreakdown([]);
+  const hoursByDate: Record<string, number> = {};
   for (const row of rows) {
     for (const category of WORKED_HOURS_CATEGORIES) periodCategoryTotals[category] += row.breakdown[category];
+    hoursByDate[row.work_date] = (hoursByDate[row.work_date] ?? 0) + Number(row.hours);
   }
+  const daysWorked = countDaysWorked(hoursByDate);
   const basePath = "/my-hours";
   const prevDate = shiftDate(anchorDate, mode, -1);
   const nextDate = shiftDate(anchorDate, mode, 1);
@@ -138,6 +141,9 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
                     {WORKED_HOURS_CATEGORY_LABELS[category]} <span className="font-medium text-foreground tabular-nums">{periodCategoryTotals[category].toFixed(1)}h</span>
                   </span>
                 ))}
+                <span className="text-muted-foreground">
+                  Days worked <span className="font-medium text-foreground tabular-nums">{daysWorked}</span>
+                </span>
                 <span className="ml-auto font-semibold">
                   Grand Total <span className="text-lg tabular-nums">{sumWorkedHoursCategoryBreakdown(periodCategoryTotals).toFixed(1)}h</span>
                 </span>

@@ -400,6 +400,17 @@ async function main() {
   const foremanEmployeeId = employeeIdByRole.get("foreman");
   if (!foremanEmployeeId) throw new Error("No 'foreman' role found in the live catalogue — cannot build foreman-dependent fixtures.");
   await ensureStaticTeamWithForeman(companyId, projectId, foremanEmployeeId);
+  // Part 15 fixture-quality fix: Test Foreman previously had ONLY the
+  // older static team_assignments row above — no project_assignments row
+  // at all (project_assignment_role has no 'foreman' value; 'member' is
+  // the closest fit, same as Test Employee's own row). Without one,
+  // is_project_teammate() (the authorization check inside
+  // get_basic_employee_info(), the one sanctioned channel for resolving a
+  // teammate's display name) never matched Test Employee<->Test Foreman —
+  // confirmed live: their name silently failed to resolve, so Today's
+  // Team's "Foreman" line rendered nothing even once daily_teams.
+  // foreman_employee_id itself was correctly set (see this run's report).
+  await ensureProjectAssignment(companyId, projectId, foremanEmployeeId, "member", "Test Foreman");
 
   // NOTE: daily_teams/daily_team_members/scaffolds/lmra_assessments/
   // scaffold_inspections/safety_observations/equipment_items fixture rows
@@ -410,6 +421,22 @@ async function main() {
   // scoped to this exact company/project id — see this run's own final
   // report for the one-time SQL used. This script remains safely re-
   // runnable for the auth/membership/employee/role layer only.
+  //
+  // Second Employee-role correction pass, Part 15 (fixture quality only,
+  // same one-time `supabase db query --linked --file` mechanism, run once
+  // more): fixed the original TEST Today's Team's `daily_teams.
+  // foreman_employee_id` (was null — the fixture's one-time creation only
+  // ever wrote the OLDER daily_team_members role='foreman' row, predating
+  // the foreman_employee_id column the app actually reads from, which is
+  // why the team card showed "No Foreman Assigned") to Test Foreman's
+  // employee id; and added a second daily_teams row ("TEST Second Team
+  // (negative-visibility fixture)", same project/date, a different worker
+  // — Test Recruiter — and no foreman, since validate_daily_team_
+  // foreman_eligibility requires foreman_employee_id to reference an
+  // employee who genuinely holds the foreman role on this project, and
+  // this fixture company has only one such account) specifically so
+  // Employee-role visibility tests have a real "another team I must NOT
+  // see" fixture to assert against, not just the one team they're on.
 
   console.log("\n=== SUMMARY ===");
   const counts = report.reduce<Record<Action, number>>((acc, r) => ({ ...acc, [r.action]: (acc[r.action] ?? 0) + 1 }), { created: 0, reused: 0, skipped: 0, updated: 0 });

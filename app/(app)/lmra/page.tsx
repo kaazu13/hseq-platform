@@ -144,7 +144,7 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <CreateSuccessToast paramName="created" buildMessage={() => "LMRA saved successfully."} buildViewHref={(id) => `/lmra/${id}`} viewLabel="View LMRA" />
+      <CreateSuccessToast paramName="created" message="LMRA saved successfully." viewHrefTemplate="/lmra/{value}" viewLabel="View LMRA" />
       <PageHeader
         title="LMRA"
         description={`${project.name} · Last Minute Risk Assessments — a go/no-go check completed before starting work.`}

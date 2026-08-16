@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HardHat, Lock } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
-import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster } from "@/modules/daily-workforce/queries";
+import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster, getEmployeeTodayCard, getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
 import { groupTeamsByForemanRoster, DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
@@ -13,12 +13,14 @@ import { ForemanSection } from "@/modules/daily-workforce/components/foreman-sec
 import { AddForemanButton } from "@/modules/daily-workforce/components/add-foreman-button";
 import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/export-daily-teams-button";
 import { CopyTeamsDialog } from "@/modules/daily-workforce/components/copy-teams-dialog";
+import { EmployeeDailyTeamCard } from "@/modules/daily-workforce/components/employee-daily-team-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { AutoRefresh } from "@/components/shared/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 type TeamsPageProps = {
   params: Promise<{ companyId: string; projectId: string }>;
@@ -63,6 +65,51 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
 
   const basePath = `/companies/${companyId}/projects/${projectId}/teams`;
   const todayDate = todayIsoDate();
+
+  // Part 3 (second Employee correction pass): a plain employee gets a
+  // genuine personal view here — their own team for the selected date
+  // only, never the Workforce/Absent Today/Holiday-Leave tabs, Archive
+  // browsing, Export, or any other team's roster. Scoped server-side via
+  // getEmployeeTodayCard (queried by employee_id, never client-trusted)
+  // and daily_teams_select/daily_team_members_select RLS underneath it —
+  // not a UI-only filter. Checked and returned before any of the
+  // management branches below so no management data is ever fetched for
+  // this caller.
+  if (isEmployeeOnlyAccount(roleNames)) {
+    const employeeWorkDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayDate;
+    const myEmployeeId = await getMyEmployeeId(companyId, user.id);
+
+    if (!myEmployeeId) {
+      return (
+        <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+          <PageHeader title="Today's Team" description={project.name} />
+          <EmptyState icon={HardHat} title="No linked employee record" description="Contact your administrator to link your account to an employee record." className="flex-1" />
+        </div>
+      );
+    }
+
+    const todayCard = await getEmployeeTodayCard(companyId, projectId, myEmployeeId, employeeWorkDate);
+    const lmraEntries = todayCard.team ? (await listLmraCountsByDailyTeamId(companyId, projectId, employeeWorkDate)).get(todayCard.team.id) ?? [] : [];
+
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <PageHeader title="Today's Team" description={`${formatWorkDate(employeeWorkDate)} · ${project.name}`} actions={<RefreshButton />} />
+
+        <form action={basePath} method="GET" className="flex items-center gap-2">
+          <Input type="date" name="date" defaultValue={employeeWorkDate} className="w-auto" aria-label="Select date" />
+          <button type="submit" className="sr-only">
+            Go
+          </button>
+        </form>
+
+        {todayCard.team ? (
+          <EmployeeDailyTeamCard workDate={employeeWorkDate} team={todayCard.team} lmraEntries={lmraEntries} />
+        ) : (
+          <EmptyState icon={HardHat} title="No team assigned to you for this date" className="flex-1" />
+        )}
+      </div>
+    );
+  }
 
   if (urlParams.view === "archive") {
     const archiveDays = await listDailyTeamsArchiveDays(companyId, projectId);

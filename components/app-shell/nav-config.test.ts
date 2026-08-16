@@ -248,6 +248,10 @@ describe("Employee-role correction: management/aggregate nav items are hidden fr
     "Documents",
     "Reports",
     "Certificates",
+    // Second Employee correction pass (Part 4): the management Worked
+    // Hours page just showed Employee a bare "Not available" empty state —
+    // replaced in navigation by the dedicated "My Hours" item below.
+    "Worked Hours",
   ];
 
   it.each(EMPLOYEE_HIDDEN_LABELS)("'%s' has a roles array that excludes 'employee'", (label) => {
@@ -257,8 +261,8 @@ describe("Employee-role correction: management/aggregate nav items are hidden fr
     expect(item.roles).not.toContain("employee");
   });
 
-  it("Employee still has no roles array (visible) on LMRA, Toolbox Meetings, Safety Flash, Safety Observations, Today's Teams, Worked Hours", () => {
-    for (const label of ["LMRA", "Toolbox Meetings", "Safety Observations", "Today's Teams", "Worked Hours"]) {
+  it("Employee still has no roles array (visible) on LMRA, Toolbox Meetings, Safety Flash, Safety Observations, Today's Teams, My Hours", () => {
+    for (const label of ["LMRA", "Toolbox Meetings", "Safety Observations", "Today's Teams", "My Hours"]) {
       const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
       expect(item).toBeDefined();
       expect(item.roles).toBeUndefined();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { canManageEquipment } from "@/modules/equipment/permissions";
@@ -26,8 +26,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [roleNames, myProjectAssignmentRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
-  if (!canManageEquipment(roleNames, projectId, myProjectAssignmentRoles)) {
+  const [roleNames, myProjectAssignmentRoles, isSuperAdmin] = await Promise.all([
+    getUserRoleNames(companyId),
+    getMyProjectAssignmentRoles(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
+  ]);
+  if (!isSuperAdmin && !canManageEquipment(roleNames, projectId, myProjectAssignmentRoles)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

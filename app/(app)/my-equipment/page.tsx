@@ -1,17 +1,17 @@
-import Link from "next/link";
 import { Wrench } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
-import { listMyEquipmentAssignments, listMyEquipmentRequests } from "@/modules/equipment/queries";
-import { EQUIPMENT_ASSIGNMENT_STATUS_LABELS, EQUIPMENT_REQUEST_STATUS_LABELS, EQUIPMENT_CONDITION_LABELS, equipmentRequestStatusTone } from "@/modules/equipment/types";
+import { listMyEquipmentAssignments, listMyEquipmentRequests, listEquipmentCandidateItems } from "@/modules/equipment/queries";
+import { EQUIPMENT_ASSIGNMENT_STATUS_LABELS, EQUIPMENT_REQUEST_STATUS_LABELS, EQUIPMENT_CONDITION_LABELS, equipmentRequestStatusTone, describeEquipmentExpiry } from "@/modules/equipment/types";
+import { RequestEquipmentDialog } from "@/modules/equipment/components/request-equipment-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { SEMANTIC_TONE_TEXT_CLASSES } from "@/components/shared/status-tone";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -58,18 +58,15 @@ export default async function MyEquipmentPage() {
     );
   }
 
-  const [assignments, requests] = await Promise.all([listMyEquipmentAssignments(currentCompanyId, myEmployeeId), listMyEquipmentRequests(currentCompanyId, myEmployeeId)]);
+  const [assignments, requests, candidateItems] = await Promise.all([
+    listMyEquipmentAssignments(currentCompanyId, myEmployeeId),
+    listMyEquipmentRequests(currentCompanyId, myEmployeeId),
+    listEquipmentCandidateItems(currentCompanyId, currentProjectId),
+  ]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader
-        title="My Equipment"
-        actions={
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/companies/${currentCompanyId}/projects/${currentProjectId}/equipment`} />}>
-            View project equipment
-          </Button>
-        }
-      />
+      <PageHeader title="My Equipment" actions={<RequestEquipmentDialog companyId={currentCompanyId} projectId={currentProjectId} candidateItems={candidateItems} />} />
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="Currently issued" />
@@ -77,22 +74,32 @@ export default async function MyEquipmentPage() {
           <EmptyState icon={Wrench} title="Nothing issued to you right now" description="Equipment issued to you will appear here." />
         ) : (
           <div className="flex flex-col gap-2">
-            {assignments.map((assignment) => (
-              <Card key={assignment.id}>
-                <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-4">
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-medium">
-                      {assignment.item.name}
-                      {assignment.item.reference_number ? ` (${assignment.item.reference_number})` : ""}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Qty {assignment.quantity} · Issued {formatDate(assignment.issued_at)} · Condition at issue: {EQUIPMENT_CONDITION_LABELS[assignment.condition_at_issue]}
-                    </span>
+            {assignments.map((assignment) => {
+              const expiry = describeEquipmentExpiry(assignment.expires_at);
+              return (
+                <div key={assignment.id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="font-medium">{assignment.item.name}</span>
+                      <span className="text-xs text-muted-foreground">{assignment.item.category}</span>
+                      {assignment.item.reference_number && <span className="text-xs text-muted-foreground">Ref {assignment.item.reference_number}</span>}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>Issued {formatDate(assignment.issued_at)}{assignment.issuedByName ? ` by ${assignment.issuedByName}` : ""}</span>
+                      {assignment.item.tracking_mode === "quantity" && <span>Qty {assignment.quantity}</span>}
+                      <span>Condition: {EQUIPMENT_CONDITION_LABELS[assignment.condition_at_issue]}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                      <span className="text-muted-foreground">{assignment.expires_at ? `Validity: expires ${formatDate(assignment.expires_at)}` : "Validity: No expiry set"}</span>
+                      {assignment.expires_at && <span className={SEMANTIC_TONE_TEXT_CLASSES[expiry.tone]}>{expiry.label}</span>}
+                    </div>
                   </div>
-                  <StatusBadge tone="info">{EQUIPMENT_ASSIGNMENT_STATUS_LABELS[assignment.status]}</StatusBadge>
-                </CardContent>
-              </Card>
-            ))}
+                  <StatusBadge tone="info" className="w-fit shrink-0">
+                    {EQUIPMENT_ASSIGNMENT_STATUS_LABELS[assignment.status]}
+                  </StatusBadge>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

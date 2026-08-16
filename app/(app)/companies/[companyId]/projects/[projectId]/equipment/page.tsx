@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Download, Wrench } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { canManageEquipment } from "@/modules/equipment/permissions";
@@ -62,10 +62,11 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
     notFound();
   }
 
-  const [roleNames, myProjectAssignmentRoles, myEmployeeId] = await Promise.all([
+  const [roleNames, myProjectAssignmentRoles, myEmployeeId, isSuperAdmin] = await Promise.all([
     getUserRoleNames(companyId),
     getMyProjectAssignmentRoles(companyId, projectId, user.id),
     getMyEmployeeId(companyId, user.id),
+    isPlatformSuperAdmin(),
   ]);
 
   // Employee-role correction: this is the management inventory/issue/
@@ -77,7 +78,9 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
     redirect("/my-equipment");
   }
 
-  const canManage = canManageEquipment(roleNames, projectId, myProjectAssignmentRoles);
+  // Part 9: platform_super_admin has global equipment authority — same OR
+  // treatment as every other manage-tier check in this domain.
+  const canManage = isSuperAdmin || canManageEquipment(roleNames, projectId, myProjectAssignmentRoles);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/equipment`;
   const tab = TABS.some((t) => t.key === urlParams.tab) ? urlParams.tab! : "inventory";
@@ -125,8 +128,33 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
       </div>
     );
   } else if (tab === "issued") {
-    const assignments = await listEquipmentAssignments(companyId, projectId);
-    body = <EquipmentIssuedView companyId={companyId} projectId={projectId} assignments={assignments} canManage={canManage} />;
+    const expiryFilter = urlParams.expiry === "expiring_soon" || urlParams.expiry === "expired" ? urlParams.expiry : "all";
+    const assignments = await listEquipmentAssignments(companyId, projectId, { expiry: expiryFilter });
+    body = (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { key: "all", label: "All" },
+              { key: "expiring_soon", label: "Expiring soon" },
+              { key: "expired", label: "Expired" },
+            ] as const
+          ).map((option) => (
+            <Link
+              key={option.key}
+              href={option.key === "all" ? tabHref("issued") : `${tabHref("issued")}&expiry=${option.key}`}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                expiryFilter === option.key ? "border-primary bg-primary/10 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </div>
+        <EquipmentIssuedView companyId={companyId} projectId={projectId} assignments={assignments} canManage={canManage} />
+      </div>
+    );
   } else if (tab === "requests") {
     if (!canManage) {
       body = <p className="text-sm text-muted-foreground">You don&apos;t have access to review equipment requests for this project.</p>;

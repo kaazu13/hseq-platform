@@ -11,6 +11,7 @@ import type {
   EquipmentRequestStatus,
   BasicEmployee,
 } from "./types";
+import { describeEquipmentExpiry } from "./types";
 
 /**
  * Server-only data access for the Equipment domain — see
@@ -150,9 +151,21 @@ async function resolveEmployeesById(companyId: string, employeeIds: string[]): P
   return new Map((data ?? []).map((e) => [e.id, e]));
 }
 
+/** Resolves "issued by" display names — same sanctioned channel as modules/leave-requests/queries.ts's resolveDeciderNames (get_basic_profile_info), scoped to companyId. */
+async function resolveProfileNames(companyId: string, userIds: string[]): Promise<Map<string, string>> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return new Map();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_basic_profile_info", { target_company_id: companyId, target_user_ids: ids });
+  if (error) throw error;
+  return new Map((data ?? []).map((row) => [row.id, row.full_name]));
+}
+
 export type EquipmentAssignmentListFilters = {
   status?: "active" | "returned" | "lost" | "written_off" | "all";
   search?: string;
+  /** Part 10's "Expiring soon / Expired" quick filters — computed in JS from expires_at (describeEquipmentExpiry's own thresholds), not a DB column filter. */
+  expiry?: "all" | "expiring_soon" | "expired";
 };
 
 /** The "Issued" tab — every assignment for items in `projectId`'s context, resolved with employee + item display fields. */
@@ -175,13 +188,14 @@ export async function listEquipmentAssignments(companyId: string, projectId: str
   if (assignmentsError) throw assignmentsError;
 
   const employeeById = await resolveEmployeesById(companyId, (assignmentRows ?? []).map((row) => row.employee_id));
+  const issuedByNameById = await resolveProfileNames(companyId, (assignmentRows ?? []).map((row) => row.issued_by).filter((id): id is string => Boolean(id)));
 
   return (assignmentRows ?? [])
     .map((row) => {
       const employee = employeeById.get(row.employee_id);
       const item = itemById.get(row.equipment_item_id);
       if (!employee || !item) return null;
-      return { ...row, employee, item };
+      return { ...row, employee, item, issuedByName: row.issued_by ? (issuedByNameById.get(row.issued_by) ?? null) : null };
     })
     .filter((row): row is EquipmentAssignmentWithDetail => row !== null)
     .filter((row) => {
@@ -192,6 +206,14 @@ export async function listEquipmentAssignments(companyId: string, projectId: str
         (row.item.reference_number ?? "").toLowerCase().includes(term) ||
         `${row.employee.first_name} ${row.employee.last_name}`.toLowerCase().includes(term)
       );
+    })
+    .filter((row) => {
+      if (!filters.expiry || filters.expiry === "all") return true;
+      if (!row.expires_at) return false;
+      const tone = describeEquipmentExpiry(row.expires_at).tone;
+      if (filters.expiry === "expired") return tone === "negative";
+      if (filters.expiry === "expiring_soon") return tone === "attention";
+      return true;
     });
 }
 
@@ -213,11 +235,13 @@ export async function listMyEquipmentAssignments(companyId: string, employeeId: 
   const employee = employeeById.get(employeeId);
   if (!employee) return [];
 
+  const issuedByNameById = await resolveProfileNames(companyId, assignmentRows.map((row) => row.issued_by).filter((id): id is string => Boolean(id)));
+
   return assignmentRows
     .map((row) => {
       const item = itemById.get(row.equipment_item_id);
       if (!item) return null;
-      return { ...row, employee, item };
+      return { ...row, employee, item, issuedByName: row.issued_by ? (issuedByNameById.get(row.issued_by) ?? null) : null };
     })
     .filter((row): row is EquipmentAssignmentWithDetail => row !== null);
 }

@@ -7,12 +7,25 @@ import { toast } from "sonner";
 type CreateSuccessToastProps = {
   /** Query param whose presence signals a just-completed create/submit — e.g. `?created=<id>`. */
   paramName: string;
-  /** Toast message, built from the param's value and the full query string (for reading companion params like `?created=<id>&tag=<tag>`). */
-  buildMessage: (value: string, params: URLSearchParams) => string;
-  /** If set, the toast gets a "View [record]" action button linking here. Omit when there's nothing more specific to view than the list itself. */
-  buildViewHref?: (value: string, params: URLSearchParams) => string;
+  /**
+   * Toast message template. `{value}` is replaced with the `paramName`
+   * param's value; `{param:x}` is replaced with the value of companion
+   * query param `x` (empty string if absent) — e.g. `?created=<id>&tag=<tag>`
+   * plus `message="Scaffold {param:tag} registered successfully."`.
+   */
+  message: string;
+  /**
+   * If set, the toast gets a "View [record]" action button linking to this
+   * path template (same `{value}`/`{param:x}` interpolation). Omit when
+   * there's nothing more specific to view than the list itself.
+   */
+  viewHrefTemplate?: string;
   viewLabel?: string;
 };
+
+function interpolate(template: string, value: string, params: URLSearchParams): string {
+  return template.replace(/\{value\}/g, value).replace(/\{param:(\w+)\}/g, (_match, key: string) => params.get(key) ?? "");
+}
 
 /**
  * Part 5 (Global Create/Submit UX) shared pattern: a Server Action's
@@ -23,10 +36,16 @@ type CreateSuccessToastProps = {
  * the param from the URL via `router.replace` so a browser refresh/back
  * navigation never re-shows it or leaves it in the address bar.
  *
+ * `message`/`viewHrefTemplate` are plain strings (not functions) because
+ * this component is always rendered from a Server Component call site —
+ * functions aren't serializable across the Server→Client boundary. Build
+ * any per-record wording as a template string with `{value}`/`{param:x}`
+ * placeholders instead of a closure.
+ *
  * Renders nothing — drop it anywhere on the destination page (typically
  * once, near the top).
  */
-export function CreateSuccessToast({ paramName, buildMessage, buildViewHref, viewLabel = "View" }: CreateSuccessToastProps) {
+export function CreateSuccessToast({ paramName, message, viewHrefTemplate, viewLabel = "View" }: CreateSuccessToastProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -40,15 +59,15 @@ export function CreateSuccessToast({ paramName, buildMessage, buildViewHref, vie
     firedRef.current = true;
 
     const params = new URLSearchParams(paramsString);
-    const message = buildMessage(value, params);
-    const viewHref = buildViewHref?.(value, params);
+    const resolvedMessage = interpolate(message, value, params);
+    const viewHref = viewHrefTemplate ? interpolate(viewHrefTemplate, value, params) : undefined;
 
-    toast.success(message, viewHref ? { action: { label: viewLabel, onClick: () => router.push(viewHref) } } : undefined);
+    toast.success(resolvedMessage, viewHref ? { action: { label: viewLabel, onClick: () => router.push(viewHref) } } : undefined);
 
     params.delete(paramName);
     const remaining = params.toString();
     router.replace(remaining ? `${pathname}?${remaining}` : pathname, { scroll: false });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- buildMessage/buildViewHref are expected to be stable per call site; re-running on every render would re-fire the toast
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- message/viewHrefTemplate are expected to be stable per call site; re-running on every render would re-fire the toast
   }, [value, paramsString]);
 
   return null;

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
-import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -21,6 +21,7 @@ import {
   submitEquipmentRequestSchema,
   decideEquipmentRequestSchema,
   denyOrReturnEquipmentRequestSchema,
+  updateEquipmentAssignmentExpirySchema,
   type CreateEquipmentItemInput,
   type UpdateEquipmentItemInput,
   type IssueEquipmentInput,
@@ -32,6 +33,7 @@ import {
   type SubmitEquipmentRequestInput,
   type DecideEquipmentRequestInput,
   type DenyOrReturnEquipmentRequestInput,
+  type UpdateEquipmentAssignmentExpiryInput,
 } from "./validation";
 import type { EquipmentItem, EquipmentAssignment, EquipmentRequest, EquipmentCondition } from "./types";
 
@@ -45,8 +47,12 @@ import type { EquipmentItem, EquipmentAssignment, EquipmentRequest, EquipmentCon
 
 async function requireEquipmentManageAccess(companyId: string, projectId: string) {
   const { user } = await requireCompanyMembership(companyId);
-  const [roleNames, myProjectAssignmentRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
-  if (!canManageEquipment(roleNames, projectId, myProjectAssignmentRoles)) forbidden();
+  const [roleNames, myProjectAssignmentRoles, isSuperAdmin] = await Promise.all([
+    getUserRoleNames(companyId),
+    getMyProjectAssignmentRoles(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
+  ]);
+  if (!isSuperAdmin && !canManageEquipment(roleNames, projectId, myProjectAssignmentRoles)) forbidden();
   return { user, roleNames, myProjectAssignmentRoles };
 }
 
@@ -86,6 +92,7 @@ export async function createEquipmentItem(companyId: string, projectId: string, 
       target_condition: parsed.data.condition as EquipmentItem["condition"],
       target_location: parsed.data.location ?? undefined,
       target_notes: parsed.data.notes ?? undefined,
+      target_default_validity_days: parsed.data.defaultValidityDays ?? undefined,
     })
     .single();
 
@@ -121,6 +128,7 @@ export async function updateEquipmentItem(companyId: string, projectId: string, 
       target_specification: parsed.data.specification ?? undefined,
       target_location: parsed.data.location ?? undefined,
       target_notes: parsed.data.notes ?? undefined,
+      target_default_validity_days: parsed.data.defaultValidityDays ?? undefined,
     })
     .single();
 
@@ -153,6 +161,8 @@ export async function issueEquipment(companyId: string, projectId: string, itemI
       target_expected_return_at: parsed.data.expectedReturnAt || undefined,
       target_note: parsed.data.note ?? undefined,
       target_request_id: requestId,
+      target_expires_at: parsed.data.expiresAt || undefined,
+      target_use_default_validity: parsed.data.useDefaultValidity ?? true,
     })
     .single();
 
@@ -160,6 +170,38 @@ export async function issueEquipment(companyId: string, projectId: string, itemI
     if (isRlsViolation(error)) forbidden();
     if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
     return { ok: false, error: { code: "server_error", message: "Couldn't issue this item. Try again." } };
+  }
+
+  revalidateEquipmentPaths(companyId, projectId);
+  return { ok: true, data: data as EquipmentAssignment };
+}
+
+export async function updateEquipmentAssignmentExpiry(
+  companyId: string,
+  projectId: string,
+  assignmentId: string,
+  input: UpdateEquipmentAssignmentExpiryInput,
+): Promise<ActionResult<EquipmentAssignment>> {
+  const parsed = updateEquipmentAssignmentExpirySchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireEquipmentManageAccess(companyId, projectId);
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .rpc("update_equipment_assignment_expiry", {
+      target_assignment_id: assignmentId,
+      target_expires_at: parsed.data.expiresAt || undefined,
+      target_reason: parsed.data.reason ?? undefined,
+    })
+    .single();
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't update this assignment's expiry. Try again." } };
   }
 
   revalidateEquipmentPaths(companyId, projectId);
