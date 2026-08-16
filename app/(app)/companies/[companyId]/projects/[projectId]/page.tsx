@@ -15,6 +15,7 @@ import { canManageProject } from "@/modules/projects/permissions";
 import { ProjectDailyOverview } from "@/modules/projects/components/project-daily-overview";
 import { ProjectStatusBadge } from "@/modules/projects/components/project-status-badge";
 import { PageHeader } from "@/components/shared/page-header";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -122,12 +123,15 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
         title={project.name}
         description={project.client_name ?? undefined}
         actions={
-          canManage ? (
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/projects/${project.id}/edit`} />}>
-              <Settings2 />
-              Manage project
-            </Button>
-          ) : undefined
+          <>
+            <RefreshButton />
+            {canManage && (
+              <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/projects/${project.id}/edit`} />}>
+                <Settings2 />
+                Manage project
+              </Button>
+            )}
+          </>
         }
       />
 

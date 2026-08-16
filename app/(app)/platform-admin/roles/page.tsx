@@ -87,6 +87,10 @@ export default async function PlatformAdminRolesPage({ searchParams }: PageProps
           <CardTitle className="text-sm font-medium">Custom roles</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            <strong className="font-medium text-foreground">Custom permission enforcement rollout pending.</strong> Custom roles below are real, company-scoped, and fully audited (create/edit/delete), but assigning one — or
+            granting it permissions — does not yet change what its holder can actually do in Scaffold Register, LMRA, or any other operational module. Only the built-in system roles above are enforced today.
+          </p>
           <CompanyRoleSelector companies={companies} selectedCompanyId={selectedCompanyId} query={companyQuery} />
 
           {!selectedCompanyId ? (

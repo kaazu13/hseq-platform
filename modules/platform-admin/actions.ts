@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
-import { flattenFieldErrors, isRaisedException } from "@/lib/supabase/errors";
+import { flattenFieldErrors, isRaisedException, isUniqueViolation } from "@/lib/supabase/errors";
 import { searchPlatformAccounts } from "./queries";
 import type { PlatformAccountSearchResult, RoleRow } from "./types";
 import {
@@ -288,6 +288,9 @@ export async function createCustomRole(input: CreateCustomRoleInput): Promise<Ac
     .single();
   if (error || !data) {
     if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    if (isUniqueViolation(error)) {
+      return { ok: false, error: { code: "conflict", message: "A role with that name already exists for this company.", fieldErrors: { name: "Already in use" } } };
+    }
     return { ok: false, error: { code: "server_error", message: "Couldn't create the role. Try again." } };
   }
 

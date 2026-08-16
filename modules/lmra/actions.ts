@@ -151,9 +151,10 @@ export async function getMyTodaysTeamForLmra(companyId: string, projectId: strin
 /**
  * The one-shot create path (Phase 7) — work details, workers involved,
  * hazards+controls, and (if `submit`) the final go/no-go confirmation, all
- * saved atomically via create_lmra_assessment(). Redirects to the new
- * assessment's canonical view page on success — never leaves the caller on
- * the creation form.
+ * saved atomically via create_lmra_assessment(). Redirects to the LMRA
+ * list on success (completion pass, Part 5) — never leaves the caller on
+ * the creation form; the new assessment is immediately visible in the
+ * list, with an optional "View LMRA" action to jump to its detail page.
  */
 export async function createLmraComplete(companyId: string, input: LmraCreateFormInput): Promise<ActionResult<null>> {
   const parsed = lmraCreateFormSchema.safeParse(input);
@@ -201,7 +202,11 @@ export async function createLmraComplete(companyId: string, input: LmraCreateFor
 
   revalidatePath("/lmra");
   revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/teams`);
-  redirect(`/lmra/${data.id}`);
+  revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}`);
+  // Part 5 (completion pass): return to the LMRA list (not the detail page)
+  // — the new assessment is immediately visible there, with a success toast
+  // and an optional "View LMRA" action (see app/(app)/lmra/page.tsx).
+  redirect(`/lmra?created=${data.id}`);
 }
 
 /**
@@ -252,6 +257,7 @@ export async function updateLmraComplete(companyId: string, lmraId: string, proj
   revalidatePath("/lmra");
   revalidatePath(`/lmra/${lmraId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   redirect(`/lmra/${lmraId}`);
 }
 
@@ -292,6 +298,7 @@ export async function submitLmra(companyId: string, lmraId: string, projectId: s
 
   revalidatePath("/lmra");
   revalidatePath(`/lmra/${lmraId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   return { ok: true, data: null };
 }
 
@@ -333,6 +340,7 @@ export async function reviewLmra(companyId: string, lmraId: string, projectId: s
 
   revalidatePath("/lmra");
   revalidatePath(`/lmra/${lmraId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   return { ok: true, data: null };
 }
 
@@ -359,7 +367,9 @@ export async function reopenLmra(companyId: string, lmraId: string, projectId: s
     return { ok: false, error: { code: "not_found", message: "LMRA not found, or it can't be reopened from its current status." } };
   }
 
+  revalidatePath("/lmra");
   revalidatePath(`/lmra/${lmraId}`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   return { ok: true, data: null };
 }
 

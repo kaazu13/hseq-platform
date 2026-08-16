@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { finalizeInspection } from "@/modules/scaffolds/actions";
 import { SCAFFOLD_INSPECTION_OUTCOMES, SCAFFOLD_INSPECTION_OUTCOME_LABELS, type ScaffoldInspectionOutcome } from "@/modules/scaffolds/types";
@@ -49,7 +50,14 @@ export function InspectionFinalizeCard({ companyId, inspectionId, scaffoldId, pr
         return;
       }
       setConfirmOpen(false);
-      router.refresh();
+      // Completion pass, Part 2: return to the Scaffold Inspections list
+      // (not stay on the just-finalized detail page) — a finalized
+      // inspection is terminal, so there is nothing further to do here.
+      const listPath = `/companies/${companyId}/projects/${projectId}/scaffold-inspections`;
+      toast.success("Inspection finalized successfully.", {
+        action: { label: "View inspection", onClick: () => router.push(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`) },
+      });
+      router.push(listPath);
     });
   }
 

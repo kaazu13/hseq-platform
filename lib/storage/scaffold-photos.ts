@@ -93,3 +93,15 @@ export async function getScaffoldPhotoSignedUrl(supabase: SupabaseClient, object
   if (error || !data) return null;
   return data.signedUrl;
 }
+
+/** Batched form of getScaffoldPhotoSignedUrl — one Storage API call for up to 30 paths (a scaffold's full gallery) instead of 30 sequential round trips (performance pass, completion package Part 5). Returns a Map keyed by the input path; a path that failed to sign is simply absent from the map rather than throwing, matching the singular function's null-on-failure behavior. */
+export async function getScaffoldPhotoSignedUrls(supabase: SupabaseClient, objectPaths: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (objectPaths.length === 0) return result;
+  const { data, error } = await supabase.storage.from(SCAFFOLD_PHOTOS_BUCKET).createSignedUrls(objectPaths, 60);
+  if (error || !data) return result;
+  for (const entry of data) {
+    if (!entry.error && entry.signedUrl) result.set(entry.path ?? "", entry.signedUrl);
+  }
+  return result;
+}

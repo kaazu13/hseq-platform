@@ -26,6 +26,7 @@ import { EquipmentIssuedView } from "@/modules/equipment/components/equipment-is
 import { EquipmentRequestsReview } from "@/modules/equipment/components/equipment-requests-review";
 import { EquipmentHistoryView } from "@/modules/equipment/components/equipment-history-view";
 import { PageHeader } from "@/components/shared/page-header";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -145,6 +146,7 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
         description={project.name}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <RefreshButton />
             {canExport && (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href={exportHref} />} className="print:hidden">
                 <Download />

@@ -44,18 +44,46 @@ export function canViewScaffoldRegister(roleNames: RoleName[], hasProjectAccess:
 }
 
 /**
- * V2: who may CREATE/REGISTER a scaffold — broader than canManageScaffold.
+ * V2 (corrected per the completion-pass business rule — see
+ * supabase/migrations/20260901093000_scaffold_register_creation_permission_fix.sql's
+ * header comment for the full rationale): who may CREATE/REGISTER a
+ * scaffold — a DELIBERATELY NARROWER set than canViewScaffoldRegister.
  * Mirrors is_scaffold_broad_creator() (SQL) exactly for the "broad" path;
  * `isEligibleForeman` is the caller's own is_caller_eligible_scaffold_foreman()
  * result — a Foreman with no other qualifying role can ALSO create, but
  * ONLY with themselves as Responsible Foreman (enforced server-side by
  * validate_scaffold_insert(), never merely by this UI-gating function or a
- * disabled field). operations_manager is deliberately excluded — every
- * other HSEQ-record-creation surface in this schema (LMRA, Observations,
- * Corrective Actions) consistently excludes it too.
+ * disabled field).
+ *
+ * hse_officer, inspector, AND hseq_manager are ALL deliberately excluded
+ * from creation (view-only) — the product rule is explicit that being
+ * trusted to view, or to create OTHER HSEQ records (inspections, LMRA,
+ * observations), does not imply scaffold-registration authority, and no
+ * exception was authorized for hseq_manager. Only `company_admin` — per
+ * docs/ROLES_AND_PERMISSIONS.md's own description ("Highest authority
+ * inside their company... full visibility across all projects and
+ * modules") — represents genuine company-level operational management
+ * here. `operations_manager` was inspected and explicitly excluded: its
+ * own seeded description scopes it to "normal employee administration...
+ * coordinates project staffing," and explicitly forbids it from gaining
+ * elevated/specialist authority — it is not an HSEQ-authority role.
+ *
+ * Platform Super Admin's "authorized globally" scaffold-creation rule is
+ * enforced at the RLS layer (is_scaffold_broad_creator() ORs in
+ * is_platform_super_admin()) rather than mirrored here — see this file's
+ * README-style note in the migration for why a page-level bypass isn't
+ * added: requireCompanyMembership()/requireProjectAccess() (the shared
+ * chokepoint every module's pages use) still require actual company/
+ * project membership before any page is ever reached, and changing that
+ * shared chokepoint to let a non-member platform admin traverse arbitrary
+ * companies' ordinary operational pages is out of scope for this pass — a
+ * platform admin's real day-to-day company access already comes through
+ * being a genuine company member (as cristi.3ddd@gmail.com is, via
+ * company_admin, in both her companies), or through the dedicated Platform
+ * Admin Console's own RPCs, not through this per-company UI.
  */
-const BROAD_CREATOR_PROJECT_ROLES: RoleName[] = ["hse_officer", "inspector", "project_manager"];
-const BROAD_CREATOR_COMPANY_WIDE_ROLES: RoleName[] = ["hseq_manager", "company_admin"];
+const BROAD_CREATOR_PROJECT_ROLES: RoleName[] = ["project_manager"];
+const BROAD_CREATOR_COMPANY_WIDE_ROLES: RoleName[] = ["company_admin"];
 
 export function isScaffoldBroadCreator(roleNames: RoleName[], hasProjectAccess: boolean): boolean {
   return roleNames.some((role) => BROAD_CREATOR_COMPANY_WIDE_ROLES.includes(role)) || (hasProjectAccess && roleNames.some((role) => BROAD_CREATOR_PROJECT_ROLES.includes(role)));

@@ -16,6 +16,7 @@ import { CopyTeamsDialog } from "@/modules/daily-workforce/components/copy-teams
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { AutoRefresh } from "@/components/shared/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -120,6 +121,8 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      {/* Only the live "today" view polls — the archive view (returned earlier above) renders historical, no-longer-changing days. */}
+      <AutoRefresh intervalMs={60000} />
       <PageHeader
         title="Today's Teams"
         description={`${formatWorkDate(workDate)} · ${project.name}`}

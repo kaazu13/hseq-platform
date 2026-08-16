@@ -132,6 +132,7 @@ export async function createScaffold(companyId: string, input: ScaffoldFormInput
   // the new scaffold is immediately visible there, with a success toast
   // and an optional "View scaffold" action (see ScaffoldRegisterListClient).
   revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
+  revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}`);
   redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds?created=${data.id}&tag=${encodeURIComponent(parsed.data.tagNumber)}`);
 }
 
@@ -187,6 +188,7 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
     return teamResult;
   }
 
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/edit`);
   return { ok: true, data: null };
@@ -426,6 +428,7 @@ export async function finalizeInspection(
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-inspections`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   return { ok: true, data: null };
 }
 

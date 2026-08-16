@@ -10,6 +10,7 @@ import { ScaffoldInspectionOutcomeBadge } from "@/modules/scaffolds/components/s
 import { ScaffoldInspectionFilters } from "@/modules/scaffolds/components/scaffold-inspection-filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -53,7 +54,7 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Scaffold Inspections" description={`${project.name} — every inspection recorded across this project's scaffolds.`} />
+      <PageHeader title="Scaffold Inspections" description={`${project.name} — every inspection recorded across this project's scaffolds.`} actions={<RefreshButton />} />
 
       <ScaffoldInspectionFilters basePath={basePath} />
 

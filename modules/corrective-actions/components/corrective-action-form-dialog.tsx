@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { createCorrectiveAction, updateCorrectiveActionDetails } from "@/modules/corrective-actions/actions";
 import { CORRECTIVE_ACTION_PRIORITIES, CORRECTIVE_ACTION_PRIORITY_LABELS, type CorrectiveAction, type CorrectiveActionPriority } from "@/modules/corrective-actions/types";
@@ -60,6 +61,17 @@ export function CorrectiveActionFormDialog({ companyId, observationId, projectId
       }
 
       onOpenChange(false);
+      // Completion pass, Part 2: corrective actions are only ever created
+      // from within an observation's review — a genuinely necessary
+      // context (the observation is the reason the action exists), so this
+      // stays on the observation page rather than redirecting to the
+      // standalone Corrective Actions list. A toast + optional "View in
+      // Corrective Actions" link is offered instead of a forced redirect.
+      if (mode === "create" && result.data && "actionId" in result.data) {
+        toast.success("Corrective action created.", { action: { label: "View in Corrective Actions", onClick: () => router.push(`/corrective-actions/${result.data.actionId}`) } });
+      } else {
+        toast.success("Corrective action updated.");
+      }
       router.refresh();
     });
   }

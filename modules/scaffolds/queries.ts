@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, ScaffoldInspectionWithScaffold, BasicEmployee, ScaffoldTeamMemberDetail, ScaffoldErectionTeamDetail, ScaffoldPhotoDetail } from "./types";
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
-import { getScaffoldPhotoSignedUrl } from "@/lib/storage/scaffold-photos";
+import { getScaffoldPhotoSignedUrls } from "@/lib/storage/scaffold-photos";
 import { listDailyTeamsForDate } from "@/modules/daily-workforce/queries";
 import type { Project } from "@/modules/projects/types";
 import type { RoleName } from "@/modules/companies/types";
@@ -175,22 +175,25 @@ export async function getScaffold(companyId: string, scaffoldId: string): Promis
     });
   }
 
-  const photos: ScaffoldPhotoDetail[] = (
-    await Promise.all(
-      (photoRows ?? []).map(async (row) => {
-        const url = await getScaffoldPhotoSignedUrl(supabase, row.storage_object_path);
-        if (!url) return null;
-        return {
-          id: row.id,
-          url,
-          originalFilename: row.original_filename,
-          uploadedByName: uploaderNameById.get(row.uploaded_by) ?? null,
-          uploadedAt: row.uploaded_at,
-          orderIndex: row.order_index,
-        };
-      }),
-    )
-  ).filter((row): row is ScaffoldPhotoDetail => row !== null);
+  // One batched Storage call for the whole gallery (up to 30 photos) rather
+  // than one sequential round trip per photo — performance pass.
+  const signedUrlByPath = await getScaffoldPhotoSignedUrls(
+    supabase,
+    (photoRows ?? []).map((row) => row.storage_object_path),
+  );
+  const photos: ScaffoldPhotoDetail[] = [];
+  for (const row of photoRows ?? []) {
+    const url = signedUrlByPath.get(row.storage_object_path);
+    if (!url) continue;
+    photos.push({
+      id: row.id,
+      url,
+      originalFilename: row.original_filename,
+      uploadedByName: uploaderNameById.get(row.uploaded_by) ?? null,
+      uploadedAt: row.uploaded_at,
+      orderIndex: row.order_index,
+    });
+  }
 
   return { ...scaffold, responsibleForeman: employeeById.get(scaffold.responsible_foreman_id) ?? null, teamMembers, erectionTeams, photos };
 }
@@ -304,10 +307,23 @@ export async function listScaffoldInspectionCreatableProjects(companyId: string,
  * only projects where they are, themselves, an eligible Responsible
  * Foreman (is_eligible_scaffold_foreman()).
  */
+/**
+ * Corrected per the completion pass's Scaffold Register creation
+ * permission fix (20260901093000_scaffold_register_creation_permission_fix.sql):
+ * ONLY company_admin (company-wide), the project's own project_manager,
+ * and a project's own eligible foreman (self-only, further narrowed by
+ * validate_scaffold_insert() server-side) may create/register a scaffold.
+ * hse_officer/inspector/hseq_manager/operations_manager are VIEW-tier
+ * only — previously this function incorrectly also listed projects for
+ * hseq_manager/hse_officer/inspector, which meant the "Register scaffold"
+ * page itself remained reachable for those roles even though the
+ * underlying insert was already correctly rejected — a live-tested,
+ * fixed gap between the page guard and the real RLS/trigger enforcement.
+ */
 export async function listScaffoldRegisterCreatableProjects(companyId: string, userId: string, roleNames: RoleName[]): Promise<Project[]> {
   const supabase = await createClient();
 
-  if (roleNames.includes("hseq_manager") || roleNames.includes("company_admin")) {
+  if (roleNames.includes("company_admin")) {
     const { data, error } = await supabase.from("projects").select("*").eq("company_id", companyId).neq("status", "archived").order("name", { ascending: true });
     if (error) throw error;
     return data ?? [];
@@ -318,17 +334,6 @@ export async function listScaffoldRegisterCreatableProjects(companyId: string, u
   if (!employee) return [];
 
   const projectIdSet = new Set<string>();
-
-  if (roleNames.some((role) => SCAFFOLD_INSPECTION_MANAGE_ELIGIBLE_ROLES.includes(role))) {
-    const [{ data: projectAssignments, error: projectAssignmentsError }, { data: teamAssignments, error: teamAssignmentsError }] = await Promise.all([
-      supabase.from("project_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
-      supabase.from("team_assignments").select("project_id").eq("company_id", companyId).eq("employee_id", employee.id).is("end_at", null),
-    ]);
-    if (projectAssignmentsError) throw projectAssignmentsError;
-    if (teamAssignmentsError) throw teamAssignmentsError;
-    for (const row of projectAssignments ?? []) projectIdSet.add(row.project_id);
-    for (const row of teamAssignments ?? []) projectIdSet.add(row.project_id);
-  }
 
   if (roleNames.includes("project_manager")) {
     const { data: pmAssignments, error: pmError } = await supabase

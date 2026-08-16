@@ -1,0 +1,12 @@
+-- ============================================================================
+-- Completion pass, Part 5 (performance): platform_admin_list_security_events()
+-- (20260901090000_platform_admin_console.sql) does an unfiltered
+-- `order by se.created_at desc limit/offset` across ALL companies'
+-- security_events — the table's only existing index is
+-- security_events_user_id_idx (user_id, created_at desc)
+-- (20260819095000_platform_admin.sql), which cannot serve a global,
+-- unfiltered ordering (created_at isn't the leading column). Mirrors
+-- audit_events_created_at_idx's exact precedent
+-- (20260725090600_audit_events.sql) for the identical query shape.
+-- ============================================================================
+create index security_events_created_at_idx on public.security_events (created_at desc);

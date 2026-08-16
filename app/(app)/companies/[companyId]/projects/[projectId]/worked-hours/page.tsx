@@ -21,6 +21,7 @@ import { WorkedHoursExportDialog } from "@/modules/worked-hours/components/worke
 import { WorkedHoursDateNav } from "@/modules/worked-hours/components/worked-hours-date-nav";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
@@ -203,6 +204,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
         description={`${formatWorkDate(workDate)} · ${project.name}`}
         actions={
           <div className="flex items-center gap-2">
+            <RefreshButton />
             <WorkedHoursExportDialog companyId={companyId} projectId={projectId} defaultMode="day" defaultDate={workDate} rosterCandidates={rosterCandidates} />
             <SubmitWorkedHoursButton companyId={companyId} projectId={projectId} workDate={workDate} draftCount={draftCount} />
           </div>

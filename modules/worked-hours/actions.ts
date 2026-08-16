@@ -43,6 +43,7 @@ async function requireWorkedHoursManageAccess(companyId: string, projectId: stri
 
 function revalidateWorkedHoursPaths(companyId: string, projectId: string) {
   revalidatePath(`/companies/${companyId}/projects/${projectId}/worked-hours`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   revalidatePath("/dashboard");
 }
 
@@ -161,8 +162,9 @@ export async function reportWorkedHoursDiscrepancy(companyId: string, workedHour
     return { ok: false, error: { code: "server_error", message: "Couldn't report this discrepancy. Try again." } };
   }
 
-  revalidatePath("/dashboard");
-  return { ok: true, data: data as WorkedHoursDiscrepancy };
+  const discrepancy = data as WorkedHoursDiscrepancy;
+  revalidateWorkedHoursPaths(companyId, discrepancy.project_id);
+  return { ok: true, data: discrepancy };
 }
 
 /** PM/Admin accept/reject review of a discrepancy — resolve_worked_hours_discrepancy(). Accepting with a resulting hours value applies the correction via the same upsert_worked_hours() path any other correction uses. */

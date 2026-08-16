@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { sql, asUser, createTestCompany, deleteTestCompany, createTestUser, deleteTestUser, addMembership } from "./helpers";
+import { sql, asUser, createTestCompany, deleteTestCompany, createTestUser, deleteTestUser, addMembership, roleId, getMembershipId, RAISED_EXCEPTION, UNIQUE_VIOLATION, RLS_VIOLATION } from "./helpers";
 
 /**
  * Post-audit implementation package, Part 2 — Platform Admin console
@@ -136,6 +136,148 @@ describe("platform_admin_* RPCs reject a non-platform-admin caller", () => {
     } finally {
       await deleteTestCompany(company.companyId);
       await deleteTestUser(companyAdminUser.userId);
+    }
+  });
+});
+
+/**
+ * Completion pass, Part 6 — custom-role escalation regression tests. The
+ * foundation (20260831092000_roles_permissions_foundation.sql) is
+ * deliberately not wired into any operational module's own enforcement
+ * yet (see the Roles & Permissions page's own "Custom permission
+ * enforcement rollout pending" notice) — these tests only cover the
+ * custom-role CRUD/assignment layer itself: who may touch it, and what it
+ * can never be made to do, independent of whether anything downstream
+ * consults it yet.
+ */
+describe("custom role escalation attempts are rejected", () => {
+  afterAll(async () => {
+    await sql.end();
+  });
+
+  it("a company_admin (not a platform super admin) cannot create/edit/delete a custom role", async () => {
+    const company = await createTestCompany("custom-role-reject-company-admin");
+    const companyAdminUser = await createTestUser("Company Admin, Not Platform Admin (roles)");
+    try {
+      await addMembership(company.companyId, companyAdminUser.userId, ["company_admin"]);
+      await expect(
+        asUser(companyAdminUser.userId, (tx) => tx`select * from create_custom_role(${company.companyId}, 'Attempted Role', null, array[]::text[])`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+    } finally {
+      await deleteTestCompany(company.companyId);
+      await deleteTestUser(companyAdminUser.userId);
+    }
+  });
+
+  it("a platform super admin cannot grant a reserved permission to a custom role", async () => {
+    const company = await createTestCompany("custom-role-reject-reserved-permission");
+    const platformAdmin = await createTestUser("Reserved-Permission Checker");
+    try {
+      await sql`insert into platform_super_admins (user_id) values (${platformAdmin.userId})`;
+      await expect(
+        asUser(
+          platformAdmin.userId,
+          (tx) => tx`select * from create_custom_role(${company.companyId}, 'Would-Be Escalated Role', null, array['company_admin.manage']::text[])`,
+        ),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+    } finally {
+      await sql`delete from platform_super_admins where user_id = ${platformAdmin.userId}`;
+      await deleteTestCompany(company.companyId);
+      await deleteTestUser(platformAdmin.userId);
+    }
+  });
+
+  it("a platform super admin cannot edit or delete a SYSTEM role via the custom-role RPCs", async () => {
+    const platformAdmin = await createTestUser("System-Role Protection Checker");
+    try {
+      await sql`insert into platform_super_admins (user_id) values (${platformAdmin.userId})`;
+      const foremanRoleId = await roleId("foreman");
+
+      await expect(
+        asUser(platformAdmin.userId, (tx) => tx`select * from update_custom_role_permissions(${foremanRoleId}, array[]::text[])`),
+      ).rejects.toMatchObject(RAISED_EXCEPTION);
+      await expect(asUser(platformAdmin.userId, (tx) => tx`select * from delete_custom_role(${foremanRoleId})`)).rejects.toMatchObject(RAISED_EXCEPTION);
+
+      const stillExists = await sql`select id from roles where id = ${foremanRoleId}`;
+      expect(stillExists.length).toBe(1);
+    } finally {
+      await sql`delete from platform_super_admins where user_id = ${platformAdmin.userId}`;
+      await deleteTestUser(platformAdmin.userId);
+    }
+  });
+
+  it("two custom roles cannot share the same name within one company", async () => {
+    const company = await createTestCompany("custom-role-reject-duplicate-name");
+    const platformAdmin = await createTestUser("Duplicate-Name Checker");
+    try {
+      await sql`insert into platform_super_admins (user_id) values (${platformAdmin.userId})`;
+      await asUser(platformAdmin.userId, (tx) => tx`select * from create_custom_role(${company.companyId}, 'Site Auditor', null, array[]::text[])`);
+      await expect(
+        asUser(platformAdmin.userId, (tx) => tx`select * from create_custom_role(${company.companyId}, 'Site Auditor', null, array[]::text[])`),
+      ).rejects.toMatchObject(UNIQUE_VIOLATION);
+    } finally {
+      await sql`delete from role_permissions where role_id in (select id from roles where company_id = ${company.companyId})`;
+      await sql`delete from roles where company_id = ${company.companyId}`;
+      await sql`delete from platform_super_admins where user_id = ${platformAdmin.userId}`;
+      await deleteTestCompany(company.companyId);
+      await deleteTestUser(platformAdmin.userId);
+    }
+  });
+
+  it("a custom role still assigned to a membership cannot be deleted", async () => {
+    const company = await createTestCompany("custom-role-reject-delete-assigned");
+    const platformAdmin = await createTestUser("Delete-Guard Checker");
+    const holder = await createTestUser("Custom Role Holder");
+    try {
+      await sql`insert into platform_super_admins (user_id) values (${platformAdmin.userId})`;
+      await addMembership(company.companyId, holder.userId, []);
+      const [created] = await asUser(
+        platformAdmin.userId,
+        (tx) => tx`select id from create_custom_role(${company.companyId}, 'Assigned Custom Role', null, array[]::text[])`,
+      );
+      const membershipId = await getMembershipId(company.companyId, holder.userId);
+      await sql`insert into membership_roles (membership_id, role_id, company_id) values (${membershipId}, ${created.id}, ${company.companyId})`;
+
+      await expect(asUser(platformAdmin.userId, (tx) => tx`select * from delete_custom_role(${created.id})`)).rejects.toMatchObject(RAISED_EXCEPTION);
+    } finally {
+      await sql`delete from membership_roles where company_id = ${company.companyId} and role_id in (select id from roles where company_id = ${company.companyId})`;
+      await sql`delete from role_permissions where role_id in (select id from roles where company_id = ${company.companyId})`;
+      await sql`delete from roles where company_id = ${company.companyId}`;
+      await sql`delete from platform_super_admins where user_id = ${platformAdmin.userId}`;
+      await deleteTestCompany(company.companyId);
+      await deleteTestUser(platformAdmin.userId);
+      await deleteTestUser(holder.userId);
+    }
+  });
+
+  it("REGRESSION (completion pass fix, 20260901095000): a custom role belonging to Company A cannot be assigned to a membership in Company B, even by that company's own company_admin", async () => {
+    const companyA = await createTestCompany("custom-role-scope-fix-owner");
+    const companyB = await createTestCompany("custom-role-scope-fix-target");
+    const platformAdmin = await createTestUser("Cross-Company Scope Checker");
+    const companyBAdmin = await createTestUser("Company B Admin (scope fix)");
+    try {
+      await sql`insert into platform_super_admins (user_id) values (${platformAdmin.userId})`;
+      const [created] = await asUser(
+        platformAdmin.userId,
+        (tx) => tx`select id from create_custom_role(${companyA.companyId}, 'Company A Only Role', null, array[]::text[])`,
+      );
+      await addMembership(companyB.companyId, companyBAdmin.userId, ["company_admin"]);
+      const membershipId = await getMembershipId(companyB.companyId, companyBAdmin.userId);
+
+      await expect(
+        asUser(
+          companyBAdmin.userId,
+          (tx) => tx`insert into membership_roles (membership_id, role_id, company_id) values (${membershipId}, ${created.id}, ${companyB.companyId})`,
+        ),
+      ).rejects.toMatchObject(RLS_VIOLATION);
+    } finally {
+      await sql`delete from role_permissions where role_id in (select id from roles where company_id = ${companyA.companyId})`;
+      await sql`delete from roles where company_id = ${companyA.companyId}`;
+      await sql`delete from platform_super_admins where user_id = ${platformAdmin.userId}`;
+      await deleteTestCompany(companyA.companyId);
+      await deleteTestCompany(companyB.companyId);
+      await deleteTestUser(platformAdmin.userId);
+      await deleteTestUser(companyBAdmin.userId);
     }
   });
 });

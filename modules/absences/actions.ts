@@ -30,6 +30,7 @@ async function requireAbsenceManageAccess(companyId: string, projectId: string) 
 
 function revalidateAbsencePaths(companyId: string, projectId: string) {
   revalidatePath(`/companies/${companyId}/projects/${projectId}/absences`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   revalidatePath("/dashboard");
   revalidatePath("/my-hours");
 }
@@ -63,7 +64,14 @@ export async function correctAbsenceStatus(companyId: string, projectId: string,
     return { ok: false, error: { code: "server_error", message: "Couldn't update attendance status. Try again." } };
   }
 
+  // Shares set_daily_attendance_status with modules/daily-workforce's own
+  // setDailyAttendanceStatus (which can atomically move a worker on/off a
+  // Today's Team and change their worked-hours eligibility) — revalidate
+  // the same two extra paths that sibling action does, on top of the
+  // absence-specific ones.
   revalidateAbsencePaths(companyId, projectId);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/worked-hours`);
   return { ok: true, data: { status: data.attendance.status } };
 }
 

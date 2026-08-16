@@ -60,6 +60,7 @@ export function CreateTeamUnderForemanDialog({ companyId, projectId, workDate, f
       }
       reset();
       onOpenChange(false);
+      toast.success("Team created.");
       router.refresh();
     });
   }

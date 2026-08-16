@@ -60,32 +60,60 @@ describe("canViewScaffoldRegister — V2: employees excluded entirely", () => {
   });
 });
 
-describe("canCreateScaffold / isScaffoldBroadCreator / mustSelfLockResponsibleForeman — V2", () => {
-  it("hseq_manager and company_admin are broad creators company-wide", () => {
-    expect(isScaffoldBroadCreator(["hseq_manager"], false)).toBe(true);
+describe("canCreateScaffold / isScaffoldBroadCreator / mustSelfLockResponsibleForeman — V2, corrected per the completion pass", () => {
+  it("company_admin is a broad creator company-wide — the genuine company-level HSEQ-authority role per its own seeded description", () => {
     expect(isScaffoldBroadCreator(["company_admin"], false)).toBe(true);
   });
 
-  it("hse_officer/inspector/project_manager are broad creators only WITH project access", () => {
-    for (const role of ["hse_officer", "inspector", "project_manager"] as const) {
-      expect(isScaffoldBroadCreator([role], true)).toBe(true);
-      expect(isScaffoldBroadCreator([role], false)).toBe(false);
-    }
+  it("project_manager is a broad creator only WITH project access", () => {
+    expect(isScaffoldBroadCreator(["project_manager"], true)).toBe(true);
+    expect(isScaffoldBroadCreator(["project_manager"], false)).toBe(false);
   });
 
-  it("operations_manager is deliberately NOT a broad creator, unlike its view-tier inclusion", () => {
+  it("REGRESSION: inspector create rejected — view-tier only, even with project access", () => {
+    expect(isScaffoldBroadCreator(["inspector"], true)).toBe(false);
+    expect(canCreateScaffold(["inspector"], true, false)).toBe(false);
+    expect(canViewScaffoldRegister(["inspector"], true)).toBe(true);
+  });
+
+  it("REGRESSION: hse_officer create rejected — view-tier only, even with project access", () => {
+    expect(isScaffoldBroadCreator(["hse_officer"], true)).toBe(false);
+    expect(canCreateScaffold(["hse_officer"], true, false)).toBe(false);
+    expect(canViewScaffoldRegister(["hse_officer"], true)).toBe(true);
+  });
+
+  it("REGRESSION: hseq_manager create rejected — no product-authorized exception; view-tier only", () => {
+    expect(isScaffoldBroadCreator(["hseq_manager"], false)).toBe(false);
+    expect(isScaffoldBroadCreator(["hseq_manager"], true)).toBe(false);
+    expect(canCreateScaffold(["hseq_manager"], true, false)).toBe(false);
+    expect(canViewScaffoldRegister(["hseq_manager"], false)).toBe(true);
+  });
+
+  it("REGRESSION: operations_manager create rejected — inspected and confirmed not a company-level HSEQ-authority role; view-tier only", () => {
     expect(isScaffoldBroadCreator(["operations_manager"], true)).toBe(false);
+    expect(canCreateScaffold(["operations_manager"], true, false)).toBe(false);
     expect(canViewScaffoldRegister(["operations_manager"], false)).toBe(true);
   });
 
-  it("a plain Foreman with no other role can create ONLY via the isEligibleForeman flag, never via role alone", () => {
+  it("REGRESSION: foreman create accepted, self-lock only", () => {
     expect(isScaffoldBroadCreator(["foreman"], true)).toBe(false);
     expect(canCreateScaffold(["foreman"], true, false)).toBe(false);
     expect(canCreateScaffold(["foreman"], true, true)).toBe(true);
+    expect(mustSelfLockResponsibleForeman(["foreman"], true, true)).toBe(true);
   });
 
-  it("a broad creator can create even without being flagged as an eligible foreman themselves", () => {
+  it("REGRESSION: project_manager create accepted (their own active project)", () => {
     expect(canCreateScaffold(["project_manager"], true, false)).toBe(true);
+  });
+
+  it("REGRESSION: company_admin (the correct company-management role) create accepted", () => {
+    expect(canCreateScaffold(["company_admin"], false, false)).toBe(true);
+  });
+
+  it("REGRESSION: employee denied entirely, on every path", () => {
+    expect(canCreateScaffold(["employee"], true, false)).toBe(false);
+    expect(isScaffoldBroadCreator(["employee"], true)).toBe(false);
+    expect(canViewScaffoldRegister(["employee"], true)).toBe(false);
   });
 
   it("mustSelfLockResponsibleForeman is true ONLY for the foreman-only path, never for a broad creator who also happens to be an eligible foreman", () => {
@@ -93,10 +121,5 @@ describe("canCreateScaffold / isScaffoldBroadCreator / mustSelfLockResponsibleFo
     expect(mustSelfLockResponsibleForeman(["foreman", "project_manager"], true, true)).toBe(false);
     expect(mustSelfLockResponsibleForeman(["foreman"], true, false)).toBe(false);
     expect(mustSelfLockResponsibleForeman(["project_manager"], true, false)).toBe(false);
-  });
-
-  it("denies a plain employee outright, on every path", () => {
-    expect(canCreateScaffold(["employee"], true, false)).toBe(false);
-    expect(isScaffoldBroadCreator(["employee"], true)).toBe(false);
   });
 });

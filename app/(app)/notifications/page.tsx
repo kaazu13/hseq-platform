@@ -6,6 +6,8 @@ import { MarkAllNotificationsReadButton } from "@/modules/worked-hours/component
 import { NotificationCenterAutoRead } from "@/modules/worked-hours/components/notification-center-auto-read";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RefreshButton } from "@/components/shared/refresh-button";
+import { AutoRefresh } from "@/components/shared/auto-refresh";
 
 /**
  * Notification Center — every notification belonging to the signed-in
@@ -30,10 +32,16 @@ export default async function NotificationsPage() {
   return (
     <NotificationCenterAutoRead hasUnread={unreadCount > 0}>
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+        <AutoRefresh intervalMs={45000} />
         <PageHeader
           title="Notifications"
           description={unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up."}
-          actions={<MarkAllNotificationsReadButton disabled={unreadCount === 0} />}
+          actions={
+            <>
+              <RefreshButton />
+              <MarkAllNotificationsReadButton disabled={unreadCount === 0} />
+            </>
+          }
         />
 
         {notifications.length === 0 ? (

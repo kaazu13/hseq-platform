@@ -37,6 +37,7 @@ export function AddForemanButton({ companyId, projectId, workDate, workforce, ro
         return;
       }
       setOpen(false);
+      toast.success("Foreman added to today's roster.");
       router.refresh();
     });
   }

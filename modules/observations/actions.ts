@@ -107,7 +107,11 @@ export async function createObservation(companyId: string, input: ObservationFor
   }
 
   revalidatePath("/observations");
-  redirect(`/observations/${data.id}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}`);
+  // Completion pass, Part 2: return to the Observations list (not the edit
+  // page) — the new observation is immediately visible there, with a
+  // success toast and an optional "View observation" action.
+  redirect(`/observations?created=${data.id}`);
 }
 
 export async function updateObservation(
@@ -160,8 +164,10 @@ export async function updateObservation(
     return { ok: false, error: { code: "not_found", message: "Observation not found, or it's no longer editable." } };
   }
 
+  revalidatePath("/observations");
   revalidatePath(`/observations/${observationId}`);
   revalidatePath(`/observations/${observationId}/edit`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   return { ok: true, data: null };
 }
 
@@ -243,6 +249,7 @@ export async function reviewObservation(companyId: string, observationId: string
     return { ok: false, error: { code: "not_found", message: "Observation not found, or it's already closed." } };
   }
 
+  revalidatePath("/observations");
   revalidatePath(`/observations/${observationId}`);
   return { ok: true, data: null };
 }

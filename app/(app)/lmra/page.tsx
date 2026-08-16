@@ -13,6 +13,7 @@ import { parsePageParam, parsePageSizeParam, offsetFor, clampPage, totalPagesFor
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { CreateSuccessToast } from "@/components/shared/create-success-toast";
 import { Button } from "@/components/ui/button";
 
 type LmraPageProps = {
@@ -143,6 +144,7 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      <CreateSuccessToast paramName="created" buildMessage={() => "LMRA saved successfully."} buildViewHref={(id) => `/lmra/${id}`} viewLabel="View LMRA" />
       <PageHeader
         title="LMRA"
         description={`${project.name} · Last Minute Risk Assessments — a go/no-go check completed before starting work.`}

@@ -8,7 +8,11 @@ const OUTCOME_STYLES: Record<ScaffoldInspectionOutcome, { className: string; ico
   safe_for_use: { className: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400", icon: CheckCircle2 },
   safe_with_restrictions: { className: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400", icon: TriangleAlert },
   unsafe_do_not_use: { className: "bg-destructive/10 text-destructive dark:bg-destructive/20", icon: ShieldX },
-  awaiting_corrective_action: { className: "bg-orange-500/10 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400", icon: ShieldAlert },
+  // Standardized to the same amber-500 token as safe_with_restrictions
+  // (completion pass, Part 4) — same "caution/pending" semantic family as
+  // ScaffoldStatusBadge's identical fix; previously used a different
+  // Tailwind hue (orange) for the same meaning.
+  awaiting_corrective_action: { className: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400", icon: ShieldAlert },
   closed_dismantled: { className: "bg-muted text-muted-foreground", icon: XCircle },
 };
 

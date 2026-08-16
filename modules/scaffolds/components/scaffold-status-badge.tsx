@@ -15,7 +15,11 @@ const TONE_CLASSES: Record<ReturnType<typeof getScaffoldDisplayStatus>, string> 
   pending_inspection: "bg-muted text-muted-foreground",
   safe: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
   restricted: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-  awaiting_corrective_action: "bg-orange-500/10 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400",
+  // Standardized to the same amber-500 token as restricted/expiring_soon
+  // (completion pass, Part 4) — all three are the same semantic "caution/
+  // pending" family and previously used two different Tailwind hues
+  // (amber vs orange) for what should read as one consistent color.
+  awaiting_corrective_action: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
   expiring_soon: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
   expired: "bg-destructive/10 text-destructive dark:bg-destructive/20",
   unsafe: "bg-destructive/10 text-destructive dark:bg-destructive/20",

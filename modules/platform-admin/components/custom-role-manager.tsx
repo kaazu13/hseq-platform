@@ -27,6 +27,24 @@ export type CustomRoleWithDetails = {
 };
 
 /**
+ * Completion pass, Part 6: the permission catalogue/role_permissions
+ * foundation is real, audited, and fully CRUD-able here, but it is
+ * DELIBERATELY not yet wired into any operational module's own RLS/
+ * permissions.ts (see the roles page's own header comment for why — doing
+ * so safely would mean rewriting ~40+ already-audited policies). Every
+ * place an admin selects permission checkboxes must say so plainly, right
+ * where the choice is being made — a checked box here must never be
+ * mistaken for an active grant.
+ */
+function CustomRoleEnforcementNotice() {
+  return (
+    <Alert>
+      <AlertDescription className="text-xs">Custom permission enforcement rollout pending — selecting permissions here defines and audits the role, but does not yet grant anything in Scaffold Register, LMRA, or any other operational module.</AlertDescription>
+    </Alert>
+  );
+}
+
+/**
  * Part 2 — Roles & Permissions page's custom-role CRUD. The permission
  * picker groups by domain and NEVER offers a reserved permission as
  * selectable (`assignablePermissions` below already excludes
@@ -139,6 +157,7 @@ export function CreateCustomRoleDialog({ companyId, assignablePermissions }: { c
           <div className="flex flex-col gap-1.5">
             <Label>Permissions</Label>
             <PermissionPicker assignablePermissions={assignablePermissions} selectedKeys={selectedKeys} onToggle={toggle} />
+            <CustomRoleEnforcementNotice />
           </div>
         </div>
         <DialogFooter>
@@ -198,6 +217,7 @@ function EditCustomRoleDialog({ role, assignablePermissions }: { role: CustomRol
             </Alert>
           )}
           <PermissionPicker assignablePermissions={assignablePermissions} selectedKeys={selectedKeys} onToggle={toggle} />
+          <CustomRoleEnforcementNotice />
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>

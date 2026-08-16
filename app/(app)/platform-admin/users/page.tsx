@@ -1,6 +1,6 @@
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listAdminAccounts, searchAdminCompanies, getPlatformAccountMemberships, listSecurityEventsForUser, listPlatformWarningsForUser } from "@/modules/platform-admin/queries";
-import { ACCOUNT_STATUS_LABELS, SECURITY_EVENT_TYPE_LABELS } from "@/modules/platform-admin/types";
+import { ACCOUNT_STATUS_LABELS, SECURITY_EVENT_TYPE_LABELS, MEMBERSHIP_STATUS_LABELS, type MembershipStatus } from "@/modules/platform-admin/types";
 import { UserFilters } from "@/modules/platform-admin/components/user-filters";
 import { AccountActions } from "@/modules/platform-admin/components/account-actions";
 import { AdminPagination } from "@/modules/platform-admin/components/admin-pagination";
@@ -95,7 +95,7 @@ export default async function PlatformAdminUsersPage({ searchParams }: PageProps
                       ) : (
                         memberships.map((m) => (
                           <span key={m.company_id} className="text-sm">
-                            {m.company_name} — {m.membership_status} ({(m.role_names ?? []).join(", ") || "no roles"})
+                            {m.company_name} — {MEMBERSHIP_STATUS_LABELS[m.membership_status as MembershipStatus] ?? m.membership_status} ({(m.role_names ?? []).join(", ") || "no roles"})
                           </span>
                         ))
                       )}

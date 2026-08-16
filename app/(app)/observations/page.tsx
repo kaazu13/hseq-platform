@@ -9,6 +9,8 @@ import { ObservationCard } from "@/modules/observations/components/observation-c
 import { ObservationFilters } from "@/modules/observations/components/observation-filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RefreshButton } from "@/components/shared/refresh-button";
+import { CreateSuccessToast } from "@/components/shared/create-success-toast";
 import { Button } from "@/components/ui/button";
 
 type ObservationsPageProps = {
@@ -66,14 +68,18 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      <CreateSuccessToast paramName="created" buildMessage={() => "Observation submitted successfully."} buildViewHref={(id) => `/observations/${id}`} viewLabel="View observation" />
       <PageHeader
         title="Safety Observations"
         description="Site safety observations — positive recognition and safety issues."
         actions={
-          <Button size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
-            <Plus />
-            New observation
-          </Button>
+          <>
+            <RefreshButton />
+            <Button size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
+              <Plus />
+              New observation
+            </Button>
+          </>
         }
       />
 

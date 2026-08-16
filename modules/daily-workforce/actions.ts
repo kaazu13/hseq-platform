@@ -56,6 +56,7 @@ async function requireDailyWorkforceManageAccess(companyId: string, projectId: s
 /** Today's Teams reads its date from a `?date=` search param, which revalidatePath doesn't scope by — every date under this project path is covered by revalidating the base path. */
 function revalidateDailyWorkforcePaths(companyId: string, projectId: string) {
   revalidatePath(`/companies/${companyId}/projects/${projectId}/teams`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}`);
   revalidatePath("/dashboard");
 }
 
