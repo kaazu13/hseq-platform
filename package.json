@@ -9,6 +9,7 @@
     "lint": "eslint",
     "seed:test-company": "tsx scripts/seed-test-company.ts",
     "cleanup:test-company": "tsx scripts/cleanup-test-company.ts",
+    "seed:role-validation": "tsx scripts/seed-role-validation-fixtures.ts",
     "test": "npm run test:unit",
     "test:unit": "vitest run --config vitest.config.ts",
     "test:db": "vitest run --config vitest.db.config.ts",
