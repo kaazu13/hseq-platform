@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, forbidden } from "next/navigation";
 import { LayoutDashboard, Settings2 } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate, listDailyTeamsForDate, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
 import { canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
@@ -54,6 +54,16 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
     getMyProjectAssignmentRoles(companyId, projectId, user.id),
     isCallerProjectAccessible(projectId),
   ]);
+
+  // Employee-role correction: the Project Dashboard is management/
+  // aggregate-shaped (workforce, LMRA, scaffold, observation, corrective-
+  // action counts) — a plain Employee has "Your Dashboard" (personal) for
+  // this instead. Blocked here, not just hidden from the nav, so direct
+  // URL entry is denied the same way.
+  if (isEmployeeOnlyAccount(roleNames)) {
+    forbidden();
+  }
+
   const canManage = canManageProject(roleNames, myProjectRoles);
   const canViewDailyOverview = canViewDailyWorkforceBroadly(roleNames, hasProjectAccess);
 

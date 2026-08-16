@@ -22,13 +22,23 @@ import {
   ShieldAlert,
   ShieldCheck,
   Siren,
-  User,
   Users,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { RoleName } from "@/modules/companies/types";
+import { ROLE_NAMES } from "@/modules/companies/types";
 import { COMPANY_ADMIN_ROLES } from "@/modules/admin/permissions";
+
+/**
+ * Employee-role correction (completion pass): every role except the plain
+ * worker-facing `employee` role. Used to hide management/aggregate/
+ * administrative nav items from Employee specifically, without changing
+ * visibility for any other role — see docs/ARCHITECTURE.md §6, this is a
+ * UI convenience only; the real gate for each of these is the destination
+ * page's own server-side check (added alongside each nav change below).
+ */
+const NON_EMPLOYEE_ROLES: RoleName[] = ROLE_NAMES.filter((role) => role !== "employee");
 
 /**
  * Single source of truth for the primary navigation — see
@@ -130,6 +140,7 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Workforce, Today's Teams, Worked Hours, LMRA activity, Scaffold inspections, Safety Observations, and Corrective Actions for your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}`,
         matchSegment: "",
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "Safety Overview",
@@ -138,6 +149,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description:
           "LMRA activity, open safety items, and expiring qualifications across your company, filterable by project, work area, date, and status.",
+        roles: NON_EMPLOYEE_ROLES,
       },
     ],
   },
@@ -151,6 +163,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description:
           "Company employment records for your company — name, position, employment status, and (once activated) company roles.",
+        roles: NON_EMPLOYEE_ROLES,
       },
     ],
   },
@@ -185,6 +198,14 @@ export const NAV_GROUPS: NavGroup[] = [
           "Company and project equipment — inventory, issuance, employee requests, returns, and full history. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/equipment`,
         matchSegment: "equipment",
+        roles: NON_EMPLOYEE_ROLES,
+      },
+      {
+        label: "My Equipment",
+        href: "/my-equipment",
+        icon: Wrench,
+        status: "available",
+        description: "Equipment currently issued to you, your request history, and requesting new equipment — your own records only.",
       },
       {
         label: "Scaffold Register",
@@ -195,6 +216,7 @@ export const NAV_GROUPS: NavGroup[] = [
           "The scaffold register — tag numbers, type, dimensions, load class, responsible Foreman and team, and a complete chronological inspection history. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffolds`,
         matchSegment: "scaffolds",
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "Scaffold Inspections",
@@ -205,6 +227,7 @@ export const NAV_GROUPS: NavGroup[] = [
           "Every scaffold inspection recorded across your currently selected project's scaffolds, in one list — each entry opens the same canonical inspection view reached from the Scaffold Register.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffold-inspections`,
         matchSegment: "scaffold-inspections",
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "LMRA",
@@ -235,6 +258,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description: "A reusable, company-wide library of toolbox meeting PDF templates.",
         matchQueryParam: { key: "section", value: "templates" },
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "Safety Flash",
@@ -267,6 +291,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "General safety walks across a project, with checklist results and photo evidence — distinct from Scaffold Inspections, which has its own dedicated module.",
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "Incidents and Near Misses",
@@ -275,6 +300,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "Formal records of incidents and near-misses, with severity classification, investigation, and follow-up.",
+        roles: NON_EMPLOYEE_ROLES,
       },
     ],
   },
@@ -288,6 +314,13 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "General company and project documents, separate from individual employee certificates.",
+        // Employee-role correction: the future product intent is a personal
+        // employee document vault, but the module is entirely unbuilt today
+        // (a placeholder page with no schema/queries) — hidden from Employee
+        // rather than exposing an eventual company-wide document browser
+        // under a name that will mean something different later. See this
+        // milestone's final report for the required future design.
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "Reports",
@@ -296,6 +329,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "Role-scoped dashboards and exports summarizing hours, attendance, safety, and compliance.",
+        roles: NON_EMPLOYEE_ROLES,
       },
       {
         label: "Certificates",
@@ -304,19 +338,24 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "Required documents and certificates per employee, with expiry tracking and renewal reminders.",
+        // Unbuilt (no modules/certificates exists yet) — hidden from
+        // Employee rather than linking to a placeholder; see final report.
+        roles: NON_EMPLOYEE_ROLES,
       },
     ],
   },
   {
+    // Account and Settings were removed from here (all roles, not just
+    // Employee) — both are already reachable from the sidebar-footer
+    // profile dropdown (components/app-shell/user-menu.tsx), so listing
+    // them here too was a redundant duplicate destination, not a distinct
+    // feature. The pages themselves are unchanged; only this duplicate
+    // link was removed. For Employee specifically, this group is now
+    // empty (Members/Company Setup already role-gated to
+    // COMPANY_ADMIN_ROLES) and so never renders at all — see nav-main.tsx's
+    // "hide empty groups" behavior.
     label: "People and Administration",
     items: [
-      {
-        label: "Account",
-        href: "/account",
-        icon: User,
-        status: "available",
-        description: "Your profile, company, roles, and project assignments.",
-      },
       {
         label: "Members",
         href: "/admin/members",
@@ -332,13 +371,6 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description: "Onboarding checklist — logo, first project, employees, and invitations for a newly created company.",
         roles: COMPANY_ADMIN_ROLES,
-      },
-      {
-        label: "Settings",
-        href: "/settings",
-        icon: Settings,
-        status: "planned",
-        description: "Company settings, membership, and role management.",
       },
     ],
   },

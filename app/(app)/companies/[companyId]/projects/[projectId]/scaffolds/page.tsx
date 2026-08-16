@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, forbidden } from "next/navigation";
 import { HardHat, Plus } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
 import { listScaffolds, getCurrentInspectionExpiryByScaffold, type ScaffoldListFilters } from "@/modules/scaffolds/queries";
 import { ScaffoldCard } from "@/modules/scaffolds/components/scaffold-card";
@@ -38,6 +38,17 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
   const project = await getProject(companyId, projectId);
   if (!project) {
     notFound();
+  }
+
+  // Employee-role correction: employees are already excluded from
+  // scaffolds_select RLS (see supabase/migrations/20260831093000), which
+  // makes this page show a bare "No scaffolds found" empty state for
+  // them today — indistinguishable from a genuinely-empty register. A
+  // real forbidden() is a more honest response for a page Employee was
+  // never meant to see at all.
+  const roleNames = await getUserRoleNames(companyId);
+  if (isEmployeeOnlyAccount(roleNames)) {
+    forbidden();
   }
 
   const filters: ScaffoldListFilters = {

@@ -13,7 +13,8 @@ import {
   Siren,
   Users,
 } from "lucide-react";
-import { requireUser } from "@/lib/auth/session";
+import { forbidden } from "next/navigation";
+import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { getLmraOverviewCounts, listRecentLmraForOverview, type LmraListFilters } from "@/modules/lmra/queries";
@@ -91,6 +92,16 @@ export default async function SafetyOverviewPage({ searchParams }: SafetyOvervie
         />
       </div>
     );
+  }
+
+  // Employee-role correction: Safety Overview is a company/project-wide
+  // aggregate dashboard (LMRA/observation/corrective-action/scaffold
+  // counts across the whole company) — never appropriate for a plain
+  // Employee, who has no equivalent personal need for it. Blocked here,
+  // not just hidden from the nav, so direct URL entry is denied too.
+  const roleNames = await getUserRoleNames(currentCompanyId);
+  if (isEmployeeOnlyAccount(roleNames)) {
+    forbidden();
   }
 
   const lmraListFilters: LmraListFilters = {

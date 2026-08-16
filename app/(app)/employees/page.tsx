@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect, forbidden } from "next/navigation";
 import { UserPlus, Upload, Users } from "lucide-react";
-import { requireUser, getUserRoleNames } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listEmployees, countEmployees, getEmployeeRoleInfoBulk } from "@/modules/employees/queries";
 import { canManageEmployees } from "@/modules/employees/permissions";
@@ -55,6 +55,17 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
   }
 
   const roleNames = await getUserRoleNames(currentCompanyId);
+
+  // Employee-role correction: the company employee directory is not
+  // appropriate for a plain Employee ("no access to other employees'
+  // private/admin information") — blocked here, not just hidden from the
+  // nav, so direct URL entry is denied too. Scoped to Employee only —
+  // every other role's existing access (canViewEmployeeDirectory/
+  // canManageEmployees below) is unchanged.
+  if (isEmployeeOnlyAccount(roleNames)) {
+    forbidden();
+  }
+
   const canManage = canManageEmployees(roleNames);
 
   const filters = {

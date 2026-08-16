@@ -11,15 +11,16 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { requireUser, getUserRoleNames } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import {
   countActiveMembers,
   getCurrentUserProfile,
   resolveCurrentCompany,
 } from "@/modules/companies/queries";
-import { resolveCurrentProject } from "@/modules/projects/queries";
+import { resolveCurrentProject, getProject } from "@/modules/projects/queries";
 import { createClient } from "@/lib/supabase/server";
 import { canAdministerCompany } from "@/modules/admin/permissions";
+import { canManageEmployees } from "@/modules/employees/permissions";
 import { isCurrentUserPlatformSuperAdmin } from "@/modules/platform-admin/queries";
 import { getOnboardingChecklist } from "@/modules/onboarding/queries";
 import { isOnboardingCoreComplete } from "@/modules/onboarding/types";
@@ -143,6 +144,14 @@ export default async function DashboardPage() {
     );
   }
 
+  // Employee-role correction: a plain employee (no other role) gets a
+  // purely personal dashboard — no company-wide aggregates (member count,
+  // company-wide certificate/corrective-action stats, "recent activity"),
+  // no management quick actions. Every other role's dashboard is
+  // completely unchanged.
+  const isPlainEmployee = isEmployeeOnlyAccount(roleNames);
+  const currentProject = effectiveProjectId ? await getProject(current.id, effectiveProjectId) : null;
+
   // Employee Dashboard section (Phase F) — only when the signed-in user
   // has a linked employee record for this company AND an active project;
   // every query below is explicitly scoped to that one employee, never
@@ -199,18 +208,22 @@ export default async function DashboardPage() {
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
       <PageHeader
         title={`Welcome back, ${displayName}`}
-        description={`Here's what's happening at ${current.name}.`}
+        description={isPlainEmployee && currentProject ? `${current.name} · Current project: ${currentProject.name}` : `Here's what's happening at ${current.name}.`}
         actions={
-          <>
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/employees" />}>
-              <UserPlus />
-              Add employee
-            </Button>
-            <Button size="sm" nativeButton={false} render={<Link href="/incidents" />}>
-              <Plus />
-              Report incident
-            </Button>
-          </>
+          isPlainEmployee ? undefined : (
+            <>
+              {canManageEmployees(roleNames) && (
+                <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/employees" />}>
+                  <UserPlus />
+                  Add employee
+                </Button>
+              )}
+              <Button size="sm" nativeButton={false} render={<Link href="/incidents" />}>
+                <Plus />
+                Report incident
+              </Button>
+            </>
+          )
         }
       />
 
@@ -218,143 +231,147 @@ export default async function DashboardPage() {
 
       {employeeSection}
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Current company
-            </span>
-            <span className="text-lg font-semibold">{current.name}</span>
-          </div>
-          <StatusIndicator tone={companyTone} label={current.status} className="capitalize" />
-        </CardContent>
-      </Card>
-
-      <div>
-        <SectionHeader title="Overview" className="mb-3" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            variant="live"
-            label="Team members"
-            icon={Users}
-            value={memberCount}
-            href="/settings"
-          />
-          <StatCard variant="placeholder" label="Active projects" icon={FolderKanban} href="/projects" />
-          <StatCard
-            variant="placeholder"
-            label="Certificates expiring soon"
-            icon={FileBadge}
-            href="/certificates"
-          />
-          <StatCard
-            variant="placeholder"
-            label="Open corrective actions"
-            icon={ListChecks}
-            href="/corrective-actions"
-          />
-        </div>
-      </div>
-
-      <div>
-        <SectionHeader title="Activity & compliance" className="mb-3" />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {!isPlainEmployee && (
+        <>
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <Activity className="size-4 text-muted-foreground" />
-                Recent activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EmptyState
-                icon={Activity}
-                title="No activity yet"
-                description="Actions taken across your company will show up here once business modules are in place."
-              />
+            <CardContent className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Current company
+                </span>
+                <span className="text-lg font-semibold">{current.name}</span>
+              </div>
+              <StatusIndicator tone={companyTone} label={current.status} className="capitalize" />
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <ShieldCheck className="size-4 text-muted-foreground" />
-                Compliance overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EmptyState
-                icon={ShieldCheck}
-                title="Not yet available"
-                description="A summary of inspections, LMRA completion, and open safety items will appear here."
+          <div>
+            <SectionHeader title="Overview" className="mb-3" />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                variant="live"
+                label="Team members"
+                icon={Users}
+                value={memberCount}
+                href="/settings"
               />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <FileBadge className="size-4 text-muted-foreground" />
-                Expiring certificates
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EmptyState
+              <StatCard variant="placeholder" label="Active projects" icon={FolderKanban} href="/projects" />
+              <StatCard
+                variant="placeholder"
+                label="Certificates expiring soon"
                 icon={FileBadge}
-                title="Not yet available"
-                description="Employee certificates approaching their expiry date will be listed here."
-                action={
-                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/certificates" />}>
-                    View certificates
-                  </Button>
-                }
+                href="/certificates"
               />
-            </CardContent>
-          </Card>
+              <StatCard
+                variant="placeholder"
+                label="Open corrective actions"
+                icon={ListChecks}
+                href="/corrective-actions"
+              />
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <AlertTriangle className="size-4 text-muted-foreground" />
-                Open corrective actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EmptyState
-                icon={AlertTriangle}
-                title="Not yet available"
-                description="Remediation tasks raised from inspections and incidents will be tracked here."
-                action={
-                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/corrective-actions" />}>
-                    View corrective actions
-                  </Button>
-                }
-              />
-            </CardContent>
-          </Card>
+          <div>
+            <SectionHeader title="Activity & compliance" className="mb-3" />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <Activity className="size-4 text-muted-foreground" />
+                    Recent activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EmptyState
+                    icon={Activity}
+                    title="No activity yet"
+                    description="Actions taken across your company will show up here once business modules are in place."
+                  />
+                </CardContent>
+              </Card>
 
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <FolderKanban className="size-4 text-muted-foreground" />
-                Project overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <EmptyState
-                icon={FolderKanban}
-                title="Not yet available"
-                description="Active projects, their locations, and current status will be summarized here."
-                action={
-                  <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/projects" />}>
-                    View projects
-                  </Button>
-                }
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <ShieldCheck className="size-4 text-muted-foreground" />
+                    Compliance overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EmptyState
+                    icon={ShieldCheck}
+                    title="Not yet available"
+                    description="A summary of inspections, LMRA completion, and open safety items will appear here."
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <FileBadge className="size-4 text-muted-foreground" />
+                    Expiring certificates
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EmptyState
+                    icon={FileBadge}
+                    title="Not yet available"
+                    description="Employee certificates approaching their expiry date will be listed here."
+                    action={
+                      <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/certificates" />}>
+                        View certificates
+                      </Button>
+                    }
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <AlertTriangle className="size-4 text-muted-foreground" />
+                    Open corrective actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EmptyState
+                    icon={AlertTriangle}
+                    title="Not yet available"
+                    description="Remediation tasks raised from inspections and incidents will be tracked here."
+                    action={
+                      <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/corrective-actions" />}>
+                        View corrective actions
+                      </Button>
+                    }
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                    <FolderKanban className="size-4 text-muted-foreground" />
+                    Project overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EmptyState
+                    icon={FolderKanban}
+                    title="Not yet available"
+                    description="Active projects, their locations, and current status will be summarized here."
+                    action={
+                      <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/projects" />}>
+                        View projects
+                      </Button>
+                    }
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

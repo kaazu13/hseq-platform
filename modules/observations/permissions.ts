@@ -19,9 +19,23 @@ import type { RoleName } from "@/modules/companies/types";
 
 const CREATE_AND_OWN_EDIT_ROLES: RoleName[] = ["hse_officer", "foreman", "inspector", "employee"];
 
+/**
+ * Employee-role correction milestone: CREATE rights specifically no
+ * longer include `employee` — reverses footnote 12's original "safety
+ * reporting should never be gated behind a manager role" stance for this
+ * one role, per an explicit new product direction (Employee's role here
+ * is now "see observations about me," not "author observations"). Kept
+ * as its own list, separate from `CREATE_AND_OWN_EDIT_ROLES` above
+ * (still used by canEditObservation, unchanged) rather than removing
+ * employee from that shared list — an employee can never produce a new
+ * "own entry" to edit after this change anyway, so leaving edit's role
+ * list alone is a no-op for them, not a widening.
+ */
+const CREATE_ROLES: RoleName[] = ["hse_officer", "foreman", "inspector"];
+
 /** Can create an observation for a specific project. `hasProjectAccess` is the caller's own has_project_access(project_id) — the caller is responsible for scoping it to the right project, same trust boundary as modules/lmra/permissions.ts's canManageLmra. */
 export function canCreateObservation(roleNames: RoleName[], hasProjectAccess: boolean): boolean {
-  return roleNames.includes("hseq_manager") || (hasProjectAccess && roleNames.some((role) => CREATE_AND_OWN_EDIT_ROLES.includes(role)));
+  return roleNames.includes("hseq_manager") || (hasProjectAccess && roleNames.some((role) => CREATE_ROLES.includes(role)));
 }
 
 /** Can edit an existing observation's own fields (not review/close — see canReviewOrCloseObservation). `isOwnEntry` = the caller authored it (created_by = them). */

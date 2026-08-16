@@ -18,10 +18,11 @@ export type ToolboxSection = (typeof SECTIONS)[number]["key"];
  * user only ever pays for the section they're actually viewing, and each
  * section has its own shareable URL.
  */
-export function ToolboxSectionNav({ active }: { active: ToolboxSection }) {
+export function ToolboxSectionNav({ active, hideTemplates }: { active: ToolboxSection; hideTemplates?: boolean }) {
+  const visibleSections = hideTemplates ? SECTIONS.filter((section) => section.key !== "templates") : SECTIONS;
   return (
     <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
-      {SECTIONS.map((section) => (
+      {visibleSections.map((section) => (
         <Link
           key={section.key}
           href={section.href}

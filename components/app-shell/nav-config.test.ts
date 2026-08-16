@@ -233,3 +233,57 @@ describe("matchSegment: '' (project root — 'Project Dashboard')", () => {
     expect(isNavItemActive(projectDashboardItem, "/companies/c1/projects/p1/teams", new URLSearchParams())).toBe(false);
   });
 });
+
+describe("Employee-role correction: management/aggregate nav items are hidden from Employee", () => {
+  const EMPLOYEE_HIDDEN_LABELS = [
+    "Project Dashboard",
+    "Safety Overview",
+    "Employees",
+    "Equipment",
+    "Scaffold Register",
+    "Scaffold Inspections",
+    "Toolbox Templates",
+    "Safety Walks",
+    "Incidents and Near Misses",
+    "Documents",
+    "Reports",
+    "Certificates",
+  ];
+
+  it.each(EMPLOYEE_HIDDEN_LABELS)("'%s' has a roles array that excludes 'employee'", (label) => {
+    const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+    expect(item).toBeDefined();
+    expect(item.roles).toBeDefined();
+    expect(item.roles).not.toContain("employee");
+  });
+
+  it("Employee still has no roles array (visible) on LMRA, Toolbox Meetings, Safety Flash, Safety Observations, Today's Teams, Worked Hours", () => {
+    for (const label of ["LMRA", "Toolbox Meetings", "Safety Observations", "Today's Teams", "Worked Hours"]) {
+      const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+      expect(item).toBeDefined();
+      expect(item.roles).toBeUndefined();
+    }
+  });
+
+  it("'My Equipment' exists, is visible to every role (no roles restriction), and is a flat non-project-scoped route", () => {
+    const item = ALL_NAV_ITEMS.find((i) => i.label === "My Equipment")!;
+    expect(item).toBeDefined();
+    expect(item.href).toBe("/my-equipment");
+    expect(item.roles).toBeUndefined();
+    expect(item.buildHref).toBeUndefined();
+  });
+
+  it("Account and Settings are no longer separate sidebar nav items (already reachable from the profile dropdown)", () => {
+    expect(ALL_NAV_ITEMS.some((item) => item.label === "Account")).toBe(false);
+    expect(ALL_NAV_ITEMS.some((item) => item.label === "Settings")).toBe(false);
+  });
+
+  it("'People and Administration' has no items visible to a plain employee — only Members/Company Setup remain, both company-admin-gated", () => {
+    const group = NAV_GROUPS.find((g) => g.label === "People and Administration")!;
+    expect(group).toBeDefined();
+    for (const item of group.items) {
+      expect(item.roles).toBeDefined();
+      expect(item.roles).not.toContain("employee");
+    }
+  });
+});

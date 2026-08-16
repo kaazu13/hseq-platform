@@ -158,8 +158,8 @@ export async function listObservationCandidateEmployees(companyId: string, proje
   return (employees ?? []).sort((a, b) => `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`));
 }
 
-/** Roles safety_observations_insert admits alongside hseq_manager — see that RLS policy in the migration. A caller holding NONE of these (e.g. company_admin, even one with a stray project_assignments row from unrelated historical test data) is never creatable-anywhere, regardless of project assignments. */
-const OBSERVATION_CREATE_ELIGIBLE_ROLES: RoleName[] = ["hse_officer", "foreman", "inspector", "employee"];
+/** Roles safety_observations_insert admits alongside hseq_manager — see that RLS policy in the migration. A caller holding NONE of these (e.g. company_admin, even one with a stray project_assignments row from unrelated historical test data) is never creatable-anywhere, regardless of project assignments. `employee` removed — Employee-role correction milestone, mirrors modules/observations/permissions.ts's canCreateObservation exactly. */
+const OBSERVATION_CREATE_ELIGIBLE_ROLES: RoleName[] = ["hse_officer", "foreman", "inspector"];
 
 /**
  * Projects the caller can create an observation for — company-wide (every

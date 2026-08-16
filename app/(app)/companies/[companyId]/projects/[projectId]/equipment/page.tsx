@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Download, Wrench } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { canManageEquipment } from "@/modules/equipment/permissions";
@@ -67,6 +67,16 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
     getMyProjectAssignmentRoles(companyId, projectId, user.id),
     getMyEmployeeId(companyId, user.id),
   ]);
+
+  // Employee-role correction: this is the management inventory/issue/
+  // admin surface — a plain Employee gets the personal "My Equipment"
+  // page instead (own assignments/requests only). Redirected (not just
+  // hidden from the nav) so direct URL entry lands somewhere useful
+  // rather than a bare denial.
+  if (isEmployeeOnlyAccount(roleNames)) {
+    redirect("/my-equipment");
+  }
+
   const canManage = canManageEquipment(roleNames, projectId, myProjectAssignmentRoles);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/equipment`;

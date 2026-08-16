@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Eye, Plus } from "lucide-react";
-import { requireUser } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listObservations, type ObservationListFilters } from "@/modules/observations/queries";
 import { listProjects } from "@/modules/projects/queries";
@@ -22,11 +22,14 @@ type ObservationsPageProps = {
  * supabase/migrations/20260802120000_safety_observations_and_corrective_actions.sql
  * and modules/observations/. RLS (safety_observations_select) is the real
  * scoping — company-wide roles see every observation in the company,
- * project-scoped roles see everything on their assigned project(s), and an
- * Employee sees only what they authored (docs/ROLES_AND_PERMISSIONS.md §5
- * footnote 12) — this page never filters visibility client-side, only the
- * work-area/project/category/risk/status/responsible-person/overdue/date
- * facets in ObservationFilters.
+ * project-scoped roles see everything on their assigned project(s), and a
+ * plain Employee sees only observations targeted at them (Employee-role
+ * correction milestone — an ordinary worker can no longer author
+ * observations at all, see modules/observations/permissions.ts's
+ * canCreateObservation) — this page never filters visibility client-side
+ * beyond the title/create-button changes below, only the work-area/
+ * project/category/risk/status/responsible-person/overdue/date facets in
+ * ObservationFilters.
  */
 export default async function ObservationsPage({ searchParams }: ObservationsPageProps) {
   const params = await searchParams;
@@ -46,6 +49,9 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
       </div>
     );
   }
+
+  const roleNames = await getUserRoleNames(currentCompanyId);
+  const isPlainEmployee = isEmployeeOnlyAccount(roleNames);
 
   const filters: ObservationListFilters = {
     projectId: params.projectId,
@@ -70,15 +76,17 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <CreateSuccessToast paramName="created" buildMessage={() => "Observation submitted successfully."} buildViewHref={(id) => `/observations/${id}`} viewLabel="View observation" />
       <PageHeader
-        title="Safety Observations"
-        description="Site safety observations — positive recognition and safety issues."
+        title={isPlainEmployee ? "My Observations" : "Safety Observations"}
+        description={isPlainEmployee ? "Safety observations that are about you." : "Site safety observations — positive recognition and safety issues."}
         actions={
           <>
             <RefreshButton />
-            <Button size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
-              <Plus />
-              New observation
-            </Button>
+            {!isPlainEmployee && (
+              <Button size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
+                <Plus />
+                New observation
+              </Button>
+            )}
           </>
         }
       />
@@ -89,12 +97,14 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
         <EmptyState
           icon={Eye}
           title="No observations found"
-          description="Try a different filter, or report the first observation for a project."
+          description={isPlainEmployee ? "No safety observations have been recorded about you." : "Try a different filter, or report the first observation for a project."}
           action={
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
-              <Plus />
-              New observation
-            </Button>
+            isPlainEmployee ? undefined : (
+              <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
+                <Plus />
+                New observation
+              </Button>
+            )
           }
           className="flex-1"
         />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MessagesSquare, Plus, BookOpen, Siren } from "lucide-react";
-import { requireUser, getUserRoleNames } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { listProjects } from "@/modules/projects/queries";
 import { listToolboxMeetings, type ToolboxMeetingListFilters } from "@/modules/toolbox-meetings/queries";
@@ -45,6 +45,12 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
   }
 
   const roleNames = await getUserRoleNames(currentCompanyId);
+  // Employee-role correction: read-only for Toolbox Meetings and Safety
+  // Flash — every write control (create/upload) hidden. Server-side
+  // enforcement is unchanged (canManageToolboxMeeting/canManageSafetyFlash
+  // already excluded employee before this task); this only fixes the UI
+  // still unconditionally offering these buttons to every role.
+  const isPlainEmployee = isEmployeeOnlyAccount(roleNames);
 
   if (section === "templates") {
     const canManage = canViewToolboxTemplate(roleNames);
@@ -52,7 +58,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
       return (
         <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
           <PageHeader title="Toolbox Meetings" />
-          <ToolboxSectionNav active={section} />
+          <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
           <EmptyState icon={BookOpen} title="No access to Toolbox Templates" description="This library is available to HSE staff, Project Managers, Foremen, and Inspectors." className="flex-1" />
         </div>
       );
@@ -75,7 +81,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
             ) : undefined
           }
         />
-        <ToolboxSectionNav active={section} />
+        <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
         <ToolboxTemplateFilters />
         {templates.length === 0 ? (
           <EmptyState icon={BookOpen} title="No templates found" description="Try a different filter, or upload the first reusable template." className="flex-1" />
@@ -108,13 +114,15 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
         <PageHeader
           title="Toolbox Meetings"
           actions={
-            <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/safety-flash/new" />}>
-              <Plus />
-              New Safety Flash
-            </Button>
+            isPlainEmployee ? undefined : (
+              <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/safety-flash/new" />}>
+                <Plus />
+                New Safety Flash
+              </Button>
+            )
           }
         />
-        <ToolboxSectionNav active={section} />
+        <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
         <SafetyFlashFilters projects={projects} />
         {flashes.length === 0 ? (
           <EmptyState icon={Siren} title="No Safety Flashes found" description="Try a different filter, or issue the first Safety Flash." className="flex-1" />
@@ -145,24 +153,28 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
         title="Toolbox Meetings"
         description="A register of completed toolbox meetings, reusable templates, and Safety Flash bulletins."
         actions={
-          <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/new" />}>
-            <Plus />
-            New toolbox meeting
-          </Button>
+          isPlainEmployee ? undefined : (
+            <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/new" />}>
+              <Plus />
+              New toolbox meeting
+            </Button>
+          )
         }
       />
-      <ToolboxSectionNav active={section} />
+      <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
       <ToolboxMeetingFilters projects={projects} />
       {meetings.length === 0 ? (
         <EmptyState
           icon={MessagesSquare}
           title="No toolbox meetings found"
-          description="Try a different filter, or upload the first completed toolbox meeting PDF."
+          description={isPlainEmployee ? "No toolbox meetings have been recorded for your project yet." : "Try a different filter, or upload the first completed toolbox meeting PDF."}
           action={
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/new" />}>
-              <Plus />
-              New toolbox meeting
-            </Button>
+            isPlainEmployee ? undefined : (
+              <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/new" />}>
+                <Plus />
+                New toolbox meeting
+              </Button>
+            )
           }
           className="flex-1"
         />

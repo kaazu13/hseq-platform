@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, forbidden } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
 import { listInspectionsForProject, type ScaffoldInspectionListFilters } from "@/modules/scaffolds/queries";
 import { SCAFFOLD_INSPECTION_REASON_LABELS, formatInspectionReference } from "@/modules/scaffolds/types";
@@ -45,6 +45,15 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
   const project = await getProject(companyId, projectId);
   if (!project) {
     notFound();
+  }
+
+  // Employee-role correction: kept worker-focused — ordinary Employee
+  // does not perform or manage Scaffold Inspections. Also closes a real
+  // RLS gap (scaffold_inspections_select previously admitted any project
+  // member) — see the accompanying migration.
+  const roleNames = await getUserRoleNames(companyId);
+  if (isEmployeeOnlyAccount(roleNames)) {
+    forbidden();
   }
 
   const filters: ScaffoldInspectionListFilters = { status: urlParams.status };

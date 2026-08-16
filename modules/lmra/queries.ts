@@ -115,33 +115,63 @@ export async function countLmraAssessments(companyId: string, filters: LmraListF
 /**
  * "My LMRAs" (item 8) — every LMRA in `projectId` where `employeeId` is
  * ANY of: the completed-by person, the assessment-level responsible
- * person, a hazard-level responsible person, or a listed participant
- * ("Workers Involved"). Four independent id-set lookups, unioned via a
- * `Set` before the final fetch — the same dedup shape as
+ * person, a hazard-level responsible person, a listed participant
+ * ("Workers Involved"), or — Employee-role correction milestone — a
+ * member of the assessment's linked historical Today's Team
+ * (`daily_team_id`), per the actual saved `daily_team_members` row for
+ * that team on that day. This last criterion is deliberately a lookup
+ * against the historical record itself, never a live/current-day
+ * membership check — an employee who has since moved to a different team
+ * must still see an LMRA their team completed on the day they were
+ * actually on it, and an employee who joined that same team LATER must
+ * not retroactively see it. Five independent id-set lookups, unioned via
+ * a `Set` before the final fetch — the same dedup shape as
  * `listLmraCandidateEmployeeIds`'s `[...new Set(...)]` convention — so an
- * employee who is e.g. both completed-by AND a participant on the same
- * assessment (the common case) is never returned twice. Always scoped to
- * ONE project (the caller's active project), matching "All LMRAs" (item
- * 8's "only the currently active project, never every project in the
- * company") — this is a filter down to a determined id list, never a
- * looser query than `listLmraAssessments`'s own company/project scoping,
- * so RLS still applies identically.
+ * employee who qualifies via more than one criterion (the common case) is
+ * never returned twice. Always scoped to ONE project (the caller's active
+ * project), matching "All LMRAs" (item 8's "only the currently active
+ * project, never every project in the company") — this is a filter down
+ * to a determined id list, never a looser query than
+ * `listLmraAssessments`'s own company/project scoping, so RLS still
+ * applies identically (and, for a plain employee, independently enforces
+ * these exact same criteria server-side — see
+ * 20260901097000_employee_role_correction_lmra_involvement_scope.sql).
  */
 async function resolveMyLmraAssessmentIds(companyId: string, projectId: string, employeeId: string): Promise<string[]> {
   const supabase = await createClient();
-  const [{ data: ownedRows, error: ownedError }, { data: participantRows, error: participantError }, { data: hazardRows, error: hazardError }] = await Promise.all([
+  const [
+    { data: ownedRows, error: ownedError },
+    { data: participantRows, error: participantError },
+    { data: hazardRows, error: hazardError },
+    { data: myDailyTeamRows, error: myDailyTeamError },
+  ] = await Promise.all([
     supabase.from("lmra_assessments").select("id").eq("company_id", companyId).eq("project_id", projectId).or(`completed_by_employee_id.eq.${employeeId},responsible_person_id.eq.${employeeId}`),
     supabase.from("lmra_participants").select("lmra_assessment_id").eq("company_id", companyId).eq("employee_id", employeeId),
     supabase.from("lmra_hazards").select("lmra_assessment_id").eq("company_id", companyId).eq("responsible_person_id", employeeId),
+    supabase.from("daily_team_members").select("daily_team_id").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", employeeId),
   ]);
   if (ownedError) throw ownedError;
   if (participantError) throw participantError;
   if (hazardError) throw hazardError;
+  if (myDailyTeamError) throw myDailyTeamError;
 
   const assessmentIds = new Set<string>();
   for (const row of ownedRows ?? []) assessmentIds.add(row.id);
   for (const row of participantRows ?? []) assessmentIds.add(row.lmra_assessment_id);
   for (const row of hazardRows ?? []) assessmentIds.add(row.lmra_assessment_id);
+
+  const myDailyTeamIds = [...new Set((myDailyTeamRows ?? []).map((row) => row.daily_team_id))];
+  if (myDailyTeamIds.length > 0) {
+    const { data: teamLinkedRows, error: teamLinkedError } = await supabase
+      .from("lmra_assessments")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("project_id", projectId)
+      .in("daily_team_id", myDailyTeamIds);
+    if (teamLinkedError) throw teamLinkedError;
+    for (const row of teamLinkedRows ?? []) assessmentIds.add(row.id);
+  }
+
   return [...assessmentIds];
 }
 

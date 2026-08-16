@@ -7,17 +7,20 @@ describe("canCreateObservation", () => {
     expect(canCreateObservation(["hseq_manager"], true)).toBe(true);
   });
 
-  it("allows HSE Officer/Foreman/Inspector/Employee WITH project access", () => {
+  it("allows HSE Officer/Foreman/Inspector WITH project access", () => {
     expect(canCreateObservation(["hse_officer"], true)).toBe(true);
     expect(canCreateObservation(["foreman"], true)).toBe(true);
     expect(canCreateObservation(["inspector"], true)).toBe(true);
-    expect(canCreateObservation(["employee"], true)).toBe(true);
   });
 
-  it("denies HSE Officer/Foreman/Inspector/Employee WITHOUT project access", () => {
+  it("denies HSE Officer/Foreman/Inspector WITHOUT project access", () => {
     expect(canCreateObservation(["hse_officer"], false)).toBe(false);
     expect(canCreateObservation(["foreman"], false)).toBe(false);
     expect(canCreateObservation(["inspector"], false)).toBe(false);
+  });
+
+  it("REGRESSION (Employee-role correction milestone): Employee can never create an observation, with or without project access — reverses the original 'safety reporting should never be gated behind a manager role' stance for this one role only", () => {
+    expect(canCreateObservation(["employee"], true)).toBe(false);
     expect(canCreateObservation(["employee"], false)).toBe(false);
   });
 
@@ -51,6 +54,11 @@ describe("canEditObservation", () => {
 
   it("denies a role with no create/edit standing at all, even for their own entry", () => {
     expect(canEditObservation(["project_manager"], true, true)).toBe(false);
+  });
+
+  it("Employee can still edit a pre-existing own entry (unchanged by the Employee-role correction milestone, which only removed CREATE — an employee simply can never produce a new 'own entry' going forward)", () => {
+    expect(canEditObservation(["employee"], true, true)).toBe(true);
+    expect(canEditObservation(["employee"], true, false)).toBe(false);
   });
 });
 
