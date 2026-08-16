@@ -19,16 +19,25 @@ type Step = "company" | "admin" | "done";
 /**
  * Onboarding items 1/2 — one guided flow: create the company (item 1),
  * then assign its first company_admin either directly (an existing
- * platform account) or via invitation (a new email) — item 2's two
- * explicit paths. The first admin is never made a platform_super_admin
- * by this flow (item 2's explicit requirement) — path A only ever grants
- * the `company_admin` COMPANY role, never touches platform_super_admins.
+ * platform account), via invitation (a new email), or skip entirely —
+ * item 2's two explicit paths, PLUS a third, equally first-class "assign
+ * later" exit (Part 2 fix — the wizard previously forced a choice between
+ * "New email"/"Existing account" with no way to finish otherwise, even
+ * though create_company() itself has always succeeded with zero
+ * memberships; live-verified before this fix — see this milestone's own
+ * report). Companies that skip this step are flagged on the Companies
+ * list/detail pages (no company_admin badge), which offer the same two
+ * assign paths again later. The first admin is never made a
+ * platform_super_admin by this flow (item 2's explicit requirement) —
+ * path A only ever grants the `company_admin` COMPANY role, never touches
+ * platform_super_admins.
  */
 export function CreateCompanyWizard() {
   const [step, setStep] = useState<Step>("company");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
+  const [skipped, setSkipped] = useState(false);
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -108,6 +117,13 @@ export function CreateCompanyWizard() {
             <CheckCircle2 className="size-5 text-green-600" />
             <p className="text-sm font-medium">{company?.name} is set up.</p>
           </div>
+          {skipped && (
+            <Alert>
+              <AlertDescription>
+                No company administrator was assigned. You can assign one any time from this company&apos;s detail page — it will also show a reminder until one is added.
+              </AlertDescription>
+            </Alert>
+          )}
           {inviteLink && (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">No email provider is configured — share this link with the new administrator directly:</p>
@@ -127,8 +143,8 @@ export function CreateCompanyWizard() {
               </div>
             </div>
           )}
-          <Button type="button" nativeButton={false} render={<Link href="/platform-admin" />}>
-            Back to Platform Administration
+          <Button type="button" nativeButton={false} render={<Link href={company ? `/platform-admin/companies/${company.id}` : "/platform-admin/companies"} />}>
+            {company ? "Go to company" : "Back to Companies"}
           </Button>
         </CardContent>
       </Card>
@@ -140,12 +156,25 @@ export function CreateCompanyWizard() {
       <Card>
         <CardContent className="flex flex-col gap-4 pt-4">
           <p className="text-sm font-medium">Assign the first company administrator for {company.name}</p>
-          <div className="flex gap-2">
+          <p className="text-xs text-muted-foreground">Optional — you can also skip this and assign an administrator later from the company&apos;s detail page.</p>
+          <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" variant={adminMode === "invite" ? "default" : "outline"} onClick={() => setAdminMode("invite")}>
               New email
             </Button>
             <Button type="button" size="sm" variant={adminMode === "existing" ? "default" : "outline"} onClick={() => setAdminMode("existing")}>
               Existing account
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="text-muted-foreground"
+              onClick={() => {
+                setSkipped(true);
+                setStep("done");
+              }}
+            >
+              Skip for now — assign later
             </Button>
           </div>
 

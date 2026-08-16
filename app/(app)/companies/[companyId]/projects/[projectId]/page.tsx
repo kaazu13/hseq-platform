@@ -5,7 +5,7 @@ import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate, listDailyTeamsForDate, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
 import { canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
-import { summarizeDailyWorkforce } from "@/modules/daily-workforce/types";
+import { summarizeDailyWorkforce, dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import { listWorkedHoursForDate, listOpenWorkedHoursDiscrepancies } from "@/modules/worked-hours/queries";
 import { getLmraOverviewCounts } from "@/modules/lmra/queries";
 import { getObservationOverviewCounts } from "@/modules/observations/queries";
@@ -75,6 +75,20 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
     const hoursSubmittedCount = hoursRows.filter((row) => row.status === "submitted").length;
     const hoursDraftCount = hoursRows.filter((row) => row.status === "draft").length;
 
+    // Audit finding (Phase 8 of the post-audit implementation package):
+    // "No Hours Recorded" previously counted every project-assigned
+    // employee regardless of attendance status, inflating the count for
+    // anyone confirmed absent/sick/on leave/training/off-site — people who
+    // correctly need no hours today, not people missing hours. Only
+    // employees whose CONFIRMED daily status still permits work
+    // (dailyAttendancePermitsWork — the same TS mirror of the DB's
+    // daily_attendance_permits_work() every attendance/hours gate already
+    // uses) and who have no worked_hours row yet are genuinely "missing."
+    const employeeIdsWithHoursToday = new Set(hoursRows.map((row) => row.employee_id));
+    const hoursNotRecordedCount = workforce.filter(
+      (state) => dailyAttendancePermitsWork(state.attendanceStatus) && !employeeIdsWithHoursToday.has(state.employee.id),
+    ).length;
+
     dailyOverview = {
       today: {
         ...todayWorkforceCounts,
@@ -83,7 +97,7 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
         anyTeamsOpen: teams.some((team) => team.status === "open"),
         hoursSubmittedCount,
         hoursDraftCount,
-        hoursNotRecordedCount: Math.max(0, workforce.length - hoursRows.length),
+        hoursNotRecordedCount,
       },
       safety: {
         lmraSubmittedToday: lmraCounts.submittedToday,

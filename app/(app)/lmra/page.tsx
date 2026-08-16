@@ -3,12 +3,16 @@ import { Plus, ShieldCheck } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject, getProject } from "@/modules/projects/queries";
-import { listLmraAssessments, listMyLmraAssessments, isCallerProjectForeman, getMyEmployeeId, type LmraListFilters } from "@/modules/lmra/queries";
+import { listLmraAssessments, listMyLmraAssessments, countLmraAssessments, countMyLmraAssessments, isCallerProjectForeman, getMyEmployeeId, type LmraListFilters } from "@/modules/lmra/queries";
 import { canViewAllProjectLmra } from "@/modules/lmra/permissions";
+import { resolveLmraDateRange, LMRA_DEFAULT_DATE_RANGE_PRESET, type LmraDateRangePreset, LMRA_DATE_RANGE_PRESETS } from "@/modules/lmra/types";
 import { LmraCard } from "@/modules/lmra/components/lmra-card";
 import { LmraFilters } from "@/modules/lmra/components/lmra-filters";
+import { PaginationBar } from "@/components/shared/pagination-bar";
+import { parsePageParam, parsePageSizeParam, offsetFor, clampPage, totalPagesFor } from "@/lib/pagination";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { Button } from "@/components/ui/button";
 
 type LmraPageProps = {
@@ -28,6 +32,13 @@ type LmraPageProps = {
  * only renders for roles `canViewAllProjectLmra` allows, deliberately
  * narrower than what RLS alone already permits (see that function's own
  * comment for why).
+ *
+ * Post-audit implementation package, Part 7: a visible default date
+ * window (Last 30 days — never a silent unbounded fetch) plus real,
+ * server-side pagination via the shared PaginationBar/lib/pagination.ts
+ * (the same URL-backed page/pageSize convention the employees list uses)
+ * — "All time" still paginates rather than ever fetching a project's
+ * entire history in one request.
  */
 export default async function LmraPage({ searchParams }: LmraPageProps) {
   const params = await searchParams;
@@ -87,26 +98,44 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
   const canViewAll = canViewAllProjectLmra(roleNames, isForeman);
   const mode: "my" | "all" = params.mode === "all" && canViewAll ? "all" : "my";
 
+  const rangePreset: LmraDateRangePreset = LMRA_DATE_RANGE_PRESETS.includes(params.range as LmraDateRangePreset) ? (params.range as LmraDateRangePreset) : LMRA_DEFAULT_DATE_RANGE_PRESET;
+  const { dateFrom, dateTo } = resolveLmraDateRange(rangePreset, { dateFrom: params.dateFrom, dateTo: params.dateTo });
+
   const filters: Omit<LmraListFilters, "projectId"> = {
     status: params.status,
     workAreaSearch: params.workArea,
-    dateFrom: params.dateFrom,
-    dateTo: params.dateTo,
+    dateFrom,
+    dateTo,
   };
+
+  const pageSize = parsePageSizeParam(params.pageSize);
+  const requestedPage = parsePageParam(params.page);
+
+  const totalCount =
+    mode === "all"
+      ? await countLmraAssessments(currentCompanyId, { ...filters, projectId: currentProjectId })
+      : myEmployeeId
+        ? await countMyLmraAssessments(currentCompanyId, currentProjectId, myEmployeeId, filters)
+        : 0;
+  const page = clampPage(requestedPage, totalPagesFor(totalCount, pageSize));
+  const offset = offsetFor(page, pageSize);
 
   const assessments =
     mode === "all"
-      ? await listLmraAssessments(currentCompanyId, { ...filters, projectId: currentProjectId })
+      ? await listLmraAssessments(currentCompanyId, { ...filters, projectId: currentProjectId }, pageSize, offset)
       : myEmployeeId
-        ? await listMyLmraAssessments(currentCompanyId, currentProjectId, myEmployeeId, filters)
+        ? await listMyLmraAssessments(currentCompanyId, currentProjectId, myEmployeeId, filters, pageSize, offset)
         : [];
 
   function modeHref(target: "my" | "all"): string {
     const url = new URLSearchParams();
     if (filters.status) url.set("status", filters.status);
     if (filters.workAreaSearch) url.set("workArea", filters.workAreaSearch);
-    if (filters.dateFrom) url.set("dateFrom", filters.dateFrom);
-    if (filters.dateTo) url.set("dateTo", filters.dateTo);
+    if (rangePreset !== LMRA_DEFAULT_DATE_RANGE_PRESET) url.set("range", rangePreset);
+    if (rangePreset === "custom") {
+      if (params.dateFrom) url.set("dateFrom", params.dateFrom);
+      if (params.dateTo) url.set("dateTo", params.dateTo);
+    }
     if (target === "all") url.set("mode", "all");
     const qs = url.toString();
     return `/lmra${qs ? `?${qs}` : ""}`;
@@ -118,10 +147,13 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
         title="LMRA"
         description={`${project.name} · Last Minute Risk Assessments — a go/no-go check completed before starting work.`}
         actions={
-          <Button size="sm" nativeButton={false} render={<Link href="/lmra/new" />}>
-            <Plus />
-            New LMRA
-          </Button>
+          <>
+            <RefreshButton />
+            <Button size="sm" nativeButton={false} render={<Link href="/lmra/new" />}>
+              <Plus />
+              New LMRA
+            </Button>
+          </>
         }
       />
 
@@ -148,7 +180,7 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
         </div>
       )}
 
-      <LmraFilters />
+      <LmraFilters activeRangePreset={rangePreset} />
 
       {assessments.length === 0 ? (
         <EmptyState
@@ -164,11 +196,14 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
           className="flex-1"
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {assessments.map((assessment) => (
-            <LmraCard key={assessment.id} assessment={assessment} projectName={project.name} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {assessments.map((assessment) => (
+              <LmraCard key={assessment.id} assessment={assessment} projectName={project.name} />
+            ))}
+          </div>
+          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel="LMRAs" />
+        </>
       )}
     </div>
   );

@@ -68,11 +68,15 @@ export async function listLmraCountsByDailyTeamId(companyId: string, projectId: 
  * (lmra_assessments_select) does the real scoping. Newest work_date first.
  * `limit`, when passed, is applied at the DB query level (not a
  * fetch-everything-then-slice in JS) — added so listRecentLmraForOverview()
- * below can bound its own query directly; the main LMRA list page
- * (app/(app)/lmra/page.tsx) never passes one, so its existing full-history
- * behavior when no date filter is applied is unchanged by this.
+ * below can bound its own query directly. `offset`, when passed alongside
+ * `limit`, pages through the DB via `.range()` rather than fetching
+ * everything up to that point — the main LMRA list page (app/(app)/lmra/page.tsx)
+ * now always passes both (a default 30-day window + page size), closing
+ * the audit's "no default date window, can fetch full project history"
+ * finding; a caller that truly wants the full unbounded history (there is
+ * currently none) can still omit both.
  */
-export async function listLmraAssessments(companyId: string, filters: LmraListFilters = {}, limit?: number): Promise<LmraAssessment[]> {
+export async function listLmraAssessments(companyId: string, filters: LmraListFilters = {}, limit?: number, offset?: number): Promise<LmraAssessment[]> {
   const supabase = await createClient();
   let query = supabase.from("lmra_assessments").select("*").eq("company_id", companyId);
 
@@ -81,11 +85,31 @@ export async function listLmraAssessments(companyId: string, filters: LmraListFi
   if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
   if (filters.dateFrom) query = query.gte("work_date", filters.dateFrom);
   if (filters.dateTo) query = query.lte("work_date", filters.dateTo);
-  if (limit) query = query.limit(limit);
+  if (limit && offset !== undefined) {
+    query = query.range(offset, offset + limit - 1);
+  } else if (limit) {
+    query = query.limit(limit);
+  }
 
   const { data, error } = await query.order("work_date", { ascending: false }).order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+/** Total count matching the same filters listLmraAssessments() uses — for the shared PaginationBar (Part 7), a `head: true, count: "exact"` request (no rows transferred, just the count) rather than fetching everything to measure its length. */
+export async function countLmraAssessments(companyId: string, filters: LmraListFilters = {}): Promise<number> {
+  const supabase = await createClient();
+  let query = supabase.from("lmra_assessments").select("*", { count: "exact", head: true }).eq("company_id", companyId);
+
+  if (filters.projectId) query = query.eq("project_id", filters.projectId);
+  if (filters.status) query = query.eq("status", filters.status as LmraAssessment["status"]);
+  if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
+  if (filters.dateFrom) query = query.gte("work_date", filters.dateFrom);
+  if (filters.dateTo) query = query.lte("work_date", filters.dateTo);
+
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
 }
 
 /**
@@ -103,9 +127,8 @@ export async function listLmraAssessments(companyId: string, filters: LmraListFi
  * looser query than `listLmraAssessments`'s own company/project scoping,
  * so RLS still applies identically.
  */
-export async function listMyLmraAssessments(companyId: string, projectId: string, employeeId: string, filters: Omit<LmraListFilters, "projectId"> = {}): Promise<LmraAssessment[]> {
+async function resolveMyLmraAssessmentIds(companyId: string, projectId: string, employeeId: string): Promise<string[]> {
   const supabase = await createClient();
-
   const [{ data: ownedRows, error: ownedError }, { data: participantRows, error: participantError }, { data: hazardRows, error: hazardError }] = await Promise.all([
     supabase.from("lmra_assessments").select("id").eq("company_id", companyId).eq("project_id", projectId).or(`completed_by_employee_id.eq.${employeeId},responsible_person_id.eq.${employeeId}`),
     supabase.from("lmra_participants").select("lmra_assessment_id").eq("company_id", companyId).eq("employee_id", employeeId),
@@ -119,17 +142,52 @@ export async function listMyLmraAssessments(companyId: string, projectId: string
   for (const row of ownedRows ?? []) assessmentIds.add(row.id);
   for (const row of participantRows ?? []) assessmentIds.add(row.lmra_assessment_id);
   for (const row of hazardRows ?? []) assessmentIds.add(row.lmra_assessment_id);
-  if (assessmentIds.size === 0) return [];
+  return [...assessmentIds];
+}
 
-  let query = supabase.from("lmra_assessments").select("*").eq("company_id", companyId).eq("project_id", projectId).in("id", [...assessmentIds]);
+export async function listMyLmraAssessments(
+  companyId: string,
+  projectId: string,
+  employeeId: string,
+  filters: Omit<LmraListFilters, "projectId"> = {},
+  limit?: number,
+  offset?: number,
+): Promise<LmraAssessment[]> {
+  const assessmentIds = await resolveMyLmraAssessmentIds(companyId, projectId, employeeId);
+  if (assessmentIds.length === 0) return [];
+
+  const supabase = await createClient();
+  let query = supabase.from("lmra_assessments").select("*").eq("company_id", companyId).eq("project_id", projectId).in("id", assessmentIds);
+  if (filters.status) query = query.eq("status", filters.status as LmraAssessment["status"]);
+  if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
+  if (filters.dateFrom) query = query.gte("work_date", filters.dateFrom);
+  if (filters.dateTo) query = query.lte("work_date", filters.dateTo);
+  if (limit && offset !== undefined) {
+    query = query.range(offset, offset + limit - 1);
+  } else if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query.order("work_date", { ascending: false }).order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Total count for "My LMRAs" mode matching the same filters — mirrors countLmraAssessments() for the shared PaginationBar. */
+export async function countMyLmraAssessments(companyId: string, projectId: string, employeeId: string, filters: Omit<LmraListFilters, "projectId"> = {}): Promise<number> {
+  const assessmentIds = await resolveMyLmraAssessmentIds(companyId, projectId, employeeId);
+  if (assessmentIds.length === 0) return 0;
+
+  const supabase = await createClient();
+  let query = supabase.from("lmra_assessments").select("*", { count: "exact", head: true }).eq("company_id", companyId).eq("project_id", projectId).in("id", assessmentIds);
   if (filters.status) query = query.eq("status", filters.status as LmraAssessment["status"]);
   if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
   if (filters.dateFrom) query = query.gte("work_date", filters.dateFrom);
   if (filters.dateTo) query = query.lte("work_date", filters.dateTo);
 
-  const { data, error } = await query.order("work_date", { ascending: false }).order("created_at", { ascending: false });
+  const { count, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return count ?? 0;
 }
 
 /** A single assessment scoped to `companyId`, with completed-by/responsible-person/hazards/participants resolved via get_basic_employee_info() (never a raw employees select for anyone but the caller's own company-scoped lookup). Null if it doesn't exist, belongs to another company, or RLS hides it. */

@@ -455,6 +455,73 @@ export type Database = {
           },
         ]
       }
+      company_subscriptions: {
+        Row: {
+          billing_renewal_date: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_limit: number | null
+          id: string
+          notes: string | null
+          plan_name: string | null
+          project_limit: number | null
+          subscription_status: Database["public"]["Enums"]["company_subscription_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          billing_renewal_date?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          employee_limit?: number | null
+          id?: string
+          notes?: string | null
+          plan_name?: string | null
+          project_limit?: number | null
+          subscription_status?: Database["public"]["Enums"]["company_subscription_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          billing_renewal_date?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          employee_limit?: number | null
+          id?: string
+          notes?: string | null
+          plan_name?: string | null
+          project_limit?: number | null
+          subscription_status?: Database["public"]["Enums"]["company_subscription_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_subscriptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_subscriptions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corrective_actions: {
         Row: {
           closure_evidence: string | null
@@ -2121,6 +2188,39 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          created_at: string
+          description: string | null
+          domain: string
+          id: string
+          is_reserved: boolean
+          key: string
+          label: string
+          scope_type: Database["public"]["Enums"]["permission_scope_type"]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          domain: string
+          id?: string
+          is_reserved?: boolean
+          key: string
+          label: string
+          scope_type?: Database["public"]["Enums"]["permission_scope_type"]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          domain?: string
+          id?: string
+          is_reserved?: boolean
+          key?: string
+          label?: string
+          scope_type?: Database["public"]["Enums"]["permission_scope_type"]
+        }
+        Relationships: []
+      }
       platform_super_admins: {
         Row: {
           granted_at: string
@@ -2556,8 +2656,55 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       roles: {
         Row: {
+          company_id: string | null
           created_at: string
           description: string | null
           display_label: string
@@ -2566,6 +2713,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           description?: string | null
           display_label: string
@@ -2574,6 +2722,7 @@ export type Database = {
           name: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           description?: string | null
           display_label?: string
@@ -2581,7 +2730,15 @@ export type Database = {
           is_system?: boolean
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       safety_flash_file_replacements: {
         Row: {
@@ -3133,6 +3290,65 @@ export type Database = {
           },
         ]
       }
+      scaffold_erection_teams: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          company_id: string
+          daily_team_id: string
+          id: string
+          project_id: string
+          scaffold_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          company_id: string
+          daily_team_id: string
+          id?: string
+          project_id: string
+          scaffold_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          company_id?: string
+          daily_team_id?: string
+          id?: string
+          project_id?: string
+          scaffold_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_erection_teams_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_teams_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_teams_daily_team_fk"
+            columns: ["daily_team_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "daily_teams"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_teams_scaffold_fk"
+            columns: ["scaffold_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
       scaffold_inspection_items: {
         Row: {
           comment: string | null
@@ -3416,6 +3632,73 @@ export type Database = {
           },
         ]
       }
+      scaffold_photos: {
+        Row: {
+          company_id: string
+          file_size_bytes: number
+          id: string
+          mime_type: string
+          order_index: number
+          original_filename: string
+          project_id: string
+          scaffold_id: string
+          storage_bucket: string
+          storage_object_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          company_id: string
+          file_size_bytes: number
+          id?: string
+          mime_type: string
+          order_index?: number
+          original_filename: string
+          project_id: string
+          scaffold_id: string
+          storage_bucket?: string
+          storage_object_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          company_id?: string
+          file_size_bytes?: number
+          id?: string
+          mime_type?: string
+          order_index?: number
+          original_filename?: string
+          project_id?: string
+          scaffold_id?: string
+          storage_bucket?: string
+          storage_object_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_photos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_photos_scaffold_fk"
+            columns: ["scaffold_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "scaffold_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scaffold_team_members: {
         Row: {
           added_at: string
@@ -3503,7 +3786,7 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
-          erected_at: string | null
+          erected_at: string
           erected_by: string | null
           height_metres: number | null
           id: string
@@ -3527,7 +3810,7 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
-          erected_at?: string | null
+          erected_at?: string
           erected_by?: string | null
           height_metres?: number | null
           id?: string
@@ -3551,7 +3834,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
-          erected_at?: string | null
+          erected_at?: string
           erected_by?: string | null
           height_metres?: number | null
           id?: string
@@ -4814,6 +5097,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_manage_scaffold_photos: {
+        Args: { target_scaffold_id: string }
+        Returns: boolean
+      }
       cancel_equipment_request: {
         Args: { target_request_id: string }
         Returns: {
@@ -4931,6 +5218,10 @@ export type Database = {
           workers_skipped_unavailable: number
         }[]
       }
+      count_active_company_admin_memberships: {
+        Args: { target_company_id: string }
+        Returns: number
+      }
       count_employees: {
         Args: {
           include_archived?: boolean
@@ -4962,6 +5253,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "companies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_custom_role: {
+        Args: {
+          target_company_id: string
+          target_description: string
+          target_name: string
+          target_permission_keys: string[]
+        }
+        Returns: {
+          company_id: string | null
+          created_at: string
+          description: string | null
+          display_label: string
+          id: string
+          is_system: boolean
+          name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "roles"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -5141,6 +5455,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      delete_custom_role: {
+        Args: { target_role_id: string }
+        Returns: undefined
+      }
       deny_equipment_request: {
         Args: { target_comment: string; target_request_id: string }
         Returns: {
@@ -5310,6 +5628,10 @@ export type Database = {
         Args: { role_names: string[]; target_org_id: string }
         Returns: boolean
       }
+      has_company_permission: {
+        Args: { target_company_id: string; target_permission_key: string }
+        Returns: boolean
+      }
       has_company_role: {
         Args: { role_name: string; target_org_id: string }
         Returns: boolean
@@ -5331,6 +5653,10 @@ export type Database = {
           invitation_token: string
           row_index: number
         }[]
+      }
+      is_caller_eligible_scaffold_foreman: {
+        Args: { target_company_id: string; target_project_id: string }
+        Returns: boolean
       }
       is_company_member: { Args: { target_org_id: string }; Returns: boolean }
       is_daily_team_foreman: {
@@ -5380,6 +5706,10 @@ export type Database = {
       }
       is_safety_flash_manage_tier: {
         Args: { target_organization_id: string; target_project_id: string }
+        Returns: boolean
+      }
+      is_scaffold_broad_creator: {
+        Args: { target_company_id: string; target_project_id: string }
         Returns: boolean
       }
       is_scaffold_manage_tier: {
@@ -5691,6 +6021,24 @@ export type Database = {
         }
         Returns: undefined
       }
+      platform_admin_get_company_detail: {
+        Args: { target_company_id: string }
+        Returns: {
+          active_employees: number
+          active_memberships: number
+          active_projects: number
+          admin_names: string[]
+          created_at: string
+          employee_number_prefix: string
+          id: string
+          logo_storage_path: string
+          name: string
+          pending_invitations: number
+          slug: string
+          status: Database["public"]["Enums"]["company_status"]
+          total_employees: number
+        }[]
+      }
       platform_admin_get_memberships: {
         Args: { target_user_id: string }
         Returns: {
@@ -5698,6 +6046,23 @@ export type Database = {
           company_name: string
           membership_status: Database["public"]["Enums"]["membership_status"]
           role_names: string[]
+        }[]
+      }
+      platform_admin_get_overview_stats: {
+        Args: never
+        Returns: {
+          activated_users: number
+          active_companies: number
+          active_employees: number
+          active_platform_warnings: number
+          active_projects: number
+          banned_accounts: number
+          companies_without_admin_count: number
+          pending_invitations: number
+          suspended_accounts: number
+          suspended_companies: number
+          total_employees: number
+          trial_companies: number
         }[]
       }
       platform_admin_grant_company_membership: {
@@ -5725,6 +6090,147 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      platform_admin_list_accounts: {
+        Args: {
+          filter_account_status?: Database["public"]["Enums"]["account_status"]
+          filter_company_id?: string
+          filter_role_name?: string
+          limit_count?: number
+          offset_count?: number
+          search_query?: string
+        }
+        Returns: {
+          account_status: Database["public"]["Enums"]["account_status"]
+          account_status_reason: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          total_count: number
+        }[]
+      }
+      platform_admin_list_audit_events: {
+        Args: {
+          filter_action?: Database["public"]["Enums"]["audit_action"]
+          filter_actor_user_id?: string
+          filter_company_id?: string
+          filter_date_from?: string
+          filter_date_to?: string
+          filter_entity_type?: string
+          limit_count?: number
+          offset_count?: number
+        }
+        Returns: {
+          action: Database["public"]["Enums"]["audit_action"]
+          actor_full_name: string
+          actor_user_id: string
+          changes: Json
+          company_id: string
+          company_name: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          total_count: number
+        }[]
+      }
+      platform_admin_list_companies: {
+        Args: {
+          limit_count?: number
+          offset_count?: number
+          search_query?: string
+        }
+        Returns: {
+          activated_user_count: number
+          active_employee_count: number
+          active_project_count: number
+          admin_names: string[]
+          created_at: string
+          employee_limit: number
+          id: string
+          logo_storage_path: string
+          name: string
+          pending_invitation_count: number
+          project_limit: number
+          slug: string
+          status: Database["public"]["Enums"]["company_status"]
+          subscription_plan_name: string
+          subscription_status: Database["public"]["Enums"]["company_subscription_status"]
+          total_count: number
+        }[]
+      }
+      platform_admin_list_companies_without_admin: {
+        Args: { limit_count?: number }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
+        }[]
+      }
+      platform_admin_list_company_employees: {
+        Args: { target_company_id: string }
+        Returns: {
+          account_status: Database["public"]["Enums"]["employee_account_status"]
+          employee_number: string
+          employment_status: Database["public"]["Enums"]["employment_status"]
+          first_name: string
+          id: string
+          last_name: string
+          position_title: string
+          profile_id: string
+        }[]
+      }
+      platform_admin_list_company_members: {
+        Args: { target_company_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          joined_at: string
+          membership_id: string
+          role_ids: string[]
+          role_names: string[]
+          status: Database["public"]["Enums"]["membership_status"]
+          user_id: string
+        }[]
+      }
+      platform_admin_list_company_projects: {
+        Args: { target_company_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["project_status"]
+        }[]
+      }
+      platform_admin_list_security_events: {
+        Args: { limit_count?: number; offset_count?: number }
+        Returns: {
+          actor_full_name: string
+          actor_user_id: string
+          created_at: string
+          detail: string
+          event_type: Database["public"]["Enums"]["security_event_type"]
+          id: string
+          ip_address: unknown
+          total_count: number
+          user_agent: string
+          user_full_name: string
+          user_id: string
+        }[]
+      }
+      platform_admin_list_super_admins: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
+          granted_at: string
+          granted_by: string
+          granted_by_name: string
+          notes: string
+          user_id: string
+        }[]
+      }
       platform_admin_search_accounts: {
         Args: { limit_count?: number; search_query?: string }
         Returns: {
@@ -5734,6 +6240,14 @@ export type Database = {
           email: string
           full_name: string
           id: string
+        }[]
+      }
+      platform_admin_search_companies: {
+        Args: { limit_count?: number; search_query?: string }
+        Returns: {
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["company_status"]
         }[]
       }
       recover_equipment: {
@@ -6577,6 +7091,24 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      update_custom_role_permissions: {
+        Args: { target_permission_keys: string[]; target_role_id: string }
+        Returns: {
+          company_id: string | null
+          created_at: string
+          description: string | null
+          display_label: string
+          id: string
+          is_system: boolean
+          name: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "roles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_daily_team_with_foreman: {
         Args: {
           target_activity?: string
@@ -6706,6 +7238,37 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "lmra_assessments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_company_subscription: {
+        Args: {
+          target_billing_renewal_date?: string
+          target_company_id: string
+          target_employee_limit?: number
+          target_notes?: string
+          target_plan_name?: string
+          target_project_limit?: number
+          target_subscription_status?: Database["public"]["Enums"]["company_subscription_status"]
+        }
+        Returns: {
+          billing_renewal_date: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_limit: number | null
+          id: string
+          notes: string | null
+          plan_name: string | null
+          project_limit: number | null
+          subscription_status: Database["public"]["Enums"]["company_subscription_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_subscriptions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -6844,6 +7407,12 @@ export type Database = {
         | "rehire"
       company_invitation_status: "pending" | "accepted" | "revoked"
       company_status: "trial" | "active" | "suspended"
+      company_subscription_status:
+        | "trialing"
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "paused"
       corrective_action_priority: "low" | "medium" | "high" | "critical"
       corrective_action_status:
         | "open"
@@ -6976,6 +7545,7 @@ export type Database = {
       observation_status: "open" | "closed"
       observation_target_type: "employee" | "daily_team" | "general"
       observation_type: "positive" | "negative" | "general"
+      permission_scope_type: "company_wide" | "project_specific" | "either"
       project_assignment_role:
         | "project_manager"
         | "hseq_manager"
@@ -7252,6 +7822,13 @@ export const Constants = {
       ],
       company_invitation_status: ["pending", "accepted", "revoked"],
       company_status: ["trial", "active", "suspended"],
+      company_subscription_status: [
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "paused",
+      ],
       corrective_action_priority: ["low", "medium", "high", "critical"],
       corrective_action_status: [
         "open",
@@ -7398,6 +7975,7 @@ export const Constants = {
       observation_status: ["open", "closed"],
       observation_target_type: ["employee", "daily_team", "general"],
       observation_type: ["positive", "negative", "general"],
+      permission_scope_type: ["company_wide", "project_specific", "either"],
       project_assignment_role: [
         "project_manager",
         "hseq_manager",

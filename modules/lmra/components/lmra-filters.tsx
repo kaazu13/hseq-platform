@@ -3,13 +3,13 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
-import { LMRA_STATUSES, LMRA_STATUS_LABELS } from "@/modules/lmra/types";
+import { LMRA_STATUSES, LMRA_STATUS_LABELS, LMRA_DATE_RANGE_PRESETS, LMRA_DATE_RANGE_PRESET_LABELS, type LmraDateRangePreset } from "@/modules/lmra/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const FILTER_KEYS = ["workArea", "status", "dateFrom", "dateTo"] as const;
+const FILTER_KEYS = ["workArea", "status", "dateFrom", "dateTo", "range"] as const;
 
 /**
  * URL-search-param-driven filters for the LMRA list — same pattern as
@@ -22,8 +22,15 @@ const FILTER_KEYS = ["workArea", "status", "dateFrom", "dateTo"] as const;
  * query param the page itself renders links for — omitted from
  * `FILTER_KEYS` so "Clear filters" resets search/status/date without also
  * bouncing the caller out of whichever list mode they're viewing.
+ *
+ * `activeRangePreset` (Part 7): the page has already resolved which date
+ * window is actually in effect (defaulting to "Last 30 days" when the URL
+ * has no `range` param) — this component reflects that back visibly, so
+ * the default filtering is never silent. Clearing `range` always resets
+ * to the default 30-day window (never "All time"), matching the page's
+ * own default-resolution logic.
  */
-export function LmraFilters() {
+export function LmraFilters({ activeRangePreset }: { activeRangePreset: LmraDateRangePreset }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -44,6 +51,23 @@ export function LmraFilters() {
     } else {
       params.set(key, value);
     }
+    // Any filter change resets to page 1 — a stale offset into a
+    // now-different result set would otherwise silently skip/duplicate rows.
+    params.delete("page");
+    startTransition(() => {
+      router.push(`/lmra?${params.toString()}`);
+    });
+  }
+
+  function onRangePresetChange(preset: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (preset === "30d") params.delete("range");
+    else params.set("range", preset);
+    if (preset !== "custom") {
+      params.delete("dateFrom");
+      params.delete("dateTo");
+    }
+    params.delete("page");
     startTransition(() => {
       router.push(`/lmra?${params.toString()}`);
     });
@@ -62,72 +86,94 @@ export function LmraFilters() {
     setWorkAreaValue("");
     const params = new URLSearchParams(searchParams.toString());
     for (const key of FILTER_KEYS) params.delete(key);
+    params.delete("page");
     startTransition(() => {
       router.push(`/lmra?${params.toString()}`);
     });
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="relative w-full sm:max-w-xs">
-        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search work area…"
-          value={workAreaValue}
-          className="pl-8"
-          onChange={(event) => onWorkAreaChange(event.target.value)}
-          aria-label="Search work area"
-        />
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Date range">
+        {LMRA_DATE_RANGE_PRESETS.map((preset) => (
+          <Button
+            key={preset}
+            type="button"
+            size="sm"
+            variant={activeRangePreset === preset ? "default" : "outline"}
+            aria-current={activeRangePreset === preset ? "true" : undefined}
+            onClick={() => onRangePresetChange(preset)}
+          >
+            {LMRA_DATE_RANGE_PRESET_LABELS[preset]}
+          </Button>
+        ))}
       </div>
 
-      <Select value={searchParams.get("status") ?? "all"} onValueChange={(value) => setParam("status", value)}>
-        <SelectTrigger className="w-full sm:w-40" aria-label="Filter by status">
-          <SelectValue placeholder="All statuses" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All statuses</SelectItem>
-          {LMRA_STATUSES.map((status) => (
-            <SelectItem key={status} value={status}>
-              {LMRA_STATUS_LABELS[status]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search work area…"
+            value={workAreaValue}
+            className="pl-8"
+            onChange={(event) => onWorkAreaChange(event.target.value)}
+            aria-label="Search work area"
+          />
+        </div>
 
-      <div className="flex items-center gap-2">
-        <Label htmlFor="dateFrom" className="text-sm font-normal text-muted-foreground">
-          From
-        </Label>
-        <Input
-          id="dateFrom"
-          type="date"
-          className="w-40"
-          value={searchParams.get("dateFrom") ?? ""}
-          onChange={(event) => setParam("dateFrom", event.target.value)}
-        />
+        <Select value={searchParams.get("status") ?? "all"} onValueChange={(value) => setParam("status", value)}>
+          <SelectTrigger className="w-full sm:w-40" aria-label="Filter by status">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {LMRA_STATUSES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {LMRA_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {activeRangePreset === "custom" && (
+          <>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="dateFrom" className="text-sm font-normal text-muted-foreground">
+                From
+              </Label>
+              <Input
+                id="dateFrom"
+                type="date"
+                className="w-40"
+                value={searchParams.get("dateFrom") ?? ""}
+                onChange={(event) => setParam("dateFrom", event.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label htmlFor="dateTo" className="text-sm font-normal text-muted-foreground">
+                To
+              </Label>
+              <Input
+                id="dateTo"
+                type="date"
+                className="w-40"
+                value={searchParams.get("dateTo") ?? ""}
+                onChange={(event) => setParam("dateTo", event.target.value)}
+              />
+            </div>
+          </>
+        )}
+
+        {hasActiveFilters && (
+          <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+            <X />
+            Clear filters
+          </Button>
+        )}
+
+        {isPending && <span className="text-xs text-muted-foreground">Updating…</span>}
       </div>
-
-      <div className="flex items-center gap-2">
-        <Label htmlFor="dateTo" className="text-sm font-normal text-muted-foreground">
-          To
-        </Label>
-        <Input
-          id="dateTo"
-          type="date"
-          className="w-40"
-          value={searchParams.get("dateTo") ?? ""}
-          onChange={(event) => setParam("dateTo", event.target.value)}
-        />
-      </div>
-
-      {hasActiveFilters && (
-        <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-          <X />
-          Clear filters
-        </Button>
-      )}
-
-      {isPending && <span className="text-xs text-muted-foreground">Updating…</span>}
     </div>
   );
 }

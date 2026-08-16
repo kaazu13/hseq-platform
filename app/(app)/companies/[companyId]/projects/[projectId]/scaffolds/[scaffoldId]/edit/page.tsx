@@ -1,7 +1,7 @@
 import { forbidden, notFound } from "next/navigation";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
-import { getScaffold, isCallerProjectAccessible, listEligibleScaffoldForemen, listEligibleScaffoldTeamMembers } from "@/modules/scaffolds/queries";
+import { getScaffold, isCallerProjectAccessible, listEligibleScaffoldForemen } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
 import { PageHeader } from "@/components/shared/page-header";
@@ -35,16 +35,14 @@ export default async function EditScaffoldPage({ params }: EditScaffoldPageProps
     forbidden();
   }
 
-  const [foremanOptions, teamMemberOptions] = await Promise.all([
-    listEligibleScaffoldForemen(companyId, scaffold.project_id),
-    listEligibleScaffoldTeamMembers(companyId, scaffold.project_id),
-  ]);
+  const foremanOptions = await listEligibleScaffoldForemen(companyId, scaffold.project_id);
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Edit scaffold" description={`${project.name} · ${scaffold.tag_number}`} />
       <div className="max-w-3xl">
-        <ScaffoldForm mode="edit" companyId={companyId} projectId={scaffold.project_id} projectName={project.name} foremanOptions={foremanOptions} teamMemberOptions={teamMemberOptions} scaffold={scaffold} />
+        <ScaffoldForm mode="edit" companyId={companyId} projectId={scaffold.project_id} projectName={project.name} foremanOptions={foremanOptions} today={today} scaffold={scaffold} />
       </div>
     </div>
   );

@@ -1,91 +1,88 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AlertCircle, Loader2, Users } from "lucide-react";
+import { AlertCircle, Loader2, Lock, Users } from "lucide-react";
 import { createScaffold, updateScaffold } from "@/modules/scaffolds/actions";
-import { SCAFFOLD_TYPES, SCAFFOLD_TYPE_LABELS, SCAFFOLD_TEAM_MIN_SIZE, SCAFFOLD_TEAM_MAX_SIZE, type ScaffoldType, type ScaffoldDetail } from "@/modules/scaffolds/types";
+import { listEligibleErectionTeamsAction } from "@/modules/scaffolds/team-actions";
+import { SCAFFOLD_TYPES, SCAFFOLD_TYPE_LABELS, type ScaffoldType, type ScaffoldDetail } from "@/modules/scaffolds/types";
 import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
+
+type EligibleErectionTeam = { id: string; name: string; shift: string | null; workArea: string | null; foremanName: string | null; workerCount: number };
 
 type ScaffoldFormProps = {
   companyId: string;
   projectId: string;
   projectName: string;
   foremanOptions: EmployeeOption[];
-  teamMemberOptions: EmployeeOption[];
+  /** V2: locks the Responsible Foreman field to the caller's own name (mustSelfLockResponsibleForeman()'s result) — a Foreman relying only on the self-only creation path can never pick anyone else, even by tampering with the client. Ignored in edit mode (editing is unchanged, hseq_manager/hse_officer/inspector only). */
+  selfLockedForemanId?: string | null;
+  today: string;
 } & ({ mode: "create"; scaffold?: undefined } | { mode: "edit"; scaffold: ScaffoldDetail });
 
-const TEAM_SIZE_OPTIONS = Array.from({ length: SCAFFOLD_TEAM_MAX_SIZE - SCAFFOLD_TEAM_MIN_SIZE + 1 }, (_, i) => i + SCAFFOLD_TEAM_MIN_SIZE);
-
 /**
- * Combined create/edit scaffold-registration form — see this milestone's
- * implementation report for the full "before" state. Sectioned per Part 6
- * ("Scaffold details" / "Dimensions and loading" / "Responsible team" /
- * "Dates and status") rather than one continuous block. The Responsible
- * Foreman and every team-member slot use the shared EmployeeCombobox
- * (components/shared/employee-combobox.tsx) — never a plain `<Select>`,
- * which is what caused the raw-UUID-after-selection bug this milestone
- * fixes (see that component's header comment for the root cause).
+ * Combined create/edit scaffold-registration form — see the audit's
+ * Scaffold Register V2 implementation report for the "before" state.
+ * V2 changes (Part 4 of the post-audit implementation package): the old
+ * "Scaffold team size" + "Team member 1/2/3…" manual roster is replaced
+ * with "Teams assigned to scaffold erection" — one or more real Today's
+ * Teams, refetched whenever the erection date changes (never a stale
+ * list for a different date). A Foreman relying only on the self-only
+ * creation path sees the Responsible Foreman field locked to their own
+ * name (server-enforced regardless — see validate_scaffold_insert()) and
+ * only their OWN Today's Teams offered as erection-team choices.
  */
-export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions, teamMemberOptions, mode, scaffold }: ScaffoldFormProps) {
+export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions, selfLockedForemanId, today, mode, scaffold }: ScaffoldFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [scaffoldType, setScaffoldType] = useState<ScaffoldType>(scaffold?.scaffold_type ?? "independent");
-  const [responsibleForemanId, setResponsibleForemanId] = useState(scaffold?.responsible_foreman_id ?? "");
+  const [responsibleForemanId, setResponsibleForemanId] = useState(scaffold?.responsible_foreman_id ?? selfLockedForemanId ?? "");
+  const [erectedAt, setErectedAt] = useState(scaffold?.erected_at ?? today);
 
-  const initialTeamIds = mode === "edit" ? scaffold.teamMembers.map((member) => member.employeeId) : [];
-  const [teamSize, setTeamSize] = useState(initialTeamIds.length || SCAFFOLD_TEAM_MIN_SIZE);
-  const [teamMemberIds, setTeamMemberIds] = useState<(string | null)[]>(() => {
-    const slots = [...initialTeamIds] as (string | null)[];
-    while (slots.length < teamSize) slots.push(null);
-    return slots;
-  });
-  const [pendingTeamSize, setPendingTeamSize] = useState<number | null>(null);
+  // `eligibleTeams === null` IS the loading state — deliberately no
+  // separate `loading` boolean set synchronously inside the effect body
+  // (react-hooks/set-state-in-effect flags that as a cascading-render
+  // risk; see the identical convention in
+  // modules/lmra/components/lmra-add-daily-team-dialog.tsx). Every
+  // setState call below happens inside the fetch's .then()/.catch(),
+  // never synchronously in the effect body itself.
+  const [eligibleTeams, setEligibleTeams] = useState<EligibleErectionTeam[] | null>(null);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(mode === "edit" ? scaffold.erectionTeams.map((t) => t.dailyTeamId) : []);
 
-  function applyTeamSize(newSize: number) {
-    setTeamMemberIds((prev) => {
-      const next = prev.slice(0, newSize);
-      while (next.length < newSize) next.push(null);
-      return next;
-    });
-    setTeamSize(newSize);
-  }
+  // Refetch eligible teams whenever the erection date changes — never a
+  // stale list for a date the caller has since moved away from. Also
+  // clears/revalidates any selected team that no longer appears in the
+  // refreshed list (e.g. the date changed to one that team didn't work).
+  useEffect(() => {
+    if (!erectedAt) return;
+    let cancelled = false;
+    listEligibleErectionTeamsAction(companyId, projectId, erectedAt)
+      .then((teams) => {
+        if (cancelled) return;
+        setEligibleTeams(teams);
+        setSelectedTeamIds((prev) => prev.filter((id) => teams.some((t) => t.id === id)));
+      })
+      .catch(() => {
+        if (!cancelled) setEligibleTeams([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, projectId, erectedAt]);
 
-  function handleTeamSizeChange(value: string | null) {
-    if (!value) return;
-    const newSize = Number(value);
-    if (newSize < teamMemberIds.length) {
-      const removedNames = teamMemberIds
-        .slice(newSize)
-        .filter((id): id is string => Boolean(id))
-        .map((id) => teamMemberOptions.find((option) => option.value === id)?.label ?? "Unknown");
-      if (removedNames.length > 0) {
-        setPendingTeamSize(newSize);
-        return;
-      }
-    }
-    applyTeamSize(newSize);
-  }
-
-  function confirmReduceTeamSize() {
-    if (pendingTeamSize !== null) applyTeamSize(pendingTeamSize);
-    setPendingTeamSize(null);
-  }
-
-  function setSlot(index: number, employeeId: string | null) {
-    setTeamMemberIds((prev) => prev.map((id, i) => (i === index ? employeeId : id)));
+  function toggleTeam(teamId: string, checked: boolean) {
+    setSelectedTeamIds((prev) => (checked ? [...prev, teamId] : prev.filter((id) => id !== teamId)));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -93,13 +90,13 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
     setFormError(null);
     setFieldErrors({});
 
-    const filledSlots = teamMemberIds.filter((id): id is string => Boolean(id));
-    if (filledSlots.length < teamSize) {
-      setFormError(`Select all ${teamSize} scaffold team members before saving — ${teamSize - filledSlots.length} slot(s) still empty.`);
+    const effectiveForemanId = selfLockedForemanId ?? responsibleForemanId;
+    if (!effectiveForemanId) {
+      setFormError("Choose the Responsible Foreman.");
       return;
     }
-    if (!responsibleForemanId) {
-      setFormError("Choose the Responsible Foreman.");
+    if (selectedTeamIds.length === 0) {
+      setFormError("Select at least one Today's Team that erected this scaffold.");
       return;
     }
 
@@ -114,18 +111,15 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
       maxLoadClass: String(formData.get("maxLoadClass") ?? ""),
       // Raw strings, passed through untouched — the zod schema is the
       // ONLY place that coerces these to numbers, both client- and
-      // server-side. Pre-converting here was the root cause of "Invalid
-      // input: expected string, received number" (see
-      // modules/scaffolds/validation.ts's header comment).
+      // server-side (see modules/scaffolds/validation.ts's header comment).
       heightMetres: String(formData.get("heightMetres") ?? ""),
       lengthMetres: String(formData.get("lengthMetres") ?? ""),
       widthMetres: String(formData.get("widthMetres") ?? ""),
       erectedBy: String(formData.get("erectedBy") ?? ""),
-      responsibleForemanId,
-      erectedAt: String(formData.get("erectedAt") ?? ""),
+      responsibleForemanId: effectiveForemanId,
+      erectedAt,
       notes: String(formData.get("notes") ?? ""),
-      teamSize: String(teamSize),
-      teamMemberIds: filledSlots,
+      erectionTeamIds: selectedTeamIds,
     };
 
     startTransition(async () => {
@@ -142,7 +136,7 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
     return fieldErrors[name];
   }
 
-  const usedElsewhere = (index: number) => [responsibleForemanId, ...teamMemberIds.filter((_, i) => i !== index)].filter((id): id is string => Boolean(id));
+  const selfLockedForemanOption = selfLockedForemanId ? foremanOptions.find((option) => option.value === selfLockedForemanId) : null;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-8" noValidate>
@@ -228,10 +222,23 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
       </div>
 
       <div className="flex flex-col gap-4">
-        <SectionHeader title="Responsible team" />
+        <SectionHeader title="Responsible Foreman" />
 
-        {foremanOptions.length === 0 ? (
-          <EmptyState icon={Users} title="No active Foremen are assigned to this project." description="A Foreman must hold the Foreman role and an active Foreman team assignment on this project before they can be selected here." action={<Link href="/admin/members" className="text-sm font-medium text-primary underline-offset-2 hover:underline">Manage project assignments →</Link>} />
+        {selfLockedForemanId ? (
+          <div className="flex flex-col gap-1.5">
+            <Label>Responsible Foreman</Label>
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <Lock className="size-3.5 text-muted-foreground" />
+              <span>{selfLockedForemanOption?.label ?? "You"} (yourself)</span>
+            </div>
+            <p className="text-xs text-muted-foreground">As a Foreman, you can only register a scaffold with yourself as the Responsible Foreman.</p>
+          </div>
+        ) : foremanOptions.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No active Foremen are assigned to this project."
+            description="A Foreman must hold the Foreman role and an active Foreman team assignment on this project before they can be selected here."
+          />
         ) : (
           <EmployeeComboboxField
             label="Responsible Foreman"
@@ -241,69 +248,72 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
             options={foremanOptions}
             placeholder="Search Foreman by name or employee number…"
             emptyMessage="No active Foremen are assigned to this project."
-            excludeIds={teamMemberIds.filter((id): id is string => Boolean(id))}
             clearable={false}
             error={fieldError("responsibleForemanId")}
           />
         )}
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="teamSize">Scaffold team size</Label>
-          <Select value={String(teamSize)} onValueChange={handleTeamSizeChange}>
-            <SelectTrigger id="teamSize" className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TEAM_SIZE_OPTIONS.map((value) => (
-                <SelectItem key={value} value={String(value)}>
-                  {value} {value === 1 ? "team member" : "team members"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Ordinary scaffold team members only — the Responsible Foreman is counted separately. Total people connected to this scaffold: {teamSize + 1}.
-          </p>
-        </div>
-
-        {teamMemberOptions.length === 0 ? (
-          <EmptyState icon={Users} title="No eligible team members on this project" description="Only active employees assigned to this project, excluding Foreman/HSE/Project Manager/Inspector/Company Administrator roles, can be added." />
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {teamMemberIds.map((id, index) => (
-              <EmployeeComboboxField
-                key={index}
-                label={`Team member ${index + 1}`}
-                htmlFor={`teamMember-${index}`}
-                value={id}
-                onValueChange={(nextId) => setSlot(index, nextId)}
-                options={teamMemberOptions}
-                placeholder="Search by name or employee number…"
-                emptyMessage="No eligible team members on this project."
-                excludeIds={usedElsewhere(index)}
-              />
-            ))}
-          </div>
-        )}
-        {fieldError("teamMemberIds") && <p className="text-sm text-destructive">{fieldError("teamMemberIds")}</p>}
       </div>
 
       <div className="flex flex-col gap-4">
-        <SectionHeader title="Dates and status" />
+        <SectionHeader title="Dates" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="erectedAt">Erection date</Label>
+            <Input id="erectedAt" name="erectedAt" type="date" required value={erectedAt} onChange={(event) => setErectedAt(event.target.value)} aria-invalid={Boolean(fieldError("erectedAt"))} />
+            {fieldError("erectedAt") && <p className="text-sm text-destructive">{fieldError("erectedAt")}</p>}
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="erectedBy">Erected by (subcontractor crew, if applicable — optional)</Label>
             <Input id="erectedBy" name="erectedBy" defaultValue={scaffold?.erected_by ?? ""} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="erectedAt">Erection date (optional)</Label>
-            <Input id="erectedAt" name="erectedAt" type="date" defaultValue={scaffold?.erected_at ?? ""} aria-invalid={Boolean(fieldError("erectedAt"))} />
-            {fieldError("erectedAt") && <p className="text-sm text-destructive">{fieldError("erectedAt")}</p>}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Teams assigned to scaffold erection" />
+        <p className="text-sm text-muted-foreground">Select one or more of that date&apos;s Today&apos;s Teams. Changing the erection date refreshes which teams are available.</p>
+
+        {mode === "edit" && scaffold.teamMembers.length > 0 && (
+          <div className="flex flex-col gap-1.5 rounded-md border bg-muted/40 p-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase">Legacy team roster (preserved as recorded)</p>
+            <p className="text-sm text-muted-foreground">
+              {scaffold.teamMembers.map((member) => `${member.firstName} ${member.lastName}`).join(", ")}
+            </p>
+            <p className="text-xs text-muted-foreground">This scaffold was registered before Today&apos;s Team linking existed — its original roster is kept exactly as recorded and is no longer editable here. Use the picker below to additionally link real Today&apos;s Teams going forward.</p>
           </div>
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea id="notes" name="notes" rows={3} defaultValue={scaffold?.notes ?? ""} />
+        )}
+
+        {eligibleTeams === null ? (
+          <p className="text-sm text-muted-foreground">Loading teams for {erectedAt}…</p>
+        ) : eligibleTeams.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No Today's Teams found for this date"
+            description={selfLockedForemanId ? "You have no Today's Team on this date for this project — create one first, then come back to register the scaffold." : "No Today's Teams exist for this project on this date yet."}
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {eligibleTeams.map((team) => (
+              <label key={team.id} className="flex items-center gap-3 rounded-md border p-3 text-sm hover:bg-muted/40">
+                <Checkbox checked={selectedTeamIds.includes(team.id)} onCheckedChange={(checked) => toggleTeam(team.id, checked === true)} />
+                <span className="flex-1">
+                  <span className="font-medium">{team.name}</span>
+                  {team.workArea ? <span className="text-muted-foreground"> · {team.workArea}</span> : null}
+                  {team.foremanName ? <span className="text-muted-foreground"> · Foreman: {team.foremanName}</span> : null}
+                  <span className="text-muted-foreground"> · {team.workerCount} {team.workerCount === 1 ? "worker" : "workers"}</span>
+                </span>
+              </label>
+            ))}
           </div>
+        )}
+        {fieldError("erectionTeamIds") && <p className="text-sm text-destructive">{fieldError("erectionTeamIds")}</p>}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Notes" />
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Textarea id="notes" name="notes" rows={3} defaultValue={scaffold?.notes ?? ""} />
         </div>
       </div>
 
@@ -316,23 +326,6 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
           Cancel
         </Button>
       </div>
-
-      <ConfirmDialog
-        open={pendingTeamSize !== null}
-        onOpenChange={(open) => !open && setPendingTeamSize(null)}
-        title="Reduce scaffold team size?"
-        description={
-          pendingTeamSize !== null
-            ? `Reducing to ${pendingTeamSize} will remove: ${teamMemberIds
-                .slice(pendingTeamSize)
-                .filter((id): id is string => Boolean(id))
-                .map((id) => teamMemberOptions.find((option) => option.value === id)?.label ?? "Unknown")
-                .join(", ")}. This only removes them from this scaffold's team — it does not affect their project assignment.`
-            : undefined
-        }
-        confirmLabel="Reduce team size"
-        onConfirm={confirmReduceTeamSize}
-      />
     </form>
   );
 }

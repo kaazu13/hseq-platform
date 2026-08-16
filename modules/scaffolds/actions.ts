@@ -6,8 +6,8 @@ import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException, isUniqueViolation } from "@/lib/supabase/errors";
-import { canManageScaffold } from "./permissions";
-import { isCallerProjectAccessible } from "./queries";
+import { canManageScaffold, canCreateScaffold } from "./permissions";
+import { isCallerProjectAccessible, isCallerEligibleScaffoldForeman } from "./queries";
 import {
   scaffoldFormSchema,
   inspectionFormSchema,
@@ -25,11 +25,11 @@ import {
 
 /**
  * Server Functions for the Scaffolds/Scaffold Inspections domain — same
- * fixed recipe as every other module (docs/API_CONVENTIONS.md §3). The
- * auth gate mirrors modules/observations/actions.ts's shape but with a
- * DIFFERENT eligible-role set (hse_officer/inspector, not foreman/
- * employee) — see modules/scaffolds/permissions.ts's header comment for
- * why Foreman is view-only here, unlike every other HSEQ module so far.
+ * fixed recipe as every other module (docs/API_CONVENTIONS.md §3).
+ * requireScaffoldManageAccess() (unchanged) gates EDIT/inspection actions;
+ * requireScaffoldCreateAccess() (V2, Part 4 of the post-audit
+ * implementation package) is broader — see modules/scaffolds/permissions.ts's
+ * header comment for exactly which roles/paths each covers.
  */
 
 async function requireScaffoldManageAccess(companyId: string, projectId: string) {
@@ -43,13 +43,28 @@ async function requireScaffoldManageAccess(companyId: string, projectId: string)
   return { user, roleNames };
 }
 
+async function requireScaffoldCreateAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess, isEligibleForeman] = await Promise.all([
+    getUserRoleNames(companyId),
+    isCallerProjectAccessible(projectId),
+    isCallerEligibleScaffoldForeman(companyId, projectId),
+  ]);
+
+  if (!canCreateScaffold(roleNames, hasProjectAccess, isEligibleForeman)) {
+    forbidden();
+  }
+
+  return { user, roleNames };
+}
+
 export async function createScaffold(companyId: string, input: ScaffoldFormInput): Promise<ActionResult<{ scaffoldId: string }>> {
   const parsed = scaffoldFormSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(companyId, parsed.data.projectId);
+  const { user } = await requireScaffoldCreateAccess(companyId, parsed.data.projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -68,7 +83,7 @@ export async function createScaffold(companyId: string, input: ScaffoldFormInput
       width_metres: parsed.data.widthMetres ?? null,
       erected_by: parsed.data.erectedBy ?? null,
       responsible_foreman_id: parsed.data.responsibleForemanId,
-      erected_at: parsed.data.erectedAt ?? null,
+      erected_at: parsed.data.erectedAt,
       notes: parsed.data.notes ?? null,
       created_by: user.id,
       updated_by: user.id,
@@ -87,36 +102,37 @@ export async function createScaffold(companyId: string, input: ScaffoldFormInput
     return { ok: false, error: { code: "server_error", message: "Couldn't register the scaffold. Try again." } };
   }
 
-  // Bulk-insert the whole team in ONE call — a single multi-row INSERT is
-  // one statement/transaction, so an ineligible/forged/duplicate employee
-  // id anywhere in the batch rolls back the ENTIRE team (never a partial
-  // roster) rather than failing row-by-row. The scaffold record itself is
-  // already committed at this point (a separate, earlier statement) — if
-  // the team insert fails, the scaffold still exists with zero team
-  // members, and the caller is sent to its edit page to add the team
-  // rather than losing everything just entered.
-  if (parsed.data.teamMemberIds.length > 0) {
-    const teamRows = parsed.data.teamMemberIds.map((employeeId, index) => ({
-      company_id: companyId,
-      // project_id is re-derived and validated by
-      // validate_scaffold_team_member_insert() regardless of what's sent
-      // here (never client-trusted) — passed explicitly only because the
-      // generated Insert type requires it (no DB-level default).
-      project_id: parsed.data.projectId,
-      scaffold_id: data.id,
-      employee_id: employeeId,
-      team_position: index + 1,
-      added_by: user.id,
-    }));
-    const { error: teamError } = await supabase.from("scaffold_team_members").insert(teamRows);
-    if (teamError) {
-      revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
-      redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}/edit?teamError=1`);
-    }
+  // V2 (Part 4C): bulk-insert the erection-team links in ONE call — a
+  // single multi-row INSERT is one statement/transaction, so an
+  // ineligible/mismatched-date/forged team id anywhere in the batch rolls
+  // back the ENTIRE set (never a partial link list) rather than failing
+  // row-by-row. The scaffold record itself is already committed at this
+  // point (a separate, earlier statement) — if the team-link insert
+  // fails, the scaffold still exists with zero erection teams, and the
+  // caller is sent to its edit page to add them rather than losing
+  // everything just entered.
+  const erectionTeamRows = parsed.data.erectionTeamIds.map((dailyTeamId) => ({
+    // company_id/project_id are re-derived and validated by
+    // validate_scaffold_erection_team_insert() regardless of what's sent
+    // here (never client-trusted) — passed explicitly only because the
+    // generated Insert type requires them (no DB-level default).
+    company_id: companyId,
+    project_id: parsed.data.projectId,
+    scaffold_id: data.id,
+    daily_team_id: dailyTeamId,
+    added_by: user.id,
+  }));
+  const { error: teamError } = await supabase.from("scaffold_erection_teams").insert(erectionTeamRows);
+  if (teamError) {
+    revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
+    redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}/edit?teamError=1`);
   }
 
+  // Part 5: return to the Scaffold Register list (not the detail page) —
+  // the new scaffold is immediately visible there, with a success toast
+  // and an optional "View scaffold" action (see ScaffoldRegisterListClient).
   revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
-  redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}`);
+  redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds?created=${data.id}&tag=${encodeURIComponent(parsed.data.tagNumber)}`);
 }
 
 export async function updateScaffold(companyId: string, scaffoldId: string, projectId: string, input: ScaffoldFormInput): Promise<ActionResult<null>> {
@@ -143,7 +159,7 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
         width_metres: parsed.data.widthMetres ?? null,
         erected_by: parsed.data.erectedBy ?? null,
         responsible_foreman_id: parsed.data.responsibleForemanId,
-        erected_at: parsed.data.erectedAt ?? null,
+        erected_at: parsed.data.erectedAt,
         notes: parsed.data.notes ?? null,
         updated_by: user.id,
       },
@@ -166,7 +182,7 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
     return { ok: false, error: { code: "not_found", message: "Scaffold not found." } };
   }
 
-  const teamResult = await reconcileScaffoldTeam(supabase, companyId, projectId, scaffoldId, user.id, parsed.data.teamMemberIds);
+  const teamResult = await reconcileScaffoldErectionTeams(supabase, companyId, projectId, scaffoldId, user.id, parsed.data.erectionTeamIds);
   if (!teamResult.ok) {
     return teamResult;
   }
@@ -177,64 +193,57 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
 }
 
 /**
- * Reconciles a scaffold's active team-member roster to exactly
- * `nextEmployeeIds` — members no longer selected are non-destructively
- * removed (removed_at/removed_by, never deleted — full history stays in
- * `scaffold_team_members`), members newly selected are added at the next
- * available `team_position`, and members present in both sets are left
- * completely untouched (their original `added_at`/`added_by`/`team_position`
- * never rewritten just because the form was resubmitted). "Team member N"
- * numbering shown to users is always computed at display time from array
- * order, never assumed to equal the stored `team_position` — see
- * modules/scaffolds/types.ts's ScaffoldTeamMemberDetail comment.
+ * Reconciles a scaffold's erection-team links (Part 4C) to exactly
+ * `nextDailyTeamIds`. Unlike the legacy `scaffold_team_members` roster,
+ * `scaffold_erection_teams` has no soft-delete/history concept of its own
+ * (the historical record IS the underlying `daily_teams` row, which is
+ * never touched here) — a link is either present or removed, so this is a
+ * plain diff/insert/delete rather than a removed_at-style archive.
  */
-async function reconcileScaffoldTeam(
+async function reconcileScaffoldErectionTeams(
   supabase: Awaited<ReturnType<typeof createClient>>,
   companyId: string,
   projectId: string,
   scaffoldId: string,
   actingUserId: string,
-  nextEmployeeIds: string[],
+  nextDailyTeamIds: string[],
 ): Promise<ActionResult<null>> {
-  const { data: currentActive, error: currentError } = await supabase.from("scaffold_team_members").select("id, employee_id, team_position").eq("scaffold_id", scaffoldId).is("removed_at", null);
+  const { data: current, error: currentError } = await supabase.from("scaffold_erection_teams").select("id, daily_team_id").eq("scaffold_id", scaffoldId);
   if (currentError) throw currentError;
 
-  const nextSet = new Set(nextEmployeeIds);
-  const currentByEmployeeId = new Map((currentActive ?? []).map((row) => [row.employee_id, row]));
+  const nextSet = new Set(nextDailyTeamIds);
+  const currentByDailyTeamId = new Map((current ?? []).map((row) => [row.daily_team_id, row]));
 
-  const toRemove = (currentActive ?? []).filter((row) => !nextSet.has(row.employee_id));
-  const toAdd = nextEmployeeIds.filter((employeeId) => !currentByEmployeeId.has(employeeId));
+  const toRemove = (current ?? []).filter((row) => !nextSet.has(row.daily_team_id));
+  const toAdd = nextDailyTeamIds.filter((dailyTeamId) => !currentByDailyTeamId.has(dailyTeamId));
 
   if (toRemove.length > 0) {
     const { error: removeError } = await supabase
-      .from("scaffold_team_members")
-      .update({ removed_at: new Date().toISOString(), removed_by: actingUserId })
+      .from("scaffold_erection_teams")
+      .delete()
       .in(
         "id",
         toRemove.map((row) => row.id),
       );
     if (removeError) {
-      return { ok: false, error: { code: "server_error", message: "Couldn't update the scaffold team. Try again." } };
+      return { ok: false, error: { code: "server_error", message: "Couldn't update the erection teams. Try again." } };
     }
   }
 
   if (toAdd.length > 0) {
-    const highestExistingPosition = (currentActive ?? []).reduce((max, row) => Math.max(max, row.team_position), 0);
-    let nextPosition = highestExistingPosition + 1;
-    const teamRows = toAdd.map((employeeId) => ({
+    const teamRows = toAdd.map((dailyTeamId) => ({
       company_id: companyId,
       project_id: projectId,
       scaffold_id: scaffoldId,
-      employee_id: employeeId,
-      team_position: nextPosition++,
+      daily_team_id: dailyTeamId,
       added_by: actingUserId,
     }));
-    const { error: addError } = await supabase.from("scaffold_team_members").insert(teamRows);
+    const { error: addError } = await supabase.from("scaffold_erection_teams").insert(teamRows);
     if (addError) {
       if (isRaisedException(addError)) {
         return { ok: false, error: { code: "validation_error", message: addError.message } };
       }
-      return { ok: false, error: { code: "server_error", message: "Couldn't add the new scaffold team members. Try again." } };
+      return { ok: false, error: { code: "server_error", message: "Couldn't add the new erection teams. Try again." } };
     }
   }
 

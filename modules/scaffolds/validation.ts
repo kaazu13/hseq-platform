@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { optionalText } from "@/lib/validation";
-import { SCAFFOLD_TEAM_MIN_SIZE, SCAFFOLD_TEAM_MAX_SIZE } from "./types";
 
 /**
  * Server Function validation for the Scaffolds/Scaffold Inspections
@@ -52,50 +51,35 @@ function optionalPositiveDecimal(fieldLabel: string) {
     });
 }
 
-export const scaffoldFormSchema = z
-  .object({
-    projectId: z.string().uuid("Choose a project"),
-    tagNumber: z.string().trim().min(1, "Tag number is required").max(50, "Keep it under 50 characters"),
-    workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
-    structureReference: optionalText,
-    scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
-    intendedUse: z.string().trim().min(1, "Intended use is required").max(200, "Keep it under 200 characters"),
-    maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required").max(100, "Keep it under 100 characters"),
-    heightMetres: optionalPositiveDecimal("height"),
-    lengthMetres: optionalPositiveDecimal("length"),
-    widthMetres: optionalPositiveDecimal("width"),
-    erectedBy: optionalText,
-    responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
-    erectedAt: z
-      .string()
-      .trim()
-      .optional()
-      .transform((value) => (value === "" || value === undefined ? undefined : value))
-      .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date").optional()),
-    notes: optionalText,
-    teamSize: z
-      .string()
-      .trim()
-      .transform((value, ctx) => {
-        const parsed = Number(value);
-        if (!Number.isInteger(parsed) || parsed < SCAFFOLD_TEAM_MIN_SIZE || parsed > SCAFFOLD_TEAM_MAX_SIZE) {
-          ctx.addIssue({ code: "custom", message: `Team size must be between ${SCAFFOLD_TEAM_MIN_SIZE} and ${SCAFFOLD_TEAM_MAX_SIZE}` });
-          return SCAFFOLD_TEAM_MIN_SIZE;
-        }
-        return parsed;
-      }),
-    teamMemberIds: z
-      .array(z.string().uuid("Each team member must be a valid selection"))
-      .refine((ids) => new Set(ids).size === ids.length, { message: "The same employee is selected more than once" }),
-  })
-  .refine((data) => data.teamMemberIds.length === data.teamSize, {
-    message: "Select exactly the number of team members matching the chosen team size",
-    path: ["teamMemberIds"],
-  })
-  .refine((data) => !data.teamMemberIds.includes(data.responsibleForemanId), {
-    message: "The Responsible Foreman cannot also be selected as an ordinary team member",
-    path: ["teamMemberIds"],
-  });
+/**
+ * Scaffold Register V2 (Part 4 of the post-audit implementation package):
+ * the old "Scaffold team size" + "Team member 1/2/3…" manual roster is
+ * replaced with `erectionTeamIds` — one or more REAL Today's Teams
+ * (daily_teams) that erected the scaffold, never a flattened copy of
+ * worker names. At least one is required. `erectedAt` is now required
+ * (was optional) — the UI defaults it to today, but the schema itself
+ * still validates whatever value is actually submitted.
+ */
+export const scaffoldFormSchema = z.object({
+  projectId: z.string().uuid("Choose a project"),
+  tagNumber: z.string().trim().min(1, "Tag number is required").max(50, "Keep it under 50 characters"),
+  workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
+  structureReference: optionalText,
+  scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
+  intendedUse: z.string().trim().min(1, "Intended use is required").max(200, "Keep it under 200 characters"),
+  maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required").max(100, "Keep it under 100 characters"),
+  heightMetres: optionalPositiveDecimal("height"),
+  lengthMetres: optionalPositiveDecimal("length"),
+  widthMetres: optionalPositiveDecimal("width"),
+  erectedBy: optionalText,
+  responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
+  erectedAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid erection date"),
+  notes: optionalText,
+  erectionTeamIds: z
+    .array(z.string().uuid("Each team must be a valid selection"))
+    .min(1, "Select at least one Today's Team that erected this scaffold")
+    .refine((ids) => new Set(ids).size === ids.length, { message: "The same team is selected more than once" }),
+});
 export type ScaffoldFormInput = z.input<typeof scaffoldFormSchema>;
 
 const SCAFFOLD_INSPECTION_REASON_VALUES = [

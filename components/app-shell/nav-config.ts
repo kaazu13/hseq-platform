@@ -6,15 +6,18 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock,
+  CreditCard,
   Eye,
   FileBadge,
   FileText,
   FolderKanban,
   HardHat,
+  KeyRound,
   LayoutDashboard,
   ListChecks,
   MessagesSquare,
   Rocket,
+  ScrollText,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -71,6 +74,19 @@ export type NavItem = {
    * identically since they all share one `pathname`.
    */
   matchQueryParam?: { key: string; value: string | null };
+  /**
+   * True for a plain-href item whose route is itself a PREFIX of a
+   * sibling item's route (e.g. Platform Admin's "Overview" at
+   * `/platform-admin`, sibling to `/platform-admin/companies`,
+   * `/platform-admin/users`, etc.) — without this, the default
+   * startsWith-based sub-page matching (see below) would highlight
+   * "Overview" simultaneously with whichever sibling page is actually
+   * active, since every sibling path also starts with `/platform-admin/`.
+   * Omitted (the default, used by every other plain-href item) keeps the
+   * normal "stay highlighted on a child/detail page" behavior — e.g.
+   * "Employees" (`/employees`) staying active on `/employees/EMP001`.
+   */
+  exact?: boolean;
   /**
    * Set for items whose real URL depends on the caller's active company+
    * project (Scaffold Register, Scaffold Inspections, Teams) — nav-main.tsx
@@ -324,12 +340,74 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description: "Company settings, membership, and role management.",
       },
+    ],
+  },
+  {
+    label: "Platform Administration",
+    items: [
       {
-        label: "Platform Admin",
+        label: "Overview",
         href: "/platform-admin",
+        icon: LayoutDashboard,
+        status: "available",
+        description: "Platform-wide counts — companies, projects, employees, accounts, invitations, warnings, and recent activity.",
+        roles: ["platform_super_admin"],
+        exact: true,
+      },
+      {
+        label: "Companies",
+        href: "/platform-admin/companies",
         icon: Building2,
         status: "available",
-        description: "Platform-wide account search, company creation, and account security controls.",
+        description: "Every company on the platform — status, usage, administrators, invitations, and subscription.",
+        roles: ["platform_super_admin"],
+      },
+      {
+        label: "Users",
+        href: "/platform-admin/users",
+        icon: Users,
+        status: "available",
+        description: "Search every platform account — status, memberships, roles, security history, and warnings.",
+        roles: ["platform_super_admin"],
+      },
+      {
+        label: "Roles & Permissions",
+        href: "/platform-admin/roles",
+        icon: KeyRound,
+        status: "available",
+        description: "The 11 built-in system roles (read-only) and each company's custom roles.",
+        roles: ["platform_super_admin"],
+      },
+      {
+        label: "Security",
+        href: "/platform-admin/security",
+        icon: ShieldAlert,
+        status: "available",
+        description: "Platform-wide login/security history, account status changes, and platform warnings.",
+        roles: ["platform_super_admin"],
+      },
+      {
+        label: "Audit Log",
+        href: "/platform-admin/audit",
+        icon: ScrollText,
+        status: "available",
+        description: "Every recorded audit event across the platform, filterable by actor, action, entity, company, and date.",
+        roles: ["platform_super_admin"],
+      },
+      {
+        label: "Usage & Billing",
+        href: "/platform-admin/billing",
+        icon: CreditCard,
+        status: "available",
+        description: "Each company's plan, subscription status, and employee/project usage against its limits. Manual — no automated payment processing.",
+        roles: ["platform_super_admin"],
+      },
+      {
+        label: "Platform Settings",
+        href: "/platform-admin/settings",
+        icon: Settings,
+        status: "available",
+        description: "The platform super administrator roster — grant or revoke platform-level access.",
         roles: ["platform_super_admin"],
       },
     ],
@@ -357,6 +435,7 @@ export function isNavItemActive(item: NavItem, pathname: string, searchParams: U
     return new RegExp(pattern).test(pathname);
   }
   const hrefPath = item.href.split("?")[0];
+  if (item.exact) return pathname === hrefPath;
   if (pathname !== hrefPath && !pathname.startsWith(`${hrefPath}/`)) return false;
   if (!item.matchQueryParam) return true;
   return searchParams.get(item.matchQueryParam.key) === item.matchQueryParam.value;

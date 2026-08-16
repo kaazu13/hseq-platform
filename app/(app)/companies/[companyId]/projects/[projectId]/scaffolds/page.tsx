@@ -8,6 +8,8 @@ import { ScaffoldCard } from "@/modules/scaffolds/components/scaffold-card";
 import { ScaffoldFilters } from "@/modules/scaffolds/components/scaffold-filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { CreateSuccessToast } from "@/components/shared/create-success-toast";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { Button } from "@/components/ui/button";
 
 type ScaffoldsPageProps = {
@@ -51,14 +53,23 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      <CreateSuccessToast
+        paramName="created"
+        buildMessage={(id, params) => `Scaffold ${params.get("tag") ?? ""} registered successfully.`}
+        buildViewHref={(id) => `${basePath}/${id}`}
+        viewLabel="View scaffold"
+      />
       <PageHeader
         title="Scaffold Register"
         description={`${project.name} — structures, their inspection history, and current status.`}
         actions={
-          <Button size="sm" nativeButton={false} render={<Link href={`${basePath}/new`} />}>
-            <Plus />
-            Register scaffold
-          </Button>
+          <>
+            <RefreshButton />
+            <Button size="sm" nativeButton={false} render={<Link href={`${basePath}/new`} />}>
+              <Plus />
+              Register scaffold
+            </Button>
+          </>
         }
       />
 

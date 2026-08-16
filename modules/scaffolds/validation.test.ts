@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { scaffoldFormSchema, inspectionFormSchema, inspectionItemsFormSchema, finalizeInspectionFormSchema, correctionReasonFormSchema, voidInspectionFormSchema } from "./validation";
 import { SCAFFOLD_INSPECTION_ITEM_TYPES } from "./types";
 
-const TEAM_MEMBER_A = "123e4567-e89b-42d3-a456-426614174010";
-const TEAM_MEMBER_B = "123e4567-e89b-42d3-a456-426614174011";
+const ERECTION_TEAM_A = "123e4567-e89b-42d3-a456-426614174010";
+const ERECTION_TEAM_B = "123e4567-e89b-42d3-a456-426614174011";
 
 const VALID_SCAFFOLD_INPUT = {
   projectId: "123e4567-e89b-42d3-a456-426614174000",
@@ -18,10 +18,9 @@ const VALID_SCAFFOLD_INPUT = {
   widthMetres: "1.2",
   erectedBy: "",
   responsibleForemanId: "123e4567-e89b-42d3-a456-426614174001",
-  erectedAt: "",
+  erectedAt: "2026-08-10",
   notes: "",
-  teamSize: "2",
-  teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_B],
+  erectionTeamIds: [ERECTION_TEAM_A, ERECTION_TEAM_B],
 };
 
 describe("scaffoldFormSchema", () => {
@@ -90,35 +89,23 @@ describe("scaffoldFormSchema", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, scaffoldType: "trestle" }).success).toBe(false);
   });
 
-  it("accepts team sizes across the full valid range, rejects zero/negative/non-integer/over-max", () => {
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "1", teamMemberIds: [TEAM_MEMBER_A] }).success).toBe(true);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "0", teamMemberIds: [] }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "-1", teamMemberIds: [] }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "2.5", teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_B] }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "51", teamMemberIds: Array.from({ length: 51 }, (_, i) => `123e4567-e89b-42d3-a456-42661417${String(4100 + i).padStart(4, "0")}`) }).success).toBe(false);
+  it("requires erectedAt — V2 made it mandatory (was optional pre-V2)", () => {
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectedAt: "" }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectedAt: "08/10/2026" }).success).toBe(false);
   });
 
-  it("rejects when submitted team member count doesn't match the declared team size", () => {
-    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "3", teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_B] });
+  it("accepts one or more erectionTeamIds, rejects an empty selection", () => {
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: [ERECTION_TEAM_A] }).success).toBe(true);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: [] }).success).toBe(false);
+  });
+
+  it("rejects the same erection team selected more than once", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: [ERECTION_TEAM_A, ERECTION_TEAM_A] });
     expect(result.success).toBe(false);
   });
 
-  it("rejects duplicate employees within the submitted team", () => {
-    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "2", teamMemberIds: [TEAM_MEMBER_A, TEAM_MEMBER_A] });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects the Responsible Foreman also appearing as an ordinary team member", () => {
-    const result = scaffoldFormSchema.safeParse({
-      ...VALID_SCAFFOLD_INPUT,
-      teamSize: "2",
-      teamMemberIds: [VALID_SCAFFOLD_INPUT.responsibleForemanId, TEAM_MEMBER_B],
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects a forged non-UUID team member id", () => {
-    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, teamSize: "1", teamMemberIds: ["not-a-uuid"] });
+  it("rejects a forged non-UUID erection team id", () => {
+    const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: ["not-a-uuid"] });
     expect(result.success).toBe(false);
   });
 });

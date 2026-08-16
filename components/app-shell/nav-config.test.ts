@@ -178,6 +178,42 @@ describe("Navigation redesign item 5: Equipment moved under 'Planning & Daily'",
   });
 });
 
+describe("exact: true — a plain-href item whose route is a prefix of sibling routes (Platform Admin 'Overview')", () => {
+  const overviewItem: NavItem = { ...baseItem, label: "Overview", href: "/platform-admin", matchQueryParam: undefined, exact: true };
+  const companiesItem: NavItem = { ...baseItem, label: "Companies", href: "/platform-admin/companies", matchQueryParam: undefined };
+
+  it("Overview matches only its own exact path, never a sibling sub-page", () => {
+    expect(isNavItemActive(overviewItem, "/platform-admin", new URLSearchParams())).toBe(true);
+    expect(isNavItemActive(overviewItem, "/platform-admin/companies", new URLSearchParams())).toBe(false);
+    expect(isNavItemActive(overviewItem, "/platform-admin/companies/abc-123", new URLSearchParams())).toBe(false);
+  });
+
+  it("the sibling sub-page still matches itself and its own children (default startsWith behavior, unaffected by Overview's exact flag)", () => {
+    expect(isNavItemActive(companiesItem, "/platform-admin/companies", new URLSearchParams())).toBe(true);
+    expect(isNavItemActive(companiesItem, "/platform-admin/companies/abc-123", new URLSearchParams())).toBe(true);
+    expect(isNavItemActive(companiesItem, "/platform-admin", new URLSearchParams())).toBe(false);
+  });
+
+  it("real defect this fix corrects: without `exact`, Overview's plain href would ALSO match every sibling sub-page since they all start with '/platform-admin/'", () => {
+    const overviewWithoutExact: NavItem = { ...overviewItem, exact: undefined };
+    expect(isNavItemActive(overviewWithoutExact, "/platform-admin/companies", new URLSearchParams())).toBe(true);
+  });
+});
+
+describe("Platform Administration nav group (Part 2 of the post-audit implementation package)", () => {
+  it("groups Overview, Companies, Users, Roles & Permissions, Security, Audit Log, Usage & Billing, and Platform Settings together, all platform_super_admin-only", () => {
+    const group = NAV_GROUPS.find((g) => g.label === "Platform Administration");
+    expect(group).toBeDefined();
+    const labels = group!.items.map((item) => item.label);
+    expect(labels).toEqual(
+      expect.arrayContaining(["Overview", "Companies", "Users", "Roles & Permissions", "Security", "Audit Log", "Usage & Billing", "Platform Settings"]),
+    );
+    for (const item of group!.items) {
+      expect(item.roles).toEqual(["platform_super_admin"]);
+    }
+  });
+});
+
 describe("matchSegment: '' (project root — 'Project Dashboard')", () => {
   const projectDashboardItem: NavItem = {
     label: "Project Dashboard",

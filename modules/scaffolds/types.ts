@@ -17,7 +17,12 @@ import type { Database, Enums } from "@/types/database";
 export type Scaffold = Database["public"]["Tables"]["scaffolds"]["Row"];
 export type ScaffoldInspection = Database["public"]["Tables"]["scaffold_inspections"]["Row"];
 export type ScaffoldInspectionItem = Database["public"]["Tables"]["scaffold_inspection_items"]["Row"];
+/** Legacy manual roster (pre-V2) — still rendered for scaffolds that already have rows here, never written to by new create/edit flows. See ScaffoldErectionTeam below for the V2 replacement. */
 export type ScaffoldTeamMember = Database["public"]["Tables"]["scaffold_team_members"]["Row"];
+/** V2 (Part 4C): a real link to one of the scaffold's Today's Teams (daily_teams), scoped to its erection date — replaces the manual roster for every scaffold created going forward. */
+export type ScaffoldErectionTeam = Database["public"]["Tables"]["scaffold_erection_teams"]["Row"];
+/** V2 (Part 4F): a completion photo of the finished scaffold. */
+export type ScaffoldPhoto = Database["public"]["Tables"]["scaffold_photos"]["Row"];
 
 export type ScaffoldType = Enums<"scaffold_type">;
 export type ScaffoldStatus = Enums<"scaffold_status">;
@@ -265,10 +270,35 @@ export type ScaffoldTeamMemberDetail = {
   lastName: string;
 };
 
+/** One resolved erection-team link — the daily team's own display fields (name/shift/work area/foreman/worker count), resolved for the scaffold detail page, never a flattened copy. */
+export type ScaffoldErectionTeamDetail = {
+  id: string;
+  dailyTeamId: string;
+  name: string;
+  shift: Database["public"]["Tables"]["daily_teams"]["Row"]["shift"];
+  workArea: string | null;
+  foremanName: string | null;
+  workerCount: number;
+};
+
+/** One resolved completion photo — a short-lived signed URL for display (the bucket is private; there is no public/stable URL, unlike company logos), never the raw storage path exposed to the client. `uploadedByName` is resolved from `profiles.full_name` (scaffold_photos.uploaded_by is a profile/auth-user id, not an employee id — whoever uploaded a photo may not even have an employees row, e.g. a company_admin). */
+export type ScaffoldPhotoDetail = {
+  id: string;
+  url: string;
+  originalFilename: string;
+  uploadedByName: string | null;
+  uploadedAt: string;
+  orderIndex: number;
+};
+
 /** One scaffold with everything a detail page needs, resolved in one place. */
 export type ScaffoldDetail = Scaffold & {
   responsibleForeman: BasicEmployee | null;
+  /** Legacy manual roster — populated ONLY for scaffolds created before V2 that still have scaffold_team_members rows; empty for every V2 scaffold. */
   teamMembers: ScaffoldTeamMemberDetail[];
+  /** V2's real Today's Team links — empty for legacy scaffolds that predate this table. */
+  erectionTeams: ScaffoldErectionTeamDetail[];
+  photos: ScaffoldPhotoDetail[];
 };
 
 /**
@@ -316,3 +346,7 @@ export function formatInspectionReference(
  */
 export const SCAFFOLD_TEAM_MIN_SIZE = 1;
 export const SCAFFOLD_TEAM_MAX_SIZE = 50;
+
+// ── Scaffold completion photos (Part 4F) ───────────────────────────────
+export const SCAFFOLD_PHOTOS_MAX_COUNT = 30;
+export const SCAFFOLD_PHOTO_MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB per raw upload

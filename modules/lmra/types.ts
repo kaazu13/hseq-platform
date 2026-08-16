@@ -261,6 +261,66 @@ export type LmraAssessmentDetail = LmraAssessment & {
 // constraints added in the redesign migration; Zod (modules/lmra/validation.ts)
 // is the primary gate, these are the single source both reference so the
 // two never drift silently.
+// ── List date-range presets (post-audit performance fix, Part 7) ──────
+// The LMRA list previously had no default date window and could fetch a
+// project's entire history unfiltered. "Last 30 days" is now the default,
+// SHOWN as the active preset in the UI (never a silent filter behind an
+// "All" label) — the other presets, including an explicit "All time" that
+// still paginates rather than fetching everything, are one click away.
+export type LmraDateRangePreset = "today" | "7d" | "30d" | "month" | "custom" | "all";
+
+export const LMRA_DATE_RANGE_PRESETS: LmraDateRangePreset[] = ["today", "7d", "30d", "month", "custom", "all"];
+
+export const LMRA_DATE_RANGE_PRESET_LABELS: Record<LmraDateRangePreset, string> = {
+  today: "Today",
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
+  month: "This month",
+  custom: "Custom range",
+  all: "All time",
+};
+
+export const LMRA_DEFAULT_DATE_RANGE_PRESET: LmraDateRangePreset = "30d";
+
+/**
+ * Pure date-window resolver for a preset — `referenceDate` defaults to
+ * "now" but is an explicit param so this stays testable without mocking
+ * the clock. `custom` returns whatever dateFrom/dateTo the caller already
+ * has (from the URL); `all` returns neither (no date filter — the page
+ * still MUST paginate in that case, this function has no say over that).
+ */
+export function resolveLmraDateRange(
+  preset: LmraDateRangePreset,
+  custom: { dateFrom?: string; dateTo?: string } = {},
+  referenceDate: Date = new Date(),
+): { dateFrom?: string; dateTo?: string } {
+  const toIso = (d: Date) => d.toISOString().slice(0, 10);
+  const today = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), referenceDate.getUTCDate()));
+
+  switch (preset) {
+    case "today":
+      return { dateFrom: toIso(today), dateTo: toIso(today) };
+    case "7d": {
+      const from = new Date(today);
+      from.setUTCDate(from.getUTCDate() - 6);
+      return { dateFrom: toIso(from), dateTo: toIso(today) };
+    }
+    case "30d": {
+      const from = new Date(today);
+      from.setUTCDate(from.getUTCDate() - 29);
+      return { dateFrom: toIso(from), dateTo: toIso(today) };
+    }
+    case "month": {
+      const from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+      return { dateFrom: toIso(from), dateTo: toIso(today) };
+    }
+    case "custom":
+      return { dateFrom: custom.dateFrom, dateTo: custom.dateTo };
+    case "all":
+      return {};
+  }
+}
+
 export const LMRA_WORK_AREA_MAX_LENGTH = 100;
 export const LMRA_WORK_ACTIVITY_MAX_LENGTH = 200;
 export const LMRA_NOTES_MAX_LENGTH = 2000;

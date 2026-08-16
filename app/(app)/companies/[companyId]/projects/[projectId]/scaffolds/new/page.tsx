@@ -1,7 +1,9 @@
 import { notFound, forbidden } from "next/navigation";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
-import { listScaffoldCreatableProjects, listEligibleScaffoldForemen, listEligibleScaffoldTeamMembers } from "@/modules/scaffolds/queries";
+import { listScaffoldRegisterCreatableProjects, listEligibleScaffoldForemen, isCallerEligibleScaffoldForeman } from "@/modules/scaffolds/queries";
+import { isScaffoldBroadCreator, mustSelfLockResponsibleForeman } from "@/modules/scaffolds/permissions";
+import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
 import { PageHeader } from "@/components/shared/page-header";
 
@@ -27,21 +29,35 @@ export default async function NewScaffoldPage({ params }: NewScaffoldPageProps) 
   }
 
   const roleNames = await getUserRoleNames(companyId);
-  const creatableProjects = await listScaffoldCreatableProjects(companyId, user.id, roleNames);
+  const creatableProjects = await listScaffoldRegisterCreatableProjects(companyId, user.id, roleNames);
   if (!creatableProjects.some((candidate) => candidate.id === project.id)) {
     forbidden();
   }
 
-  const [foremanOptions, teamMemberOptions] = await Promise.all([
+  const isBroadCreator = isScaffoldBroadCreator(roleNames, true);
+  const isEligibleForeman = isBroadCreator ? false : await isCallerEligibleScaffoldForeman(companyId, project.id);
+  const selfLocked = mustSelfLockResponsibleForeman(roleNames, true, isEligibleForeman);
+
+  const [foremanOptions, selfLockedForemanId] = await Promise.all([
     listEligibleScaffoldForemen(companyId, project.id),
-    listEligibleScaffoldTeamMembers(companyId, project.id),
+    selfLocked ? getMyEmployeeId(companyId, user.id) : Promise.resolve(null),
   ]);
+
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Register scaffold" description={`For ${project.name}.`} />
       <div className="max-w-3xl">
-        <ScaffoldForm mode="create" companyId={companyId} projectId={project.id} projectName={project.name} foremanOptions={foremanOptions} teamMemberOptions={teamMemberOptions} />
+        <ScaffoldForm
+          mode="create"
+          companyId={companyId}
+          projectId={project.id}
+          projectName={project.name}
+          foremanOptions={foremanOptions}
+          selfLockedForemanId={selfLockedForemanId}
+          today={today}
+        />
       </div>
     </div>
   );

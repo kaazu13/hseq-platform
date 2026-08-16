@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { initialLmraHazardRows, lmraHazardInputsFromRows, LMRA_HAZARD_TYPES, LMRA_COMMON_CONTROLS, buildMyTodaysTeamParticipantIds } from "./types";
+import { initialLmraHazardRows, lmraHazardInputsFromRows, LMRA_HAZARD_TYPES, LMRA_COMMON_CONTROLS, buildMyTodaysTeamParticipantIds, resolveLmraDateRange } from "./types";
 
 describe("initialLmraHazardRows", () => {
   it("returns exactly 12 rows, one per LMRA_HAZARD_TYPES entry, in that fixed order", () => {
@@ -145,5 +145,39 @@ describe("buildMyTodaysTeamParticipantIds — item 2's 'Add My Today's Team'", (
   it("handles a team with no other workers — just the caller", () => {
     const ids = buildMyTodaysTeamParticipantIds({ foreman: null, workers: [] }, "me-1");
     expect(ids).toEqual(["me-1"]);
+  });
+});
+
+describe("resolveLmraDateRange", () => {
+  const reference = new Date("2026-08-20T15:30:00Z"); // a Thursday, mid-month
+
+  it("'today' returns the same date for both bounds", () => {
+    expect(resolveLmraDateRange("today", {}, reference)).toEqual({ dateFrom: "2026-08-20", dateTo: "2026-08-20" });
+  });
+
+  it("'7d' spans exactly 7 calendar days including today", () => {
+    expect(resolveLmraDateRange("7d", {}, reference)).toEqual({ dateFrom: "2026-08-14", dateTo: "2026-08-20" });
+  });
+
+  it("'30d' spans exactly 30 calendar days including today", () => {
+    expect(resolveLmraDateRange("30d", {}, reference)).toEqual({ dateFrom: "2026-07-22", dateTo: "2026-08-20" });
+  });
+
+  it("'month' spans from the 1st of the current month through today", () => {
+    expect(resolveLmraDateRange("month", {}, reference)).toEqual({ dateFrom: "2026-08-01", dateTo: "2026-08-20" });
+  });
+
+  it("'custom' passes through whatever the caller supplied, unmodified", () => {
+    expect(resolveLmraDateRange("custom", { dateFrom: "2026-01-01", dateTo: "2026-02-15" }, reference)).toEqual({ dateFrom: "2026-01-01", dateTo: "2026-02-15" });
+    expect(resolveLmraDateRange("custom", {}, reference)).toEqual({ dateFrom: undefined, dateTo: undefined });
+  });
+
+  it("'all' returns no date bounds at all — the caller (page.tsx) is still required to paginate separately", () => {
+    expect(resolveLmraDateRange("all", {}, reference)).toEqual({});
+  });
+
+  it("crosses a month boundary correctly for '30d'", () => {
+    const earlyMonth = new Date("2026-03-05T00:00:00Z");
+    expect(resolveLmraDateRange("30d", {}, earlyMonth)).toEqual({ dateFrom: "2026-02-04", dateTo: "2026-03-05" });
   });
 });

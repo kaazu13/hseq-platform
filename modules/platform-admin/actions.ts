@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRaisedException } from "@/lib/supabase/errors";
 import { searchPlatformAccounts } from "./queries";
-import type { PlatformAccountSearchResult } from "./types";
+import type { PlatformAccountSearchResult, RoleRow } from "./types";
 import {
   suspendAccountSchema,
   banAccountSchema,
@@ -15,6 +15,9 @@ import {
   adminUpdateUserNameSchema,
   createCompanySchema,
   grantCompanyMembershipSchema,
+  createCustomRoleSchema,
+  updateCustomRolePermissionsSchema,
+  upsertCompanySubscriptionSchema,
   type SuspendAccountInput,
   type BanAccountInput,
   type RestoreAccountInput,
@@ -22,6 +25,9 @@ import {
   type AdminUpdateUserNameInput,
   type CreateCompanyInput,
   type GrantCompanyMembershipInput,
+  type CreateCustomRoleInput,
+  type UpdateCustomRolePermissionsInput,
+  type UpsertCompanySubscriptionInput,
 } from "./validation";
 import type { Database } from "@/types/database";
 import type { Company } from "@/modules/companies/types";
@@ -29,6 +35,7 @@ import type { Company } from "@/modules/companies/types";
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type PlatformWarning = Database["public"]["Tables"]["platform_warnings"]["Row"];
 type CompanyMembership = Database["public"]["Tables"]["company_memberships"]["Row"];
+type CompanySubscription = Database["public"]["Tables"]["company_subscriptions"]["Row"];
 
 /**
  * Server Functions for Platform Administrator account/security controls
@@ -42,6 +49,11 @@ type CompanyMembership = Database["public"]["Tables"]["company_memberships"]["Ro
 
 function revalidatePlatformAdminPaths() {
   revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin/companies");
+  revalidatePath("/platform-admin/users");
+  revalidatePath("/platform-admin/roles");
+  revalidatePath("/platform-admin/billing");
+  revalidatePath("/platform-admin/settings");
 }
 
 export async function suspendAccount(targetUserId: string, input: SuspendAccountInput): Promise<ActionResult<Profile>> {
@@ -248,4 +260,110 @@ export async function platformAdminGrantCompanyMembership(companyId: string, inp
 
   revalidatePlatformAdminPaths();
   return { ok: true, data };
+}
+
+/**
+ * Part 2 — Roles & Permissions page. create_custom_role()/
+ * update_custom_role_permissions()/delete_custom_role() (SECURITY DEFINER,
+ * 20260831092000_roles_permissions_foundation.sql) already independently
+ * enforce platform-admin-only + reserved-permission rejection +
+ * system-role protection — this app-layer check is the same fast
+ * pre-filter every other action in this file uses.
+ */
+export async function createCustomRole(input: CreateCustomRoleInput): Promise<ActionResult<RoleRow>> {
+  const parsed = createCustomRoleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("create_custom_role", {
+      target_company_id: parsed.data.companyId,
+      target_name: parsed.data.name,
+      target_description: (parsed.data.description || null) as string,
+      target_permission_keys: parsed.data.permissionKeys,
+    })
+    .single();
+  if (error || !data) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't create the role. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data };
+}
+
+export async function updateCustomRolePermissions(roleId: string, input: UpdateCustomRolePermissionsInput): Promise<ActionResult<RoleRow>> {
+  const parsed = updateCustomRolePermissionsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_custom_role_permissions", { target_role_id: roleId, target_permission_keys: parsed.data.permissionKeys }).single();
+  if (error || !data) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't update the role's permissions. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data };
+}
+
+export async function deleteCustomRole(roleId: string): Promise<ActionResult<null>> {
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_custom_role", { target_role_id: roleId });
+  if (error) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't delete the role. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data: null };
+}
+
+/** Part 2 — Usage & Billing. upsert_company_subscription() (SECURITY DEFINER, 20260831091000_billing_usage_foundation.sql) is platform-admin-only and audited; this is a foundation, no payment processing. */
+export async function upsertCompanySubscription(companyId: string, input: UpsertCompanySubscriptionInput): Promise<ActionResult<CompanySubscription>> {
+  const parsed = upsertCompanySubscriptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("upsert_company_subscription", {
+      target_company_id: companyId,
+      target_plan_name: parsed.data.planName || undefined,
+      target_subscription_status: parsed.data.subscriptionStatus,
+      target_employee_limit: parsed.data.employeeLimit ?? undefined,
+      target_project_limit: parsed.data.projectLimit ?? undefined,
+      target_billing_renewal_date: parsed.data.billingRenewalDate || undefined,
+      target_notes: parsed.data.notes || undefined,
+    })
+    .single();
+  if (error || !data) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't save the billing information. Try again." } };
+  }
+
+  revalidatePlatformAdminPaths();
+  return { ok: true, data };
+}
+
+/** Part 2 — Platform Settings roster. Wraps the existing revoke_platform_super_admin() RPC (grantPlatformSuperAdmin() above already covers the grant path). */
+export async function revokePlatformSuperAdmin(targetUserId: string): Promise<ActionResult<null>> {
+  await requirePlatformSuperAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("revoke_platform_super_admin", { target_user_id: targetUserId });
+  if (error) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't revoke platform administrator access. Try again." } };
+  }
+  revalidatePlatformAdminPaths();
+  return { ok: true, data: null };
 }

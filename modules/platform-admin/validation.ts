@@ -42,3 +42,35 @@ export const grantCompanyMembershipSchema = z.object({
   roleNames: z.array(z.string()).min(1, "At least one role is required"),
 });
 export type GrantCompanyMembershipInput = z.infer<typeof grantCompanyMembershipSchema>;
+
+/**
+ * Part 2 — Roles & Permissions page. Mirrors create_custom_role()/
+ * update_custom_role_permissions()'s own validation exactly (name length,
+ * description length) as a fast client-side hint; the RPCs re-validate
+ * server-side regardless, including the reserved-permission and
+ * unrecognized-key checks this schema deliberately does NOT duplicate
+ * (that catalogue can only be known server-side, at call time).
+ */
+export const createCustomRoleSchema = z.object({
+  companyId: z.string().uuid("Select a company"),
+  name: z.string().trim().min(1, "A role name is required").max(100, "Keep it under 100 characters"),
+  description: z.string().trim().max(500, "Keep it under 500 characters").optional(),
+  permissionKeys: z.array(z.string()),
+});
+export type CreateCustomRoleInput = z.infer<typeof createCustomRoleSchema>;
+
+export const updateCustomRolePermissionsSchema = z.object({
+  permissionKeys: z.array(z.string()),
+});
+export type UpdateCustomRolePermissionsInput = z.infer<typeof updateCustomRolePermissionsSchema>;
+
+/** Part 2 — Usage & Billing. Mirrors upsert_company_subscription()'s own constraints (positive limits, bounded text lengths). */
+export const upsertCompanySubscriptionSchema = z.object({
+  planName: z.string().trim().max(100, "Keep it under 100 characters").optional(),
+  subscriptionStatus: z.enum(["trialing", "active", "past_due", "canceled", "paused"]),
+  employeeLimit: z.coerce.number().int().positive("Must be a positive number").optional(),
+  projectLimit: z.coerce.number().int().positive("Must be a positive number").optional(),
+  billingRenewalDate: z.string().trim().optional(),
+  notes: z.string().trim().max(2000, "Keep it under 2000 characters").optional(),
+});
+export type UpsertCompanySubscriptionInput = z.infer<typeof upsertCompanySubscriptionSchema>;

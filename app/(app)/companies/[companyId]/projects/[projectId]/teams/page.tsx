@@ -15,6 +15,7 @@ import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/exp
 import { CopyTeamsDialog } from "@/modules/daily-workforce/components/copy-teams-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RefreshButton } from "@/components/shared/refresh-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -122,7 +123,12 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
       <PageHeader
         title="Today's Teams"
         description={`${formatWorkDate(workDate)} · ${project.name}`}
-        actions={<ExportDailyTeamsButton companyId={companyId} projectId={projectId} workDate={workDate} className="print:hidden" />}
+        actions={
+          <>
+            <RefreshButton />
+            <ExportDailyTeamsButton companyId={companyId} projectId={projectId} workDate={workDate} className="print:hidden" />
+          </>
+        }
       />
 
       <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="teams" />

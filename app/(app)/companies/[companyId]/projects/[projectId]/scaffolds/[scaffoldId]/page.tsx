@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
-import { getScaffold, listInspectionsForScaffold, isCallerProjectAccessible, getCurrentInspectionExpiryByScaffold } from "@/modules/scaffolds/queries";
+import { getScaffold, listInspectionsForScaffold, isCallerProjectAccessible, getCurrentInspectionExpiryByScaffold, canManageScaffoldPhotos } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { SCAFFOLD_TYPE_LABELS, formatScaffoldDimensions } from "@/modules/scaffolds/types";
 import { ScaffoldStatusBadge } from "@/modules/scaffolds/components/scaffold-status-badge";
 import { InspectionHistoryList } from "@/modules/scaffolds/components/inspection-history-list";
+import { ScaffoldPhotoGallery } from "@/modules/scaffolds/components/scaffold-photo-gallery";
 import { ScaffoldPrintButton } from "@/modules/scaffolds/components/scaffold-print-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -56,10 +57,11 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
     notFound();
   }
 
-  const [roleNames, hasProjectAccess, inspections] = await Promise.all([
+  const [roleNames, hasProjectAccess, inspections, canManagePhotos] = await Promise.all([
     getUserRoleNames(companyId),
     isCallerProjectAccessible(scaffold.project_id),
     listInspectionsForScaffold(companyId, scaffoldId),
+    canManageScaffoldPhotos(scaffoldId),
   ]);
 
   const projectName = project.name;
@@ -144,10 +146,31 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
       </Card>
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title={`Scaffold team${scaffold.teamMembers.length > 0 ? ` — ${scaffold.teamMembers.length} members` : ""}`} />
-        {scaffold.teamMembers.length === 0 ? (
-          <EmptyState icon={HardHat} title="No scaffold team members recorded" />
+        <SectionHeader title={`Teams assigned to scaffold erection${scaffold.erectionTeams.length > 0 ? ` — ${scaffold.erectionTeams.length}` : ""}`} />
+        {scaffold.erectionTeams.length === 0 ? (
+          <EmptyState icon={HardHat} title="No erection teams recorded" />
         ) : (
+          <Card>
+            <CardContent className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2">
+              {scaffold.erectionTeams.map((team) => (
+                <div key={team.id} className="rounded-lg border p-3 text-sm">
+                  <p className="font-medium">{team.name}</p>
+                  <p className="text-muted-foreground">
+                    {[team.workArea, team.shift].filter(Boolean).join(" · ") || "—"}
+                  </p>
+                  <p className="text-muted-foreground">Foreman: {team.foremanName ?? "—"}</p>
+                  <p className="text-muted-foreground">{team.workerCount} worker{team.workerCount === 1 ? "" : "s"}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {scaffold.teamMembers.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <SectionHeader title={`Legacy team roster — ${scaffold.teamMembers.length} members`} />
+          <p className="text-sm text-muted-foreground">Recorded before Teams assigned to scaffold erection existed. Preserved as recorded; no longer editable.</p>
           <Card>
             <CardContent className="pt-4">
               <ol className="flex flex-col gap-1.5 text-sm">
@@ -159,7 +182,19 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
               </ol>
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 print:hidden">
+        <SectionHeader title={`Completion photos${scaffold.photos.length > 0 ? ` — ${scaffold.photos.length}/30` : ""}`} />
+        <ScaffoldPhotoGallery
+          companyId={companyId}
+          projectId={projectId}
+          scaffoldId={scaffold.id}
+          tagNumber={scaffold.tag_number}
+          initialPhotos={scaffold.photos}
+          canManage={canManagePhotos}
+        />
       </div>
 
       <div className="flex flex-col gap-3">
