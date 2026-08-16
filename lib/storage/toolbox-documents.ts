@@ -77,9 +77,23 @@ export function buildToolboxTemplateObjectPath(companyId: string, templateId: st
   return `${companyId}/templates/${templateId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
 }
 
-/** {company_id}/safety-flash/{project_id|'company'}/{flash_id}/{uuid}-{filename} — literal 'company' segment when no project, matching the storage RLS policy's path parsing. */
+/**
+ * {company_id}/safety-flash/{project_id|'org'}/{flash_id}/{uuid}-{filename}
+ *
+ * CRITICAL fix, caught by live testing (role-validation realistic data
+ * seed): this previously used the literal segment 'company' for a
+ * company-wide (no-project) flash, but the deployed storage RLS policy
+ * (supabase/migrations/20260803161000_toolbox_documents_storage.sql,
+ * predating the organizations->companies rename) checks for the literal
+ * 'org' at this exact path position — never updated when this file's
+ * literal was written/renamed. The mismatch meant EVERY company-wide
+ * safety flash upload failed storage RLS for EVERY caller, unconditionally
+ * — confirmed live, and confirmed zero company-wide safety_flashes rows
+ * exist in the database (this path can never have succeeded before).
+ * Fixed to match the storage policy's actual, deployed expectation.
+ */
 export function buildSafetyFlashObjectPath(companyId: string, projectId: string | null, flashId: string, originalFilename: string): string {
-  const scopeSegment = projectId ?? "company";
+  const scopeSegment = projectId ?? "org";
   return `${companyId}/safety-flash/${scopeSegment}/${flashId}/${crypto.randomUUID()}-${sanitizeFilenameSegment(originalFilename)}`;
 }
 

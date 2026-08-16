@@ -4810,6 +4810,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      __test_get_lmra_row: {
+        Args: { target_id: string }
+        Returns: {
+          approved_at: string | null
+          archived_at: string | null
+          archived_by: string | null
+          company_id: string
+          completed_by_employee_id: string
+          created_at: string
+          created_by: string | null
+          daily_team_id: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          responsible_person_id: string | null
+          result: Database["public"]["Enums"]["lmra_result"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"]
+          status: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_activity: string
+          work_area: string
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lmra_assessments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_invitation: { Args: { target_token: string }; Returns: Json }
       acknowledge_platform_warning: {
         Args: { target_warning_id: string }
@@ -5614,6 +5651,43 @@ export type Database = {
           full_name: string
           id: string
         }[]
+      }
+      get_lmra_assessment_row: {
+        Args: { target_id: string }
+        Returns: {
+          approved_at: string | null
+          archived_at: string | null
+          archived_by: string | null
+          company_id: string
+          completed_by_employee_id: string
+          created_at: string
+          created_by: string | null
+          daily_team_id: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          responsible_person_id: string | null
+          result: Database["public"]["Enums"]["lmra_result"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shift: Database["public"]["Enums"]["lmra_shift"]
+          status: Database["public"]["Enums"]["lmra_status"]
+          stop_work_reason: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          updated_by: string | null
+          work_activity: string
+          work_area: string
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lmra_assessments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_toolbox_authorized_employee_info: {
         Args: { target_employee_ids: string[] }

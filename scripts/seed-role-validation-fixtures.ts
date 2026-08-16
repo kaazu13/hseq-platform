@@ -13,12 +13,33 @@
  * NEVER touches cristi.3ddd@gmail.com or any other real account — this
  * script has no code path that can reference a non-@example.test email.
  *
- * Run: npx tsx scripts/seed-role-validation-fixtures.ts
+ * STABLE CREDENTIALS (role-validation environment fix, 2026-08-16): every
+ * fixture account's password is now a FIXED, deterministic, per-role value
+ * (ROLE_FIXTURE_PASSWORDS below) — never regenerated randomly. This is
+ * intentional and safe ONLY because (a) this script is dev/test tooling,
+ * never imported by the Next.js app or shipped in any client bundle, (b)
+ * `assertFixtureEmail()` hard-refuses any address that isn't
+ * `test.<role>@example.test`, so these values can never reach a real
+ * account, and (c) the accounts themselves hold zero real data. Do not
+ * copy this pattern for anything that touches a real user.
+ *
+ * PRODUCTION SAFETY GUARD: refuses to run at all unless
+ * ALLOW_ROLE_VALIDATION_SEED=true is set in the environment — see
+ * assertSeedAllowed() below. This is a fail-closed gate, not a soft
+ * warning; company-name matching alone is not trusted as a safety check.
+ *
+ * Run: ALLOW_ROLE_VALIDATION_SEED=true npx tsx scripts/seed-role-validation-fixtures.ts
+ * (or, to also run the realistic-data companion script in one command:
+ * ALLOW_ROLE_VALIDATION_SEED=true npm run seed:role-validation — this
+ * runs THIS script first, then scripts/seed-role-validation-realistic-
+ * data.ts, which expands the company/project this script creates into a
+ * realistic, weeks-old-looking fixture. Run this script alone if you only
+ * need the 11 role accounts normalized.)
  * Requires SUPABASE_SECRET_KEY in .env.local (never committed).
- * Passwords are printed once to the console and nowhere else — never
- * written to a file, log, or committed anywhere.
+ * Credentials are printed to the console each run (stable, so this is
+ * informational, not a one-time reveal) — never written to a file, log,
+ * or committed anywhere by this script itself.
  */
-import { randomBytes } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
@@ -61,6 +82,22 @@ function assertFixtureEmail(email: string) {
   }
 }
 
+// Production-safety guard (role-validation environment fix): this script
+// performs bulk auth-user creation/password resets and must never run
+// against a real environment by accident. Company-name matching alone is
+// NOT trusted as a safety check (a real company could coincidentally be
+// named similarly) — an explicit, deliberately-set env flag is required.
+// Fails closed: no flag, no run, regardless of anything else about the
+// environment.
+function assertSeedAllowed() {
+  if (process.env.ALLOW_ROLE_VALIDATION_SEED !== "true") {
+    throw new Error(
+      "REFUSING to run: ALLOW_ROLE_VALIDATION_SEED=true is not set. This script resets fixture account passwords and creates test data — " +
+        "it must be run with an explicit opt-in. Run as: ALLOW_ROLE_VALIDATION_SEED=true npm run seed:role-validation",
+    );
+  }
+}
+
 type Action = "created" | "reused" | "skipped" | "updated";
 const report: { section: string; item: string; action: Action; detail?: string }[] = [];
 function log(section: string, item: string, action: Action, detail?: string) {
@@ -89,9 +126,35 @@ type RoleHolder = {
 // Populated after inspecting the live role catalogue (see inspectRoleCatalogue()).
 let ROLE_HOLDERS: RoleHolder[] = [];
 
-function generatePassword(): string {
-  // Strong (96 bits) but easy-to-type: base64url has no ambiguous punctuation.
-  return randomBytes(12).toString("base64url") + "!1";
+// STABLE, per-role fixture passwords — deliberately fixed, never
+// regenerated (see this file's header for why this is safe here). Easy to
+// type, unique per role, meets the project's configured minimum password
+// length. Every account here can ONLY ever be a test.<role>@example.test
+// fixture (assertFixtureEmail enforces this before any password write).
+const ROLE_FIXTURE_PASSWORDS: Record<string, string> = {
+  platform_super_admin: "TestPlatformAdmin2026!",
+  company_admin: "TestCompanyAdmin2026!",
+  operations_manager: "TestOpsManager2026!",
+  project_manager: "TestProjectMgr2026!",
+  hseq_manager: "TestHseqManager2026!",
+  hse_officer: "TestHseOfficer2026!",
+  foreman: "TestForeman2026!",
+  inspector: "TestInspector2026!",
+  planner: "TestPlanner2026!",
+  recruiter: "TestRecruiter2026!",
+  employee: "TestEmployee2026!",
+};
+
+function fixturePasswordFor(roleName: string): string {
+  const password = ROLE_FIXTURE_PASSWORDS[roleName];
+  if (!password) {
+    // A role exists in the live catalogue but has no assigned stable
+    // password yet — fail loudly rather than silently falling back to a
+    // random one (which would reintroduce the exact instability bug this
+    // fix addresses).
+    throw new Error(`No stable fixture password defined for role "${roleName}" — add one to ROLE_FIXTURE_PASSWORDS.`);
+  }
+  return password;
 }
 
 async function inspectRoleCatalogue(): Promise<string[]> {
@@ -162,22 +225,30 @@ async function ensureProject(companyId: string): Promise<string> {
   return data.id;
 }
 
-async function ensureAuthUser(email: string, fullName: string, roleLabel: string): Promise<{ id: string; password: string | null }> {
+async function ensureAuthUser(email: string, fullName: string, roleName: string, roleLabel: string): Promise<{ id: string; password: string | null }> {
   assertFixtureEmail(email);
   const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (listErr) throw listErr;
   const found = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
 
-  const password = generatePassword();
+  const password = fixturePasswordFor(roleName);
 
   if (found) {
-    // Normalize rather than duplicate: reset to a known fresh password
-    // (this is a disposable fixture, not a real account) and ensure it's
-    // confirmed/active so login is never blocked.
-    const { error: updErr } = await admin.auth.admin.updateUserById(found.id, { password, email_confirm: true, user_metadata: { full_name: fullName, seed_source: "role-validation-fixtures" } });
+    // Normalize rather than duplicate: reset to the STABLE fixture
+    // password (never a fresh random one — see this file's header),
+    // ensure it's confirmed/active, and explicitly clear any ban so a
+    // previous failed run (or manual testing) can never leave this
+    // account permanently locked out.
+    const wasBanned = Boolean(found.banned_until) && new Date(found.banned_until as string).getTime() > Date.now();
+    const { error: updErr } = await admin.auth.admin.updateUserById(found.id, {
+      password,
+      email_confirm: true,
+      ban_duration: "none",
+      user_metadata: { full_name: fullName, seed_source: "role-validation-fixtures" },
+    });
     if (updErr) throw updErr;
     credentials.push({ role: roleLabel, email, password });
-    log("auth-user", email, "updated", "normalized password + confirmed");
+    log("auth-user", email, "updated", `normalized password + confirmed${wasBanned ? " + unbanned" : ""}`);
     console.log(`  CREDENTIAL: ${roleLabel} | ${email} | ${password}`);
     return { id: found.id, password };
   }
@@ -355,6 +426,7 @@ async function ensurePlatformSuperAdmin(userId: string, email: string) {
 }
 
 async function main() {
+  assertSeedAllowed();
   console.log(`=== Role-Validation Fixture Seed — ${new Date().toISOString()} ===\n`);
 
   const catalogue = await inspectRoleCatalogue();
@@ -367,7 +439,7 @@ async function main() {
   const profileIdByRole = new Map<string, string>();
 
   for (const holder of ROLE_HOLDERS) {
-    const { id: userId } = await ensureAuthUser(holder.email, holder.fullName, holder.roleName);
+    const { id: userId } = await ensureAuthUser(holder.email, holder.fullName, holder.roleName, holder.roleName);
     await waitForProfile(userId, holder.fullName);
     profileIdByRole.set(holder.roleName, userId);
 

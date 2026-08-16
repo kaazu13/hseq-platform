@@ -74,9 +74,9 @@ describe("storage path builders", () => {
     expect(path).toMatch(/^company-1\/safety-flash\/project-1\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
   });
 
-  it("buildSafetyFlashObjectPath uses the literal 'company' segment when there is no project", () => {
+  it("buildSafetyFlashObjectPath uses the literal 'org' segment when there is no project (matches the deployed storage RLS policy's path parsing — see this function's own comment for the bug this fixed)", () => {
     const path = buildSafetyFlashObjectPath("company-1", null, "flash-1", "Flash.pdf");
-    expect(path).toMatch(/^company-1\/safety-flash\/company\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
+    expect(path).toMatch(/^company-1\/safety-flash\/org\/flash-1\/[0-9a-f-]{36}-Flash\.pdf$/);
   });
 
   it("two builds of the same inputs never collide — each upload gets a fresh uuid", () => {
