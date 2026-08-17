@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canCreateProjects, canManageProject } from "./permissions";
+import { canCreateProjects, canManageProject, canEditProjectLocationSettings, canEditProjectSiteLocation } from "./permissions";
 
 describe("canCreateProjects", () => {
   it("allows company_admin and operations_manager", () => {
@@ -41,5 +41,38 @@ describe("canManageProject", () => {
     // this test documents that trust boundary — the caller (getMyProjectAssignmentRoles)
     // is responsible for scoping to the correct project, not this function.
     expect(canManageProject(["employee"], [])).toBe(false);
+  });
+});
+
+describe("canEditProjectLocationSettings (Task 3 Part 12)", () => {
+  it("allows company_admin", () => {
+    expect(canEditProjectLocationSettings(["company_admin"])).toBe(true);
+  });
+
+  it("denies operations_manager and an assigned project_manager, even though both can manage every OTHER project field", () => {
+    expect(canEditProjectLocationSettings(["operations_manager"])).toBe(false);
+    expect(canEditProjectLocationSettings(["project_manager"])).toBe(false);
+  });
+
+  it("denies a plain employee", () => {
+    expect(canEditProjectLocationSettings(["employee"])).toBe(false);
+    expect(canEditProjectLocationSettings([])).toBe(false);
+  });
+});
+
+describe("canEditProjectSiteLocation (Task 3 Part 13)", () => {
+  it("allows company_admin and planner", () => {
+    expect(canEditProjectSiteLocation(["company_admin"])).toBe(true);
+    expect(canEditProjectSiteLocation(["planner"])).toBe(true);
+  });
+
+  it("denies operations_manager and an assigned project_manager, same as the country/timezone gate", () => {
+    expect(canEditProjectSiteLocation(["operations_manager"])).toBe(false);
+    expect(canEditProjectSiteLocation(["project_manager"])).toBe(false);
+  });
+
+  it("is broader than canEditProjectLocationSettings by exactly one role (planner)", () => {
+    expect(canEditProjectLocationSettings(["planner"])).toBe(false);
+    expect(canEditProjectSiteLocation(["planner"])).toBe(true);
   });
 });

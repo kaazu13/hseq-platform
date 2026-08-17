@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
+import { getLocale } from "next-intl/server";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany, getCurrentUserProfile } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
@@ -24,10 +25,11 @@ import { TopBar } from "@/components/app-shell/top-bar";
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const { user } = await requireUser();
 
-  const [{ companies, currentCompanyId }, profile, cookieStore] = await Promise.all([
+  const [{ companies, currentCompanyId }, profile, cookieStore, locale] = await Promise.all([
     resolveCurrentCompany(user.id),
     getCurrentUserProfile(user.id),
     cookies(),
+    getLocale(),
   ]);
   const [companyRoleNames, { projects, currentProjectId }, isPlatformSuperAdmin] = await Promise.all([
     currentCompanyId ? getUserRoleNames(currentCompanyId) : Promise.resolve([]),
@@ -48,6 +50,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const defaultSidebarOpen = sidebarOpenCookie !== "false";
 
   const displayName = profile?.full_name?.trim() || user.email?.split("@")[0] || "";
+  const currentProjectTimezone = projects.find((project) => project.id === currentProjectId)?.timezone ?? null;
 
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
@@ -56,11 +59,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         currentCompanyId={currentCompanyId}
         projects={projects}
         currentProjectId={currentProjectId}
-        user={{ name: displayName, email: user.email ?? "" }}
         roleNames={roleNames}
       />
       <SidebarInset>
-        <TopBar />
+        <TopBar projectTimezone={currentProjectTimezone} user={{ name: displayName, email: user.email ?? "" }} locale={locale} />
         <main className="flex flex-1 flex-col">{children}</main>
       </SidebarInset>
     </SidebarProvider>

@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   ListChecks,
   MessagesSquare,
+  PartyPopper,
   Rocket,
   ScrollText,
   Settings,
@@ -379,6 +380,18 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description: "Onboarding checklist — logo, first project, employees, and invitations for a newly created company.",
         roles: COMPANY_ADMIN_ROLES,
+      },
+      {
+        label: "Company Greetings",
+        href: "/admin/greetings",
+        icon: PartyPopper,
+        status: "available",
+        description: "Automated birthday, Christmas, New Year, and Easter messages.",
+        // company_admin only (narrower than COMPANY_ADMIN_ROLES, which also
+        // includes operations_manager) — matches
+        // company_greeting_settings_manage's RLS exactly, so the nav link
+        // is never shown to someone the page would then forbid().
+        roles: ["company_admin"],
       },
     ],
   },

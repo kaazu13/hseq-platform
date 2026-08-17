@@ -80,7 +80,6 @@ export default async function EditObservationPage({ params }: EditObservationPag
           createdBy={observation.created_by}
           candidates={candidates}
           currentParticipantIds={observation.participants.map((participant) => participant.employee_id)}
-          readOnly={false}
         />
       </div>
     </div>

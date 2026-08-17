@@ -1,23 +1,35 @@
-import { Search } from "lucide-react";
 import { getUnreadNotificationCount, listMyNotifications } from "@/modules/worked-hours/queries";
 import { NotificationBell } from "@/components/app-shell/notification-bell";
-import { Button } from "@/components/ui/button";
+import { ProjectClock } from "@/components/app-shell/project-clock";
+import { UserMenu } from "@/components/app-shell/user-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumbs } from "@/components/app-shell/breadcrumbs";
 
 const NOTIFICATION_PREVIEW_LIMIT = 5;
 
+type TopBarProps = {
+  /** The current project's timezone (Task 3 Part 11) — resolved once by the layout (which already fetches the project list/current selection for the sidebar switcher) and passed down, rather than re-querying here. */
+  projectTimezone: string | null;
+  /** Task 3 Part 16 — the profile menu now lives here, top-right. */
+  user: { name: string; email: string };
+  /** Task 3 Part 22 — the caller's resolved next-intl locale, passed down for UserMenu's quick language-switch submenu. */
+  locale: string;
+};
+
 /**
- * Persistent top bar — see docs/UI_GUIDELINES.md §4. Global search remains
- * a UI placeholder only (out of this milestone's scope); the notifications
- * bell is a real compact dropdown (item 3) — a Server Component so the
- * unread count and preview list are fetched fresh on every navigation,
- * same "no client-only parallel state" principle as the rest of this
- * milestone. The bell is now the primary notification UX — the dashboard's
- * own Notifications card was removed (item 2) since it duplicated this.
+ * Persistent top bar — see docs/UI_GUIDELINES.md §4. Task 3 Part 10: the
+ * disabled "Search — coming soon" placeholder is removed outright (it was
+ * never functional and had been sitting there since an earlier milestone
+ * with no real search behind it) — nothing replaces it, this is a genuine
+ * removal, not a swap. The notifications bell is a real compact dropdown
+ * (item 3) — a Server Component so the unread count and preview list are
+ * fetched fresh on every navigation, same "no client-only parallel state"
+ * principle as the rest of this milestone. The bell is the primary
+ * notification UX — the dashboard's own Notifications card was removed
+ * (item 2) since it duplicated this.
  */
-export async function TopBar() {
+export async function TopBar({ projectTimezone, user, locale }: TopBarProps) {
   const [unreadCount, notifications] = await Promise.all([getUnreadNotificationCount(), listMyNotifications(NOTIFICATION_PREVIEW_LIMIT)]);
 
   return (
@@ -26,21 +38,11 @@ export async function TopBar() {
       <Separator orientation="vertical" className="mr-2 h-4" />
       <Breadcrumbs />
 
-      <div className="ml-auto flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled
-          className="hidden text-muted-foreground sm:inline-flex"
-          title="Global search — coming soon"
-        >
-          <Search />
-          Search
-          <kbd className="ml-2 rounded border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
-            ⌘K
-          </kbd>
-        </Button>
+      <div className="ml-auto flex items-center gap-3">
+        <ProjectClock timezone={projectTimezone} />
         <NotificationBell unreadCount={unreadCount} notifications={notifications} />
+        <Separator orientation="vertical" className="h-6" />
+        <UserMenu name={user.name} email={user.email} locale={locale} />
       </div>
     </header>
   );

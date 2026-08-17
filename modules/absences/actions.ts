@@ -147,12 +147,20 @@ export async function reportAbsence(companyId: string, projectId: string, input:
   return { ok: true, data };
 }
 
-/** Manager "[ Confirm ]" a pending self-report — applies the effect to daily_attendance (Phase 7). */
-export async function confirmAbsenceReport(companyId: string, projectId: string, reportId: string): Promise<ActionResult<AbsenceReport>> {
+/**
+ * Manager "[ Confirm ]" a pending self-report — applies the effect to
+ * daily_attendance (Phase 7). `reason` is optional and only actually
+ * required (enforced server-side by set_daily_attendance_status) when the
+ * employee already has SUBMITTED worked hours for that date that this will
+ * zero out — same "retry in place with the reason field revealed" pattern
+ * as correctAbsenceStatus/Mark Absent (modules/absences/components/mark-
+ * absent-dialog.tsx).
+ */
+export async function confirmAbsenceReport(companyId: string, projectId: string, reportId: string, reason?: string): Promise<ActionResult<AbsenceReport>> {
   await requireAbsenceManageAccess(companyId, projectId);
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("confirm_absence_report", { target_report_id: reportId }).single();
+  const { data, error } = await supabase.rpc("confirm_absence_report", { target_report_id: reportId, target_reason: (reason ?? null) as string }).single();
   if (error || !data) {
     if (error && isRlsViolation(error)) forbidden();
     if (error && isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };

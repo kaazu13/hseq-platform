@@ -20,6 +20,7 @@ import { DiscrepancyReviewItem } from "@/modules/worked-hours/components/discrep
 import { WorkedHoursExportDialog } from "@/modules/worked-hours/components/worked-hours-export-dialog";
 import { WorkedHoursDateNav } from "@/modules/worked-hours/components/worked-hours-date-nav";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -31,10 +32,6 @@ type WorkedHoursPageProps = {
   params: Promise<{ companyId: string; projectId: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 };
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatWorkDate(value: string): string {
   return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
@@ -61,7 +58,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
   const [roleNames, myProjectRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
   const canManage = canManageWorkedHours(roleNames, myProjectRoles);
   const basePath = `/companies/${companyId}/projects/${projectId}/worked-hours`;
-  const todayDate = todayIsoDate();
+  const todayDate = getProjectLocalDate(project.timezone);
 
   if (!canManage) {
     return (

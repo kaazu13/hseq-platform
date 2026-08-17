@@ -4,6 +4,7 @@ import { getProject } from "@/modules/projects/queries";
 import { getScaffold, isCallerProjectAccessible, listEligibleScaffoldForemen } from "@/modules/scaffolds/queries";
 import { canManageScaffold } from "@/modules/scaffolds/permissions";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 
 type EditScaffoldPageProps = {
@@ -36,7 +37,7 @@ export default async function EditScaffoldPage({ params }: EditScaffoldPageProps
   }
 
   const foremanOptions = await listEligibleScaffoldForemen(companyId, scaffold.project_id);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getProjectLocalDate(project.timezone);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">

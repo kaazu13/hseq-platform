@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
-import { canCreateLmra, canManageLmra, canArchiveLmra } from "./permissions";
+import { canCreateLmra, canManageLmra, canArchiveLmra, canReviewLmra } from "./permissions";
 import { isCallerProjectForeman, isCallerProjectAccessible, getMyEmployeeId, listDailyTeamsForDate } from "./queries";
 import type { DailyTeamWithMembers } from "@/modules/daily-workforce/types";
 import {
@@ -69,6 +69,31 @@ async function requireLmraManageAccess(companyId: string, lmraId: string, projec
   const isOwnAssessment = Boolean(assessment && myEmployeeId && assessment.completed_by_employee_id === myEmployeeId);
 
   if (!canManageLmra(roleNames, isForeman, isOwnAssessment)) {
+    forbidden();
+  }
+
+  return { user, roleNames };
+}
+
+/**
+ * Review-decision gate (approve/reject a submitted assessment, or reopen an
+ * approved/rejected one) — deliberately separate from
+ * `requireLmraManageAccess` above, which is for pre-submission self-editing
+ * and self-submit only. `canReviewLmra` has no own-assessment branch, so an
+ * assessment's own creator can never satisfy this on that basis alone. The
+ * matching RLS/trigger-level fix (supabase/migrations/
+ * 20260901107000_fix_lmra_review_self_approval.sql) is the real backstop
+ * even if this were bypassed.
+ */
+async function requireLmraReviewAccess(companyId: string, lmraId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, isForeman, isSuperAdmin] = await Promise.all([
+    getUserRoleNames(companyId),
+    isCallerProjectForeman(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
+  ]);
+
+  if (!isSuperAdmin && !canReviewLmra(roleNames, isForeman)) {
     forbidden();
   }
 
@@ -309,7 +334,7 @@ export async function reviewLmra(companyId: string, lmraId: string, projectId: s
     return { ok: false, error: { code: "validation_error", message: "Check the review decision.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireLmraManageAccess(companyId, lmraId, projectId);
+  const { user } = await requireLmraReviewAccess(companyId, lmraId, projectId);
   const supabase = await createClient();
   const now = new Date().toISOString();
 
@@ -346,7 +371,7 @@ export async function reviewLmra(companyId: string, lmraId: string, projectId: s
 
 /** Reopens an approved/rejected assessment for correction — back to draft, editable again. */
 export async function reopenLmra(companyId: string, lmraId: string, projectId: string): Promise<ActionResult<null>> {
-  await requireLmraManageAccess(companyId, lmraId, projectId);
+  await requireLmraReviewAccess(companyId, lmraId, projectId);
   const supabase = await createClient();
 
   const { error, count } = await supabase

@@ -11,10 +11,12 @@ import { AutoRefresh } from "@/components/shared/auto-refresh";
 
 /**
  * Notification Center — every notification belonging to the signed-in
- * user, unread first. Recipient-scoped entirely server-side
- * (listMyNotifications()/RLS both key off `recipient_user_id = auth.uid()`)
- * — there is no id/param a caller could manipulate to reach anyone else's
- * notifications, since none is ever accepted from the client.
+ * user, newest first (Task 3 Part 9 — strict created_at DESC; read/unread
+ * is a visual distinction only, never a sort-order one). Recipient-scoped
+ * entirely server-side (listMyNotifications()/RLS both key off
+ * `recipient_user_id = auth.uid()`) — there is no id/param a caller could
+ * manipulate to reach anyone else's notifications, since none is ever
+ * accepted from the client.
  *
  * Item 3: viewing this page marks the currently-displayed notifications
  * read (NotificationCenterAutoRead) — the unread badge in the top bar

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { HardHat, Lock } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
-import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster, getEmployeeTodayCard, getMyEmployeeId } from "@/modules/daily-workforce/queries";
+import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster, getEmployeeTodayCard, getMyEmployeeId, getDailyTeamPhoneNumbers } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
 import { groupTeamsByForemanRoster, DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
@@ -14,22 +14,19 @@ import { AddForemanButton } from "@/modules/daily-workforce/components/add-forem
 import { ExportDailyTeamsButton } from "@/modules/daily-workforce/components/export-daily-teams-button";
 import { CopyTeamsDialog } from "@/modules/daily-workforce/components/copy-teams-dialog";
 import { EmployeeDailyTeamCard } from "@/modules/daily-workforce/components/employee-daily-team-card";
+import { DateNav } from "@/modules/daily-workforce/components/date-nav";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { AutoRefresh } from "@/components/shared/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 
 type TeamsPageProps = {
   params: Promise<{ companyId: string; projectId: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 };
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatWorkDate(value: string): string {
   return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
@@ -64,7 +61,11 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
   const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/teams`;
-  const todayDate = todayIsoDate();
+  // Task 3 Part 15 — "today" for Today's Teams is the PROJECT's own local
+  // calendar date, not the server's — a project in a different timezone
+  // than the server should see its own actual "today," not one that's
+  // already tomorrow (or still yesterday) there.
+  const todayDate = getProjectLocalDate(project.timezone);
 
   // Part 3 (second Employee correction pass): a plain employee gets a
   // genuine personal view here — their own team for the selected date
@@ -89,21 +90,19 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
     }
 
     const todayCard = await getEmployeeTodayCard(companyId, projectId, myEmployeeId, employeeWorkDate);
-    const lmraEntries = todayCard.team ? (await listLmraCountsByDailyTeamId(companyId, projectId, employeeWorkDate)).get(todayCard.team.id) ?? [] : [];
+    const [lmraEntries, phoneByEmployeeId] = await Promise.all([
+      todayCard.team ? (await listLmraCountsByDailyTeamId(companyId, projectId, employeeWorkDate)).get(todayCard.team.id) ?? [] : [],
+      todayCard.team ? getDailyTeamPhoneNumbers(todayCard.team.id) : Promise.resolve({}),
+    ]);
 
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader title="Today's Team" description={`${formatWorkDate(employeeWorkDate)} · ${project.name}`} actions={<RefreshButton />} />
 
-        <form action={basePath} method="GET" className="flex items-center gap-2">
-          <Input type="date" name="date" defaultValue={employeeWorkDate} className="w-auto" aria-label="Select date" />
-          <button type="submit" className="sr-only">
-            Go
-          </button>
-        </form>
+        <DateNav basePath={basePath} workDate={employeeWorkDate} todayDate={todayDate} />
 
         {todayCard.team ? (
-          <EmployeeDailyTeamCard workDate={employeeWorkDate} team={todayCard.team} lmraEntries={lmraEntries} />
+          <EmployeeDailyTeamCard workDate={employeeWorkDate} team={todayCard.team} lmraEntries={lmraEntries} phoneByEmployeeId={phoneByEmployeeId} />
         ) : (
           <EmptyState icon={HardHat} title="No team assigned to you for this date" className="flex-1" />
         )}

@@ -48,6 +48,33 @@ export type CreateEmployeeFormInput = z.infer<typeof createEmployeeFormSchema>;
 export const employeeFormSchema = z.object(sharedEmployeeFields);
 export type EmployeeFormInput = z.infer<typeof employeeFormSchema>;
 
+/**
+ * `updateMyBirthDate` (Task 3 Part 7) — own-view/edit only. The 14-100-year
+ * sanity bound is the DB's employees_birth_date_sane constraint's real,
+ * authoritative rule; re-validated here too so a wildly wrong date gets a
+ * clear "enter a realistic date" message instead of the action's generic
+ * server_error fallback (isRaisedException doesn't match a check-constraint
+ * violation, only a plain RAISE EXCEPTION — see lib/supabase/errors.ts).
+ */
+export const updateMyBirthDateFormSchema = z.object({
+  birthDate: optionalDate.pipe(
+    z
+      .string()
+      .refine(
+        (value) => {
+          const date = new Date(`${value}T00:00:00Z`);
+          const now = new Date();
+          const fourteenYearsAgo = new Date(Date.UTC(now.getUTCFullYear() - 14, now.getUTCMonth(), now.getUTCDate()));
+          const hundredYearsAgo = new Date(Date.UTC(now.getUTCFullYear() - 100, now.getUTCMonth(), now.getUTCDate()));
+          return date <= fourteenYearsAgo && date >= hundredYearsAgo;
+        },
+        { message: "Enter a realistic birth date" },
+      )
+      .optional(),
+  ),
+});
+export type UpdateMyBirthDateFormInput = z.infer<typeof updateMyBirthDateFormSchema>;
+
 const EMPLOYMENT_END_REASON_VALUES = ["resigned", "terminated", "layoff", "end_of_contract", "other"] as const;
 
 const requiredDate = z

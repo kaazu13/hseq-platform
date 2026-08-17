@@ -8,8 +8,13 @@ describe("updateOwnProfileFormSchema", () => {
     if (result.success) expect(result.data.phone).toBeUndefined();
   });
 
-  it("accepts a phone number", () => {
-    expect(updateOwnProfileFormSchema.safeParse({ phone: "+1 555 0100" }).success).toBe(true);
+  it("accepts a valid E.164 phone number — Task 3 Part 6's PhoneInput always produces this shape", () => {
+    expect(updateOwnProfileFormSchema.safeParse({ phone: "+15550100000" }).success).toBe(true);
+  });
+
+  it("rejects a non-E.164 phone number (spaces/punctuation) — the DB constraint (profiles_phone_e164) requires strict E.164", () => {
+    expect(updateOwnProfileFormSchema.safeParse({ phone: "+1 555 0100" }).success).toBe(false);
+    expect(updateOwnProfileFormSchema.safeParse({ phone: "(555) 010-0000" }).success).toBe(false);
   });
 
   it("item 10: has no fullName field at all — a user's display name is no longer self-editable, not even to the same value", () => {

@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Salva",
+    "saving": "Salvataggio…",
+    "cancel": "Annulla",
+    "loading": "Caricamento…"
+  },
+  "Settings": {
+    "title": "Impostazioni"
+  },
+  "Appearance": {
+    "title": "Aspetto",
+    "description": "Preferenza personale: non influisce sugli altri utenti.",
+    "themeLabel": "Tema",
+    "themeMode": {
+      "light": "Chiaro",
+      "dark": "Scuro",
+      "system": "Sistema"
+    },
+    "accentColorLabel": "Colore accento",
+    "accent": {
+      "default_blue": "Blu predefinito",
+      "safety_green": "Verde sicurezza",
+      "steel_slate": "Acciaio / Ardesia",
+      "orange": "Arancione",
+      "indigo_purple": "Indaco / Viola"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Lingua e regione",
+    "description": "La tua lingua: non cambia mai ciò che vedono gli altri utenti.",
+    "languageLabel": "Lingua",
+    "saved": "Lingua aggiornata.",
+    "previewDate": "Data di oggi nella tua lingua: {date, date, long}",
+    "previewNumber": "Numero di esempio: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Nessuna notifica non letta} one {# notifica non letta} other {# notifiche non lette}}"
+  },
+  "Dashboard": {
+    "welcome": "Benvenuto/a, {name}",
+    "welcomeBack": "Bentornato/a, {name}",
+    "gettingStarted": "Colleghiamoti a un'azienda.",
+    "noCompanyTitle": "Nessuna appartenenza attiva a un'azienda trovata",
+    "noCompanyDescriptionAdmin": "Non sei ancora membro di nessuna azienda. Come amministratore della piattaforma, puoi crearne una dall'Amministrazione piattaforma.",
+    "noCompanyDescriptionMember": "Non appena un amministratore aziendale aggiungerà il tuo account a un'azienda, comparirà qui automaticamente: non devi fare nulla.",
+    "createCompany": "Crea azienda",
+    "chooseProjectDescription": "Scegli su quale progetto di {company} lavorare.",
+    "noProjectTitle": "Al momento non sei assegnato a nessun progetto",
+    "noProjectDescription": "Contatta l'amministratore della tua azienda per essere aggiunto a un progetto.",
+    "employeeDescription": "{company} · Progetto attuale: {project}",
+    "adminDescription": "Ecco cosa sta succedendo in {company}.",
+    "addEmployee": "Aggiungi dipendente",
+    "reportIncident": "Segnala incidente"
+  },
+  "Notifications": {
+    "title": "Notifiche",
+    "ariaUnread": "Notifiche — {count} non lette",
+    "aria": "Notifiche",
+    "markAllAsRead": "Segna tutte come lette",
+    "allCaughtUp": "Sei aggiornato/a.",
+    "viewAll": "Vedi tutte le notifiche",
+    "justNow": "Proprio ora"
+  }
+}

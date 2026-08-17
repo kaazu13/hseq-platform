@@ -313,8 +313,9 @@ export type EmployeeTodayCard = {
   attendanceStatus: import("./types").DailyAttendanceStatus;
   team:
     | (Pick<DailyTeam, "id" | "name" | "shift" | "work_area" | "activity"> & {
-        foremanName: string | null;
-        /** Item 9: the caller's current team colleagues (workers only, excluding the caller themselves) — names only, no phone/personal data. */
+        /** Task 3 Part 5: the full foreman record (name + position), not just a name string, so the redesigned team roster can show their position too. */
+        foreman: BasicEmployee | null;
+        /** Item 9: the caller's current team colleagues (workers only, excluding the caller themselves) — no phone/personal data beyond name/position. */
         colleagues: BasicEmployee[];
       })
     | null;
@@ -354,15 +355,14 @@ export async function getEmployeeTodayCard(companyId: string, projectId: string,
   const colleagueIds = [...new Set((memberRows ?? []).map((row) => row.employee_id).filter((id) => id !== employeeId))];
   const resolveIds = [...new Set([...(team.foreman_employee_id ? [team.foreman_employee_id] : []), ...colleagueIds])];
 
-  let foremanName: string | null = null;
+  let foreman: BasicEmployee | null = null;
   let colleagues: BasicEmployee[] = [];
   if (resolveIds.length > 0) {
     const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: resolveIds });
     if (employeesError) throw employeesError;
     const employeeById = new Map((employees ?? []).map((employee) => [employee.id, employee]));
     if (team.foreman_employee_id) {
-      const foreman = employeeById.get(team.foreman_employee_id);
-      if (foreman) foremanName = `${foreman.first_name} ${foreman.last_name}`;
+      foreman = employeeById.get(team.foreman_employee_id) ?? null;
     }
     colleagues = colleagueIds
       .map((id) => employeeById.get(id))
@@ -373,7 +373,25 @@ export async function getEmployeeTodayCard(companyId: string, projectId: string,
       });
   }
 
-  return { attendanceStatus: attendanceRow?.status ?? "not_set", team: { ...team, foremanName, colleagues } };
+  return { attendanceStatus: attendanceRow?.status ?? "not_set", team: { ...team, foreman, colleagues } };
+}
+
+/**
+ * Task 3 Part 6: phone numbers for one daily team's foreman + current
+ * members — a `Record<employeeId, phone | null>` (null entries mean "no
+ * phone on file," distinct from "not returned at all," which means the
+ * caller wasn't authorized). Backed entirely by get_daily_team_phone_numbers()'s
+ * own authorization (caller must be that exact team's foreman or a current
+ * member) — this function does no additional filtering, so it must only
+ * ever be called with a team the caller is confirmed to belong to (both
+ * current call sites resolve dailyTeamId from getEmployeeTodayCard, which
+ * is already scoped that way).
+ */
+export async function getDailyTeamPhoneNumbers(dailyTeamId: string): Promise<Record<string, string | null>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_daily_team_phone_numbers", { target_daily_team_id: dailyTeamId });
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((row) => [row.employee_id, row.phone]));
 }
 
 export type DailyTeamsArchiveDay = {
@@ -442,4 +460,30 @@ export async function listDailyTeamsArchiveDays(companyId: string, projectId: st
     workerCount: workerCountByDate.get(workDate) ?? 0,
     locked: lockedByDate.get(workDate) ?? false,
   }));
+}
+
+/**
+ * Task 3 Part 18 — the caller's OWN daily_attendance rows across
+ * [fromDate, toDate], for My Hours' new "Absences" tab. Genuine records
+ * only — a real daily_attendance row with a non-work-permitting status
+ * (absent/sick/leave/training/off_site), never a day INFERRED as an
+ * absence just because no worked_hours row exists for it (a missing
+ * record could mean "not yet entered," "not a scheduled work day," or
+ * genuinely nothing — daily_attendance_select's RLS "own row" branch
+ * (employees.profile_id = auth.uid()) is what scopes this to the caller
+ * alone, same trust boundary as every other "my own data" query in this
+ * codebase.
+ */
+export async function listMyAttendanceForPeriod(companyId: string, employeeId: string, fromDate: string, toDate: string): Promise<DailyAttendance[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("daily_attendance")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("employee_id", employeeId)
+    .gte("work_date", fromDate)
+    .lte("work_date", toDate)
+    .order("work_date", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
 }

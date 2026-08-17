@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "loading": "Cargando…"
+  },
+  "Settings": {
+    "title": "Configuración"
+  },
+  "Appearance": {
+    "title": "Apariencia",
+    "description": "Preferencia personal: no afecta a otros usuarios.",
+    "themeLabel": "Tema",
+    "themeMode": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "accentColorLabel": "Color de acento",
+    "accent": {
+      "default_blue": "Azul predeterminado",
+      "safety_green": "Verde seguridad",
+      "steel_slate": "Acero / Pizarra",
+      "orange": "Naranja",
+      "indigo_purple": "Índigo / Morado"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Idioma y región",
+    "description": "Tu propio idioma: nunca cambia lo que ven otros usuarios.",
+    "languageLabel": "Idioma",
+    "saved": "Idioma actualizado.",
+    "previewDate": "Fecha de hoy en tu idioma: {date, date, long}",
+    "previewNumber": "Número de ejemplo: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Sin notificaciones sin leer} one {# notificación sin leer} other {# notificaciones sin leer}}"
+  },
+  "Dashboard": {
+    "welcome": "Bienvenido, {name}",
+    "welcomeBack": "Bienvenido de nuevo, {name}",
+    "gettingStarted": "Vamos a incorporarte a una empresa.",
+    "noCompanyTitle": "No se encontró ninguna membresía de empresa activa",
+    "noCompanyDescriptionAdmin": "Aún no eres miembro de ninguna empresa. Como administrador de la plataforma, puedes crear una desde Administración de plataforma.",
+    "noCompanyDescriptionMember": "En cuanto un administrador de la empresa añada tu cuenta a una empresa, aparecerá aquí automáticamente: no necesitas hacer nada.",
+    "createCompany": "Crear empresa",
+    "chooseProjectDescription": "Elige en qué proyecto de {company} vas a trabajar.",
+    "noProjectTitle": "Actualmente no estás asignado a ningún proyecto",
+    "noProjectDescription": "Ponte en contacto con el administrador de tu empresa para que te añada a un proyecto.",
+    "employeeDescription": "{company} · Proyecto actual: {project}",
+    "adminDescription": "Esto es lo que está pasando en {company}.",
+    "addEmployee": "Añadir empleado",
+    "reportIncident": "Reportar incidente"
+  },
+  "Notifications": {
+    "title": "Notificaciones",
+    "ariaUnread": "Notificaciones: {count} sin leer",
+    "aria": "Notificaciones",
+    "markAllAsRead": "Marcar todo como leído",
+    "allCaughtUp": "Estás al día.",
+    "viewAll": "Ver todas las notificaciones",
+    "justNow": "Ahora mismo"
+  }
+}

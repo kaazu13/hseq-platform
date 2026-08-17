@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "loading": "Loading…"
+  },
+  "Settings": {
+    "title": "Settings"
+  },
+  "Appearance": {
+    "title": "Appearance",
+    "description": "Personal preference — does not affect other users.",
+    "themeLabel": "Theme",
+    "themeMode": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "accentColorLabel": "Accent color",
+    "accent": {
+      "default_blue": "Default Blue",
+      "safety_green": "Safety Green",
+      "steel_slate": "Steel / Slate",
+      "orange": "Orange",
+      "indigo_purple": "Indigo / Purple"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Language & Region",
+    "description": "Your own language — never changes what other users see.",
+    "languageLabel": "Language",
+    "saved": "Language updated.",
+    "previewDate": "Today's date in your language: {date, date, long}",
+    "previewNumber": "Example number: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {No unread notifications} one {# unread notification} other {# unread notifications}}"
+  },
+  "Dashboard": {
+    "welcome": "Welcome, {name}",
+    "welcomeBack": "Welcome back, {name}",
+    "gettingStarted": "Let's get you into a company.",
+    "noCompanyTitle": "No active company membership found",
+    "noCompanyDescriptionAdmin": "You're not a member of any company yet. As a platform administrator, you can create one from Platform Admin.",
+    "noCompanyDescriptionMember": "Once a company administrator adds your account to a company, it will appear here automatically — no action needed on your end.",
+    "createCompany": "Create Company",
+    "chooseProjectDescription": "Choose which {company} project to work in.",
+    "noProjectTitle": "You are not currently assigned to a project",
+    "noProjectDescription": "Contact your company administrator to be added to a project.",
+    "employeeDescription": "{company} · Current project: {project}",
+    "adminDescription": "Here's what's happening at {company}.",
+    "addEmployee": "Add employee",
+    "reportIncident": "Report incident"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "ariaUnread": "Notifications — {count} unread",
+    "aria": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "allCaughtUp": "You're all caught up.",
+    "viewAll": "View all notifications",
+    "justNow": "Just now"
+  }
+}

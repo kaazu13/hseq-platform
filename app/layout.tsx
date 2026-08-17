@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -61,20 +63,29 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     }
   }
 
+  // Task 3 Part 21 — locale/messages come from i18n/request.ts (resolved
+  // from the same signed-in-user's saved profiles.locale, "without i18n
+  // routing" mode — see that file's header comment). NextIntlClientProvider
+  // makes both available to Client Components (useTranslations()); Server
+  // Components use getTranslations() directly, no provider needed for them.
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+
   return (
     <html
-      lang="en"
+      lang={locale}
       data-accent-theme={accentTheme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider attribute="class" defaultTheme={themeMode} enableSystem disableTransitionOnChange>
-          <TooltipProvider delay={200}>
-            {children}
-            <Toaster />
-          </TooltipProvider>
-        </ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider attribute="class" defaultTheme={themeMode} enableSystem disableTransitionOnChange>
+            <TooltipProvider delay={200}>
+              {children}
+              <Toaster />
+            </TooltipProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

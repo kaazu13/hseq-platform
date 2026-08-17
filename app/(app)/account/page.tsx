@@ -8,6 +8,8 @@ import { PROJECT_ASSIGNMENT_ROLE_LABELS } from "@/modules/projects/types";
 import { EMPLOYMENT_STATUS_LABELS } from "@/modules/employees/types";
 import { canManageEmployees } from "@/modules/employees/permissions";
 import { ProfileEditForm } from "@/modules/account/components/profile-edit-form";
+import { BirthDateEditForm } from "@/modules/employees/components/birth-date-edit-form";
+import { ChangePasswordForm } from "@/modules/account-security/components/change-password-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -123,6 +125,13 @@ export default async function AccountPage() {
         )}
       </div>
 
+      {overview.employee && (
+        <div className="flex flex-col gap-3">
+          <SectionHeader title="Birth date" />
+          <BirthDateEditForm companyId={currentCompanyId} birthDate={overview.employee.birthDate ?? null} />
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         <SectionHeader title="Assigned projects" />
         {overview.projectAssignments.length === 0 ? (
@@ -146,6 +155,11 @@ export default async function AccountPage() {
       <div className="flex flex-col gap-3">
         <SectionHeader title="Edit profile" description="Phone is the only field you can change here — your name, role, and company are managed by an administrator." />
         <ProfileEditForm fullName={overview.profile.fullName} phone={overview.profile.phone} />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <SectionHeader title="Account & Security" description="Change your own sign-in password. You'll need to confirm your current password first." />
+        <ChangePasswordForm />
       </div>
 
       {canAdminister && (

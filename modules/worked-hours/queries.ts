@@ -331,15 +331,22 @@ export async function getEmployeeMonthToDateHours(companyId: string, projectId: 
   return (data ?? []).reduce((sum, row) => sum + Number(row.hours), 0);
 }
 
-/** An unread-first page of a user's own notifications — the Employee Dashboard's "Notifications / actions required" section, and the full Notification Center page. Always scoped to `recipient_user_id = auth.uid()` by RLS, never client-filterable to another user. */
+/**
+ * A newest-first page of a user's own notifications — the Employee
+ * Dashboard's "Notifications / actions required" section, and the full
+ * Notification Center page. Always scoped to `recipient_user_id =
+ * auth.uid()` by RLS, never client-filterable to another user.
+ *
+ * Task 3 Part 9: strictly `created_at DESC`, global chronological order —
+ * previously ordered unread-first (`read_at` ascending nulls-first, THEN
+ * created_at), which could surface a weeks-old unread notification above a
+ * genuinely newer read one. Read/unread is now distinguished purely by
+ * NotificationList's own styling (dimmed + no "Mark read" button once
+ * read_at is set), never by sort position.
+ */
 export async function listMyNotifications(limit = 20): Promise<AppNotification[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .order("read_at", { ascending: true, nullsFirst: true })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(limit);
   if (error) throw error;
   return data ?? [];
 }

@@ -30,6 +30,33 @@ export type ProjectFormInput = z.infer<typeof projectFormSchema>;
 
 const PROJECT_ASSIGNMENT_ROLE_VALUES = ["project_manager", "hseq_manager", "hse_officer", "inspector", "member"] as const;
 
+/** `updateProjectLocationSettings` (Task 3 Part 12) — country_code/timezone, a separate narrower-gated write path from the general project-fields form. The 2-letter-code/real-IANA-timezone checks mirror validate_project_location_settings_update()'s DB-level validation; re-validated here too for a clear client-side error instead of a raw exception. */
+const VALID_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
+
+export const projectLocationSettingsSchema = z.object({
+  countryCode: optionalText.pipe(z.string().regex(/^[A-Z]{2}$/, "Pick a country").optional()),
+  timezone: optionalText.pipe(
+    z
+      .string()
+      .refine((value) => VALID_TIMEZONES.has(value), "Pick a valid timezone")
+      .optional(),
+  ),
+});
+export type ProjectLocationSettingsInput = z.infer<typeof projectLocationSettingsSchema>;
+
+/** `updateProjectSiteLocation` (Task 3 Part 13) — site_address/lat/long, separate write path (and separate role gate — adds planner) from Part 12's country/timezone. Lat/long must be supplied together or not at all — a lone coordinate is meaningless for the Directions link (Part 14). */
+export const projectSiteLocationSchema = z
+  .object({
+    siteAddress: optionalText,
+    siteLatitude: z.coerce.number().min(-90).max(90).optional(),
+    siteLongitude: z.coerce.number().min(-180).max(180).optional(),
+  })
+  .refine((data) => (data.siteLatitude === undefined) === (data.siteLongitude === undefined), {
+    message: "Enter both latitude and longitude, or leave both blank",
+    path: ["siteLongitude"],
+  });
+export type ProjectSiteLocationInput = z.infer<typeof projectSiteLocationSchema>;
+
 export const assignProjectRoleSchema = z.object({
   employeeId: z.string().uuid(),
   assignmentRole: z.enum(PROJECT_ASSIGNMENT_ROLE_VALUES),

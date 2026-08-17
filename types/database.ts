@@ -123,6 +123,94 @@ export type Database = {
           },
         ]
       }
+      attendance_review_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          explanation: string
+          id: string
+          project_id: string
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["attendance_review_status"]
+          work_date: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          employee_id: string
+          explanation: string
+          id?: string
+          project_id: string
+          requested_by: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["attendance_review_status"]
+          work_date: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          explanation?: string
+          id?: string
+          project_id?: string
+          requested_by?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["attendance_review_status"]
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_review_requests_attendance_fk"
+            columns: ["project_id", "employee_id", "work_date"]
+            isOneToOne: false
+            referencedRelation: "daily_attendance"
+            referencedColumns: ["project_id", "employee_id", "work_date"]
+          },
+          {
+            foreignKeyName: "attendance_review_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_review_requests_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "attendance_review_requests_project_fk"
+            columns: ["project_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "attendance_review_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_review_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_events: {
         Row: {
           action: Database["public"]["Enums"]["audit_action"]
@@ -277,6 +365,51 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: true
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_greeting_settings: {
+        Row: {
+          company_id: string
+          enabled: boolean
+          greeting_type: string
+          id: string
+          message_template: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          enabled?: boolean
+          greeting_type: string
+          id?: string
+          message_template: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          enabled?: boolean
+          greeting_type?: string
+          id?: string
+          message_template?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_greeting_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_greeting_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2317,6 +2450,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          locale: Database["public"]["Enums"]["app_locale"]
           phone: string | null
           theme_mode: Database["public"]["Enums"]["theme_mode"]
           updated_at: string
@@ -2333,6 +2467,7 @@ export type Database = {
           created_at?: string
           full_name: string
           id: string
+          locale?: Database["public"]["Enums"]["app_locale"]
           phone?: string | null
           theme_mode?: Database["public"]["Enums"]["theme_mode"]
           updated_at?: string
@@ -2349,6 +2484,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          locale?: Database["public"]["Enums"]["app_locale"]
           phone?: string | null
           theme_mode?: Database["public"]["Enums"]["theme_mode"]
           updated_at?: string
@@ -2464,6 +2600,7 @@ export type Database = {
           client_name: string | null
           code: string | null
           company_id: string
+          country_code: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -2472,8 +2609,12 @@ export type Database = {
           location: string | null
           name: string
           scaffold_inspection_validity_days: number | null
+          site_address: string | null
+          site_latitude: number | null
+          site_longitude: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
+          timezone: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -2481,6 +2622,7 @@ export type Database = {
           client_name?: string | null
           code?: string | null
           company_id: string
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2489,8 +2631,12 @@ export type Database = {
           location?: string | null
           name: string
           scaffold_inspection_validity_days?: number | null
+          site_address?: string | null
+          site_latitude?: number | null
+          site_longitude?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          timezone?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -2498,6 +2644,7 @@ export type Database = {
           client_name?: string | null
           code?: string | null
           company_id?: string
+          country_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2506,8 +2653,12 @@ export type Database = {
           location?: string | null
           name?: string
           scaffold_inspection_validity_days?: number | null
+          site_address?: string | null
+          site_latitude?: number | null
+          site_longitude?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          timezone?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -3946,6 +4097,48 @@ export type Database = {
           },
         ]
       }
+      sent_greetings: {
+        Row: {
+          company_id: string
+          employee_id: string
+          greeting_type: string
+          id: string
+          occurrence_year: number
+          sent_at: string
+        }
+        Insert: {
+          company_id: string
+          employee_id: string
+          greeting_type: string
+          id?: string
+          occurrence_year: number
+          sent_at?: string
+        }
+        Update: {
+          company_id?: string
+          employee_id?: string
+          greeting_type?: string
+          id?: string
+          occurrence_year?: number
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sent_greetings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_greetings_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_assignments: {
         Row: {
           assigned_by: string | null
@@ -4847,6 +5040,34 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      accept_attendance_review: {
+        Args: {
+          target_corrected_status: Database["public"]["Enums"]["daily_attendance_status"]
+          target_reason?: string
+          target_request_id: string
+          target_review_note: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          explanation: string
+          id: string
+          project_id: string
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["attendance_review_status"]
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_review_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       accept_invitation: { Args: { target_token: string }; Returns: Json }
       acknowledge_platform_warning: {
         Args: { target_warning_id: string }
@@ -4900,6 +5121,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          locale: Database["public"]["Enums"]["app_locale"]
           phone: string | null
           theme_mode: Database["public"]["Enums"]["theme_mode"]
           updated_at: string
@@ -5027,6 +5249,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          locale: Database["public"]["Enums"]["app_locale"]
           phone: string | null
           theme_mode: Database["public"]["Enums"]["theme_mode"]
           updated_at: string
@@ -5220,7 +5443,7 @@ export type Database = {
         }
       }
       confirm_absence_report: {
-        Args: { target_report_id: string }
+        Args: { target_reason?: string; target_report_id: string }
         Returns: {
           comment: string | null
           company_id: string
@@ -5652,6 +5875,13 @@ export type Database = {
           id: string
         }[]
       }
+      get_daily_team_phone_numbers: {
+        Args: { target_daily_team_id: string }
+        Returns: {
+          employee_id: string
+          phone: string
+        }[]
+      }
       get_lmra_assessment_row: {
         Args: { target_id: string }
         Returns: {
@@ -5743,6 +5973,10 @@ export type Database = {
           invitation_token: string
           row_index: number
         }[]
+      }
+      is_attendance_reviewer: {
+        Args: { target_company_id: string; target_project_id: string }
+        Returns: boolean
       }
       is_caller_eligible_scaffold_foreman: {
         Args: { target_company_id: string; target_project_id: string }
@@ -6345,6 +6579,15 @@ export type Database = {
           status: Database["public"]["Enums"]["company_status"]
         }[]
       }
+      process_company_greetings: {
+        Args: { target_date: string; target_due_fixed_types: string[] }
+        Returns: {
+          company_id: string
+          employee_id: string
+          greeting_type: string
+          notification_id: string
+        }[]
+      }
       recover_equipment: {
         Args: {
           target_item_id: string
@@ -6403,6 +6646,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "absence_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reject_attendance_review: {
+        Args: { target_request_id: string; target_review_note: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          explanation: string
+          id: string
+          project_id: string
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["attendance_review_status"]
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_review_requests"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -6653,6 +6919,34 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_attendance_review: {
+        Args: {
+          target_employee_id: string
+          target_explanation: string
+          target_project_id: string
+          target_work_date: string
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          employee_id: string
+          explanation: string
+          id: string
+          project_id: string
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["attendance_review_status"]
+          work_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_review_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resend_invitation: {
         Args: { target_invitation_id: string }
         Returns: {
@@ -6711,6 +7005,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          locale: Database["public"]["Enums"]["app_locale"]
           phone: string | null
           theme_mode: Database["public"]["Enums"]["theme_mode"]
           updated_at: string
@@ -7130,6 +7425,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      substitute_greeting_placeholders: {
+        Args: {
+          target_company_name: string
+          target_first_name: string
+          target_last_name: string
+          template: string
+        }
+        Returns: string
+      }
       suspend_account: {
         Args: { target_reason: string; target_user_id: string }
         Returns: {
@@ -7143,6 +7447,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          locale: Database["public"]["Enums"]["app_locale"]
           phone: string | null
           theme_mode: Database["public"]["Enums"]["theme_mode"]
           updated_at: string
@@ -7379,6 +7684,107 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_my_birth_date: {
+        Args: { target_birth_date: string; target_company_id: string }
+        Returns: {
+          account_status: Database["public"]["Enums"]["employee_account_status"]
+          archived_at: string | null
+          birth_date: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          employee_number: string
+          employment_status: Database["public"]["Enums"]["employment_status"]
+          end_date: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          position_title: string | null
+          profile_id: string | null
+          start_date: string | null
+          updated_at: string
+          updated_by: string | null
+          work_email: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employees"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_project_location_settings: {
+        Args: {
+          target_country_code?: string
+          target_project_id: string
+          target_timezone?: string
+        }
+        Returns: {
+          client_name: string | null
+          code: string | null
+          company_id: string
+          country_code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          name: string
+          scaffold_inspection_validity_days: number | null
+          site_address: string | null
+          site_latitude: number | null
+          site_longitude: number | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          timezone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_project_site_location: {
+        Args: {
+          target_project_id: string
+          target_site_address?: string
+          target_site_latitude?: number
+          target_site_longitude?: number
+        }
+        Returns: {
+          client_name: string | null
+          code: string | null
+          company_id: string
+          country_code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          name: string
+          scaffold_inspection_validity_days: number | null
+          site_address: string | null
+          site_latitude: number | null
+          site_longitude: number | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          timezone: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_company_subscription: {
         Args: {
           target_billing_renewal_date?: string
@@ -7529,6 +7935,19 @@ export type Database = {
         | "orange"
         | "indigo_purple"
       account_status: "active" | "suspended" | "banned"
+      app_locale:
+        | "en"
+        | "es"
+        | "sv"
+        | "nb"
+        | "ro"
+        | "fr"
+        | "nl"
+        | "de"
+        | "ru"
+        | "lt"
+        | "it"
+      attendance_review_status: "pending" | "accepted" | "rejected"
       audit_action:
         | "create"
         | "update"
@@ -7642,7 +8061,14 @@ export type Database = {
         | "denied"
         | "returned"
         | "cancelled"
-      leave_type: "annual" | "sick" | "unpaid" | "compassionate" | "other"
+      leave_type:
+        | "annual"
+        | "sick"
+        | "unpaid"
+        | "compassionate"
+        | "other"
+        | "holiday"
+        | "emergency"
       lmra_hazard_type:
         | "working_at_height"
         | "falling_objects"
@@ -7944,6 +8370,20 @@ export const Constants = {
         "indigo_purple",
       ],
       account_status: ["active", "suspended", "banned"],
+      app_locale: [
+        "en",
+        "es",
+        "sv",
+        "nb",
+        "ro",
+        "fr",
+        "nl",
+        "de",
+        "ru",
+        "lt",
+        "it",
+      ],
+      attendance_review_status: ["pending", "accepted", "rejected"],
       audit_action: [
         "create",
         "update",
@@ -8070,7 +8510,15 @@ export const Constants = {
         "returned",
         "cancelled",
       ],
-      leave_type: ["annual", "sick", "unpaid", "compassionate", "other"],
+      leave_type: [
+        "annual",
+        "sick",
+        "unpaid",
+        "compassionate",
+        "other",
+        "holiday",
+        "emergency",
+      ],
       lmra_hazard_type: [
         "working_at_height",
         "falling_objects",

@@ -39,6 +39,32 @@ export function canArchiveLmra(roleNames: RoleName[]): boolean {
 }
 
 /**
+ * Can make a REVIEW DECISION on an existing LMRA — approve/reject a
+ * submitted assessment, or reopen an approved/rejected one back to draft.
+ * Deliberately has NO `isOwnAssessment` branch: `canManageLmra`'s
+ * own-assessment allowance exists for pre-submission self-editing (and
+ * self-submit), never for reviewing/deciding on your own work — see
+ * supabase/migrations/20260901107000_fix_lmra_review_self_approval.sql,
+ * which closes the matching RLS/trigger-level gap so a direct table write
+ * can't bypass this either. Reuses `canViewAllProjectLmra`'s existing
+ * "sees more than just my own LMRA" role set (project foreman, hseq_manager,
+ * company_admin, operations_manager, project_manager) plus hse_officer.
+ * platform_super_admin is intentionally NOT included here — callers OR in
+ * `isPlatformSuperAdmin()` separately, matching this module's established
+ * pattern for that global, non-company-scoped authority.
+ */
+export function canReviewLmra(roleNames: RoleName[], isProjectForeman: boolean): boolean {
+  return (
+    isProjectForeman ||
+    roleNames.includes("hseq_manager") ||
+    roleNames.includes("hse_officer") ||
+    roleNames.includes("company_admin") ||
+    roleNames.includes("operations_manager") ||
+    roleNames.includes("project_manager")
+  );
+}
+
+/**
  * The "All LMRAs" list mode gate (Today's Teams/LMRA UX redesign, item 9).
  * RLS (`lmra_assessments_select`) already lets ANY project member read
  * every LMRA on a project they're assigned to — deliberately broader than

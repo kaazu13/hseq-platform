@@ -57,4 +57,6 @@ export type AccountEmployeeInfo = {
   positionTitle: string | null;
   employmentStatus: string;
   archivedAt: string | null;
+  /** Task 3 Part 7: own-view/edit only — populated by getAccountOverview (the caller's OWN record) but deliberately NEVER by listCompanyMembersOverview's bulk admin list, so this field is always absent there, not just unrendered. */
+  birthDate?: string | null;
 };

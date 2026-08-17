@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
 import { Pencil } from "lucide-react";
-import { requireUser, getUserRoleNames } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
 import { getLmraAssessment, isCallerProjectForeman, listLmraCandidateEmployees, getMyEmployeeId } from "@/modules/lmra/queries";
-import { canManageLmra, canArchiveLmra } from "@/modules/lmra/permissions";
+import { canManageLmra, canArchiveLmra, canReviewLmra } from "@/modules/lmra/permissions";
 import { lmraHazardInputsFromRows, LMRA_SHIFT_LABELS, formatLmraReference } from "@/modules/lmra/types";
 import { LmraStatusBadge } from "@/modules/lmra/components/lmra-status-badge";
 import { LmraResultBadge } from "@/modules/lmra/components/lmra-result-badge";
@@ -59,11 +59,12 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
     notFound();
   }
 
-  const [roleNames, isForeman, myEmployeeId, project] = await Promise.all([
+  const [roleNames, isForeman, myEmployeeId, project, isSuperAdmin] = await Promise.all([
     getUserRoleNames(currentCompanyId),
     isCallerProjectForeman(currentCompanyId, assessment.project_id, user.id),
     getMyEmployeeId(currentCompanyId, user.id),
     getProject(currentCompanyId, assessment.project_id),
+    isPlatformSuperAdmin(),
   ]);
 
   // `project` can legitimately be null here even though the assessment
@@ -78,6 +79,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
 
   const isOwnAssessment = Boolean(myEmployeeId && assessment.completed_by_employee_id === myEmployeeId);
   const canManage = canManageLmra(roleNames, isForeman, isOwnAssessment);
+  const canReview = isSuperAdmin || canReviewLmra(roleNames, isForeman);
   const canArchive = canArchiveLmra(roleNames);
   const candidateRows = await listLmraCandidateEmployees(currentCompanyId, assessment.project_id);
   const candidates = toEmployeeOptions(candidateRows);
@@ -101,7 +103,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
               companyId={currentCompanyId}
               lmraId={assessment.id}
               projectId={assessment.project_id}
-              canReopen={canManage && (assessment.status === "approved" || assessment.status === "rejected")}
+              canReopen={canReview && (assessment.status === "approved" || assessment.status === "rejected")}
               canArchive={canArchive && assessment.status !== "archived"}
               canShare={canManage}
               initialShares={shares}
@@ -214,7 +216,7 @@ export default async function LmraDetailPage({ params }: LmraDetailPageProps) {
         </div>
       )}
 
-      {canManage && assessment.status === "submitted" && (
+      {canReview && assessment.status === "submitted" && (
         <div className="print:hidden">
           <LmraReviewCard companyId={currentCompanyId} lmraId={assessment.id} projectId={assessment.project_id} />
         </div>

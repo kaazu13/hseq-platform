@@ -17,10 +17,18 @@ type ObservationParticipantsPickerProps = {
   createdBy: string | null;
   candidates: BasicEmployee[];
   currentParticipantIds: string[];
-  readOnly: boolean;
 };
 
-/** People involved, optional ("where appropriate") — checkbox picker over the project roster, same convention as modules/lmra/components/lmra-participants-picker.tsx. */
+/**
+ * People involved, optional ("where appropriate") — checkbox picker over
+ * the project roster, same convention as
+ * modules/lmra/components/lmra-participants-picker.tsx. Editing only: only
+ * ever reached from the edit page, itself gated server-side by
+ * canEditObservation. The read-only detail view uses the separate, much
+ * simpler ObservationParticipantsList instead of this component in
+ * disabled mode — a plain viewer should never see the full project roster
+ * as a checkbox grid just to find out who was actually involved.
+ */
 export function ObservationParticipantsPicker({
   companyId,
   observationId,
@@ -28,7 +36,6 @@ export function ObservationParticipantsPicker({
   createdBy,
   candidates,
   currentParticipantIds,
-  readOnly,
 }: ObservationParticipantsPickerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -75,7 +82,6 @@ export function ObservationParticipantsPicker({
             <Checkbox
               id={`observation-participant-${candidate.id}`}
               checked={selectedIds.has(candidate.id)}
-              disabled={readOnly}
               onCheckedChange={(checked) => toggle(candidate.id, checked === true)}
             />
             <Label htmlFor={`observation-participant-${candidate.id}`} className="font-normal">
@@ -86,14 +92,12 @@ export function ObservationParticipantsPicker({
         ))}
       </div>
 
-      {!readOnly && (
-        <div>
-          <Button type="button" onClick={handleSave} disabled={isPending}>
-            {isPending ? <Loader2 className="animate-spin" /> : null}
-            {isPending ? "Saving…" : "Save people involved"}
-          </Button>
-        </div>
-      )}
+      <div>
+        <Button type="button" onClick={handleSave} disabled={isPending}>
+          {isPending ? <Loader2 className="animate-spin" /> : null}
+          {isPending ? "Saving…" : "Save people involved"}
+        </Button>
+      </div>
     </div>
   );
 }

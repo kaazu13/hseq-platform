@@ -32,3 +32,30 @@ const PROJECT_COMPANY_WIDE_MANAGE_ROLES: RoleName[] = ["company_admin", "operati
 export function canManageProject(roleNames: RoleName[], myProjectAssignmentRoles: string[]): boolean {
   return roleNames.some((role) => PROJECT_COMPANY_WIDE_MANAGE_ROLES.includes(role)) || myProjectAssignmentRoles.includes("project_manager");
 }
+
+/**
+ * Task 3 Part 12 — country_code/timezone are edit-restricted to
+ * platform_super_admin + company_admin ONLY, deliberately narrower than
+ * canManageProject (which also lets operations_manager and the project's
+ * own assigned Project Manager edit every other field). Mirrors
+ * validate_project_location_settings_update()'s DB-level check exactly —
+ * platform_super_admin is OR'd in separately at the call site (this
+ * function is pure over RoleName[], same convention as
+ * modules/lmra/permissions.ts's canReviewLmra).
+ */
+export function canEditProjectLocationSettings(roleNames: RoleName[]): boolean {
+  return roleNames.includes("company_admin");
+}
+
+/**
+ * Task 3 Part 13 — site_address/site_latitude/site_longitude are edit-
+ * restricted to platform_super_admin + company_admin + planner. A
+ * different (broader by one role) matrix than
+ * canEditProjectLocationSettings's country/timezone gate — planner plans
+ * site logistics, so it's the role that should actually set this, even
+ * though it has no say over the project's country/timezone. Mirrors
+ * validate_project_site_location_update()'s DB-level check exactly.
+ */
+export function canEditProjectSiteLocation(roleNames: RoleName[]): boolean {
+  return roleNames.includes("company_admin") || roleNames.includes("planner");
+}

@@ -7,6 +7,7 @@ import { canManageLmra } from "@/modules/lmra/permissions";
 import { lmraHazardInputsFromRows } from "@/modules/lmra/types";
 import { LmraForm } from "@/modules/lmra/components/lmra-form";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 
 type EditLmraPageProps = {
@@ -73,7 +74,7 @@ export default async function EditLmraPage({ params }: EditLmraPageProps) {
           projectId={assessment.project_id}
           projectName={projectName}
           candidates={candidates}
-          todayDate={new Date().toISOString().slice(0, 10)}
+          todayDate={getProjectLocalDate(project?.timezone)}
           hazardRows={lmraHazardInputsFromRows(assessment.hazards)}
           participantIds={assessment.participants.map((participant) => participant.employee_id)}
           assessment={assessment}

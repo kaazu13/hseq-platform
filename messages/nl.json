@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Opslaan",
+    "saving": "Opslaan…",
+    "cancel": "Annuleren",
+    "loading": "Laden…"
+  },
+  "Settings": {
+    "title": "Instellingen"
+  },
+  "Appearance": {
+    "title": "Weergave",
+    "description": "Persoonlijke voorkeur — heeft geen invloed op andere gebruikers.",
+    "themeLabel": "Thema",
+    "themeMode": {
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem"
+    },
+    "accentColorLabel": "Accentkleur",
+    "accent": {
+      "default_blue": "Standaard blauw",
+      "safety_green": "Veiligheidsgroen",
+      "steel_slate": "Staal / Leisteen",
+      "orange": "Oranje",
+      "indigo_purple": "Indigo / Paars"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Taal en regio",
+    "description": "Uw eigen taal — verandert nooit wat andere gebruikers zien.",
+    "languageLabel": "Taal",
+    "saved": "Taal bijgewerkt.",
+    "previewDate": "Datum van vandaag in uw taal: {date, date, long}",
+    "previewNumber": "Voorbeeldgetal: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Geen ongelezen meldingen} one {# ongelezen melding} other {# ongelezen meldingen}}"
+  },
+  "Dashboard": {
+    "welcome": "Welkom, {name}",
+    "welcomeBack": "Welkom terug, {name}",
+    "gettingStarted": "Laten we je aan een bedrijf koppelen.",
+    "noCompanyTitle": "Geen actief bedrijfslidmaatschap gevonden",
+    "noCompanyDescriptionAdmin": "Je bent nog geen lid van een bedrijf. Als platformbeheerder kun je er één aanmaken vanuit Platformbeheer.",
+    "noCompanyDescriptionMember": "Zodra een bedrijfsbeheerder je account aan een bedrijf toevoegt, verschijnt het hier automatisch — je hoeft zelf niets te doen.",
+    "createCompany": "Bedrijf aanmaken",
+    "chooseProjectDescription": "Kies aan welk {company}-project je gaat werken.",
+    "noProjectTitle": "Je bent momenteel aan geen enkel project toegewezen",
+    "noProjectDescription": "Neem contact op met je bedrijfsbeheerder om aan een project te worden toegevoegd.",
+    "employeeDescription": "{company} · Huidig project: {project}",
+    "adminDescription": "Dit gebeurt er momenteel bij {company}.",
+    "addEmployee": "Medewerker toevoegen",
+    "reportIncident": "Incident melden"
+  },
+  "Notifications": {
+    "title": "Meldingen",
+    "ariaUnread": "Meldingen — {count} ongelezen",
+    "aria": "Meldingen",
+    "markAllAsRead": "Alles als gelezen markeren",
+    "allCaughtUp": "Je bent helemaal bij.",
+    "viewAll": "Alle meldingen bekijken",
+    "justNow": "Zojuist"
+  }
+}

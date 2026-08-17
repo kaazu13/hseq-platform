@@ -2,10 +2,11 @@
 
 import { useSyncExternalStore, useTransition } from "react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { updateAppearance } from "@/modules/appearance/actions";
 import { subscribeToAccentTheme, getAccentThemeSnapshot, getAccentThemeServerSnapshot, writeAccentTheme } from "@/modules/appearance/accent-store";
-import { THEME_MODES, THEME_MODE_LABELS, ACCENT_THEMES, ACCENT_THEME_LABELS, ACCENT_THEME_SWATCH, type ThemeMode, type AccentTheme } from "@/modules/appearance/types";
+import { THEME_MODES, ACCENT_THEMES, ACCENT_THEME_SWATCH, type ThemeMode, type AccentTheme } from "@/modules/appearance/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
  * persistence design.
  */
 export function AppearanceSection() {
+  const t = useTranslations("Appearance");
   const { theme, setTheme } = useTheme();
   const [isPending, startTransition] = useTransition();
   const selectedAccent = useSyncExternalStore(subscribeToAccentTheme, getAccentThemeSnapshot, getAccentThemeServerSnapshot);
@@ -43,23 +45,23 @@ export function AppearanceSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Appearance</CardTitle>
-        <CardDescription>Personal preference — does not affect other users.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">Theme</span>
+          <span className="text-sm font-medium">{t("themeLabel")}</span>
           <div className="flex flex-wrap gap-2">
             {THEME_MODES.map((mode) => (
               <Button key={mode} type="button" variant={theme === mode ? "default" : "outline"} size="sm" onClick={() => selectThemeMode(mode)} disabled={isPending}>
-                {THEME_MODE_LABELS[mode]}
+                {t(`themeMode.${mode}`)}
               </Button>
             ))}
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">Accent color</span>
+          <span className="text-sm font-medium">{t("accentColorLabel")}</span>
           <div className="flex flex-wrap gap-2">
             {ACCENT_THEMES.map((accent) => (
               <button
@@ -70,7 +72,7 @@ export function AppearanceSection() {
                 className={cn("flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-muted", selectedAccent === accent && "border-primary")}
               >
                 <span className="size-4 shrink-0 rounded-full border" style={{ backgroundColor: ACCENT_THEME_SWATCH[accent] }} aria-hidden="true" />
-                {ACCENT_THEME_LABELS[accent]}
+                {t(`accent.${accent}`)}
               </button>
             ))}
           </div>

@@ -2,12 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, forbidden } from "next/navigation";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
-import { PROJECT_CREATE_ROLES, canManageProject } from "./permissions";
-import { assignProjectRoleSchema, projectFormSchema, type AssignProjectRoleInput, type ProjectFormInput } from "./validation";
+import { PROJECT_CREATE_ROLES, canManageProject, canEditProjectLocationSettings, canEditProjectSiteLocation } from "./permissions";
+import {
+  assignProjectRoleSchema,
+  projectFormSchema,
+  projectLocationSettingsSchema,
+  projectSiteLocationSchema,
+  type AssignProjectRoleInput,
+  type ProjectFormInput,
+  type ProjectLocationSettingsInput,
+  type ProjectSiteLocationInput,
+} from "./validation";
 import { getProject, getMyProjectAssignmentRoles } from "./queries";
 
 /**
@@ -145,6 +154,104 @@ export async function updateProject(companyId: string, projectId: string, input:
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}`);
+}
+
+/**
+ * Task 3 Part 12 — country_code/timezone, platform_super_admin +
+ * company_admin only. Deliberately separate from updateProject:
+ * canManageProject's broader "company-wide manager OR this project's PM"
+ * gate would otherwise let operations_manager change these too.
+ *
+ * Writes through update_project_location_settings() (SECURITY DEFINER) —
+ * NOT a raw table UPDATE — for every actor, including company_admin. Two
+ * reasons: (1) platform_super_admin, by design, usually has NO
+ * company_memberships row in an arbitrary company at all, so
+ * requireCompanyMembership would 403 them before this ever ran (the exact
+ * gap 20260901090000_platform_admin_console.sql documented for projects_select/
+ * employees_select/etc.); (2) live attack-testing found the RLS-driven path
+ * unreliable for a sibling case (see updateProjectSiteLocation below) — one
+ * consistent RPC-based mechanism for every actor is simpler and provably
+ * correct rather than two different paths for "has company membership" vs
+ * not. validate_project_location_settings_update() (the BEFORE UPDATE
+ * trigger) still fires and still re-validates the actor + the data,
+ * independent of this function's own check.
+ */
+export async function updateProjectLocationSettings(companyId: string, projectId: string, input: ProjectLocationSettingsInput): Promise<ActionResult<null>> {
+  const parsed = projectLocationSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  if (!(await isPlatformSuperAdmin())) {
+    await requireCompanyMembership(companyId);
+    const roleNames = await getUserRoleNames(companyId);
+    if (!canEditProjectLocationSettings(roleNames)) {
+      forbidden();
+    }
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_project_location_settings", {
+    target_project_id: projectId,
+    target_country_code: parsed.data.countryCode,
+    target_timezone: parsed.data.timezone,
+  });
+
+  if (error) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't save changes. Try again." } };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/edit`);
+  return { ok: true, data: null };
+}
+
+/**
+ * Task 3 Part 13 — site_address/lat/long, platform_super_admin +
+ * company_admin + planner. Writes through update_project_site_location()
+ * (SECURITY DEFINER) for every actor — same reasoning as
+ * updateProjectLocationSettings above. planner specifically NEEDS this
+ * RPC-based path: live attack-testing found that widening projects_update's
+ * RLS to admit planner directly was unreliable in practice (an UPDATE
+ * whose exact same authorization boolean expression evaluated to true when
+ * checked directly still silently affected 0 rows for planner specifically
+ * — root cause not fully isolated; see
+ * 20260901116000_project_location_settings_rpc_unification.sql's header
+ * comment for the full investigation). The RPC sidesteps RLS entirely and
+ * is verified working for planner/company_admin/platform_super_admin
+ * alike.
+ */
+export async function updateProjectSiteLocation(companyId: string, projectId: string, input: ProjectSiteLocationInput): Promise<ActionResult<null>> {
+  const parsed = projectSiteLocationSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  if (!(await isPlatformSuperAdmin())) {
+    await requireCompanyMembership(companyId);
+    const roleNames = await getUserRoleNames(companyId);
+    if (!canEditProjectSiteLocation(roleNames)) {
+      forbidden();
+    }
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_project_site_location", {
+    target_project_id: projectId,
+    target_site_address: parsed.data.siteAddress,
+    target_site_latitude: parsed.data.siteLatitude,
+    target_site_longitude: parsed.data.siteLongitude,
+  });
+
+  if (error) {
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't save changes. Try again." } };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/edit`);
+  return { ok: true, data: null };
 }
 
 /**

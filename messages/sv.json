@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Spara",
+    "saving": "Sparar…",
+    "cancel": "Avbryt",
+    "loading": "Läser in…"
+  },
+  "Settings": {
+    "title": "Inställningar"
+  },
+  "Appearance": {
+    "title": "Utseende",
+    "description": "Personlig inställning – påverkar inte andra användare.",
+    "themeLabel": "Tema",
+    "themeMode": {
+      "light": "Ljust",
+      "dark": "Mörkt",
+      "system": "System"
+    },
+    "accentColorLabel": "Accentfärg",
+    "accent": {
+      "default_blue": "Standardblå",
+      "safety_green": "Säkerhetsgrön",
+      "steel_slate": "Stål / Skiffer",
+      "orange": "Orange",
+      "indigo_purple": "Indigo / Lila"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Språk och region",
+    "description": "Ditt eget språk – ändrar aldrig vad andra användare ser.",
+    "languageLabel": "Språk",
+    "saved": "Språket har uppdaterats.",
+    "previewDate": "Dagens datum på ditt språk: {date, date, long}",
+    "previewNumber": "Exempelnummer: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Inga olästa aviseringar} one {# oläst avisering} other {# olästa aviseringar}}"
+  },
+  "Dashboard": {
+    "welcome": "Välkommen, {name}",
+    "welcomeBack": "Välkommen tillbaka, {name}",
+    "gettingStarted": "Låt oss få in dig i ett företag.",
+    "noCompanyTitle": "Inget aktivt företagsmedlemskap hittades",
+    "noCompanyDescriptionAdmin": "Du är ännu inte medlem i något företag. Som plattformsadministratör kan du skapa ett från Plattformsadministration.",
+    "noCompanyDescriptionMember": "När en företagsadministratör lägger till ditt konto i ett företag visas det här automatiskt — du behöver inte göra något.",
+    "createCompany": "Skapa företag",
+    "chooseProjectDescription": "Välj vilket {company}-projekt du ska arbeta i.",
+    "noProjectTitle": "Du är inte tilldelad något projekt just nu",
+    "noProjectDescription": "Kontakta din företagsadministratör för att läggas till i ett projekt.",
+    "employeeDescription": "{company} · Aktuellt projekt: {project}",
+    "adminDescription": "Det här händer just nu på {company}.",
+    "addEmployee": "Lägg till anställd",
+    "reportIncident": "Rapportera incident"
+  },
+  "Notifications": {
+    "title": "Aviseringar",
+    "ariaUnread": "Aviseringar — {count} olästa",
+    "aria": "Aviseringar",
+    "markAllAsRead": "Markera alla som lästa",
+    "allCaughtUp": "Du är helt äjour.",
+    "viewAll": "Visa alla aviseringar",
+    "justNow": "Just nu"
+  }
+}

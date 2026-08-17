@@ -1,15 +1,22 @@
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, UserX } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
-import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
+import { getMyEmployeeId, listMyAttendanceForPeriod } from "@/modules/daily-workforce/queries";
+import { dailyAttendancePermitsWork, DAILY_ATTENDANCE_STATUS_LABELS } from "@/modules/daily-workforce/types";
 import { listWorkedHoursHistoryForEmployee, listMyWorkedHoursDiscrepancies, listWorkedHoursCorrections } from "@/modules/worked-hours/queries";
+import { listMyAbsenceReports } from "@/modules/absences/queries";
+import { ABSENCE_REPORT_STATUS_LABELS } from "@/modules/absences/types";
+import { listMyAttendanceReviewRequests } from "@/modules/attendance-review/queries";
+import { ATTENDANCE_REVIEW_STATUS_LABELS } from "@/modules/attendance-review/types";
+import { RequestReviewButton } from "@/modules/attendance-review/components/request-review-button";
 import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, countDaysWorked, type WorkedHoursPeriodMode } from "@/modules/worked-hours/period";
 import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, toWorkedHoursCategoryBreakdown, sumWorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { MyHoursRow } from "@/modules/worked-hours/components/my-hours-row";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 type MyHoursPageProps = {
@@ -72,9 +79,23 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
     );
   }
 
+  const activeTab: "hours" | "absences" = params.tab === "absences" ? "absences" : "hours";
   const mode: WorkedHoursPeriodMode = params.view === "week" ? "week" : params.view === "month" ? "month" : "day";
   const anchorDate = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : todayIsoDate();
   const period = resolveWorkedHoursPeriod(mode, anchorDate);
+
+  if (activeTab === "absences") {
+    return (
+      <MyAbsencesTab
+        companyId={currentCompanyId}
+        projectId={currentProjectId}
+        myEmployeeId={myEmployeeId}
+        mode={mode}
+        anchorDate={anchorDate}
+        period={period}
+      />
+    );
+  }
 
   const [rows, discrepancies] = await Promise.all([
     listWorkedHoursHistoryForEmployee(currentCompanyId, currentProjectId, myEmployeeId, period.fromDate, period.toDate),
@@ -101,6 +122,8 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="My Hours" description={`${formatWorkedHoursPeriodLabel(period)} · ${totalHours.toFixed(1)}h total`} />
+
+      <MyHoursTabSwitcher active="hours" mode={mode} anchorDate={anchorDate} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={`${basePath}?view=day`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
@@ -160,4 +183,143 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
       )}
     </div>
   );
+}
+
+/** Hours / Absences — the top-level tab switcher shared by both views, preserving the current Day/Week/Month granularity and anchor date across the switch. */
+function MyHoursTabSwitcher({ active, mode, anchorDate }: { active: "hours" | "absences"; mode: WorkedHoursPeriodMode; anchorDate: string }) {
+  const suffix = `view=${mode}&date=${anchorDate}`;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+      <Link href={`/my-hours?${suffix}`} className={active === "hours" ? "text-foreground" : "text-muted-foreground transition-colors hover:text-foreground"}>
+        Hours
+      </Link>
+      <span className="text-muted-foreground">/</span>
+      <Link href={`/my-hours?tab=absences&${suffix}`} className={active === "absences" ? "text-foreground" : "text-muted-foreground transition-colors hover:text-foreground"}>
+        Absences
+      </Link>
+    </div>
+  );
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Task 3 Part 18 — My Hours' new "Absences" tab. Own records only
+ * (listMyAttendanceForPeriod/listMyAbsenceReports are both RLS-scoped to
+ * the caller's own employee row), shown here purely from REAL rows — never
+ * inferred from a day with no worked_hours entry. Week mode assumes a
+ * Monday-Saturday workweek (unlike Hours' own Monday-Sunday week, which
+ * exists for complete payroll-period reporting) — Sunday is never treated
+ * as an expected work day for absence purposes, so the query range is
+ * clipped to Saturday rather than reusing the Hours tab's full 7-day week.
+ */
+async function MyAbsencesTab({
+  companyId,
+  projectId,
+  myEmployeeId,
+  mode,
+  anchorDate,
+  period,
+}: {
+  companyId: string;
+  projectId: string;
+  myEmployeeId: string;
+  mode: WorkedHoursPeriodMode;
+  anchorDate: string;
+  period: ReturnType<typeof resolveWorkedHoursPeriod>;
+}) {
+  const absenceToDate = mode === "week" ? addDays(period.fromDate, 5) : period.toDate;
+
+  const [attendanceRows, absenceReports, reviewRequests] = await Promise.all([
+    listMyAttendanceForPeriod(companyId, myEmployeeId, period.fromDate, absenceToDate),
+    listMyAbsenceReports(companyId, myEmployeeId),
+    listMyAttendanceReviewRequests(companyId, myEmployeeId),
+  ]);
+
+  const genuineAbsences = attendanceRows.filter((row) => !dailyAttendancePermitsWork(row.status));
+  const reportsInRange = absenceReports.filter((report) => report.work_date >= period.fromDate && report.work_date <= absenceToDate);
+  const reportByDate = new Map(reportsInRange.map((report) => [report.work_date, report]));
+  // Task 3 Part 19 — a day with an unresolved (pending) review request
+  // never shows a second "Request review" button; an already-decided one
+  // (accepted/rejected) can be contested again with new information.
+  const pendingReviewDates = new Set(reviewRequests.filter((request) => request.status === "pending").map((request) => request.work_date));
+  const latestReviewByDate = new Map<string, (typeof reviewRequests)[number]>();
+  for (const request of reviewRequests) {
+    if (!latestReviewByDate.has(request.work_date)) latestReviewByDate.set(request.work_date, request);
+  }
+
+  const basePath = "/my-hours";
+  const prevDate = shiftDate(anchorDate, mode, -1);
+  const nextDate = shiftDate(anchorDate, mode, 1);
+  const periodLabel = mode === "week" ? `${formatDisplayDate(period.fromDate)} – ${formatDisplayDate(absenceToDate)}` : formatWorkedHoursPeriodLabel(period);
+
+  return (
+    <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
+      <PageHeader title="My Hours" description={`${periodLabel} · ${genuineAbsences.length} ${genuineAbsences.length === 1 ? "day" : "days"} recorded`} />
+
+      <MyHoursTabSwitcher active="absences" mode={mode} anchorDate={anchorDate} />
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Link href={`${basePath}?tab=absences&view=day`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+          Day
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <Link href={`${basePath}?tab=absences&view=week`} className={mode === "week" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+          Week
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <Link href={`${basePath}?tab=absences&view=month`} className={mode === "month" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+          Month
+        </Link>
+      </div>
+
+      <div className="flex items-center gap-3 text-sm">
+        <Link href={`${basePath}?tab=absences&view=${mode}&date=${prevDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
+          ← Previous
+        </Link>
+        <Link href={`${basePath}?tab=absences`} className="text-muted-foreground transition-colors hover:text-foreground">
+          Today
+        </Link>
+        <Link href={`${basePath}?tab=absences&view=${mode}&date=${nextDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
+          Next →
+        </Link>
+      </div>
+
+      {genuineAbsences.length === 0 ? (
+        <EmptyState icon={UserX} title="No absences recorded" description="Nothing has been recorded for this period." className="flex-1" />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {genuineAbsences.map((row) => {
+            const report = reportByDate.get(row.work_date);
+            const isPendingReview = pendingReviewDates.has(row.work_date);
+            const latestReview = latestReviewByDate.get(row.work_date);
+            return (
+              <Card key={row.id}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">{formatDisplayDate(row.work_date)}</span>
+                    {row.note && <span className="text-sm text-muted-foreground">{row.note}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{DAILY_ATTENDANCE_STATUS_LABELS[row.status]}</Badge>
+                    {report && <Badge variant="outline">{ABSENCE_REPORT_STATUS_LABELS[report.status]}</Badge>}
+                    {latestReview && <Badge variant="outline">{ATTENDANCE_REVIEW_STATUS_LABELS[latestReview.status]}</Badge>}
+                    {!isPendingReview && <RequestReviewButton companyId={companyId} projectId={projectId} workDate={row.work_date} />}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatDisplayDate(value: string): string {
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }

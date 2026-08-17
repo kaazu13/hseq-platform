@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, forbidden } from "next/navigation";
-import { requireAnyRole, getUserRoleNames } from "@/lib/auth/session";
+import { requireAnyRole, requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isUniqueViolation, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -13,10 +13,12 @@ import {
   employeeFormSchema,
   endEmploymentFormSchema,
   rehireFormSchema,
+  updateMyBirthDateFormSchema,
   type CreateEmployeeFormInput,
   type EmployeeFormInput,
   type EndEmploymentFormInput,
   type RehireFormInput,
+  type UpdateMyBirthDateFormInput,
 } from "./validation";
 import { getEmployee, listAllRoles } from "./queries";
 import type { Employee } from "./types";
@@ -882,4 +884,32 @@ export async function commitEmployeeImport(companyId: string, projectId: string 
     ok: true,
     data: data.map((row) => ({ rowIndex: row.row_index, employeeId: row.employee_id, employeeNumber: row.employee_number, invitationId: row.invitation_id, invitationToken: row.invitation_token })),
   };
+}
+
+/**
+ * Task 3 Part 7 — own-view/edit only. Plain company membership is enough
+ * (no EMPLOYEE_WRITE_ROLES check — this never touches anyone else's row);
+ * update_my_birth_date() itself is the real, non-bypassable scoping
+ * (SECURITY DEFINER with its own `profile_id = auth.uid()` check, since
+ * employees_update_managers RLS has no self-update branch at all).
+ */
+export async function updateMyBirthDate(companyId: string, input: UpdateMyBirthDateFormInput): Promise<ActionResult<null>> {
+  const parsed = updateMyBirthDateFormSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireCompanyMembership(companyId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("update_my_birth_date", { target_company_id: companyId, target_birth_date: (parsed.data.birthDate ?? null) as string });
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't update your birth date. Try again." } };
+  }
+
+  revalidatePath("/account");
+  return { ok: true, data: null };
 }

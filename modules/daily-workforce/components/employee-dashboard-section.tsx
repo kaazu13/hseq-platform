@@ -16,7 +16,9 @@ import { ReportDiscrepancyButton } from "@/modules/worked-hours/components/repor
 import { EmployeeTodaySafetySection } from "@/modules/daily-workforce/components/employee-today-safety-section";
 import { ReportAbsenceDialog } from "@/modules/absences/components/report-absence-dialog";
 import { RequestLeaveDialog } from "@/modules/leave-requests/components/request-leave-dialog";
+import { TeamRoster } from "@/modules/daily-workforce/components/team-roster";
 import { RequestEquipmentDialog } from "@/modules/equipment/components/request-equipment-dialog";
+import { DirectionsButton } from "@/components/shared/directions-button";
 import type { EquipmentItem } from "@/modules/equipment/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,9 @@ type EmployeeDashboardSectionProps = {
   projectId: string;
   myEmployeeId: string;
   todayCard: EmployeeTodayCard;
+  phoneByEmployeeId?: Record<string, string | null>;
+  /** Task 3 Part 14 — the current project's site location, for the "Directions" link. Null when the project itself couldn't be resolved. */
+  siteLocation: { siteLatitude: number | null; siteLongitude: number | null; siteAddress: string | null } | null;
   hoursThisWeek: number;
   monthToDateHours: number;
   daysWorkedThisMonth: number;
@@ -65,6 +70,8 @@ export function EmployeeDashboardSection({
   projectId,
   myEmployeeId,
   todayCard,
+  phoneByEmployeeId,
+  siteLocation,
   hoursThisWeek,
   monthToDateHours,
   daysWorkedThisMonth,
@@ -106,27 +113,16 @@ export function EmployeeDashboardSection({
                 </span>
               </div>
 
-              {todayCard.team.foremanName && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Foreman</span>
-                  <span className="text-sm font-semibold">{todayCard.team.foremanName}</span>
+              {siteLocation && (
+                <div>
+                  <DirectionsButton siteLatitude={siteLocation.siteLatitude} siteLongitude={siteLocation.siteLongitude} siteAddress={siteLocation.siteAddress} />
                 </div>
               )}
 
-              {/* Item 9: current team colleagues — names only, no phone/personal data. */}
-              <div className="flex flex-col gap-0.5">
+              {/* Task 3 Part 5: structured Foreman + team-member rows (avatar/name/position), replacing the old comma-joined name dump. */}
+              <div className="flex flex-col gap-1.5 pt-1">
                 <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your team</span>
-                {todayCard.team.colleagues.length === 0 ? (
-                  <span className="text-sm text-muted-foreground">No other workers on this team yet.</span>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    {todayCard.team.colleagues
-                      .slice(0, 8)
-                      .map((colleague) => `${colleague.first_name} ${colleague.last_name}`)
-                      .join(", ")}
-                    {todayCard.team.colleagues.length > 8 && ` + ${todayCard.team.colleagues.length - 8} more`}
-                  </span>
-                )}
+                <TeamRoster foreman={todayCard.team.foreman} colleagues={todayCard.team.colleagues} phoneByEmployeeId={phoneByEmployeeId} />
               </div>
             </>
           ) : !canWork ? (

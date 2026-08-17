@@ -30,14 +30,22 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-/** Read-only summary of every column the milestone specifies for the Overview tab. */
-export function EmployeeOverviewTab({ employee }: { employee: Employee }) {
+/**
+ * Read-only summary of every column the milestone specifies for the
+ * Overview tab. `canViewSensitiveFields` (Task 3 Part 7 — birth date is
+ * sensitive PII, "no broad visibility") gates Birth date specifically to
+ * EMPLOYEE_WRITE_ROLES (the same company_admin/operations_manager tier
+ * already trusted to SET it via employee-form.tsx) — the broader
+ * EMPLOYEE_READ_ROLES set (hseq_manager/project_manager/inspector/planner)
+ * still sees every other field here, just not this one.
+ */
+export function EmployeeOverviewTab({ employee, canViewSensitiveFields }: { employee: Employee; canViewSensitiveFields: boolean }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <Field label="Employee number" value={<span className="font-mono">{employee.employee_number}</span>} />
       <Field label="Work email" value={employee.work_email ?? "—"} />
       <Field label="Phone" value={employee.phone ?? "—"} />
-      <Field label="Birth date" value={formatDate(employee.birth_date)} />
+      {canViewSensitiveFields && <Field label="Birth date" value={formatDate(employee.birth_date)} />}
       <Field label="Start date" value={formatDate(employee.start_date)} />
       <Field label="End date" value={formatDate(employee.end_date)} />
       <Field label="Employment status" value={<EmploymentStatusBadge status={employee.employment_status} />} />

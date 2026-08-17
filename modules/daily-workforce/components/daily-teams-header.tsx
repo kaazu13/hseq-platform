@@ -2,14 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight, Lock, LockOpen } from "lucide-react";
+import { Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 import { lockDailyTeams, unlockDailyTeams } from "@/modules/daily-workforce/actions";
 import { DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
+import { DateNav } from "@/modules/daily-workforce/components/date-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,12 +24,6 @@ type DailyTeamsHeaderProps = {
   canManage: boolean;
 };
 
-function shiftDate(dateStr: string, days: number): string {
-  const date = new Date(`${dateStr}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 /**
  * Today's Teams' date navigation + [ Lock Today's Teams ] / unlock
  * lifecycle controls. Milestone G: the global "Add team" button is
@@ -44,7 +37,6 @@ export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, tod
   const [isPending, startTransition] = useTransition();
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockReason, setUnlockReason] = useState("");
-  const isToday = workDate === todayDate;
 
   function handleLock() {
     startTransition(async () => {
@@ -75,26 +67,7 @@ export function DailyTeamsHeader({ companyId, projectId, basePath, workDate, tod
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link href={`${basePath}?date=${shiftDate(workDate, -1)}`} />} aria-label="Previous day">
-            <ChevronLeft />
-          </Button>
-          <Input
-            type="date"
-            value={workDate}
-            onChange={(event) => router.push(`${basePath}?date=${event.target.value}`)}
-            className="w-auto"
-            aria-label="Select date"
-          />
-          <Button variant="ghost" size="icon-sm" nativeButton={false} render={<Link href={`${basePath}?date=${shiftDate(workDate, 1)}`} />} aria-label="Next day">
-            <ChevronRight />
-          </Button>
-          {!isToday && (
-            <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={basePath} />}>
-              Today
-            </Button>
-          )}
-        </div>
+        <DateNav basePath={basePath} workDate={workDate} todayDate={todayDate} />
 
         <div className="flex items-center gap-2">
           {hasLockedTeams && !hasOpenTeams && (

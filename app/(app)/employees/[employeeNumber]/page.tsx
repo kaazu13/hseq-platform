@@ -133,7 +133,7 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
         </TabsList>
 
         <TabsContent value="overview" className="pt-4">
-          <EmployeeOverviewTab employee={employee} />
+          <EmployeeOverviewTab employee={employee} canViewSensitiveFields={canManage} />
         </TabsContent>
 
         <TabsContent value="roles" className="pt-4">

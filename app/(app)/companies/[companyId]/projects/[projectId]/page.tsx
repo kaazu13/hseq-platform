@@ -14,6 +14,8 @@ import { getScaffoldOverviewCounts } from "@/modules/scaffolds/queries";
 import { canManageProject } from "@/modules/projects/permissions";
 import { ProjectDailyOverview } from "@/modules/projects/components/project-daily-overview";
 import { ProjectStatusBadge } from "@/modules/projects/components/project-status-badge";
+import { DirectionsButton } from "@/components/shared/directions-button";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -70,7 +72,7 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
   type DailyOverviewProps = Parameters<typeof ProjectDailyOverview>[0];
   let dailyOverview: { today: DailyOverviewProps["today"]; safety: DailyOverviewProps["safety"]; actionRequired: DailyOverviewProps["actionRequired"] } | null = null;
   if (canViewDailyOverview) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getProjectLocalDate(project.timezone);
     const [workforce, teams, hoursRows, discrepancies, lmraCounts, observationCounts, correctiveActionCounts, scaffoldCounts] = await Promise.all([
       listWorkforceForDate(companyId, projectId, today),
       listDailyTeamsForDate(companyId, projectId, today),
@@ -149,6 +151,8 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
         <ProjectStatusBadge status={project.status} />
         {project.code ? <span className="font-mono text-sm text-muted-foreground">{project.code}</span> : null}
         {project.location ? <span className="text-sm text-muted-foreground">{project.location}</span> : null}
+        {project.site_address ? <span className="text-sm text-muted-foreground">{project.site_address}</span> : null}
+        <DirectionsButton siteLatitude={project.site_latitude} siteLongitude={project.site_longitude} siteAddress={project.site_address} />
       </div>
 
       {dailyOverview ? (

@@ -1,30 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronsUpDown, Globe, LogOut, Settings, User } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { logout } from "@/modules/auth/actions";
+import { updateLocale } from "@/modules/locale-preference/actions";
+import { LOCALES, LOCALE_NATIVE_NAMES, DEFAULT_LOCALE, isSupportedLocale, type Locale } from "@/i18n/locale";
 
 type UserMenuProps = {
   name: string;
   email: string;
+  /** Task 3 Part 22 — resolved next-intl locale, powers the quick-switch submenu below without a trip to Settings. */
+  locale: string;
 };
 
 function initialsFor(name: string, email: string) {
@@ -37,11 +43,12 @@ function initialsFor(name: string, email: string) {
 }
 
 /**
- * Sidebar-footer user menu: avatar, name/email, Settings link, sign out.
- * The SAME component renders inside the mobile Sheet-based drawer too —
- * shadcn's `Sidebar` primitive (components/ui/sidebar.tsx) reuses this
- * exact tree for both desktop and mobile, so there is no separate
- * "mobile user menu" to keep in sync.
+ * Task 3 Part 16 — the profile/account menu, now in the top-right header
+ * (TopBar) instead of the old sidebar-footer placement (removed from
+ * AppSidebar in the same change — never left duplicated in both places).
+ * A compact avatar-only trigger, matching common app-header conventions
+ * (GitHub/Linear-style) rather than the wide name+email sidebar row it
+ * used to be — the same info is still the first thing shown once opened.
  *
  * Sign out uses ConfirmDialog's *controlled* mode (open/onOpenChange)
  * rather than nesting an AlertDialogTrigger inside the DropdownMenuItem —
@@ -55,10 +62,25 @@ function initialsFor(name: string, email: string) {
  * node_modules/@base-ui/react/docs/react/components/menu.md, which uses
  * `onClick` in every example and documents no `onSelect` prop at all).
  */
-export function UserMenu({ name, email }: UserMenuProps) {
+export function UserMenu({ name, email, locale }: UserMenuProps) {
   const [confirmSignOutOpen, setConfirmSignOutOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const initials = initialsFor(name, email);
   const displayName = name.trim() || email;
+  const currentLocale: Locale = isSupportedLocale(locale) ? locale : DEFAULT_LOCALE;
+
+  function handleLocaleChange(next: string | null) {
+    if (!next || !isSupportedLocale(next) || next === currentLocale) return;
+    startTransition(async () => {
+      const result = await updateLocale({ locale: next });
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   // ConfirmDialog already wraps onConfirm in its own useTransition (shows
   // "Please wait…" and disables the action button while pending) — see
@@ -75,56 +97,63 @@ export function UserMenu({ name, email }: UserMenuProps) {
   }
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent" />}
-          >
-            <Avatar className="size-7">
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-col text-left">
-              <span className="truncate text-sm font-medium">{displayName}</span>
-              <span className="truncate text-xs text-muted-foreground">{email}</span>
-            </div>
-            <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="top" className="w-64">
-            {/* Base UI requires Menu.GroupLabel (DropdownMenuLabel) to have a
-                Menu.Group (DropdownMenuGroup) ancestor — see
-                node_modules/@base-ui/react/docs/react/components/menu.md's
-                "Group labels" example. This label has no items of its own
-                (it's a standalone header), so it gets its own one-item
-                group rather than being folded into the Account/Settings
-                group below it. */}
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col">
-                  <span className="truncate text-sm font-medium">{displayName}</span>
-                  <span className="truncate text-xs text-muted-foreground">{email}</span>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/account" />}>
-                <User />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem render={<Link href="/settings" />}>
-                <Settings />
-                Settings
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => setConfirmSignOutOpen(true)}>
-              <LogOut />
-              Sign out
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full" />} aria-label={`Account menu — ${displayName}`}>
+          <Avatar className="size-7">
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <ChevronsUpDown className="sr-only" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="bottom" className="w-64">
+          {/* Base UI requires Menu.GroupLabel (DropdownMenuLabel) to have a
+              Menu.Group (DropdownMenuGroup) ancestor — see
+              node_modules/@base-ui/react/docs/react/components/menu.md's
+              "Group labels" example. This label has no items of its own
+              (it's a standalone header), so it gets its own one-item
+              group rather than being folded into the Account/Settings
+              group below it. */}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col">
+                <span className="truncate text-sm font-medium">{displayName}</span>
+                <span className="truncate text-xs text-muted-foreground">{email}</span>
+              </div>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem render={<Link href="/account" />}>
+              <User />
+              Account
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
+            <DropdownMenuItem render={<Link href="/settings" />}>
+              <Settings />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger disabled={isPending}>
+                <Globe />
+                Language — {LOCALE_NATIVE_NAMES[currentLocale]}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup value={currentLocale} onValueChange={handleLocaleChange}>
+                  {LOCALES.map((value) => (
+                    <DropdownMenuRadioItem key={value} value={value} disabled={isPending}>
+                      {LOCALE_NATIVE_NAMES[value]}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => setConfirmSignOutOpen(true)}>
+            <LogOut />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <ConfirmDialog
         open={confirmSignOutOpen}
@@ -135,6 +164,6 @@ export function UserMenu({ name, email }: UserMenuProps) {
         variant="destructive"
         onConfirm={handleSignOut}
       />
-    </SidebarMenu>
+    </>
   );
 }

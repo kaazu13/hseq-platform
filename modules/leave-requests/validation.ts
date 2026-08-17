@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { optionalText } from "@/lib/validation";
-import { LEAVE_TYPES } from "./types";
+import { LEAVE_TYPES, ALL_LEAVE_TYPES } from "./types";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_RANGE_DAYS = 366;
@@ -11,20 +11,24 @@ function daysBetween(startDate: string, endDate: string): number {
   return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
 }
 
-/** `requestLeave` — employee "[ Request Holiday / Leave ]" (Phase 8). "Do not allow end date before start date," "enforce sensible date-range limits." */
-export const requestLeaveSchema = z
-  .object({
-    leaveType: z.enum(LEAVE_TYPES as [string, ...string[]]),
-    startDate: z.string().regex(DATE_REGEX, "Pick a start date"),
-    endDate: z.string().regex(DATE_REGEX, "Pick an end date"),
-    comment: optionalText,
-  })
-  .refine((value) => daysBetween(value.startDate, value.endDate) >= 0, { message: "End date cannot be before the start date", path: ["endDate"] })
-  .refine((value) => daysBetween(value.startDate, value.endDate) <= MAX_RANGE_DAYS, { message: "That date range is too long — check the dates", path: ["endDate"] });
+function leaveRequestFormSchema(allowedLeaveTypes: readonly [string, ...string[]]) {
+  return z
+    .object({
+      leaveType: z.enum(allowedLeaveTypes),
+      startDate: z.string().regex(DATE_REGEX, "Pick a start date"),
+      endDate: z.string().regex(DATE_REGEX, "Pick an end date"),
+      comment: optionalText,
+    })
+    .refine((value) => daysBetween(value.startDate, value.endDate) >= 0, { message: "End date cannot be before the start date", path: ["endDate"] })
+    .refine((value) => daysBetween(value.startDate, value.endDate) <= MAX_RANGE_DAYS, { message: "That date range is too long — check the dates", path: ["endDate"] });
+}
+
+/** `requestLeave` — employee "[ Request Holiday / Leave ]" (Phase 8). "Do not allow end date before start date," "enforce sensible date-range limits." Only the current, offered leave types are valid for a brand-new request. */
+export const requestLeaveSchema = leaveRequestFormSchema(LEAVE_TYPES as [string, ...string[]]);
 export type RequestLeaveInput = z.infer<typeof requestLeaveSchema>;
 
-/** `resubmitLeaveRequest` — same shape as requesting, since the employee is re-supplying the full corrected form. */
-export const resubmitLeaveRequestSchema = requestLeaveSchema;
+/** `resubmitLeaveRequest` — same shape as requesting, but must also accept a request's own pre-existing LEGACY leave type (annual/unpaid/compassionate) unchanged, not only the types offered for new requests. */
+export const resubmitLeaveRequestSchema = leaveRequestFormSchema(ALL_LEAVE_TYPES as [string, ...string[]]);
 export type ResubmitLeaveRequestInput = z.infer<typeof resubmitLeaveRequestSchema>;
 
 /** `approveLeaveRequest` — comment optional. */

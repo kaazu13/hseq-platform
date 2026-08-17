@@ -5,6 +5,7 @@ import { listScaffoldRegisterCreatableProjects, listEligibleScaffoldForemen, isC
 import { isScaffoldBroadCreator, mustSelfLockResponsibleForeman } from "@/modules/scaffolds/permissions";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 
 type NewScaffoldPageProps = {
@@ -43,7 +44,8 @@ export default async function NewScaffoldPage({ params }: NewScaffoldPageProps) 
     selfLocked ? getMyEmployeeId(companyId, user.id) : Promise.resolve(null),
   ]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  // Task 3 Part 15 — scaffold erection date defaults to the project's own local "today," not the server's.
+  const today = getProjectLocalDate(project.timezone);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">

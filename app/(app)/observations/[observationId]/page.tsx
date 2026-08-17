@@ -4,7 +4,7 @@ import { Pencil } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getProject } from "@/modules/projects/queries";
-import { getObservation, isCallerProjectAccessible, listObservationCandidateEmployees } from "@/modules/observations/queries";
+import { getObservation, isCallerProjectAccessible } from "@/modules/observations/queries";
 import { canEditObservation, canReviewOrCloseObservation } from "@/modules/observations/permissions";
 import { listCorrectiveActionsForObservation, isCallerProjectManager, listCorrectiveActionCandidateEmployees } from "@/modules/corrective-actions/queries";
 import { canCreateCorrectiveAction, canManageCorrectiveActionDetails } from "@/modules/corrective-actions/permissions";
@@ -14,7 +14,7 @@ import { ObservationCategoryBadge } from "@/modules/observations/components/obse
 import { ObservationRiskBadge } from "@/modules/observations/components/observation-risk-badge";
 import { OBSERVATION_TYPE_LABELS, OBSERVATION_NEGATIVE_DISPOSITION_LABELS } from "@/modules/observations/types";
 import { Badge } from "@/components/ui/badge";
-import { ObservationParticipantsPicker } from "@/modules/observations/components/observation-participants-picker";
+import { ObservationParticipantsList } from "@/modules/observations/components/observation-participants-list";
 import { ObservationReviewCloseCard } from "@/modules/observations/components/observation-review-close-card";
 import { ObservationPrintButton } from "@/modules/observations/components/observation-print-button";
 import { CorrectiveActionsSection } from "@/modules/corrective-actions/components/corrective-actions-section";
@@ -86,7 +86,6 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
   const canCreateAction = canCreateCorrectiveAction(roleNames, isProjectManager, hasProjectAccess) && observation.status === "open";
   const canManageActionDetails = canManageCorrectiveActionDetails(roleNames, isProjectManager, hasProjectAccess);
 
-  const candidates = await listObservationCandidateEmployees(currentCompanyId, observation.project_id);
   const actionCandidates = toEmployeeOptions(await listCorrectiveActionCandidateEmployees(currentCompanyId, observation.project_id));
   const shares = canEdit ? await listReportSharesForRecord(currentCompanyId, "safety_observation", observation.id) : [];
   const actionShareEntries = canManageActionDetails
@@ -180,15 +179,7 @@ export default async function ObservationDetailPage({ params }: ObservationDetai
 
       <div className="flex flex-col gap-3">
         <SectionHeader title="People involved" />
-        <ObservationParticipantsPicker
-          companyId={currentCompanyId}
-          observationId={observation.id}
-          projectId={observation.project_id}
-          createdBy={observation.created_by}
-          candidates={candidates}
-          currentParticipantIds={observation.participants.map((participant) => participant.employee_id)}
-          readOnly
-        />
+        <ObservationParticipantsList participants={observation.participants} />
       </div>
 
       <div className="flex flex-col gap-3">

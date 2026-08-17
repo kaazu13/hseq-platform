@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Salvează",
+    "saving": "Se salvează…",
+    "cancel": "Anulează",
+    "loading": "Se încarcă…"
+  },
+  "Settings": {
+    "title": "Setări"
+  },
+  "Appearance": {
+    "title": "Aspect",
+    "description": "Preferință personală – nu afectează alți utilizatori.",
+    "themeLabel": "Temă",
+    "themeMode": {
+      "light": "Luminos",
+      "dark": "Întunecat",
+      "system": "Sistem"
+    },
+    "accentColorLabel": "Culoare accent",
+    "accent": {
+      "default_blue": "Albastru implicit",
+      "safety_green": "Verde siguranță",
+      "steel_slate": "Oțel / Ardezie",
+      "orange": "Portocaliu",
+      "indigo_purple": "Indigo / Violet"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Limbă și regiune",
+    "description": "Limba ta – nu schimbă niciodată ce văd alți utilizatori.",
+    "languageLabel": "Limbă",
+    "saved": "Limba a fost actualizată.",
+    "previewDate": "Data de azi în limba ta: {date, date, long}",
+    "previewNumber": "Număr exemplu: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Nicio notificare necitită} one {# notificare necitită} few {# notificări necitite} other {# de notificări necitite}}"
+  },
+  "Dashboard": {
+    "welcome": "Bine ai venit, {name}",
+    "welcomeBack": "Bine ai revenit, {name}",
+    "gettingStarted": "Hai să te adăugăm la o companie.",
+    "noCompanyTitle": "Nu s-a găsit nicio apartenență activă la companie",
+    "noCompanyDescriptionAdmin": "Încă nu ești membru al niciunei companii. Ca administrator de platformă, poți crea una din Administrare platformă.",
+    "noCompanyDescriptionMember": "De îndată ce un administrator de companie îți adaugă contul la o companie, va apărea aici automat — nu trebuie să faci nimic.",
+    "createCompany": "Creează companie",
+    "chooseProjectDescription": "Alege în ce proiect din {company} vei lucra.",
+    "noProjectTitle": "În prezent nu ești alocat niciunui proiect",
+    "noProjectDescription": "Contactează administratorul companiei tale pentru a fi adăugat la un proiect.",
+    "employeeDescription": "{company} · Proiect curent: {project}",
+    "adminDescription": "Iată ce se întâmplă la {company}.",
+    "addEmployee": "Adaugă angajat",
+    "reportIncident": "Raportează incident"
+  },
+  "Notifications": {
+    "title": "Notificări",
+    "ariaUnread": "Notificări — {count} necitite",
+    "aria": "Notificări",
+    "markAllAsRead": "Marchează tot ca citit",
+    "allCaughtUp": "Ești la zi.",
+    "viewAll": "Vezi toate notificările",
+    "justNow": "Chiar acum"
+  }
+}

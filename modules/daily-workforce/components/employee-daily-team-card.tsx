@@ -4,6 +4,7 @@ import type { EmployeeTodayCard } from "@/modules/daily-workforce/queries";
 import { DAILY_TEAM_SHIFT_LABELS } from "@/modules/daily-workforce/types";
 import type { DailyTeamLmraSummary } from "@/modules/lmra/queries";
 import { LMRA_STATUS_LABELS } from "@/modules/lmra/types";
+import { TeamRoster } from "@/modules/daily-workforce/components/team-roster";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -13,6 +14,7 @@ type EmployeeDailyTeamCardProps = {
   workDate: string;
   team: NonNullable<EmployeeTodayCard["team"]>;
   lmraEntries?: DailyTeamLmraSummary[];
+  phoneByEmployeeId?: Record<string, string | null>;
 };
 
 function formatLmraTimestamp(value: string): string {
@@ -32,7 +34,7 @@ function formatLmraTimestamp(value: string): string {
  * a member of — so this card, and the LMRA link it renders, can only ever
  * refer to the employee's own team by construction.
  */
-export function EmployeeDailyTeamCard({ workDate, team, lmraEntries = [] }: EmployeeDailyTeamCardProps) {
+export function EmployeeDailyTeamCard({ workDate, team, lmraEntries = [], phoneByEmployeeId }: EmployeeDailyTeamCardProps) {
   return (
     <Card className="gap-0 py-0">
       <CardHeader className="gap-2 rounded-t-xl px-4 py-3">
@@ -49,26 +51,9 @@ export function EmployeeDailyTeamCard({ workDate, team, lmraEntries = [] }: Empl
         )}
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Foreman</span>
-          <span className="text-sm">{team.foremanName ?? "No foreman assigned"}</span>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your team</span>
-          {team.colleagues.length === 0 ? (
-            <span className="text-sm text-muted-foreground">No other workers on this team yet.</span>
-          ) : (
-            <div className="flex flex-col gap-0.5">
-              {team.colleagues.map((colleague) => (
-                <span key={colleague.id} className="text-sm">
-                  {colleague.first_name} {colleague.last_name}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+      <CardContent className="flex flex-col gap-1.5 p-4">
+        <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your team</span>
+        <TeamRoster foreman={team.foreman} colleagues={team.colleagues} phoneByEmployeeId={phoneByEmployeeId} />
       </CardContent>
 
       <CardFooter className="flex flex-wrap items-center justify-end gap-2 text-sm text-muted-foreground">

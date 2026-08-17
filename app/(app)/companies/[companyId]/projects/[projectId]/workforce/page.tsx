@@ -5,6 +5,7 @@ import { listWorkforceForDate, isCallerProjectAccessible } from "@/modules/daily
 import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
 import { DailyWorkforceRoster } from "@/modules/daily-workforce/components/daily-workforce-roster";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Input } from "@/components/ui/input";
@@ -14,10 +15,6 @@ type WorkforcePageProps = {
   params: Promise<{ companyId: string; projectId: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 };
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatWorkDate(value: string): string {
   return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
@@ -49,7 +46,8 @@ export default async function WorkforcePage({ params, searchParams }: WorkforceP
   if (!canManage && !canViewBroadly) notFound();
 
   const basePath = `/companies/${companyId}/projects/${projectId}/workforce`;
-  const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayIsoDate();
+  // Task 3 Part 15 — project-local "today," not the server's.
+  const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : getProjectLocalDate(project.timezone);
   const workforce = await listWorkforceForDate(companyId, projectId, workDate);
 
   return (

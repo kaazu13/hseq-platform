@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import { Bell, CheckCheck } from "lucide-react";
 import { markNotificationRead, markAllNotificationsRead } from "@/modules/worked-hours/actions";
 import type { AppNotification } from "@/modules/worked-hours/types";
@@ -10,16 +11,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function formatRelativeTime(value: string): string {
+// Task 3 Part 27 — genuinely locale-aware, not a hand-rolled English "Xm
+// ago" template: `format.relativeTime()` wraps Intl.RelativeTimeFormat,
+// which picks correct grammar/units per locale on its own. Items 7+ days
+// old fall back to a short absolute date (`format.dateTime`, also
+// locale-aware) rather than an ever-growing "12d ago". Kept as a
+// module-scope function (not a closure inside the component) so its
+// `Date.now()` call isn't flagged by the render-purity lint rule, matching
+// this file's pre-existing pattern.
+function relativeTime(value: string, format: ReturnType<typeof useFormatter>, justNowLabel: string): string {
   const date = new Date(value);
   const diffMinutes = Math.round((Date.now() - date.getTime()) / 60000);
-  if (diffMinutes < 1) return "Just now";
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.round(diffHours / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (diffMinutes < 1) return justNowLabel;
+  const diffDays = Math.round(diffMinutes / 1440);
+  if (diffDays >= 7) return format.dateTime(date, { month: "short", day: "numeric" });
+  return format.relativeTime(date);
 }
 
 type NotificationBellProps = {
@@ -45,6 +51,8 @@ type NotificationBellProps = {
  */
 export function NotificationBell({ unreadCount, notifications }: NotificationBellProps) {
   const router = useRouter();
+  const t = useTranslations("Notifications");
+  const format = useFormatter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -75,8 +83,8 @@ export function NotificationBell({ unreadCount, notifications }: NotificationBel
           <Button
             variant="ghost"
             size="icon"
-            aria-label={unreadCount > 0 ? `Notifications — ${unreadCount} unread` : "Notifications"}
-            title="Notifications"
+            aria-label={unreadCount > 0 ? t("ariaUnread", { count: unreadCount }) : t("aria")}
+            title={t("title")}
             className="relative"
           />
         }
@@ -90,18 +98,18 @@ export function NotificationBell({ unreadCount, notifications }: NotificationBel
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between gap-2 px-1.5 py-1">
-          <span className="text-sm font-medium">Notifications</span>
+          <span className="text-sm font-medium">{t("title")}</span>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" className="h-auto px-1.5 py-0.5 text-xs" disabled={isPending} onClick={handleMarkAllRead}>
               <CheckCheck className="size-3.5" />
-              Mark all as read
+              {t("markAllAsRead")}
             </Button>
           )}
         </div>
         <DropdownMenuSeparator />
 
         {notifications.length === 0 ? (
-          <p className="px-2 py-4 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
+          <p className="px-2 py-4 text-center text-sm text-muted-foreground">{t("allCaughtUp")}</p>
         ) : (
           notifications.map((notification) => (
             <DropdownMenuItem key={notification.id} onClick={() => handleSelect(notification)} className="flex-col items-start gap-0.5 whitespace-normal py-2">
@@ -110,14 +118,14 @@ export function NotificationBell({ unreadCount, notifications }: NotificationBel
                 <span className={cn("truncate text-sm", !notification.read_at ? "font-semibold" : "font-normal text-muted-foreground")}>{notification.title}</span>
               </div>
               {notification.body && <span className="line-clamp-2 text-xs text-muted-foreground">{notification.body}</span>}
-              <span className="text-[11px] text-muted-foreground">{formatRelativeTime(notification.created_at)}</span>
+              <span className="text-[11px] text-muted-foreground">{relativeTime(notification.created_at, format, t("justNow"))}</span>
             </DropdownMenuItem>
           ))
         )}
 
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/notifications" />} className="justify-center text-sm font-medium">
-          View all notifications
+          {t("viewAll")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

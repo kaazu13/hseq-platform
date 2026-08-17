@@ -26,7 +26,14 @@ export function RequestLeaveDialog({ companyId, projectId, resubmitTarget, trigg
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [leaveType, setLeaveType] = useState<LeaveType>(resubmitTarget?.leave_type ?? "annual");
+  const [leaveType, setLeaveType] = useState<LeaveType>(resubmitTarget?.leave_type ?? "other");
+  // Resubmitting a request that was originally a legacy type (annual/
+  // unpaid/compassionate — no longer offered for new requests, see
+  // modules/leave-requests/types.ts) still needs a matching SelectItem so
+  // the current value renders with its correct label instead of going
+  // blank — added only for this one dialog instance, never offered when
+  // creating a brand-new request.
+  const availableLeaveTypes = resubmitTarget && !LEAVE_TYPES.includes(resubmitTarget.leave_type) ? [resubmitTarget.leave_type, ...LEAVE_TYPES] : LEAVE_TYPES;
   const [startDate, setStartDate] = useState(resubmitTarget?.start_date ?? "");
   const [endDate, setEndDate] = useState(resubmitTarget?.end_date ?? "");
   const [comment, setComment] = useState(resubmitTarget?.employee_comment ?? "");
@@ -78,7 +85,7 @@ export function RequestLeaveDialog({ companyId, projectId, resubmitTarget, trigg
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {LEAVE_TYPES.map((value) => (
+                {availableLeaveTypes.map((value) => (
                   <SelectItem key={value} value={value}>
                     {LEAVE_TYPE_LABELS[value]}
                   </SelectItem>

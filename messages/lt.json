@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Išsaugoti",
+    "saving": "Saugoma…",
+    "cancel": "Atšaukti",
+    "loading": "Kraunama…"
+  },
+  "Settings": {
+    "title": "Nustatymai"
+  },
+  "Appearance": {
+    "title": "Išvaizda",
+    "description": "Asmeninis nustatymas – neturi įtakos kitiems vartotojams.",
+    "themeLabel": "Tema",
+    "themeMode": {
+      "light": "Šviesi",
+      "dark": "Tamsi",
+      "system": "Sistemos"
+    },
+    "accentColorLabel": "Akcento spalva",
+    "accent": {
+      "default_blue": "Numatytoji mėlyna",
+      "safety_green": "Saugos žalia",
+      "steel_slate": "Plienas / Skalūnas",
+      "orange": "Oranžinė",
+      "indigo_purple": "Indigo / Violetinė"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Kalba ir regionas",
+    "description": "Jūsų kalba – niekada nekeičia to, ką mato kiti vartotojai.",
+    "languageLabel": "Kalba",
+    "saved": "Kalba atnaujinta.",
+    "previewDate": "Šiandienos data jūsų kalba: {date, date, long}",
+    "previewNumber": "Pavyzdinis skaičius: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Nėra neskaitytų pranešimų} one {# neskaitytas pranešimas} few {# neskaityti pranešimai} many {# neskaityto pranešimo} other {# neskaitytų pranešimų}}"
+  },
+  "Dashboard": {
+    "welcome": "Sveiki, {name}",
+    "welcomeBack": "Sveiki sugrįžę, {name}",
+    "gettingStarted": "Prijunkime jųs prie įmonės.",
+    "noCompanyTitle": "Nerasta aktyvios narystsės įmonėje",
+    "noCompanyDescriptionAdmin": "Kol kas nesate jokios įmonės narys. Kaip platformos administratorius galite ją sukurti skiltyje Platformos administravimas.",
+    "noCompanyDescriptionMember": "Kai įmonės administratorius pridės jūsų paskyrą prie įmonės, ji automatiškai atsiras čia — jums nieko daryti nereikia.",
+    "createCompany": "Sukurti įmonę",
+    "chooseProjectDescription": "Pasirinkite, kuriame {company} projekte dirbsite.",
+    "noProjectTitle": "Šiuo metu nesate priskirtas jokiam projektui",
+    "noProjectDescription": "Susisiekite su įmonės administratoriumi, kad būtumėte pridėtas prie projekto.",
+    "employeeDescription": "{company} · Dabartinis projektas: {project}",
+    "adminDescription": "Štai kas dabar vyksta įmonėje {company}.",
+    "addEmployee": "Pridėti darbuotoją",
+    "reportIncident": "Pranešti apie incidentą"
+  },
+  "Notifications": {
+    "title": "Pranešimai",
+    "ariaUnread": "Pranešimai — neskaityta: {count}",
+    "aria": "Pranešimai",
+    "markAllAsRead": "Pažymėti visus kaip perskaitytus",
+    "allCaughtUp": "Jūs viską peržiūrėjote.",
+    "viewAll": "Peržiūrėti visus pranešimus",
+    "justNow": "Ką tik"
+  }
+}

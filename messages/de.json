@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Speichern",
+    "saving": "Wird gespeichert…",
+    "cancel": "Abbrechen",
+    "loading": "Wird geladen…"
+  },
+  "Settings": {
+    "title": "Einstellungen"
+  },
+  "Appearance": {
+    "title": "Erscheinungsbild",
+    "description": "Persönliche Einstellung – betrifft keine anderen Benutzer.",
+    "themeLabel": "Design",
+    "themeMode": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
+    },
+    "accentColorLabel": "Akzentfarbe",
+    "accent": {
+      "default_blue": "Standardblau",
+      "safety_green": "Sicherheitsgrün",
+      "steel_slate": "Stahl / Schiefer",
+      "orange": "Orange",
+      "indigo_purple": "Indigo / Violett"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Sprache und Region",
+    "description": "Ihre eigene Sprache – ändert nie, was andere Benutzer sehen.",
+    "languageLabel": "Sprache",
+    "saved": "Sprache aktualisiert.",
+    "previewDate": "Heutiges Datum in Ihrer Sprache: {date, date, long}",
+    "previewNumber": "Beispielzahl: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Keine ungelesenen Benachrichtigungen} one {# ungelesene Benachrichtigung} other {# ungelesene Benachrichtigungen}}"
+  },
+  "Dashboard": {
+    "welcome": "Willkommen, {name}",
+    "welcomeBack": "Willkommen zurück, {name}",
+    "gettingStarted": "Lass uns dich einem Unternehmen zuordnen.",
+    "noCompanyTitle": "Keine aktive Unternehmensmitgliedschaft gefunden",
+    "noCompanyDescriptionAdmin": "Du bist noch kein Mitglied eines Unternehmens. Als Plattformadministrator kannst du eines über die Plattformverwaltung erstellen.",
+    "noCompanyDescriptionMember": "Sobald ein Unternehmensadministrator dein Konto einem Unternehmen hinzufügt, erscheint es hier automatisch — du musst nichts weiter tun.",
+    "createCompany": "Unternehmen erstellen",
+    "chooseProjectDescription": "Wähle, an welchem {company}-Projekt du arbeiten möchtest.",
+    "noProjectTitle": "Du bist derzeit keinem Projekt zugewiesen",
+    "noProjectDescription": "Wende dich an deinen Unternehmensadministrator, um einem Projekt hinzugefügt zu werden.",
+    "employeeDescription": "{company} · Aktuelles Projekt: {project}",
+    "adminDescription": "Das passiert gerade bei {company}.",
+    "addEmployee": "Mitarbeiter hinzufügen",
+    "reportIncident": "Vorfall melden"
+  },
+  "Notifications": {
+    "title": "Benachrichtigungen",
+    "ariaUnread": "Benachrichtigungen — {count} ungelesen",
+    "aria": "Benachrichtigungen",
+    "markAllAsRead": "Alle als gelesen markieren",
+    "allCaughtUp": "Du bist auf dem neuesten Stand.",
+    "viewAll": "Alle Benachrichtigungen anzeigen",
+    "justNow": "Gerade eben"
+  }
+}

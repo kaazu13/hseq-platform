@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getCompanyLogoPublicUrl } from "@/lib/storage/company-logos";
 import { CompanyBrandingSection } from "@/modules/companies/components/company-branding-section";
 import { AppearanceSection } from "@/modules/appearance/components/appearance-section";
+import { LanguageRegionSection } from "@/modules/locale-preference/components/language-region-section";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Settings as SettingsIcon } from "lucide-react";
+import { DEFAULT_LOCALE, isSupportedLocale } from "@/i18n/locale";
 
 const COMPANY_BRANDING_ROLES = ["company_admin", "operations_manager"];
 
@@ -34,11 +36,16 @@ export default async function SettingsPage() {
     if (companyRow?.logo_storage_path) logoUrl = getCompanyLogoPublicUrl(supabase, companyRow.logo_storage_path);
   }
 
+  const { data: profileRow } = await supabase.from("profiles").select("locale").eq("id", user.id).maybeSingle();
+  const currentLocale = profileRow && isSupportedLocale(profileRow.locale) ? profileRow.locale : DEFAULT_LOCALE;
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Settings" />
 
       <AppearanceSection />
+
+      <LanguageRegionSection currentLocale={currentLocale} />
 
       {canManageBranding && <CompanyBrandingSection companyId={current.id} companyName={current.name} logoUrl={logoUrl} />}
     </div>

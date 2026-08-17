@@ -10,6 +10,7 @@ import { LmraForm } from "@/modules/lmra/components/lmra-form";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -91,7 +92,8 @@ export default async function NewLmraPage({ searchParams }: NewLmraPageProps) {
   // participant/hazard validation regardless of who clicked the button.
   const canSelectAnyTeam = isElevated || roleNames.includes("company_admin") || roleNames.includes("operations_manager") || roleNames.includes("project_manager");
   const candidates = toEmployeeOptions(candidateRows);
-  const todayDate = new Date().toISOString().slice(0, 10);
+  // Task 3 Part 15 — LMRA's default date is the project's own local "today," not the server's.
+  const todayDate = getProjectLocalDate(project.timezone);
 
   // "Create LMRA for team" from Today's Teams (Phase 9) — pre-populates
   // participants from that day's actual roster, reusing the exact same

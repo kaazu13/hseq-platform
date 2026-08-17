@@ -1165,6 +1165,13 @@ async function main() {
 
   const todayTeamIds = await ensureDailyTeamsForDate(companyAdminSession, companyId, projectId, TODAY, TEAM_SPECS, employeeIdByKey);
 
+  // Task 3 Part 3 fixture: Team Alpha assignment for TOMORROW — gives the
+  // Employee "Today's Team" date-navigation control (Prev/Next/date-picker)
+  // a real future-dated assignment to actually verify against, not only
+  // past/today.
+  const TOMORROW = isoDate(-1);
+  await ensureDailyTeamsForDate(companyAdminSession, companyId, projectId, TOMORROW, [TEAM_SPECS[0]], employeeIdByKey);
+
   const HISTORICAL_DATES = [isoDate(1), isoDate(2), isoDate(9)]; // yesterday, 2 days ago, previous week
   for (const workDate of HISTORICAL_DATES) {
     const { data: existing } = await companyAdminSession.from("daily_teams").select("id").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate);
@@ -1235,7 +1242,16 @@ async function main() {
     const { data: report, error: reportErr } = await employeeSession.rpc("report_absence", { target_project_id: projectId, target_employee_id: employeeEmployeeId, target_work_date: isoDate(3), target_reason: "sick", target_comment: "TEST fixture: felt unwell" }).single();
     if (reportErr) throw new Error(`report_absence: ${reportErr.message}`);
     log("absence-report", `Test Employee (${isoDate(3)})`, "created");
-    const { error: confirmErr } = await companyAdminSession.rpc("confirm_absence_report", { target_report_id: (report as { id: string }).id });
+    // target_reason is passed unconditionally and harmlessly here: isoDate(N)
+    // fixture dates drift by one real day on every calendar-day boundary, so
+    // a date that used to be a "safe" isoDate(N) slot on an earlier run can
+    // collide with already-submitted worked hours seeded on a later run —
+    // this reason covers that case without needing to detect it in advance
+    // (20260901108000_confirm_absence_report_reason.sql).
+    const { error: confirmErr } = await companyAdminSession.rpc("confirm_absence_report", {
+      target_report_id: (report as { id: string }).id,
+      target_reason: "TEST fixture: confirming self-reported absence",
+    });
     if (confirmErr) throw new Error(`confirm_absence_report: ${confirmErr.message}`);
     log("absence-report", `Test Employee (${isoDate(3)})`, "updated", "confirmed");
   }

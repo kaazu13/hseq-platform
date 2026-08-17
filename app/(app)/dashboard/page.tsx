@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { getTranslations } from "next-intl/server";
 import {
   Activity,
   AlertTriangle,
@@ -25,7 +26,7 @@ import { isCurrentUserPlatformSuperAdmin } from "@/modules/platform-admin/querie
 import { getOnboardingChecklist } from "@/modules/onboarding/queries";
 import { isOnboardingCoreComplete } from "@/modules/onboarding/types";
 import { OnboardingBanner } from "@/modules/onboarding/components/onboarding-banner";
-import { getMyEmployeeId, getEmployeeTodayCard } from "@/modules/daily-workforce/queries";
+import { getMyEmployeeId, getEmployeeTodayCard, getDailyTeamPhoneNumbers } from "@/modules/daily-workforce/queries";
 import { getLatestWorkedHours, listMyWorkedHoursDiscrepancies, listWorkedHoursForPeriod } from "@/modules/worked-hours/queries";
 import { resolveWorkedHoursPeriod, countDaysWorked } from "@/modules/worked-hours/period";
 import { listMyObservations } from "@/modules/observations/queries";
@@ -43,6 +44,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusIndicator, type StatusTone } from "@/components/shared/status-indicator";
 import { ProjectSelectorCard } from "@/modules/projects/components/project-selector-card";
+import { getProjectLocalDate } from "@/lib/project-date";
 
 const COMPANY_STATUS_TONE: Record<string, StatusTone> = {
   trial: "info",
@@ -62,10 +64,11 @@ const COMPANY_STATUS_TONE: Record<string, StatusTone> = {
  */
 export default async function DashboardPage() {
   const { user } = await requireUser();
-  const [{ companies, currentCompanyId }, profile, isPlatformSuperAdmin] = await Promise.all([
+  const [{ companies, currentCompanyId }, profile, isPlatformSuperAdmin, t] = await Promise.all([
     resolveCurrentCompany(user.id),
     getCurrentUserProfile(user.id),
     isCurrentUserPlatformSuperAdmin(),
+    getTranslations("Dashboard"),
   ]);
 
   const displayName = profile?.full_name?.trim() || user.email?.split("@")[0] || "there";
@@ -78,21 +81,17 @@ export default async function DashboardPage() {
     // platform has no self-serve company creation for non-admins.
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title={`Welcome, ${displayName}`} description="Let's get you into a company." />
+        <PageHeader title={t("welcome", { name: displayName })} description={t("gettingStarted")} />
         <EmptyState
           icon={Users}
-          title="No active company membership found"
-          description={
-            isPlatformSuperAdmin
-              ? "You're not a member of any company yet. As a platform administrator, you can create one from Platform Admin."
-              : "Once a company administrator adds your account to a company, it will appear here automatically — no action needed on your end."
-          }
+          title={t("noCompanyTitle")}
+          description={isPlatformSuperAdmin ? t("noCompanyDescriptionAdmin") : t("noCompanyDescriptionMember")}
           className="flex-1"
         />
         {isPlatformSuperAdmin && (
           <Button size="sm" nativeButton={false} render={<Link href="/platform-admin/companies/new" />} className="w-fit">
             <Plus />
-            Create Company
+            {t("createCompany")}
           </Button>
         )}
       </div>
@@ -126,7 +125,7 @@ export default async function DashboardPage() {
   } else if (!currentProjectId && projects.length > 1) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title={`Welcome back, ${displayName}`} description={`Choose which ${current.name} project to work in.`} />
+        <PageHeader title={t("welcomeBack", { name: displayName })} description={t("chooseProjectDescription", { company: current.name })} />
         <ProjectSelectorCard companyId={current.id} projects={projects} />
       </div>
     );
@@ -138,8 +137,8 @@ export default async function DashboardPage() {
     // which already covers "create/assign a project").
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title={`Welcome back, ${displayName}`} description={current.name} />
-        <EmptyState icon={FolderKanban} title="You are not currently assigned to a project" description="Contact your company administrator to be added to a project." className="flex-1" />
+        <PageHeader title={t("welcomeBack", { name: displayName })} description={current.name} />
+        <EmptyState icon={FolderKanban} title={t("noProjectTitle")} description={t("noProjectDescription")} className="flex-1" />
       </div>
     );
   }
@@ -160,7 +159,7 @@ export default async function DashboardPage() {
   if (effectiveProjectId) {
     const myEmployeeId = await getMyEmployeeId(current.id, user.id);
     if (myEmployeeId) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getProjectLocalDate(currentProject?.timezone);
       const weekPeriod = resolveWorkedHoursPeriod("week", today);
       const monthPeriod = resolveWorkedHoursPeriod("month", today);
       const [todayCard, weekRows, monthToDateRows, latestWorkedHours, discrepancies, observations, todaysLmra, todaysToolboxMeetings, activeSafetyFlashes, myCorrectiveActions, equipmentCandidateItems] =
@@ -181,6 +180,7 @@ export default async function DashboardPage() {
       const hoursThisWeek = weekRows[0]?.totalHours ?? 0;
       const monthToDateHours = monthToDateRows[0]?.totalHours ?? 0;
       const daysWorkedThisMonth = monthToDateRows[0] ? countDaysWorked(monthToDateRows[0].hoursByDate) : 0;
+      const phoneByEmployeeId = todayCard.team ? await getDailyTeamPhoneNumbers(todayCard.team.id) : {};
 
       employeeSection = (
         <EmployeeDashboardSection
@@ -188,6 +188,8 @@ export default async function DashboardPage() {
           projectId={effectiveProjectId}
           myEmployeeId={myEmployeeId}
           todayCard={todayCard}
+          phoneByEmployeeId={phoneByEmployeeId}
+          siteLocation={currentProject ? { siteLatitude: currentProject.site_latitude, siteLongitude: currentProject.site_longitude, siteAddress: currentProject.site_address } : null}
           hoursThisWeek={hoursThisWeek}
           monthToDateHours={monthToDateHours}
           daysWorkedThisMonth={daysWorkedThisMonth}
@@ -207,20 +209,24 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6">
       <PageHeader
-        title={`Welcome back, ${displayName}`}
-        description={isPlainEmployee && currentProject ? `${current.name} · Current project: ${currentProject.name}` : `Here's what's happening at ${current.name}.`}
+        title={t("welcomeBack", { name: displayName })}
+        description={
+          isPlainEmployee && currentProject
+            ? t("employeeDescription", { company: current.name, project: currentProject.name })
+            : t("adminDescription", { company: current.name })
+        }
         actions={
           isPlainEmployee ? undefined : (
             <>
               {canManageEmployees(roleNames) && (
                 <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/employees" />}>
                   <UserPlus />
-                  Add employee
+                  {t("addEmployee")}
                 </Button>
               )}
               <Button size="sm" nativeButton={false} render={<Link href="/incidents" />}>
                 <Plus />
-                Report incident
+                {t("reportIncident")}
               </Button>
             </>
           )

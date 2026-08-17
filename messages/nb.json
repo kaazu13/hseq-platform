@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Lagre",
+    "saving": "Lagrer…",
+    "cancel": "Avbryt",
+    "loading": "Laster…"
+  },
+  "Settings": {
+    "title": "Innstillinger"
+  },
+  "Appearance": {
+    "title": "Utseende",
+    "description": "Personlig preferanse – påvirker ikke andre brukere.",
+    "themeLabel": "Tema",
+    "themeMode": {
+      "light": "Lys",
+      "dark": "Mørk",
+      "system": "System"
+    },
+    "accentColorLabel": "Aksentfarge",
+    "accent": {
+      "default_blue": "Standard blå",
+      "safety_green": "Sikkerhetsgrønn",
+      "steel_slate": "Stål / Skifer",
+      "orange": "Oransje",
+      "indigo_purple": "Indigo / Lilla"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Språk og region",
+    "description": "Ditt eget språk – endrer aldri hva andre brukere ser.",
+    "languageLabel": "Språk",
+    "saved": "Språket er oppdatert.",
+    "previewDate": "Dagens dato på ditt språk: {date, date, long}",
+    "previewNumber": "Eksempelnummer: {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Ingen uleste varsler} one {# ulest varsel} other {# uleste varsler}}"
+  },
+  "Dashboard": {
+    "welcome": "Velkommen, {name}",
+    "welcomeBack": "Velkommen tilbake, {name}",
+    "gettingStarted": "La oss få deg inn i en bedrift.",
+    "noCompanyTitle": "Ingen aktivt bedriftsmedlemskap funnet",
+    "noCompanyDescriptionAdmin": "Du er ikke medlem av noen bedrift ennå. Som plattformadministrator kan du opprette en fra Plattformadministrasjon.",
+    "noCompanyDescriptionMember": "Når en bedriftsadministrator legger til kontoen din i en bedrift, vises den her automatisk — du trenger ikke gjøre noe.",
+    "createCompany": "Opprett bedrift",
+    "chooseProjectDescription": "Velg hvilket {company}-prosjekt du skal jobbe i.",
+    "noProjectTitle": "Du er ikke tildelt noe prosjekt for øyeblikket",
+    "noProjectDescription": "Kontakt bedriftsadministratoren din for å bli lagt til i et prosjekt.",
+    "employeeDescription": "{company} · Nåværende prosjekt: {project}",
+    "adminDescription": "Dette skjer akkurat nå hos {company}.",
+    "addEmployee": "Legg til ansatt",
+    "reportIncident": "Rapporter hendelse"
+  },
+  "Notifications": {
+    "title": "Varsler",
+    "ariaUnread": "Varsler — {count} uleste",
+    "aria": "Varsler",
+    "markAllAsRead": "Merk alle som lest",
+    "allCaughtUp": "Du har lest alt.",
+    "viewAll": "Vis alle varsler",
+    "justNow": "Akkurat nå"
+  }
+}

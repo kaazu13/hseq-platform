@@ -1,38 +1,34 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { updateOwnProfile } from "@/modules/companies/actions";
+import { PhoneInput } from "@/components/shared/phone-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /**
  * Item 10: `fullName` is read-only display text, not an input — a user
  * can no longer self-edit their own display name (only a Platform Super
  * Admin can, via a dedicated authorized path). Phone stays freely
- * self-editable, unchanged.
+ * self-editable — now via PhoneInput (Task 3 Part 6), which always
+ * produces a valid E.164 value instead of a free-text string.
  */
 export function ProfileEditForm({ fullName, phone }: { fullName: string; phone: string | null }) {
   const [isPending, startTransition] = useTransition();
+  const [phoneValue, setPhoneValue] = useState(phone ?? "");
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleSubmit() {
     setFormError(null);
     setFieldErrors({});
     setSavedAt(null);
 
-    const formData = new FormData(event.currentTarget);
-    const input = {
-      phone: String(formData.get("phone") ?? ""),
-    };
-
     startTransition(async () => {
-      const result = await updateOwnProfile(input);
+      const result = await updateOwnProfile({ phone: phoneValue });
       if (!result.ok) {
         setFormError(result.error.message);
         setFieldErrors(result.error.fieldErrors ?? {});
@@ -43,7 +39,7 @@ export function ProfileEditForm({ fullName, phone }: { fullName: string; phone: 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+    <div className="flex flex-col gap-4">
       {formError && (
         <Alert variant="destructive" role="alert">
           <AlertCircle />
@@ -62,17 +58,18 @@ export function ProfileEditForm({ fullName, phone }: { fullName: string; phone: 
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="phone">Phone (optional)</Label>
-          <Input id="phone" name="phone" defaultValue={phone ?? ""} aria-invalid={Boolean(fieldErrors.phone)} />
+          <PhoneInput id="phone" value={phoneValue} onChange={setPhoneValue} invalid={Boolean(fieldErrors.phone)} />
           {fieldErrors.phone && <p className="text-sm text-destructive">{fieldErrors.phone}</p>}
+          <p className="text-xs text-muted-foreground">Visible to your Foreman and teammates only while you&apos;re on the same team for the same day.</p>
         </div>
       </div>
 
       <div>
-        <Button type="submit" size="sm" disabled={isPending}>
+        <Button type="button" size="sm" disabled={isPending} onClick={handleSubmit}>
           {isPending ? <Loader2 className="animate-spin" /> : null}
           {isPending ? "Saving…" : "Save changes"}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

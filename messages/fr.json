@@ -1,0 +1,63 @@
+{
+  "Common": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "cancel": "Annuler",
+    "loading": "Chargement…"
+  },
+  "Settings": {
+    "title": "Paramètres"
+  },
+  "Appearance": {
+    "title": "Apparence",
+    "description": "Préférence personnelle : n'affecte pas les autres utilisateurs.",
+    "themeLabel": "Thème",
+    "themeMode": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    },
+    "accentColorLabel": "Couleur d'accent",
+    "accent": {
+      "default_blue": "Bleu par défaut",
+      "safety_green": "Vert sécurité",
+      "steel_slate": "Acier / Ardoise",
+      "orange": "Orange",
+      "indigo_purple": "Indigo / Violet"
+    }
+  },
+  "LanguageRegion": {
+    "title": "Langue et région",
+    "description": "Votre propre langue : ne change jamais ce que voient les autres utilisateurs.",
+    "languageLabel": "Langue",
+    "saved": "Langue mise à jour.",
+    "previewDate": "Date d'aujourd'hui dans votre langue : {date, date, long}",
+    "previewNumber": "Nombre d'exemple : {value, number}",
+    "unreadNotifications": "{count, plural, =0 {Aucune notification non lue} one {# notification non lue} other {# notifications non lues}}"
+  },
+  "Dashboard": {
+    "welcome": "Bienvenue, {name}",
+    "welcomeBack": "Bon retour, {name}",
+    "gettingStarted": "Voyons comment vous rattacher à une entreprise.",
+    "noCompanyTitle": "Aucune appartenance active à une entreprise trouvée",
+    "noCompanyDescriptionAdmin": "Vous n'êtes encore membre d'aucune entreprise. En tant qu'administrateur de la plateforme, vous pouvez en créer une depuis l'administration de la plateforme.",
+    "noCompanyDescriptionMember": "Dès qu'un administrateur d'entreprise ajoutera votre compte à une entreprise, elle apparaîtra ici automatiquement — aucune action n'est requise de votre part.",
+    "createCompany": "Créer une entreprise",
+    "chooseProjectDescription": "Choisissez sur quel projet de {company} vous allez travailler.",
+    "noProjectTitle": "Vous n'êtes actuellement affecté à aucun projet",
+    "noProjectDescription": "Contactez l'administrateur de votre entreprise pour être ajouté à un projet.",
+    "employeeDescription": "{company} · Projet actuel : {project}",
+    "adminDescription": "Voici ce qu'il se passe chez {company}.",
+    "addEmployee": "Ajouter un employé",
+    "reportIncident": "Signaler un incident"
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "ariaUnread": "Notifications — {count} non lues",
+    "aria": "Notifications",
+    "markAllAsRead": "Tout marquer comme lu",
+    "allCaughtUp": "Vous êtes à jour.",
+    "viewAll": "Voir toutes les notifications",
+    "justNow": "À l'instant"
+  }
+}

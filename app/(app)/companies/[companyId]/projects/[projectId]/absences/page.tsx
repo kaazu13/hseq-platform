@@ -1,6 +1,6 @@
 import { notFound, forbidden } from "next/navigation";
 import { UserX } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
 import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
@@ -12,6 +12,10 @@ import { AbsenceDayLockControl } from "@/modules/absences/components/absence-day
 import { AbsenceReportsReview } from "@/modules/absences/components/absence-reports-review";
 import { AbsenceExportDialog } from "@/modules/absences/components/absence-export-dialog";
 import { toEmployeeOptions } from "@/modules/employees/employee-options";
+import { canReviewAttendance } from "@/modules/attendance-review/permissions";
+import { listPendingAttendanceReviewRequests } from "@/modules/attendance-review/queries";
+import { ReviewQueue } from "@/modules/attendance-review/components/review-queue";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -20,10 +24,6 @@ type AbsencesPageProps = {
   params: Promise<{ companyId: string; projectId: string }>;
   searchParams: Promise<Record<string, string | undefined>>;
 };
-
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatWorkDate(value: string): string {
   return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
@@ -45,7 +45,7 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
     notFound();
   }
 
-  const [roleNames, myProjectRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
+  const [roleNames, myProjectRoles, isSuperAdmin] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id), isPlatformSuperAdmin()]);
   // Employee-role correction pass 2: this page had no role gate at all —
   // any project member, including a plain employee, could reach it by URL
   // and see every OTHER employee's absence status, self-reported absence
@@ -56,14 +56,19 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
     forbidden();
   }
   const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
+  // Task 3 Part 19 — deliberately NARROWER than canManage (hseq_manager/
+  // hse_officer/foreman can manage daily workforce but are NOT attendance
+  // review-request reviewers).
+  const canReview = isSuperAdmin || canReviewAttendance(roleNames, myProjectRoles);
 
-  const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayIsoDate();
+  const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : getProjectLocalDate(project.timezone);
 
-  const [absentToday, dayLock, reports, roster] = await Promise.all([
+  const [absentToday, dayLock, reports, roster, pendingReviews] = await Promise.all([
     listAbsentToday(companyId, projectId, workDate),
     getAbsenceDayLock(companyId, projectId, workDate),
     listAbsenceReportsForDate(companyId, projectId, workDate),
     canManage ? listWorkforceForDate(companyId, projectId, workDate) : Promise.resolve([]),
+    canReview ? listPendingAttendanceReviewRequests(companyId, projectId) : Promise.resolve([]),
   ]);
 
   const isClosed = dayLock !== null && dayLock.unlocked_at === null;
@@ -95,6 +100,13 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
         <SectionHeader title="Self-reported absences" description="Reported by employee — review and confirm or reject." />
         <AbsenceReportsReview companyId={companyId} projectId={projectId} reports={reports} canManage={canManage} />
       </div>
+
+      {canReview && (
+        <div className="flex flex-col gap-3">
+          <SectionHeader title="Attendance review requests" description="An employee believes an already-recorded attendance status is wrong — accept to correct the record, or reject with a note." />
+          <ReviewQueue companyId={companyId} projectId={projectId} requests={pendingReviews} />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { optionalText } from "@/lib/validation";
+import { optionalE164Phone } from "@/lib/validation";
 
 /**
  * `updateOwnProfile` Server Function — a user editing their own basic
@@ -11,7 +11,7 @@ import { optionalText } from "@/lib/validation";
  * Role/company/status stay read-only everywhere in the UI, unchanged.
  */
 export const updateOwnProfileFormSchema = z.object({
-  phone: optionalText,
+  phone: optionalE164Phone,
 });
 export type UpdateOwnProfileFormInput = z.infer<typeof updateOwnProfileFormSchema>;
 

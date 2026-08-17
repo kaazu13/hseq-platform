@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canCreateLmra, canManageLmra, canArchiveLmra, canViewAllProjectLmra } from "./permissions";
+import { canCreateLmra, canManageLmra, canArchiveLmra, canViewAllProjectLmra, canReviewLmra } from "./permissions";
 
 describe("canCreateLmra", () => {
   it("allows an HSE Manager regardless of project access/foreman standing", () => {
@@ -58,6 +58,31 @@ describe("canArchiveLmra", () => {
     expect(canArchiveLmra(["company_admin"])).toBe(false);
     expect(canArchiveLmra(["operations_manager"])).toBe(false);
     expect(canArchiveLmra([])).toBe(false);
+  });
+});
+
+describe("canReviewLmra — review-decision gate (Task 3 Part 1 self-approval fix)", () => {
+  it("allows a project Foreman", () => {
+    expect(canReviewLmra(["employee"], true)).toBe(true);
+  });
+
+  it("allows hseq_manager, hse_officer, company_admin, operations_manager, and project_manager without needing foreman standing", () => {
+    expect(canReviewLmra(["hseq_manager"], false)).toBe(true);
+    expect(canReviewLmra(["hse_officer"], false)).toBe(true);
+    expect(canReviewLmra(["company_admin"], false)).toBe(true);
+    expect(canReviewLmra(["operations_manager"], false)).toBe(true);
+    expect(canReviewLmra(["project_manager"], false)).toBe(true);
+  });
+
+  it("denies a plain employee with no reviewer role or foreman standing — an ordinary worker, including the assessment's own completer, can never satisfy this on role/foreman grounds alone (there is deliberately no isOwnAssessment parameter)", () => {
+    expect(canReviewLmra(["employee"], false)).toBe(false);
+    expect(canReviewLmra([], false)).toBe(false);
+  });
+
+  it("denies roles this app doesn't treat as LMRA reviewers", () => {
+    expect(canReviewLmra(["inspector"], false)).toBe(false);
+    expect(canReviewLmra(["planner"], false)).toBe(false);
+    expect(canReviewLmra(["recruiter"], false)).toBe(false);
   });
 });
 

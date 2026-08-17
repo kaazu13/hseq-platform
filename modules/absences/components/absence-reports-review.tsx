@@ -8,6 +8,7 @@ import { ABSENCE_REPORT_REASON_LABELS, ABSENCE_REPORT_STATUS_LABELS, type Absenc
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -31,15 +32,30 @@ export function AbsenceReportsReview({ companyId, projectId, reports, canManage 
   const [isPending, startTransition] = useTransition();
   const [rejectTargetId, setRejectTargetId] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [confirmReasonTargetId, setConfirmReasonTargetId] = useState<string | null>(null);
+  const [confirmReason, setConfirmReason] = useState("");
+  const [confirmServerMessage, setConfirmServerMessage] = useState<string | null>(null);
 
-  function confirm(reportId: string) {
+  function confirm(reportId: string, reason?: string) {
     startTransition(async () => {
-      const result = await confirmAbsenceReport(companyId, projectId, reportId);
+      const result = await confirmAbsenceReport(companyId, projectId, reportId, reason);
       if (!result.ok) {
+        // Rare case: this date already has SUBMITTED worked hours for the
+        // employee, and confirming would zero them out — the server is the
+        // source of truth for when that applies. Same "retry in place with
+        // the reason field revealed" pattern as Mark Absent.
+        if (result.error.message.toLowerCase().includes("reason is required")) {
+          setConfirmReasonTargetId(reportId);
+          setConfirmServerMessage(result.error.message);
+          return;
+        }
         toast.error(result.error.message);
         return;
       }
       toast.success("Report confirmed — attendance updated.");
+      setConfirmReasonTargetId(null);
+      setConfirmReason("");
+      setConfirmServerMessage(null);
       router.refresh();
     });
   }
@@ -86,6 +102,35 @@ export function AbsenceReportsReview({ companyId, projectId, reports, canManage 
                   <Button type="button" size="sm" onClick={() => confirm(report.id)} disabled={isPending}>
                     Confirm
                   </Button>
+                  <Dialog
+                    open={confirmReasonTargetId === report.id}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setConfirmReasonTargetId(null);
+                        setConfirmReason("");
+                        setConfirmServerMessage(null);
+                      }
+                    }}
+                  >
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Reason required</DialogTitle>
+                      </DialogHeader>
+                      <div className="flex flex-col gap-1.5">
+                        {confirmServerMessage && <p className="text-sm text-destructive">{confirmServerMessage}</p>}
+                        <Label htmlFor="confirm-reason">Reason</Label>
+                        <Input id="confirm-reason" value={confirmReason} onChange={(event) => setConfirmReason(event.target.value)} maxLength={2000} aria-invalid={!confirmReason.trim()} />
+                      </div>
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setConfirmReasonTargetId(null)}>
+                          Cancel
+                        </Button>
+                        <Button type="button" disabled={isPending || !confirmReason.trim()} onClick={() => confirm(report.id, confirmReason)}>
+                          Confirm
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                   <Dialog open={rejectTargetId === report.id} onOpenChange={(open) => (open ? setRejectTargetId(report.id) : setRejectTargetId(null))}>
                     <DialogTrigger render={<Button type="button" size="sm" variant="outline" />}>Reject</DialogTrigger>
                     <DialogContent>
