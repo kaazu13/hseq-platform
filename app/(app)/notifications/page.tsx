@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/session";
 import { listMyNotifications } from "@/modules/worked-hours/queries";
 import { NotificationList } from "@/modules/worked-hours/components/notification-list";
@@ -28,7 +29,7 @@ import { AutoRefresh } from "@/components/shared/auto-refresh";
  */
 export default async function NotificationsPage() {
   await requireUser();
-  const notifications = await listMyNotifications(100);
+  const [notifications, t] = await Promise.all([listMyNotifications(100), getTranslations("Notifications")]);
   const unreadCount = notifications.filter((notification) => !notification.read_at).length;
 
   return (
@@ -36,8 +37,8 @@ export default async function NotificationsPage() {
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <AutoRefresh intervalMs={45000} />
         <PageHeader
-          title="Notifications"
-          description={unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up."}
+          title={t("title")}
+          description={unreadCount > 0 ? t("unreadCountLabel", { count: unreadCount }) : t("allCaughtUp")}
           actions={
             <>
               <RefreshButton />
@@ -47,7 +48,7 @@ export default async function NotificationsPage() {
         />
 
         {notifications.length === 0 ? (
-          <EmptyState icon={Bell} title="No notifications yet" description="Updates about your worked hours and other account activity will appear here." className="flex-1" />
+          <EmptyState icon={Bell} title={t("noNotificationsTitle")} description={t("noNotificationsDescription")} className="flex-1" />
         ) : (
           <NotificationList notifications={notifications} />
         )}

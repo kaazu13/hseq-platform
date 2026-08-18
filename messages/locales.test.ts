@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { parse as parseIcu } from "@formatjs/icu-messageformat-parser";
 import { LOCALES, DEFAULT_LOCALE } from "@/i18n/locale";
 import en from "./en.json";
 import es from "./es.json";
@@ -38,17 +39,45 @@ function flattenKeys(tree: MessageTree, prefix = ""): Map<string, string> {
   return out;
 }
 
-// ICU argument names that must appear verbatim in every locale's translation
-// of these specific keys — hand-listed rather than regex-extracted from
-// arbitrary ICU syntax, since a generic `{(\w+)` scan false-matches on plain
-// text immediately following a plural category brace (e.g. "=0 {No unread…}"
-// would otherwise look like an argument named "No"). This list only needs to
-// grow when a new interpolated/pluralized key is added to en.json.
-const REQUIRED_ARGS: Record<string, string[]> = {
-  "LanguageRegion.previewDate": ["{date,"],
-  "LanguageRegion.previewNumber": ["{value,"],
-  "LanguageRegion.unreadNotifications": ["{count,", "other {"],
-};
+// Task 3 closure Part 5 — keys whose value is NOT real ICU MessageFormat.
+// `ScaffoldRegister.createdMessage` is passed through next-intl's `t.raw()`
+// (see app/(app)/companies/[companyId]/projects/[projectId]/scaffolds/
+// page.tsx) specifically so `{param:tag}` survives untouched for
+// CreateSuccessToast's own regex-based substitution — real ICU has no
+// `{param:x}` syntax (a colon inside an argument name is a parse error), so
+// these are deliberately excluded from ICU parsing/argument-matching below
+// rather than silently failing every locale.
+const NON_ICU_KEYS = new Set<string>(["ScaffoldRegister.createdMessage"]);
+
+type IcuAstNode = { type: number; value?: string; options?: Record<string, { value: IcuAstNode[] }>; children?: IcuAstNode[] };
+
+/** Real ICU MessageFormat parse — throws on malformed syntax (unbalanced braces, invalid plural/select category names, colons in argument names, etc.), not just a naive brace-balance check. */
+function parseOrThrow(value: string, context: string): IcuAstNode[] {
+  try {
+    return parseIcu(value) as IcuAstNode[];
+  } catch (error) {
+    throw new Error(`${context}: invalid ICU MessageFormat syntax in "${value}" — ${(error as Error).message}`);
+  }
+}
+
+/** Every argument/number/date/time/select/plural/tag name referenced anywhere in the message, including inside plural/select branches — used to confirm two locales' translations of the same key reference the identical set of interpolated values. */
+function extractArgNames(nodes: IcuAstNode[]): Set<string> {
+  const names = new Set<string>();
+  for (const node of nodes) {
+    if ((node.type === 1 || node.type === 2 || node.type === 3 || node.type === 4 || node.type === 5 || node.type === 6 || node.type === 8) && node.value) {
+      names.add(node.value);
+    }
+    if (node.options) {
+      for (const branch of Object.values(node.options)) {
+        for (const name of extractArgNames(branch.value)) names.add(name);
+      }
+    }
+    if (node.children) {
+      for (const name of extractArgNames(node.children)) names.add(name);
+    }
+  }
+  return names;
+}
 
 describe("locale message catalogs", () => {
   const baseKeys = flattenKeys(en);
@@ -56,6 +85,13 @@ describe("locale message catalogs", () => {
   test("en.json has no empty leaf values", () => {
     for (const [path, value] of baseKeys) {
       expect(value.trim().length, `en.json:${path} is empty`).toBeGreaterThan(0);
+    }
+  });
+
+  test("en.json — every ICU MessageFormat value parses (real parser, not a substring check)", () => {
+    for (const [path, value] of baseKeys) {
+      if (NON_ICU_KEYS.has(path)) continue;
+      parseOrThrow(value, `en.json:${path}`);
     }
   });
 
@@ -88,13 +124,27 @@ describe("locale message catalogs", () => {
         }
       });
 
-      test("preserves required ICU argument placeholders", () => {
-        for (const [path, requiredSubstrings] of Object.entries(REQUIRED_ARGS)) {
-          const value = keys.get(path);
-          expect(value, `${locale}.json is missing key "${path}" required for ICU argument check`).toBeDefined();
-          for (const substring of requiredSubstrings) {
-            expect(value, `${locale}.json:${path} must contain "${substring}"`).toContain(substring);
-          }
+      test("every ICU MessageFormat value parses (real parser, not a substring check)", () => {
+        for (const [path, value] of keys) {
+          if (NON_ICU_KEYS.has(path)) continue;
+          parseOrThrow(value, `${locale}.json:${path}`);
+        }
+      });
+
+      test("references the exact same set of interpolated argument names as en.json for every key", () => {
+        for (const [path, baseValue] of baseKeys) {
+          if (NON_ICU_KEYS.has(path)) continue;
+          const localeValue = keys.get(path);
+          if (localeValue === undefined) continue; // already reported by the key-parity test above
+
+          const baseArgs = extractArgNames(parseOrThrow(baseValue, `en.json:${path}`));
+          const localeArgs = extractArgNames(parseOrThrow(localeValue, `${locale}.json:${path}`));
+
+          const missing = [...baseArgs].filter((name) => !localeArgs.has(name));
+          const extra = [...localeArgs].filter((name) => !baseArgs.has(name));
+
+          expect(missing, `${locale}.json:${path} is missing argument(s) present in en.json: ${missing.join(", ")}`).toEqual([]);
+          expect(extra, `${locale}.json:${path} has argument(s) not present in en.json: ${extra.join(", ")}`).toEqual([]);
         }
       });
     });

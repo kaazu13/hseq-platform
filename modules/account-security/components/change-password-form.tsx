@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { changeMyPassword } from "@/modules/account-security/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label";
  * successful change so a stale password never lingers in the DOM/history.
  */
 export function ChangePasswordForm() {
+  const t = useTranslations("Account");
   const [isPending, startTransition] = useTransition();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -53,11 +55,11 @@ export function ChangePasswordForm() {
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      {savedAt && <p className="text-sm text-emerald-600 dark:text-emerald-400">Password updated.</p>}
+      {savedAt && <p className="text-sm text-emerald-600 dark:text-emerald-400">{t("passwordUpdated")}</p>}
 
       <div className="flex flex-col gap-4 sm:max-w-sm">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="currentPassword">Current password</Label>
+          <Label htmlFor="currentPassword">{t("currentPassword")}</Label>
           <Input
             id="currentPassword"
             type="password"
@@ -69,7 +71,7 @@ export function ChangePasswordForm() {
           {fieldErrors.currentPassword && <p className="text-sm text-destructive">{fieldErrors.currentPassword}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="newPassword">New password</Label>
+          <Label htmlFor="newPassword">{t("newPassword")}</Label>
           <Input
             id="newPassword"
             type="password"
@@ -81,7 +83,7 @@ export function ChangePasswordForm() {
           {fieldErrors.newPassword && <p className="text-sm text-destructive">{fieldErrors.newPassword}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="confirmPassword">Confirm new password</Label>
+          <Label htmlFor="confirmPassword">{t("confirmNewPassword")}</Label>
           <Input
             id="confirmPassword"
             type="password"
@@ -97,7 +99,7 @@ export function ChangePasswordForm() {
       <div>
         <Button type="button" size="sm" disabled={isPending} onClick={handleSubmit}>
           {isPending ? <Loader2 className="animate-spin" /> : null}
-          {isPending ? "Saving…" : "Change password"}
+          {isPending ? t("saving") : t("changePassword")}
         </Button>
       </div>
     </div>
