@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { HardHat, Plus } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
@@ -61,24 +62,25 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
   const scaffolds = await listScaffolds(companyId, filters);
   const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(companyId, scaffolds.map((s) => s.id));
   const basePath = `/companies/${companyId}/projects/${projectId}/scaffolds`;
+  const t = await getTranslations("ScaffoldRegister");
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <CreateSuccessToast
         paramName="created"
-        message="Scaffold {param:tag} registered successfully."
+        message={t.raw("createdMessage")}
         viewHrefTemplate={`${basePath}/{value}`}
-        viewLabel="View scaffold"
+        viewLabel={t("viewScaffold")}
       />
       <PageHeader
-        title="Scaffold Register"
-        description={`${project.name} — structures, their inspection history, and current status.`}
+        title={t("title")}
+        description={t("description", { project: project.name })}
         actions={
           <>
             <RefreshButton />
             <Button size="sm" nativeButton={false} render={<Link href={`${basePath}/new`} />}>
               <Plus />
-              Register scaffold
+              {t("registerScaffold")}
             </Button>
           </>
         }
@@ -89,12 +91,12 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
       {scaffolds.length === 0 ? (
         <EmptyState
           icon={HardHat}
-          title="No scaffolds found"
-          description="Try a different filter, or register the first scaffold for this project."
+          title={t("noScaffoldsTitle")}
+          description={t("noScaffoldsDescription")}
           action={
             <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`${basePath}/new`} />}>
               <Plus />
-              Register scaffold
+              {t("registerScaffold")}
             </Button>
           }
           className="flex-1"

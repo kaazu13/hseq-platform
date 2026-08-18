@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Plus, ShieldCheck } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -45,15 +46,16 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const t = await getTranslations("Lmra");
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="LMRA" description="Last Minute Risk Assessments — a go/no-go check completed before starting work." />
+        <PageHeader title={t("titleShort")} description={t("subtitle")} />
         <EmptyState
           icon={ShieldCheck}
-          title="You're not part of an company yet"
-          description="Once an administrator adds your account to one, LMRAs will appear here."
+          title={t("noCompanyTitle")}
+          description={t("noCompanyDescription")}
           className="flex-1"
         />
       </div>
@@ -65,15 +67,11 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
   if (!currentProjectId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="LMRA" description="Last Minute Risk Assessments — a go/no-go check completed before starting work." />
+        <PageHeader title={t("titleShort")} description={t("subtitle")} />
         <EmptyState
           icon={ShieldCheck}
-          title="No active project selected"
-          description={
-            projects.length === 0
-              ? "You aren't assigned to a project yet."
-              : "Choose a project using the switcher at the top of the page — LMRA always shows your currently active project."
-          }
+          title={t("noProjectTitle")}
+          description={projects.length === 0 ? t("noProjectAssignedDescription") : t("chooseProjectDescription")}
           className="flex-1"
         />
       </div>
@@ -84,8 +82,8 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
   if (!project) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="LMRA" description="Last Minute Risk Assessments — a go/no-go check completed before starting work." />
-        <EmptyState icon={ShieldCheck} title="Project not found" description="Your active project is no longer accessible. Choose another using the switcher at the top of the page." className="flex-1" />
+        <PageHeader title={t("titleShort")} description={t("subtitle")} />
+        <EmptyState icon={ShieldCheck} title={t("projectNotFoundTitle")} description={t("projectNotFoundDescription")} className="flex-1" />
       </div>
     );
   }
@@ -144,16 +142,16 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <CreateSuccessToast paramName="created" message="LMRA saved successfully." viewHrefTemplate="/lmra/{value}" viewLabel="View LMRA" />
+      <CreateSuccessToast paramName="created" message={t.raw("savedMessage")} viewHrefTemplate="/lmra/{value}" viewLabel={t("viewLmra")} />
       <PageHeader
-        title="LMRA"
-        description={`${project.name} · Last Minute Risk Assessments — a go/no-go check completed before starting work.`}
+        title={t("titleShort")}
+        description={t("descriptionWithProject", { project: project.name })}
         actions={
           <>
             <RefreshButton />
             <Button size="sm" nativeButton={false} render={<Link href="/lmra/new" />}>
               <Plus />
-              New LMRA
+              {t("newLmra")}
             </Button>
           </>
         }
@@ -168,7 +166,7 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
             render={<Link href={modeHref("my")} />}
             aria-current={mode === "my" ? "page" : undefined}
           >
-            My LMRAs
+            {t("myLmras")}
           </Button>
           <Button
             variant={mode === "all" ? "default" : "outline"}
@@ -177,7 +175,7 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
             render={<Link href={modeHref("all")} />}
             aria-current={mode === "all" ? "page" : undefined}
           >
-            All LMRAs
+            {t("allLmras")}
           </Button>
         </div>
       )}
@@ -187,12 +185,12 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
       {assessments.length === 0 ? (
         <EmptyState
           icon={ShieldCheck}
-          title={mode === "all" ? "No LMRAs found" : "You have no LMRAs"}
-          description={mode === "all" ? "Try a different filter, or create the first LMRA for this project." : "LMRAs you complete, participate in, or are responsible for will appear here."}
+          title={mode === "all" ? t("noLmrasFoundTitle") : t("youHaveNoLmrasTitle")}
+          description={mode === "all" ? t("noLmrasFoundDescription") : t("youHaveNoLmrasDescription")}
           action={
             <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/lmra/new" />}>
               <Plus />
-              New LMRA
+              {t("newLmra")}
             </Button>
           }
           className="flex-1"
@@ -204,7 +202,7 @@ export default async function LmraPage({ searchParams }: LmraPageProps) {
               <LmraCard key={assessment.id} assessment={assessment} projectName={project.name} />
             ))}
           </div>
-          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel="LMRAs" />
+          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel={t("lmrasLabel")} />
         </>
       )}
     </div>

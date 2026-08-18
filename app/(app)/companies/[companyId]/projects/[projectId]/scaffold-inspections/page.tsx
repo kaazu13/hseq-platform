@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { ClipboardCheck } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
@@ -19,8 +20,8 @@ type ScaffoldInspectionsPageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
 };
 
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+function formatDateTime(value: string, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  return format.dateTime(new Date(value), { dateStyle: "medium", timeStyle: "short" });
 }
 
 /**
@@ -60,15 +61,16 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
   const inspections = await listInspectionsForProject(companyId, projectId, filters);
   const basePath = `/companies/${companyId}/projects/${projectId}/scaffold-inspections`;
   const scaffoldsBasePath = `/companies/${companyId}/projects/${projectId}/scaffolds`;
+  const [t, format] = await Promise.all([getTranslations("ScaffoldInspections"), getFormatter()]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Scaffold Inspections" description={`${project.name} — every inspection recorded across this project's scaffolds.`} actions={<RefreshButton />} />
+      <PageHeader title={t("title")} description={t("description", { project: project.name })} actions={<RefreshButton />} />
 
       <ScaffoldInspectionFilters basePath={basePath} />
 
       {inspections.length === 0 ? (
-        <EmptyState icon={ClipboardCheck} title="No inspections found" description="Try a different filter, or record an inspection from the Scaffold Register." className="flex-1" />
+        <EmptyState icon={ClipboardCheck} title={t("noInspectionsTitle")} description={t("noInspectionsDescription")} className="flex-1" />
       ) : (
         <div className="flex flex-col gap-3">
           {inspections.map((inspection) => (
@@ -83,7 +85,7 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
                     <span className="font-mono text-sm font-medium">{formatInspectionReference(inspection.scaffold, inspection)}</span>
                     <div className="flex items-center gap-2">
                       <ScaffoldInspectionStatusBadge status={inspection.status} />
-                      {inspection.voided_at && <Badge variant="destructive">Voided</Badge>}
+                      {inspection.voided_at && <Badge variant="destructive">{t("voided")}</Badge>}
                       {inspection.outcome && <ScaffoldInspectionOutcomeBadge outcome={inspection.outcome} />}
                     </div>
                   </div>
@@ -91,11 +93,11 @@ export default async function ScaffoldInspectionsPage({ params, searchParams }: 
                     {inspection.scaffold.tag_number} · {inspection.scaffold.work_area}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]} · {formatDateTime(inspection.inspected_at)}
+                    {SCAFFOLD_INSPECTION_REASON_LABELS[inspection.inspection_reason]} · {formatDateTime(inspection.inspected_at, format)}
                   </p>
-                  {inspection.superseded_by_id && <p className="text-xs text-muted-foreground">Superseded by a correction</p>}
-                  {inspection.corrects_inspection_id && <p className="text-xs text-muted-foreground">Corrects an earlier inspection</p>}
-                  {inspection.voided_at && <p className="text-xs text-muted-foreground">Voided: {inspection.void_reason}</p>}
+                  {inspection.superseded_by_id && <p className="text-xs text-muted-foreground">{t("supersededByCorrection")}</p>}
+                  {inspection.corrects_inspection_id && <p className="text-xs text-muted-foreground">{t("correctsEarlier")}</p>}
+                  {inspection.voided_at && <p className="text-xs text-muted-foreground">{t("voidedReason", { reason: inspection.void_reason ?? "" })}</p>}
                 </CardContent>
               </Card>
             </Link>
