@@ -1,18 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js/min";
 import { Combobox, ComboboxInputGroup, ComboboxInput, ComboboxTrigger, ComboboxContent, ComboboxList, ComboboxEmpty, ComboboxItem, useComboboxFilter } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { PHONE_COUNTRIES, callingCodeFor, countryDisplayName, toE164 } from "@/lib/phone";
+import { PHONE_COUNTRIES, callingCodeFor, countryDisplayName, flagEmoji, toE164 } from "@/lib/phone";
 
-type CountryOption = { value: CountryCode; label: string; callingCode: string };
+type CountryOption = { value: CountryCode; label: string; callingCode: string; flag: string };
 
-const COUNTRY_OPTIONS: CountryOption[] = PHONE_COUNTRIES.map((country) => ({
-  value: country,
-  label: countryDisplayName(country),
-  callingCode: callingCodeFor(country),
-})).sort((a, b) => a.label.localeCompare(b.label));
+function buildCountryOptions(locale: string): CountryOption[] {
+  return PHONE_COUNTRIES.map((country) => ({
+    value: country,
+    label: countryDisplayName(country, locale),
+    callingCode: callingCodeFor(country),
+    flag: flagEmoji(country),
+  })).sort((a, b) => a.label.localeCompare(b.label, locale));
+}
 
 const DEFAULT_COUNTRY: CountryCode = "US";
 
@@ -43,12 +47,15 @@ type PhoneInputProps = {
  * reason: consistent searchable-picker UX across the app.
  */
 export function PhoneInput({ id, value, onChange, invalid, disabled }: PhoneInputProps) {
+  const t = useTranslations("Account");
+  const locale = useLocale();
+  const countryOptions = useMemo(() => buildCountryOptions(locale), [locale]);
   const initial = useMemo(() => splitE164(value), [value]);
   const [country, setCountry] = useState<CountryCode>(initial.country);
   const [nationalNumber, setNationalNumber] = useState(initial.nationalNumber);
   const { contains } = useComboboxFilter({ sensitivity: "base" });
 
-  const selectedCountry = COUNTRY_OPTIONS.find((option) => option.value === country) ?? null;
+  const selectedCountry = countryOptions.find((option) => option.value === country) ?? null;
 
   function emit(nextCountry: CountryCode, nextNationalNumber: string) {
     if (!nextNationalNumber.trim()) {
@@ -61,7 +68,7 @@ export function PhoneInput({ id, value, onChange, invalid, disabled }: PhoneInpu
   return (
     <div className="flex gap-2">
       <Combobox
-        items={COUNTRY_OPTIONS}
+        items={countryOptions}
         value={selectedCountry}
         onValueChange={(next) => {
           const option = next as CountryOption | null;
@@ -73,18 +80,24 @@ export function PhoneInput({ id, value, onChange, invalid, disabled }: PhoneInpu
         filter={(option: CountryOption, query: string) => contains(option.label, query) || contains(option.callingCode, query)}
         disabled={disabled}
       >
-        <ComboboxInputGroup className="w-28 shrink-0">
-          <ComboboxInput id={id ? `${id}-country` : undefined} aria-label="Country code" readOnly value={selectedCountry?.callingCode ?? ""} />
+        <ComboboxInputGroup className="w-32 shrink-0">
+          <ComboboxInput
+            id={id ? `${id}-country` : undefined}
+            aria-label={t("countryCode")}
+            readOnly
+            value={selectedCountry ? `${selectedCountry.flag} ${selectedCountry.callingCode}` : ""}
+          />
           <ComboboxTrigger />
         </ComboboxInputGroup>
         <ComboboxContent>
-          <ComboboxEmpty>No matching country.</ComboboxEmpty>
+          <ComboboxEmpty>{t("noMatchingCountry")}</ComboboxEmpty>
           <ComboboxList>
             {(option: CountryOption) => (
               <ComboboxItem key={option.value} value={option}>
-                <div className="flex min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden="true">{option.flag}</span>
                   <span className="truncate">{option.label}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{option.callingCode}</span>
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">{option.callingCode}</span>
                 </div>
               </ComboboxItem>
             )}
@@ -95,7 +108,7 @@ export function PhoneInput({ id, value, onChange, invalid, disabled }: PhoneInpu
         id={id}
         type="tel"
         inputMode="tel"
-        aria-label="Phone number"
+        aria-label={t("phoneNumber")}
         aria-invalid={invalid}
         disabled={disabled}
         value={nationalNumber}
@@ -105,7 +118,7 @@ export function PhoneInput({ id, value, onChange, invalid, disabled }: PhoneInpu
           emit(country, next);
         }}
         className="flex-1"
-        placeholder="Phone number"
+        placeholder={t("phoneNumber")}
       />
     </div>
   );

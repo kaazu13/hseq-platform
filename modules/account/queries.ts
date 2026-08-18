@@ -72,7 +72,7 @@ export async function getAccountOverview(companyId: string, userId: string): Pro
 
   const { data: employeeRow, error: employeeError } = await supabase
     .from("employees")
-    .select("id, employee_number, first_name, last_name, work_email, position_title, employment_status, archived_at, birth_date")
+    .select("id, employee_number, first_name, last_name, work_email, position_title, employment_status, archived_at, birth_date, start_date")
     .eq("company_id", companyId)
     .eq("profile_id", userId)
     .maybeSingle();
@@ -123,6 +123,7 @@ export async function getAccountOverview(companyId: string, userId: string): Pro
           employmentStatus: employeeRow.employment_status,
           archivedAt: employeeRow.archived_at,
           birthDate: employeeRow.birth_date,
+          startDate: employeeRow.start_date,
         }
       : null,
     projectAssignments,

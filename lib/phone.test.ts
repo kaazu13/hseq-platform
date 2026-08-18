@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { isValidE164, toE164, formatE164ForDisplay, countryDisplayName, callingCodeFor, PHONE_COUNTRIES } from "./phone";
+import type { CountryCode } from "libphonenumber-js/min";
+import { isValidE164, toE164, formatE164ForDisplay, countryDisplayName, callingCodeFor, flagEmoji, PHONE_COUNTRIES } from "./phone";
 
 describe("isValidE164", () => {
   it("accepts a well-formed E.164 string", () => {
@@ -53,5 +54,22 @@ describe("country metadata", () => {
 
   it("countryDisplayName returns a human-readable name", () => {
     expect(countryDisplayName("US")).toBe("United States");
+  });
+});
+
+describe("flagEmoji", () => {
+  it("maps a country code to its regional-indicator flag emoji", () => {
+    expect(flagEmoji("US")).toBe("🇺🇸");
+    expect(flagEmoji("GB")).toBe("🇬🇧");
+    expect(flagEmoji("SE")).toBe("🇸🇪");
+  });
+
+  it("is case-insensitive", () => {
+    expect(flagEmoji("us" as CountryCode)).toBe(flagEmoji("US"));
+  });
+
+  it("produces a distinct flag for every supported phone country", () => {
+    const flags = new Set(PHONE_COUNTRIES.map(flagEmoji));
+    expect(flags.size).toBe(PHONE_COUNTRIES.length);
   });
 });

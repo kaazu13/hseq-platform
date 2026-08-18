@@ -1,5 +1,5 @@
 import type { Database } from "@/types/database";
-import type { RoleName } from "@/modules/companies/types";
+import { ROLE_NAMES, type RoleName } from "@/modules/companies/types";
 import type { ProjectAssignmentRole } from "@/modules/projects/types";
 
 /**
@@ -23,6 +23,12 @@ export const MEMBERSHIP_STATUS_LABELS: Record<MembershipStatus, string> = {
 };
 
 export type AccountRole = { membershipRoleId: string; roleId: string; name: RoleName; label: string };
+
+/** The most senior role among `roles` (by ROLE_NAMES's seniority order), for the Account header's single "role · company" line — or null if the caller has none. The Work Information card still lists every role, not just this one. */
+export function primaryRole(roles: AccountRole[]): AccountRole | null {
+  if (roles.length === 0) return null;
+  return [...roles].sort((a, b) => ROLE_NAMES.indexOf(a.name) - ROLE_NAMES.indexOf(b.name))[0];
+}
 
 export type AccountProjectAssignment = {
   projectId: string;
@@ -59,4 +65,6 @@ export type AccountEmployeeInfo = {
   archivedAt: string | null;
   /** Task 3 Part 7: own-view/edit only — populated by getAccountOverview (the caller's OWN record) but deliberately NEVER by listCompanyMembersOverview's bulk admin list, so this field is always absent there, not just unrendered. */
   birthDate?: string | null;
+  /** Account redesign — populated by getAccountOverview only (mirrors birthDate's convention above), shown read-only in the Work Information card. */
+  startDate?: string | null;
 };

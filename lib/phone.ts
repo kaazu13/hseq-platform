@@ -48,3 +48,14 @@ export function formatE164ForDisplay(e164: string): string {
 export function isValidE164ForAnyCountry(e164: string): boolean {
   return isValidPhoneNumber(e164);
 }
+
+/**
+ * Regional-indicator flag emoji for a country code (e.g. "US" -> "🇺🇸") —
+ * no image assets needed, every ISO 3166-1 alpha-2 code maps onto a pair of
+ * Unicode regional indicator symbols. Used by the phone/country pickers'
+ * Account redesign (Phase 4) to make the option list scannable without
+ * relying on the country name text alone.
+ */
+export function flagEmoji(country: CountryCode): string {
+  return String.fromCodePoint(...[...country.toUpperCase()].map((char) => 127397 + char.charCodeAt(0)));
+}
