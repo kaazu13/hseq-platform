@@ -6,7 +6,8 @@
     "loading": "Kraunama…"
   },
   "Settings": {
-    "title": "Nustatymai"
+    "title": "Nustatymai",
+    "noCompanySelected": "Nepasirinkta jokia įmonė"
   },
   "Appearance": {
     "title": "Išvaizda",

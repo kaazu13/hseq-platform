@@ -6,7 +6,8 @@
     "loading": "Läser in…"
   },
   "Settings": {
-    "title": "Inställningar"
+    "title": "Inställningar",
+    "noCompanySelected": "Inget företag valt"
   },
   "Appearance": {
     "title": "Utseende",

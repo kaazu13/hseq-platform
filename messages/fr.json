@@ -6,7 +6,8 @@
     "loading": "Chargement…"
   },
   "Settings": {
-    "title": "Paramètres"
+    "title": "Paramètres",
+    "noCompanySelected": "Aucune entreprise sélectionnée"
   },
   "Appearance": {
     "title": "Apparence",

@@ -6,7 +6,8 @@
     "loading": "Laden…"
   },
   "Settings": {
-    "title": "Instellingen"
+    "title": "Instellingen",
+    "noCompanySelected": "Geen bedrijf geselecteerd"
   },
   "Appearance": {
     "title": "Weergave",

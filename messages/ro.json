@@ -6,7 +6,8 @@
     "loading": "Se încarcă…"
   },
   "Settings": {
-    "title": "Setări"
+    "title": "Setări",
+    "noCompanySelected": "Nicio companie selectată"
   },
   "Appearance": {
     "title": "Aspect",

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -18,11 +19,13 @@ export default async function SettingsPage() {
   const { companies, currentCompanyId } = await resolveCurrentCompany(user.id);
   const current = companies.find((company) => company.id === currentCompanyId) ?? companies[0];
 
+  const t = await getTranslations("Settings");
+
   if (!current) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Settings" />
-        <EmptyState icon={SettingsIcon} title="No company selected" className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={SettingsIcon} title={t("noCompanySelected")} className="flex-1" />
       </div>
     );
   }
@@ -41,7 +44,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Settings" />
+      <PageHeader title={t("title")} />
 
       <AppearanceSection />
 

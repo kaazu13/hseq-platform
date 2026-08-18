@@ -6,7 +6,8 @@
     "loading": "Загрузка…"
   },
   "Settings": {
-    "title": "Настройки"
+    "title": "Настройки",
+    "noCompanySelected": "Компания не выбрана"
   },
   "Appearance": {
     "title": "Внешний вид",

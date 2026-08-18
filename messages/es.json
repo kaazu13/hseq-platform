@@ -6,7 +6,8 @@
     "loading": "Cargando…"
   },
   "Settings": {
-    "title": "Configuración"
+    "title": "Configuración",
+    "noCompanySelected": "Ninguna empresa seleccionada"
   },
   "Appearance": {
     "title": "Apariencia",

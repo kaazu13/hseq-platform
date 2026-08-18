@@ -6,7 +6,8 @@
     "loading": "Laster…"
   },
   "Settings": {
-    "title": "Innstillinger"
+    "title": "Innstillinger",
+    "noCompanySelected": "Ingen bedrift valgt"
   },
   "Appearance": {
     "title": "Utseende",
