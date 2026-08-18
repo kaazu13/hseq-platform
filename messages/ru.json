@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "У вас нет LMRA",
     "youHaveNoLmrasDescription": "LMRA, которые вы завершаете, в которых участвуете или за которые отвечаете, появятся здесь.",
     "lmrasLabel": "LMRA"
+  },
+  "ToolboxMeetings": {
+    "title": "Инструктажи по безопасности",
+    "noCompanyPageDescription": "Завершённые инструктажи, многоразовые шаблоны и оповещения о безопасности.",
+    "noCompanyTitle": "Вы ещё не состоите в компании",
+    "noCompanyDescription": "Как только администратор добавит вашу учётную запись в компанию, здесь появятся записи.",
+    "noTemplateAccessTitle": "Нет доступа к Шаблонам инструктажей",
+    "noTemplateAccessDescription": "Эта библиотека доступна для сотрудников HSE, руководителей проектов, бригадиров и инспекторов.",
+    "uploadTemplate": "Загрузить шаблон",
+    "noTemplatesFoundTitle": "Шаблоны не найдены",
+    "noTemplatesFoundDescription": "Попробуйте другой фильтр или загрузите первый многоразовый шаблон.",
+    "newSafetyFlash": "Новое оповещение о безопасности",
+    "noFlashesFoundTitle": "Оповещения не найдены",
+    "noFlashesFoundDescription": "Попробуйте другой фильтр или выпустите первое оповещение о безопасности.",
+    "unknownProject": "Неизвестный проект",
+    "companyWide": "По всей компании",
+    "mainDescription": "Реестр завершённых инструктажей, многоразовых шаблонов и оповещений о безопасности.",
+    "newToolboxMeeting": "Новый инструктаж",
+    "noMeetingsFoundTitle": "Инструктажи не найдены",
+    "noMeetingsEmployeeDescription": "Для вашего проекта пока не зафиксировано ни одного инструктажа.",
+    "noMeetingsFoundDescription": "Попробуйте другой фильтр или загрузите первый PDF завершённого инструктажа."
+  },
+  "SafetyObservations": {
+    "title": "Наблюдения по безопасности",
+    "mainDescription": "Наблюдения по безопасности на объекте — положительное признание и проблемы безопасности.",
+    "noCompanyTitle": "Вы ещё не состоите в компании",
+    "noCompanyDescription": "Как только администратор добавит вашу учётную запись в компанию, здесь появятся наблюдения.",
+    "submittedMessage": "Наблюдение успешно отправлено.",
+    "viewObservation": "Просмотреть наблюдение",
+    "myObservationsTitle": "Мои наблюдения",
+    "myObservationsDescription": "Наблюдения по безопасности, касающиеся вас.",
+    "newObservation": "Новое наблюдение",
+    "noObservationsFoundTitle": "Наблюдения не найдены",
+    "noObservationsEmployeeDescription": "Наблюдений по безопасности о вас не зафиксировано.",
+    "noObservationsFoundDescription": "Попробуйте другой фильтр или сообщите о первом наблюдении для проекта.",
+    "unknownProject": "Неизвестный проект"
   }
 }

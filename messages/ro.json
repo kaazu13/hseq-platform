@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Nu ai nicio LMRA",
     "youHaveNoLmrasDescription": "LMRA-urile pe care le completezi, la care participi sau de care ești responsabil vor apărea aici.",
     "lmrasLabel": "LMRA-uri"
+  },
+  "ToolboxMeetings": {
+    "title": "Instructaje de siguranță",
+    "noCompanyPageDescription": "Instructaje de siguranță finalizate, șabloane reutilizabile și buletine de Alertă de siguranță.",
+    "noCompanyTitle": "Încă nu faci parte dintr-o companie",
+    "noCompanyDescription": "De îndată ce un administrator îți adaugă contul la una, înregistrările vor apărea aici.",
+    "noTemplateAccessTitle": "Fără acces la Șabloane de instructaj",
+    "noTemplateAccessDescription": "Această bibliotecă este disponibilă pentru personalul HSE, manageri de proiect, șefi de echipă și inspectori.",
+    "uploadTemplate": "Încarcă șablon",
+    "noTemplatesFoundTitle": "Niciun șablon găsit",
+    "noTemplatesFoundDescription": "Încearcă un alt filtru, sau încarcă primul șablon reutilizabil.",
+    "newSafetyFlash": "Alertă de siguranță nouă",
+    "noFlashesFoundTitle": "Nicio alertă de siguranță găsită",
+    "noFlashesFoundDescription": "Încearcă un alt filtru, sau emite prima alertă de siguranță.",
+    "unknownProject": "Proiect necunoscut",
+    "companyWide": "La nivel de companie",
+    "mainDescription": "Un registru de instructaje de siguranță finalizate, șabloane reutilizabile și buletine de Alertă de siguranță.",
+    "newToolboxMeeting": "Instructaj de siguranță nou",
+    "noMeetingsFoundTitle": "Niciun instructaj de siguranță găsit",
+    "noMeetingsEmployeeDescription": "Niciun instructaj de siguranță nu a fost încă înregistrat pentru proiectul tău.",
+    "noMeetingsFoundDescription": "Încearcă un alt filtru, sau încarcă primul PDF de instructaj de siguranță finalizat."
+  },
+  "SafetyObservations": {
+    "title": "Observații de siguranță",
+    "mainDescription": "Observații de siguranță pe șantier — recunoaștere pozitivă și probleme de siguranță.",
+    "noCompanyTitle": "Încă nu faci parte dintr-o companie",
+    "noCompanyDescription": "De îndată ce un administrator îți adaugă contul la una, observațiile vor apărea aici.",
+    "submittedMessage": "Observație trimisă cu succes.",
+    "viewObservation": "Vezi observația",
+    "myObservationsTitle": "Observațiile mele",
+    "myObservationsDescription": "Observații de siguranță despre tine.",
+    "newObservation": "Observație nouă",
+    "noObservationsFoundTitle": "Nicio observație găsită",
+    "noObservationsEmployeeDescription": "Nicio observație de siguranță nu a fost înregistrată despre tine.",
+    "noObservationsFoundDescription": "Încearcă un alt filtru, sau raportează prima observație pentru un proiect.",
+    "unknownProject": "Proiect necunoscut"
   }
 }

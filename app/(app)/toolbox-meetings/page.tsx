@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { MessagesSquare, Plus, BookOpen, Siren } from "lucide-react";
 import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -34,12 +35,13 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
   const section = (params.section === "templates" || params.section === "safety-flash" ? params.section : "meetings") as ToolboxSection;
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const t = await getTranslations("ToolboxMeetings");
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Toolbox Meetings" description="Completed toolbox meetings, reusable templates, and Safety Flash bulletins." />
-        <EmptyState icon={MessagesSquare} title="You're not part of an company yet" description="Once an administrator adds your account to one, records will appear here." className="flex-1" />
+        <PageHeader title={t("title")} description={t("noCompanyPageDescription")} />
+        <EmptyState icon={MessagesSquare} title={t("noCompanyTitle")} description={t("noCompanyDescription")} className="flex-1" />
       </div>
     );
   }
@@ -57,9 +59,9 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
     if (!canManage) {
       return (
         <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-          <PageHeader title="Toolbox Meetings" />
+          <PageHeader title={t("title")} />
           <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
-          <EmptyState icon={BookOpen} title="No access to Toolbox Templates" description="This library is available to HSE staff, Project Managers, Foremen, and Inspectors." className="flex-1" />
+          <EmptyState icon={BookOpen} title={t("noTemplateAccessTitle")} description={t("noTemplateAccessDescription")} className="flex-1" />
         </div>
       );
     }
@@ -71,12 +73,12 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
-          title="Toolbox Meetings"
+          title={t("title")}
           actions={
             canCreate ? (
               <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/templates/new" />}>
                 <Plus />
-                Upload template
+                {t("uploadTemplate")}
               </Button>
             ) : undefined
           }
@@ -84,7 +86,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
         <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
         <ToolboxTemplateFilters />
         {templates.length === 0 ? (
-          <EmptyState icon={BookOpen} title="No templates found" description="Try a different filter, or upload the first reusable template." className="flex-1" />
+          <EmptyState icon={BookOpen} title={t("noTemplatesFoundTitle")} description={t("noTemplatesFoundDescription")} className="flex-1" />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {templates.map((template) => (
@@ -112,12 +114,12 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
         <PageHeader
-          title="Toolbox Meetings"
+          title={t("title")}
           actions={
             isPlainEmployee ? undefined : (
               <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/safety-flash/new" />}>
                 <Plus />
-                New Safety Flash
+                {t("newSafetyFlash")}
               </Button>
             )
           }
@@ -125,11 +127,11 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
         <ToolboxSectionNav active={section} hideTemplates={isPlainEmployee} />
         <SafetyFlashFilters projects={projects} />
         {flashes.length === 0 ? (
-          <EmptyState icon={Siren} title="No Safety Flashes found" description="Try a different filter, or issue the first Safety Flash." className="flex-1" />
+          <EmptyState icon={Siren} title={t("noFlashesFoundTitle")} description={t("noFlashesFoundDescription")} className="flex-1" />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {flashes.map((flash) => (
-              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? "Unknown project") : "Company-wide"} />
+              <SafetyFlashCard key={flash.id} flash={flash} projectName={flash.project_id ? (projectNameById.get(flash.project_id) ?? t("unknownProject")) : t("companyWide")} />
             ))}
           </div>
         )}
@@ -150,13 +152,13 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Toolbox Meetings"
-        description="A register of completed toolbox meetings, reusable templates, and Safety Flash bulletins."
+        title={t("title")}
+        description={t("mainDescription")}
         actions={
           isPlainEmployee ? undefined : (
             <Button size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/new" />}>
               <Plus />
-              New toolbox meeting
+              {t("newToolboxMeeting")}
             </Button>
           )
         }
@@ -166,13 +168,13 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
       {meetings.length === 0 ? (
         <EmptyState
           icon={MessagesSquare}
-          title="No toolbox meetings found"
-          description={isPlainEmployee ? "No toolbox meetings have been recorded for your project yet." : "Try a different filter, or upload the first completed toolbox meeting PDF."}
+          title={t("noMeetingsFoundTitle")}
+          description={isPlainEmployee ? t("noMeetingsEmployeeDescription") : t("noMeetingsFoundDescription")}
           action={
             isPlainEmployee ? undefined : (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/toolbox-meetings/new" />}>
                 <Plus />
-                New toolbox meeting
+                {t("newToolboxMeeting")}
               </Button>
             )
           }
@@ -181,7 +183,7 @@ export default async function ToolboxMeetingsPage({ searchParams }: ToolboxMeeti
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {meetings.map((meeting) => (
-            <ToolboxMeetingCard key={meeting.id} meeting={meeting} projectName={projectNameById.get(meeting.project_id) ?? "Unknown project"} />
+            <ToolboxMeetingCard key={meeting.id} meeting={meeting} projectName={projectNameById.get(meeting.project_id) ?? t("unknownProject")} />
           ))}
         </div>
       )}

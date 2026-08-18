@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Eye, Plus } from "lucide-react";
 import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -35,15 +36,16 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
   const params = await searchParams;
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const t = await getTranslations("SafetyObservations");
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Safety Observations" description="Site safety observations — positive recognition and safety issues." />
+        <PageHeader title={t("title")} description={t("mainDescription")} />
         <EmptyState
           icon={Eye}
-          title="You're not part of an company yet"
-          description="Once an administrator adds your account to one, observations will appear here."
+          title={t("noCompanyTitle")}
+          description={t("noCompanyDescription")}
           className="flex-1"
         />
       </div>
@@ -74,17 +76,17 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <CreateSuccessToast paramName="created" message="Observation submitted successfully." viewHrefTemplate="/observations/{value}" viewLabel="View observation" />
+      <CreateSuccessToast paramName="created" message={t.raw("submittedMessage")} viewHrefTemplate="/observations/{value}" viewLabel={t("viewObservation")} />
       <PageHeader
-        title={isPlainEmployee ? "My Observations" : "Safety Observations"}
-        description={isPlainEmployee ? "Safety observations that are about you." : "Site safety observations — positive recognition and safety issues."}
+        title={isPlainEmployee ? t("myObservationsTitle") : t("title")}
+        description={isPlainEmployee ? t("myObservationsDescription") : t("mainDescription")}
         actions={
           <>
             <RefreshButton />
             {!isPlainEmployee && (
               <Button size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
                 <Plus />
-                New observation
+                {t("newObservation")}
               </Button>
             )}
           </>
@@ -96,13 +98,13 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
       {observations.length === 0 ? (
         <EmptyState
           icon={Eye}
-          title="No observations found"
-          description={isPlainEmployee ? "No safety observations have been recorded about you." : "Try a different filter, or report the first observation for a project."}
+          title={t("noObservationsFoundTitle")}
+          description={isPlainEmployee ? t("noObservationsEmployeeDescription") : t("noObservationsFoundDescription")}
           action={
             isPlainEmployee ? undefined : (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/observations/new" />}>
                 <Plus />
-                New observation
+                {t("newObservation")}
               </Button>
             )
           }
@@ -111,7 +113,7 @@ export default async function ObservationsPage({ searchParams }: ObservationsPag
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {observations.map((observation) => (
-            <ObservationCard key={observation.id} observation={observation} projectName={projectNameById.get(observation.project_id) ?? "Unknown project"} />
+            <ObservationCard key={observation.id} observation={observation} projectName={projectNameById.get(observation.project_id) ?? t("unknownProject")} />
           ))}
         </div>
       )}

@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "No tienes ninguna LMRA",
     "youHaveNoLmrasDescription": "Las LMRA que completes, en las que participes o de las que seas responsable aparecerán aquí.",
     "lmrasLabel": "LMRA"
+  },
+  "ToolboxMeetings": {
+    "title": "Charlas de seguridad",
+    "noCompanyPageDescription": "Charlas de seguridad completadas, plantillas reutilizables y boletines de Alerta de seguridad.",
+    "noCompanyTitle": "Aún no formas parte de ninguna empresa",
+    "noCompanyDescription": "En cuanto un administrador añada tu cuenta a una, los registros aparecerán aquí.",
+    "noTemplateAccessTitle": "Sin acceso a Plantillas de charlas",
+    "noTemplateAccessDescription": "Esta biblioteca está disponible para el personal de HSE, gerentes de proyecto, capataces e inspectores.",
+    "uploadTemplate": "Subir plantilla",
+    "noTemplatesFoundTitle": "No se encontraron plantillas",
+    "noTemplatesFoundDescription": "Prueba con otro filtro, o sube la primera plantilla reutilizable.",
+    "newSafetyFlash": "Nueva alerta de seguridad",
+    "noFlashesFoundTitle": "No se encontraron alertas de seguridad",
+    "noFlashesFoundDescription": "Prueba con otro filtro, o emite la primera alerta de seguridad.",
+    "unknownProject": "Proyecto desconocido",
+    "companyWide": "En toda la empresa",
+    "mainDescription": "Un registro de charlas de seguridad completadas, plantillas reutilizables y boletines de Alerta de seguridad.",
+    "newToolboxMeeting": "Nueva charla de seguridad",
+    "noMeetingsFoundTitle": "No se encontraron charlas de seguridad",
+    "noMeetingsEmployeeDescription": "Aún no se ha registrado ninguna charla de seguridad para tu proyecto.",
+    "noMeetingsFoundDescription": "Prueba con otro filtro, o sube el primer PDF de charla de seguridad completada."
+  },
+  "SafetyObservations": {
+    "title": "Observaciones de seguridad",
+    "mainDescription": "Observaciones de seguridad en obra — reconocimiento positivo y problemas de seguridad.",
+    "noCompanyTitle": "Aún no formas parte de ninguna empresa",
+    "noCompanyDescription": "En cuanto un administrador añada tu cuenta a una, las observaciones aparecerán aquí.",
+    "submittedMessage": "Observación enviada correctamente.",
+    "viewObservation": "Ver observación",
+    "myObservationsTitle": "Mis observaciones",
+    "myObservationsDescription": "Observaciones de seguridad que tratan sobre ti.",
+    "newObservation": "Nueva observación",
+    "noObservationsFoundTitle": "No se encontraron observaciones",
+    "noObservationsEmployeeDescription": "No se ha registrado ninguna observación de seguridad sobre ti.",
+    "noObservationsFoundDescription": "Prueba con otro filtro, o informa de la primera observación de un proyecto.",
+    "unknownProject": "Proyecto desconocido"
   }
 }

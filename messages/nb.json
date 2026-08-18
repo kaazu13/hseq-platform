@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Du har ingen LMRA-er",
     "youHaveNoLmrasDescription": "LMRA-er du fullfører, deltar i, eller er ansvarlig for, vises her.",
     "lmrasLabel": "LMRA-er"
+  },
+  "ToolboxMeetings": {
+    "title": "Vernerunde-møter",
+    "noCompanyPageDescription": "Gjennomførte vernerunde-møter, gjenbrukbare maler og sikkerhetsvarsler.",
+    "noCompanyTitle": "Du er ikke del av en bedrift ennå",
+    "noCompanyDescription": "Så snart en administrator legger til kontoen din i en, vises poster her.",
+    "noTemplateAccessTitle": "Ingen tilgang til Møtemaler",
+    "noTemplateAccessDescription": "Dette biblioteket er tilgjengelig for HMS-personell, prosjektledere, formenn og inspektører.",
+    "uploadTemplate": "Last opp mal",
+    "noTemplatesFoundTitle": "Ingen maler funnet",
+    "noTemplatesFoundDescription": "Prøv et annet filter, eller last opp den første gjenbrukbare malen.",
+    "newSafetyFlash": "Nytt sikkerhetsvarsel",
+    "noFlashesFoundTitle": "Ingen sikkerhetsvarsler funnet",
+    "noFlashesFoundDescription": "Prøv et annet filter, eller utsted det første sikkerhetsvarselet.",
+    "unknownProject": "Ukjent prosjekt",
+    "companyWide": "Bedriftsomfattende",
+    "mainDescription": "Et register over gjennomførte vernerunde-møter, gjenbrukbare maler og sikkerhetsvarsler.",
+    "newToolboxMeeting": "Nytt vernerunde-møte",
+    "noMeetingsFoundTitle": "Ingen vernerunde-møter funnet",
+    "noMeetingsEmployeeDescription": "Ingen vernerunde-møter er registrert for prosjektet ditt ennå.",
+    "noMeetingsFoundDescription": "Prøv et annet filter, eller last opp den første gjennomførte vernerunde-møte-PDF-en."
+  },
+  "SafetyObservations": {
+    "title": "Sikkerhetsobservasjoner",
+    "mainDescription": "Sikkerhetsobservasjoner på anlegget — positiv anerkjennelse og sikkerhetsproblemer.",
+    "noCompanyTitle": "Du er ikke del av en bedrift ennå",
+    "noCompanyDescription": "Så snart en administrator legger til kontoen din i en, vises observasjoner her.",
+    "submittedMessage": "Observasjon sendt inn.",
+    "viewObservation": "Vis observasjon",
+    "myObservationsTitle": "Mine observasjoner",
+    "myObservationsDescription": "Sikkerhetsobservasjoner som handler om deg.",
+    "newObservation": "Ny observasjon",
+    "noObservationsFoundTitle": "Ingen observasjoner funnet",
+    "noObservationsEmployeeDescription": "Ingen sikkerhetsobservasjoner er registrert om deg.",
+    "noObservationsFoundDescription": "Prøv et annet filter, eller rapporter den første observasjonen for et prosjekt.",
+    "unknownProject": "Ukjent prosjekt"
   }
 }

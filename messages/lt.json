@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Neturite jokių LMRA",
     "youHaveNoLmrasDescription": "LMRA, kurias užpildote, kuriose dalyvaujate arba už kurias esate atsakingas, bus rodomos čia.",
     "lmrasLabel": "LMRA"
+  },
+  "ToolboxMeetings": {
+    "title": "Saugos instruktažai",
+    "noCompanyPageDescription": "Užbaigti saugos instruktažai, daugkartinio naudojimo šablonai ir saugos įspėjimai.",
+    "noCompanyTitle": "Kol kas nepriklausote jokiai įmonei",
+    "noCompanyDescription": "Kai tik administratorius pridės jūsų paskyrą prie įmonės, čia bus rodomi įrašai.",
+    "noTemplateAccessTitle": "Nėra prieigos prie Instruktažų šablonų",
+    "noTemplateAccessDescription": "Ši biblioteka prieinama DSS darbuotojams, projektų vadovams, meistrams ir inspektoriams.",
+    "uploadTemplate": "Įkelti šabloną",
+    "noTemplatesFoundTitle": "Šablonų nerasta",
+    "noTemplatesFoundDescription": "Pabandykite kitą filtrą arba įkelkite pirmą daugkartinio naudojimo šabloną.",
+    "newSafetyFlash": "Naujas saugos įspėjimas",
+    "noFlashesFoundTitle": "Saugos įspėjimų nerasta",
+    "noFlashesFoundDescription": "Pabandykite kitą filtrą arba išleiskite pirmą saugos įspėjimą.",
+    "unknownProject": "Nežinomas projektas",
+    "companyWide": "Visos įmonės mastu",
+    "mainDescription": "Užbaigtų saugos instruktažų, daugkartinio naudojimo šablonų ir saugos įspėjimų registras.",
+    "newToolboxMeeting": "Naujas saugos instruktažas",
+    "noMeetingsFoundTitle": "Saugos instruktažų nerasta",
+    "noMeetingsEmployeeDescription": "Jūsų projektui dar nėra užregistruota jokių saugos instruktažų.",
+    "noMeetingsFoundDescription": "Pabandykite kitą filtrą arba įkelkite pirmą užbaigto saugos instruktažo PDF."
+  },
+  "SafetyObservations": {
+    "title": "Saugos stebėjimai",
+    "mainDescription": "Saugos stebėjimai objekte — teigiamas pripažinimas ir saugos problemos.",
+    "noCompanyTitle": "Kol kas nepriklausote jokiai įmonei",
+    "noCompanyDescription": "Kai tik administratorius pridės jūsų paskyrą prie įmonės, čia bus rodomi stebėjimai.",
+    "submittedMessage": "Stebėjimas sėkmingai pateiktas.",
+    "viewObservation": "Peržiūrėti stebėjimą",
+    "myObservationsTitle": "Mano stebėjimai",
+    "myObservationsDescription": "Saugos stebėjimai apie jus.",
+    "newObservation": "Naujas stebėjimas",
+    "noObservationsFoundTitle": "Stebėjimų nerasta",
+    "noObservationsEmployeeDescription": "Apie jus saugos stebėjimų neužregistruota.",
+    "noObservationsFoundDescription": "Pabandykite kitą filtrą arba praneškite apie pirmą projekto stebėjimą.",
+    "unknownProject": "Nežinomas projektas"
   }
 }

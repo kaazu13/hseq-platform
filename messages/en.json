@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "You have no LMRAs",
     "youHaveNoLmrasDescription": "LMRAs you complete, participate in, or are responsible for will appear here.",
     "lmrasLabel": "LMRAs"
+  },
+  "ToolboxMeetings": {
+    "title": "Toolbox Meetings",
+    "noCompanyPageDescription": "Completed toolbox meetings, reusable templates, and Safety Flash bulletins.",
+    "noCompanyTitle": "You're not part of an company yet",
+    "noCompanyDescription": "Once an administrator adds your account to one, records will appear here.",
+    "noTemplateAccessTitle": "No access to Toolbox Templates",
+    "noTemplateAccessDescription": "This library is available to HSE staff, Project Managers, Foremen, and Inspectors.",
+    "uploadTemplate": "Upload template",
+    "noTemplatesFoundTitle": "No templates found",
+    "noTemplatesFoundDescription": "Try a different filter, or upload the first reusable template.",
+    "newSafetyFlash": "New Safety Flash",
+    "noFlashesFoundTitle": "No Safety Flashes found",
+    "noFlashesFoundDescription": "Try a different filter, or issue the first Safety Flash.",
+    "unknownProject": "Unknown project",
+    "companyWide": "Company-wide",
+    "mainDescription": "A register of completed toolbox meetings, reusable templates, and Safety Flash bulletins.",
+    "newToolboxMeeting": "New toolbox meeting",
+    "noMeetingsFoundTitle": "No toolbox meetings found",
+    "noMeetingsEmployeeDescription": "No toolbox meetings have been recorded for your project yet.",
+    "noMeetingsFoundDescription": "Try a different filter, or upload the first completed toolbox meeting PDF."
+  },
+  "SafetyObservations": {
+    "title": "Safety Observations",
+    "mainDescription": "Site safety observations — positive recognition and safety issues.",
+    "noCompanyTitle": "You're not part of an company yet",
+    "noCompanyDescription": "Once an administrator adds your account to one, observations will appear here.",
+    "submittedMessage": "Observation submitted successfully.",
+    "viewObservation": "View observation",
+    "myObservationsTitle": "My Observations",
+    "myObservationsDescription": "Safety observations that are about you.",
+    "newObservation": "New observation",
+    "noObservationsFoundTitle": "No observations found",
+    "noObservationsEmployeeDescription": "No safety observations have been recorded about you.",
+    "noObservationsFoundDescription": "Try a different filter, or report the first observation for a project.",
+    "unknownProject": "Unknown project"
   }
 }

@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Je hebt geen LMRA's",
     "youHaveNoLmrasDescription": "LMRA's die je voltooit, waaraan je deelneemt of waarvoor je verantwoordelijk bent, verschijnen hier.",
     "lmrasLabel": "LMRA's"
+  },
+  "ToolboxMeetings": {
+    "title": "Toolboxmeetings",
+    "noCompanyPageDescription": "Voltooide toolboxmeetings, herbruikbare sjablonen en veiligheidswaarschuwingen.",
+    "noCompanyTitle": "Je maakt nog geen deel uit van een bedrijf",
+    "noCompanyDescription": "Zodra een beheerder je account aan een bedrijf toevoegt, verschijnen records hier.",
+    "noTemplateAccessTitle": "Geen toegang tot Toolboxsjablonen",
+    "noTemplateAccessDescription": "Deze bibliotheek is beschikbaar voor HSE-personeel, projectmanagers, voormannen en inspecteurs.",
+    "uploadTemplate": "Sjabloon uploaden",
+    "noTemplatesFoundTitle": "Geen sjablonen gevonden",
+    "noTemplatesFoundDescription": "Probeer een ander filter, of upload het eerste herbruikbare sjabloon.",
+    "newSafetyFlash": "Nieuwe veiligheidswaarschuwing",
+    "noFlashesFoundTitle": "Geen veiligheidswaarschuwingen gevonden",
+    "noFlashesFoundDescription": "Probeer een ander filter, of geef de eerste veiligheidswaarschuwing uit.",
+    "unknownProject": "Onbekend project",
+    "companyWide": "Bedrijfsbreed",
+    "mainDescription": "Een register van voltooide toolboxmeetings, herbruikbare sjablonen en veiligheidswaarschuwingen.",
+    "newToolboxMeeting": "Nieuwe toolboxmeeting",
+    "noMeetingsFoundTitle": "Geen toolboxmeetings gevonden",
+    "noMeetingsEmployeeDescription": "Er zijn nog geen toolboxmeetings geregistreerd voor jouw project.",
+    "noMeetingsFoundDescription": "Probeer een ander filter, of upload de eerste voltooide toolboxmeeting-PDF."
+  },
+  "SafetyObservations": {
+    "title": "Veiligheidsobservaties",
+    "mainDescription": "Veiligheidsobservaties op locatie — positieve erkenning en veiligheidskwesties.",
+    "noCompanyTitle": "Je maakt nog geen deel uit van een bedrijf",
+    "noCompanyDescription": "Zodra een beheerder je account aan een bedrijf toevoegt, verschijnen observaties hier.",
+    "submittedMessage": "Observatie succesvol ingediend.",
+    "viewObservation": "Observatie bekijken",
+    "myObservationsTitle": "Mijn observaties",
+    "myObservationsDescription": "Veiligheidsobservaties die over jou gaan.",
+    "newObservation": "Nieuwe observatie",
+    "noObservationsFoundTitle": "Geen observaties gevonden",
+    "noObservationsEmployeeDescription": "Er zijn geen veiligheidsobservaties over jou geregistreerd.",
+    "noObservationsFoundDescription": "Probeer een ander filter, of meld de eerste observatie voor een project.",
+    "unknownProject": "Onbekend project"
   }
 }

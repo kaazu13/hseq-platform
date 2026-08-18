@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Du har inga LMRA",
     "youHaveNoLmrasDescription": "LMRA du slutför, deltar i eller ansvarar för visas här.",
     "lmrasLabel": "LMRA"
+  },
+  "ToolboxMeetings": {
+    "title": "Arbetsplatsmöten",
+    "noCompanyPageDescription": "Genomförda arbetsplatsmöten, återanvändbara mallar och säkerhetsvarningar.",
+    "noCompanyTitle": "Du är inte del av ett företag ännu",
+    "noCompanyDescription": "Så snart en administratör lägger till ditt konto i ett, visas poster här.",
+    "noTemplateAccessTitle": "Ingen åtkomst till Mötesmallar",
+    "noTemplateAccessDescription": "Detta bibliotek är tillgängligt för HSE-personal, projektledare, arbetsledare och inspektörer.",
+    "uploadTemplate": "Ladda upp mall",
+    "noTemplatesFoundTitle": "Inga mallar hittades",
+    "noTemplatesFoundDescription": "Prova ett annat filter, eller ladda upp den första återanvändbara mallen.",
+    "newSafetyFlash": "Ny säkerhetsvarning",
+    "noFlashesFoundTitle": "Inga säkerhetsvarningar hittades",
+    "noFlashesFoundDescription": "Prova ett annat filter, eller utfärda den första säkerhetsvarningen.",
+    "unknownProject": "Okänt projekt",
+    "companyWide": "Företagsövergripande",
+    "mainDescription": "Ett register över genomförda arbetsplatsmöten, återanvändbara mallar och säkerhetsvarningar.",
+    "newToolboxMeeting": "Nytt arbetsplatsmöte",
+    "noMeetingsFoundTitle": "Inga arbetsplatsmöten hittades",
+    "noMeetingsEmployeeDescription": "Inga arbetsplatsmöten har registrerats för ditt projekt än.",
+    "noMeetingsFoundDescription": "Prova ett annat filter, eller ladda upp den första genomförda arbetsplatsmötes-PDF:en."
+  },
+  "SafetyObservations": {
+    "title": "Säkerhetsobservationer",
+    "mainDescription": "Säkerhetsobservationer på plats — positivt erkännande och säkerhetsproblem.",
+    "noCompanyTitle": "Du är inte del av ett företag ännu",
+    "noCompanyDescription": "Så snart en administratör lägger till ditt konto i ett, visas observationer här.",
+    "submittedMessage": "Observation skickades in.",
+    "viewObservation": "Visa observation",
+    "myObservationsTitle": "Mina observationer",
+    "myObservationsDescription": "Säkerhetsobservationer som handlar om dig.",
+    "newObservation": "Ny observation",
+    "noObservationsFoundTitle": "Inga observationer hittades",
+    "noObservationsEmployeeDescription": "Inga säkerhetsobservationer har registrerats om dig.",
+    "noObservationsFoundDescription": "Prova ett annat filter, eller rapportera den första observationen för ett projekt.",
+    "unknownProject": "Okänt projekt"
   }
 }

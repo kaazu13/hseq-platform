@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Du hast keine LMRAs",
     "youHaveNoLmrasDescription": "LMRAs, die du abschließt, an denen du teilnimmst oder für die du verantwortlich bist, erscheinen hier.",
     "lmrasLabel": "LMRAs"
+  },
+  "ToolboxMeetings": {
+    "title": "Sicherheitsunterweisungen",
+    "noCompanyPageDescription": "Abgeschlossene Sicherheitsunterweisungen, wiederverwendbare Vorlagen und Sicherheitswarnungen.",
+    "noCompanyTitle": "Du bist noch kein Teil eines Unternehmens",
+    "noCompanyDescription": "Sobald ein Administrator dein Konto einem Unternehmen hinzufügt, erscheinen Einträge hier.",
+    "noTemplateAccessTitle": "Kein Zugriff auf Unterweisungsvorlagen",
+    "noTemplateAccessDescription": "Diese Bibliothek steht HSE-Personal, Projektleitern, Vorarbeitern und Inspektoren zur Verfügung.",
+    "uploadTemplate": "Vorlage hochladen",
+    "noTemplatesFoundTitle": "Keine Vorlagen gefunden",
+    "noTemplatesFoundDescription": "Probiere einen anderen Filter, oder lade die erste wiederverwendbare Vorlage hoch.",
+    "newSafetyFlash": "Neue Sicherheitswarnung",
+    "noFlashesFoundTitle": "Keine Sicherheitswarnungen gefunden",
+    "noFlashesFoundDescription": "Probiere einen anderen Filter, oder gib die erste Sicherheitswarnung heraus.",
+    "unknownProject": "Unbekanntes Projekt",
+    "companyWide": "Unternehmensweit",
+    "mainDescription": "Ein Register abgeschlossener Sicherheitsunterweisungen, wiederverwendbarer Vorlagen und Sicherheitswarnungen.",
+    "newToolboxMeeting": "Neue Sicherheitsunterweisung",
+    "noMeetingsFoundTitle": "Keine Sicherheitsunterweisungen gefunden",
+    "noMeetingsEmployeeDescription": "Für dein Projekt wurden noch keine Sicherheitsunterweisungen erfasst.",
+    "noMeetingsFoundDescription": "Probiere einen anderen Filter, oder lade das erste abgeschlossene Sicherheitsunterweisungs-PDF hoch."
+  },
+  "SafetyObservations": {
+    "title": "Sicherheitsbeobachtungen",
+    "mainDescription": "Sicherheitsbeobachtungen vor Ort — positive Anerkennung und Sicherheitsprobleme.",
+    "noCompanyTitle": "Du bist noch kein Teil eines Unternehmens",
+    "noCompanyDescription": "Sobald ein Administrator dein Konto einem Unternehmen hinzufügt, erscheinen Beobachtungen hier.",
+    "submittedMessage": "Beobachtung erfolgreich übermittelt.",
+    "viewObservation": "Beobachtung anzeigen",
+    "myObservationsTitle": "Meine Beobachtungen",
+    "myObservationsDescription": "Sicherheitsbeobachtungen, die dich betreffen.",
+    "newObservation": "Neue Beobachtung",
+    "noObservationsFoundTitle": "Keine Beobachtungen gefunden",
+    "noObservationsEmployeeDescription": "Es wurden keine Sicherheitsbeobachtungen über dich erfasst.",
+    "noObservationsFoundDescription": "Probiere einen anderen Filter, oder melde die erste Beobachtung für ein Projekt.",
+    "unknownProject": "Unbekanntes Projekt"
   }
 }

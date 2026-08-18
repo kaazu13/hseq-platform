@@ -355,5 +355,41 @@
     "youHaveNoLmrasTitle": "Non hai nessuna LMRA",
     "youHaveNoLmrasDescription": "Le LMRA che completi, a cui partecipi o di cui sei responsabile appariranno qui.",
     "lmrasLabel": "LMRA"
+  },
+  "ToolboxMeetings": {
+    "title": "Riunioni di sicurezza",
+    "noCompanyPageDescription": "Riunioni di sicurezza completate, modelli riutilizzabili e bollettini di Allerta sicurezza.",
+    "noCompanyTitle": "Non fai ancora parte di un'azienda",
+    "noCompanyDescription": "Non appena un amministratore aggiungerà il tuo account a un'azienda, i record appariranno qui.",
+    "noTemplateAccessTitle": "Nessun accesso ai Modelli di riunione",
+    "noTemplateAccessDescription": "Questa libreria è disponibile per il personale HSE, i project manager, i caposquadra e gli ispettori.",
+    "uploadTemplate": "Carica modello",
+    "noTemplatesFoundTitle": "Nessun modello trovato",
+    "noTemplatesFoundDescription": "Prova un filtro diverso, oppure carica il primo modello riutilizzabile.",
+    "newSafetyFlash": "Nuova allerta di sicurezza",
+    "noFlashesFoundTitle": "Nessuna allerta di sicurezza trovata",
+    "noFlashesFoundDescription": "Prova un filtro diverso, oppure emetti la prima allerta di sicurezza.",
+    "unknownProject": "Progetto sconosciuto",
+    "companyWide": "A livello aziendale",
+    "mainDescription": "Un registro di riunioni di sicurezza completate, modelli riutilizzabili e bollettini di Allerta sicurezza.",
+    "newToolboxMeeting": "Nuova riunione di sicurezza",
+    "noMeetingsFoundTitle": "Nessuna riunione di sicurezza trovata",
+    "noMeetingsEmployeeDescription": "Nessuna riunione di sicurezza è stata ancora registrata per il tuo progetto.",
+    "noMeetingsFoundDescription": "Prova un filtro diverso, oppure carica il primo PDF di riunione di sicurezza completata."
+  },
+  "SafetyObservations": {
+    "title": "Osservazioni di sicurezza",
+    "mainDescription": "Osservazioni di sicurezza sul sito — riconoscimento positivo e problemi di sicurezza.",
+    "noCompanyTitle": "Non fai ancora parte di un'azienda",
+    "noCompanyDescription": "Non appena un amministratore aggiungerà il tuo account a un'azienda, le osservazioni appariranno qui.",
+    "submittedMessage": "Osservazione inviata con successo.",
+    "viewObservation": "Visualizza osservazione",
+    "myObservationsTitle": "Le mie osservazioni",
+    "myObservationsDescription": "Osservazioni di sicurezza che ti riguardano.",
+    "newObservation": "Nuova osservazione",
+    "noObservationsFoundTitle": "Nessuna osservazione trovata",
+    "noObservationsEmployeeDescription": "Non è stata registrata nessuna osservazione di sicurezza su di te.",
+    "noObservationsFoundDescription": "Prova un filtro diverso, oppure segnala la prima osservazione per un progetto.",
+    "unknownProject": "Progetto sconosciuto"
   }
 }
