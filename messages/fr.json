@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Aucune observation de sécurité n'a été enregistrée à votre sujet.",
     "noObservationsFoundDescription": "Essayez un autre filtre, ou signalez la première observation pour un projet.",
     "unknownProject": "Projet inconnu"
+  },
+  "Employees": {
+    "title": "Employés",
+    "mainDescription": "Dossiers d'emploi de votre entreprise.",
+    "noCompanyTitle": "Vous ne faites pas encore partie d'une entreprise",
+    "noCompanyDescription": "Dès qu'un administrateur ajoutera votre compte à une entreprise, les dossiers employés apparaîtront ici.",
+    "import": "Importer",
+    "addEmployee": "Ajouter un employé",
+    "noEmployeesFoundTitle": "Aucun employé trouvé",
+    "noEmployeesManageDescription": "Essayez une autre recherche ou un autre filtre, ou ajoutez votre premier employé.",
+    "noEmployeesViewDescription": "Essayez une autre recherche ou un autre filtre.",
+    "employeesLabel": "employés"
+  },
+  "Onboarding": {
+    "title": "Configuration de l'entreprise",
+    "description": "Faites passer cette entreprise de zéro à pleinement opérationnelle.",
+    "createProject": "Créer un projet",
+    "addEmployee": "Ajouter un employé",
+    "importEmployees": "Importer des employés",
+    "inviteMember": "Inviter un membre"
+  },
+  "CompanyMembers": {
+    "title": "Membres de l'entreprise",
+    "description": "Statut, rôles et affectations de projet pour tous dans cette entreprise.",
+    "noMembersTitle": "Aucun membre trouvé",
+    "noMembersDescription": "Cette entreprise n'a pas encore de membres.",
+    "invitations": "Invitations"
+  },
+  "Projects": {
+    "title": "Projets",
+    "mainDescription": "Les chantiers et sites contractés que votre entreprise exécute.",
+    "noCompanyTitle": "Vous ne faites pas encore partie d'une entreprise",
+    "noCompanyDescription": "Dès qu'un administrateur ajoutera votre compte à une entreprise, les projets apparaîtront ici.",
+    "newProject": "Nouveau projet",
+    "noProjectsTitle": "Aucun projet pour l'instant",
+    "noProjectsCreateDescription": "Créez votre premier projet pour commencer.",
+    "noProjectsNoAccessDescription": "Vous n'avez encore accès à aucun projet."
   }
 }

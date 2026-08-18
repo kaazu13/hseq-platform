@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Apie jus saugos stebėjimų neužregistruota.",
     "noObservationsFoundDescription": "Pabandykite kitą filtrą arba praneškite apie pirmą projekto stebėjimą.",
     "unknownProject": "Nežinomas projektas"
+  },
+  "Employees": {
+    "title": "Darbuotojai",
+    "mainDescription": "Jūsų įmonės darbo santykių įrašai.",
+    "noCompanyTitle": "Kol kas nepriklausote jokiai įmonei",
+    "noCompanyDescription": "Kai tik administratorius pridės jūsų paskyrą prie įmonės, čia bus rodomi darbuotojų įrašai.",
+    "import": "Importuoti",
+    "addEmployee": "Pridėti darbuotoją",
+    "noEmployeesFoundTitle": "Darbuotojų nerasta",
+    "noEmployeesManageDescription": "Pabandykite kitą paiešką ar filtrą, arba pridėkite pirmą darbuotoją.",
+    "noEmployeesViewDescription": "Pabandykite kitą paiešką ar filtrą.",
+    "employeesLabel": "darbuotojai"
+  },
+  "Onboarding": {
+    "title": "Įmonės nustatymas",
+    "description": "Paruoškite šią įmonę nuo nulio iki visiško naudojimo.",
+    "createProject": "Sukurti projektą",
+    "addEmployee": "Pridėti darbuotoją",
+    "importEmployees": "Importuoti darbuotojus",
+    "inviteMember": "Pakviesti narį"
+  },
+  "CompanyMembers": {
+    "title": "Įmonės nariai",
+    "description": "Visų šios įmonės narių būsena, vaidmenys ir projektų priskyrimai.",
+    "noMembersTitle": "Narių nerasta",
+    "noMembersDescription": "Ši įmonė dar neturi narių.",
+    "invitations": "Kvietimai"
+  },
+  "Projects": {
+    "title": "Projektai",
+    "mainDescription": "Sutartiniai darbai ir objektai, kuriuos vykdo jūsų įmonė.",
+    "noCompanyTitle": "Kol kas nepriklausote jokiai įmonei",
+    "noCompanyDescription": "Kai tik administratorius pridės jūsų paskyrą prie įmonės, čia bus rodomi projektai.",
+    "newProject": "Naujas projektas",
+    "noProjectsTitle": "Kol kas nėra projektų",
+    "noProjectsCreateDescription": "Sukurkite pirmą projektą, kad pradėtumėte.",
+    "noProjectsNoAccessDescription": "Kol kas neturite prieigos prie jokio projekto."
   }
 }

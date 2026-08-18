@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Es wurden keine Sicherheitsbeobachtungen über dich erfasst.",
     "noObservationsFoundDescription": "Probiere einen anderen Filter, oder melde die erste Beobachtung für ein Projekt.",
     "unknownProject": "Unbekanntes Projekt"
+  },
+  "Employees": {
+    "title": "Mitarbeiter",
+    "mainDescription": "Beschäftigungsunterlagen für dein Unternehmen.",
+    "noCompanyTitle": "Du bist noch kein Teil eines Unternehmens",
+    "noCompanyDescription": "Sobald ein Administrator dein Konto einem Unternehmen hinzufügt, erscheinen Mitarbeiterdatensätze hier.",
+    "import": "Importieren",
+    "addEmployee": "Mitarbeiter hinzufügen",
+    "noEmployeesFoundTitle": "Keine Mitarbeiter gefunden",
+    "noEmployeesManageDescription": "Probiere eine andere Suche oder einen anderen Filter, oder füge deinen ersten Mitarbeiter hinzu.",
+    "noEmployeesViewDescription": "Probiere eine andere Suche oder einen anderen Filter.",
+    "employeesLabel": "Mitarbeiter"
+  },
+  "Onboarding": {
+    "title": "Unternehmenseinrichtung",
+    "description": "Bringe dieses Unternehmen von null zur vollen Einsatzbereitschaft.",
+    "createProject": "Projekt erstellen",
+    "addEmployee": "Mitarbeiter hinzufügen",
+    "importEmployees": "Mitarbeiter importieren",
+    "inviteMember": "Mitglied einladen"
+  },
+  "CompanyMembers": {
+    "title": "Unternehmensmitglieder",
+    "description": "Status, Rollen und Projektzuweisungen für alle in diesem Unternehmen.",
+    "noMembersTitle": "Keine Mitglieder gefunden",
+    "noMembersDescription": "Dieses Unternehmen hat noch keine Mitgliedschaften.",
+    "invitations": "Einladungen"
+  },
+  "Projects": {
+    "title": "Projekte",
+    "mainDescription": "Die beauftragten Aufträge und Standorte, die dein Unternehmen ausführt.",
+    "noCompanyTitle": "Du bist noch kein Teil eines Unternehmens",
+    "noCompanyDescription": "Sobald ein Administrator dein Konto einem Unternehmen hinzufügt, erscheinen Projekte hier.",
+    "newProject": "Neues Projekt",
+    "noProjectsTitle": "Noch keine Projekte",
+    "noProjectsCreateDescription": "Erstelle dein erstes Projekt, um loszulegen.",
+    "noProjectsNoAccessDescription": "Du hast noch keinen Zugriff auf Projekte."
   }
 }

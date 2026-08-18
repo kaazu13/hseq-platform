@@ -1,4 +1,5 @@
 import { forbidden } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Users } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -50,17 +51,18 @@ export default async function AdminMembersPage() {
   const assignableNames = new Set(assignableRoleNamesFor(roleNames, allRoles.map((r) => r.name as RoleName)));
   const assignableRoles = allRoles.filter((r) => assignableNames.has(r.name as RoleName));
   const activeProjects = projects.filter((p) => p.status !== "archived");
+  const t = await getTranslations("CompanyMembers");
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Company Members"
-        description="Status, roles, and project assignments for everyone in this company."
+        title={t("title")}
+        description={t("description")}
         actions={<InviteMemberDialog companyId={currentCompanyId} assignableRoles={assignableRoles} projects={activeProjects} />}
       />
 
       {members.length === 0 ? (
-        <EmptyState icon={Users} title="No members found" description="This company has no memberships yet." className="flex-1" />
+        <EmptyState icon={Users} title={t("noMembersTitle")} description={t("noMembersDescription")} className="flex-1" />
       ) : (
         <div className="flex flex-col gap-3">
           {members.map((member) => (
@@ -70,7 +72,7 @@ export default async function AdminMembersPage() {
       )}
 
       <div>
-        <SectionHeader title="Invitations" className="mb-3" />
+        <SectionHeader title={t("invitations")} className="mb-3" />
         <InvitationsList invitations={invitations} />
       </div>
     </div>

@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Non è stata registrata nessuna osservazione di sicurezza su di te.",
     "noObservationsFoundDescription": "Prova un filtro diverso, oppure segnala la prima osservazione per un progetto.",
     "unknownProject": "Progetto sconosciuto"
+  },
+  "Employees": {
+    "title": "Dipendenti",
+    "mainDescription": "Registri di impiego della tua azienda.",
+    "noCompanyTitle": "Non fai ancora parte di un'azienda",
+    "noCompanyDescription": "Non appena un amministratore aggiungerà il tuo account a un'azienda, i record dei dipendenti appariranno qui.",
+    "import": "Importa",
+    "addEmployee": "Aggiungi dipendente",
+    "noEmployeesFoundTitle": "Nessun dipendente trovato",
+    "noEmployeesManageDescription": "Prova una ricerca o un filtro diverso, oppure aggiungi il tuo primo dipendente.",
+    "noEmployeesViewDescription": "Prova una ricerca o un filtro diverso.",
+    "employeesLabel": "dipendenti"
+  },
+  "Onboarding": {
+    "title": "Configurazione azienda",
+    "description": "Porta questa azienda da zero a pienamente utilizzabile.",
+    "createProject": "Crea un progetto",
+    "addEmployee": "Aggiungi un dipendente",
+    "importEmployees": "Importa dipendenti",
+    "inviteMember": "Invita un membro"
+  },
+  "CompanyMembers": {
+    "title": "Membri dell'azienda",
+    "description": "Stato, ruoli e assegnazioni di progetto per tutti in questa azienda.",
+    "noMembersTitle": "Nessun membro trovato",
+    "noMembersDescription": "Questa azienda non ha ancora membri.",
+    "invitations": "Inviti"
+  },
+  "Projects": {
+    "title": "Progetti",
+    "mainDescription": "I lavori e i cantieri commissionati che la tua azienda sta eseguendo.",
+    "noCompanyTitle": "Non fai ancora parte di un'azienda",
+    "noCompanyDescription": "Non appena un amministratore aggiungerà il tuo account a un'azienda, i progetti appariranno qui.",
+    "newProject": "Nuovo progetto",
+    "noProjectsTitle": "Nessun progetto ancora",
+    "noProjectsCreateDescription": "Crea il tuo primo progetto per iniziare.",
+    "noProjectsNoAccessDescription": "Non hai ancora accesso a nessun progetto."
   }
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect, forbidden } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { UserPlus, Upload, Users } from "lucide-react";
 import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -39,15 +40,16 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
   const params = await searchParams;
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const t = await getTranslations("Employees");
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Employees" description="Company employment records for your company." />
+        <PageHeader title={t("title")} description={t("mainDescription")} />
         <EmptyState
           icon={Users}
-          title="You're not part of an company yet"
-          description="Once an administrator adds your account to one, employee records will appear here."
+          title={t("noCompanyTitle")}
+          description={t("noCompanyDescription")}
           className="flex-1"
         />
       </div>
@@ -97,18 +99,18 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Employees"
-        description="Company employment records for your company."
+        title={t("title")}
+        description={t("mainDescription")}
         actions={
           canManage ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/employees/import" />}>
                 <Upload />
-                Import
+                {t("import")}
               </Button>
               <Button size="sm" nativeButton={false} render={<Link href="/employees/new" />}>
                 <UserPlus />
-                Add employee
+                {t("addEmployee")}
               </Button>
             </div>
           ) : undefined
@@ -120,17 +122,13 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
       {employees.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No employees found"
-          description={
-            canManage
-              ? "Try a different search or filter, or add your first employee."
-              : "Try a different search or filter."
-          }
+          title={t("noEmployeesFoundTitle")}
+          description={canManage ? t("noEmployeesManageDescription") : t("noEmployeesViewDescription")}
           action={
             canManage ? (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/employees/new" />}>
                 <UserPlus />
-                Add employee
+                {t("addEmployee")}
               </Button>
             ) : undefined
           }
@@ -145,7 +143,7 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
             canManage={canManage}
             currentUserId={user.id}
           />
-          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel="employees" />
+          <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel={t("employeesLabel")} />
         </>
       )}
     </div>

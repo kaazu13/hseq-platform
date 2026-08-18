@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "No se ha registrado ninguna observación de seguridad sobre ti.",
     "noObservationsFoundDescription": "Prueba con otro filtro, o informa de la primera observación de un proyecto.",
     "unknownProject": "Proyecto desconocido"
+  },
+  "Employees": {
+    "title": "Empleados",
+    "mainDescription": "Registros de empleo de tu empresa.",
+    "noCompanyTitle": "Aún no formas parte de ninguna empresa",
+    "noCompanyDescription": "En cuanto un administrador añada tu cuenta a una, los registros de empleados aparecerán aquí.",
+    "import": "Importar",
+    "addEmployee": "Añadir empleado",
+    "noEmployeesFoundTitle": "No se encontraron empleados",
+    "noEmployeesManageDescription": "Prueba otra búsqueda o filtro, o añade tu primer empleado.",
+    "noEmployeesViewDescription": "Prueba otra búsqueda o filtro.",
+    "employeesLabel": "empleados"
+  },
+  "Onboarding": {
+    "title": "Configuración de la empresa",
+    "description": "Lleva esta empresa de cero a plenamente operativa.",
+    "createProject": "Crear un proyecto",
+    "addEmployee": "Añadir un empleado",
+    "importEmployees": "Importar empleados",
+    "inviteMember": "Invitar a un miembro"
+  },
+  "CompanyMembers": {
+    "title": "Miembros de la empresa",
+    "description": "Estado, roles y asignaciones de proyectos de todos en esta empresa.",
+    "noMembersTitle": "No se encontraron miembros",
+    "noMembersDescription": "Esta empresa aún no tiene miembros.",
+    "invitations": "Invitaciones"
+  },
+  "Projects": {
+    "title": "Proyectos",
+    "mainDescription": "Los trabajos y obras contratados que tu empresa está ejecutando.",
+    "noCompanyTitle": "Aún no formas parte de ninguna empresa",
+    "noCompanyDescription": "En cuanto un administrador añada tu cuenta a una, los proyectos aparecerán aquí.",
+    "newProject": "Nuevo proyecto",
+    "noProjectsTitle": "Aún no hay proyectos",
+    "noProjectsCreateDescription": "Crea tu primer proyecto para empezar.",
+    "noProjectsNoAccessDescription": "Aún no tienes acceso a ningún proyecto."
   }
 }

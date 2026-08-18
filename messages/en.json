@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "No safety observations have been recorded about you.",
     "noObservationsFoundDescription": "Try a different filter, or report the first observation for a project.",
     "unknownProject": "Unknown project"
+  },
+  "Employees": {
+    "title": "Employees",
+    "mainDescription": "Company employment records for your company.",
+    "noCompanyTitle": "You're not part of an company yet",
+    "noCompanyDescription": "Once an administrator adds your account to one, employee records will appear here.",
+    "import": "Import",
+    "addEmployee": "Add employee",
+    "noEmployeesFoundTitle": "No employees found",
+    "noEmployeesManageDescription": "Try a different search or filter, or add your first employee.",
+    "noEmployeesViewDescription": "Try a different search or filter.",
+    "employeesLabel": "employees"
+  },
+  "Onboarding": {
+    "title": "Company Setup",
+    "description": "Get this company from zero to fully usable.",
+    "createProject": "Create a project",
+    "addEmployee": "Add an employee",
+    "importEmployees": "Import employees",
+    "inviteMember": "Invite a member"
+  },
+  "CompanyMembers": {
+    "title": "Company Members",
+    "description": "Status, roles, and project assignments for everyone in this company.",
+    "noMembersTitle": "No members found",
+    "noMembersDescription": "This company has no memberships yet.",
+    "invitations": "Invitations"
+  },
+  "Projects": {
+    "title": "Projects",
+    "mainDescription": "The contracted jobs and sites your company is executing.",
+    "noCompanyTitle": "You're not part of an company yet",
+    "noCompanyDescription": "Once an administrator adds your account to one, projects will appear here.",
+    "newProject": "New project",
+    "noProjectsTitle": "No projects yet",
+    "noProjectsCreateDescription": "Create your first project to get started.",
+    "noProjectsNoAccessDescription": "You don't have access to any projects yet."
   }
 }

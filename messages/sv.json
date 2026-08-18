@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Inga säkerhetsobservationer har registrerats om dig.",
     "noObservationsFoundDescription": "Prova ett annat filter, eller rapportera den första observationen för ett projekt.",
     "unknownProject": "Okänt projekt"
+  },
+  "Employees": {
+    "title": "Anställda",
+    "mainDescription": "Anställningsregister för ditt företag.",
+    "noCompanyTitle": "Du är inte del av ett företag ännu",
+    "noCompanyDescription": "Så snart en administratör lägger till ditt konto i ett, visas anställdposter här.",
+    "import": "Importera",
+    "addEmployee": "Lägg till anställd",
+    "noEmployeesFoundTitle": "Inga anställda hittades",
+    "noEmployeesManageDescription": "Prova en annan sökning eller filter, eller lägg till din första anställd.",
+    "noEmployeesViewDescription": "Prova en annan sökning eller filter.",
+    "employeesLabel": "anställda"
+  },
+  "Onboarding": {
+    "title": "Företagsinställning",
+    "description": "Ta detta företag från noll till fullt användbart.",
+    "createProject": "Skapa ett projekt",
+    "addEmployee": "Lägg till en anställd",
+    "importEmployees": "Importera anställda",
+    "inviteMember": "Bjud in en medlem"
+  },
+  "CompanyMembers": {
+    "title": "Företagsmedlemmar",
+    "description": "Status, roller och projekttilldelningar för alla i detta företag.",
+    "noMembersTitle": "Inga medlemmar hittades",
+    "noMembersDescription": "Detta företag har inga medlemskap ännu.",
+    "invitations": "Inbjudningar"
+  },
+  "Projects": {
+    "title": "Projekt",
+    "mainDescription": "De kontrakterade jobb och platser ditt företag genomför.",
+    "noCompanyTitle": "Du är inte del av ett företag ännu",
+    "noCompanyDescription": "Så snart en administratör lägger till ditt konto i ett, visas projekt här.",
+    "newProject": "Nytt projekt",
+    "noProjectsTitle": "Inga projekt ännu",
+    "noProjectsCreateDescription": "Skapa ditt första projekt för att komma igång.",
+    "noProjectsNoAccessDescription": "Du har ännu inte tillgång till några projekt."
   }
 }

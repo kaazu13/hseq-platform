@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { FolderKanban, Plus } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -21,15 +22,16 @@ import { Button } from "@/components/ui/button";
 export default async function ProjectsPage() {
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const t = await getTranslations("Projects");
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Projects" description="The contracted jobs and sites your company is executing." />
+        <PageHeader title={t("title")} description={t("mainDescription")} />
         <EmptyState
           icon={FolderKanban}
-          title="You're not part of an company yet"
-          description="Once an administrator adds your account to one, projects will appear here."
+          title={t("noCompanyTitle")}
+          description={t("noCompanyDescription")}
           className="flex-1"
         />
       </div>
@@ -43,13 +45,13 @@ export default async function ProjectsPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Projects"
-        description="The contracted jobs and sites your company is executing."
+        title={t("title")}
+        description={t("mainDescription")}
         actions={
           canCreate ? (
             <Button size="sm" nativeButton={false} render={<Link href="/projects/new" />}>
               <Plus />
-              New project
+              {t("newProject")}
             </Button>
           ) : undefined
         }
@@ -58,13 +60,13 @@ export default async function ProjectsPage() {
       {projects.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
-          title="No projects yet"
-          description={canCreate ? "Create your first project to get started." : "You don't have access to any projects yet."}
+          title={t("noProjectsTitle")}
+          description={canCreate ? t("noProjectsCreateDescription") : t("noProjectsNoAccessDescription")}
           action={
             canCreate ? (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/projects/new" />}>
                 <Plus />
-                New project
+                {t("newProject")}
               </Button>
             ) : undefined
           }

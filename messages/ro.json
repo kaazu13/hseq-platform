@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Nicio observație de siguranță nu a fost înregistrată despre tine.",
     "noObservationsFoundDescription": "Încearcă un alt filtru, sau raportează prima observație pentru un proiect.",
     "unknownProject": "Proiect necunoscut"
+  },
+  "Employees": {
+    "title": "Angajați",
+    "mainDescription": "Evidențele de angajare ale companiei tale.",
+    "noCompanyTitle": "Încă nu faci parte dintr-o companie",
+    "noCompanyDescription": "De îndată ce un administrator îți adaugă contul la una, evidențele angajaților vor apărea aici.",
+    "import": "Importă",
+    "addEmployee": "Adaugă angajat",
+    "noEmployeesFoundTitle": "Niciun angajat găsit",
+    "noEmployeesManageDescription": "Încearcă o altă căutare sau filtru, sau adaugă primul tău angajat.",
+    "noEmployeesViewDescription": "Încearcă o altă căutare sau filtru.",
+    "employeesLabel": "angajați"
+  },
+  "Onboarding": {
+    "title": "Configurare companie",
+    "description": "Adu această companie de la zero la complet funcțională.",
+    "createProject": "Creează un proiect",
+    "addEmployee": "Adaugă un angajat",
+    "importEmployees": "Importă angajați",
+    "inviteMember": "Invită un membru"
+  },
+  "CompanyMembers": {
+    "title": "Membri companie",
+    "description": "Stare, roluri și alocări de proiecte pentru toți din această companie.",
+    "noMembersTitle": "Niciun membru găsit",
+    "noMembersDescription": "Această companie nu are încă membri.",
+    "invitations": "Invitații"
+  },
+  "Projects": {
+    "title": "Proiecte",
+    "mainDescription": "Lucrările și șantierele contractate pe care compania ta le execută.",
+    "noCompanyTitle": "Încă nu faci parte dintr-o companie",
+    "noCompanyDescription": "De îndată ce un administrator îți adaugă contul la una, proiectele vor apărea aici.",
+    "newProject": "Proiect nou",
+    "noProjectsTitle": "Niciun proiect încă",
+    "noProjectsCreateDescription": "Creează primul tău proiect pentru a începe.",
+    "noProjectsNoAccessDescription": "Nu ai încă acces la niciun proiect."
   }
 }

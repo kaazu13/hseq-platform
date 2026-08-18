@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Er zijn geen veiligheidsobservaties over jou geregistreerd.",
     "noObservationsFoundDescription": "Probeer een ander filter, of meld de eerste observatie voor een project.",
     "unknownProject": "Onbekend project"
+  },
+  "Employees": {
+    "title": "Medewerkers",
+    "mainDescription": "Dienstverbandgegevens van je bedrijf.",
+    "noCompanyTitle": "Je maakt nog geen deel uit van een bedrijf",
+    "noCompanyDescription": "Zodra een beheerder je account aan een bedrijf toevoegt, verschijnen medewerkersdossiers hier.",
+    "import": "Importeren",
+    "addEmployee": "Medewerker toevoegen",
+    "noEmployeesFoundTitle": "Geen medewerkers gevonden",
+    "noEmployeesManageDescription": "Probeer een andere zoekopdracht of filter, of voeg je eerste medewerker toe.",
+    "noEmployeesViewDescription": "Probeer een andere zoekopdracht of filter.",
+    "employeesLabel": "medewerkers"
+  },
+  "Onboarding": {
+    "title": "Bedrijfsinstellingen",
+    "description": "Breng dit bedrijf van nul naar volledig bruikbaar.",
+    "createProject": "Project aanmaken",
+    "addEmployee": "Medewerker toevoegen",
+    "importEmployees": "Medewerkers importeren",
+    "inviteMember": "Lid uitnodigen"
+  },
+  "CompanyMembers": {
+    "title": "Bedrijfsleden",
+    "description": "Status, rollen en projecttoewijzingen voor iedereen binnen dit bedrijf.",
+    "noMembersTitle": "Geen leden gevonden",
+    "noMembersDescription": "Dit bedrijf heeft nog geen lidmaatschappen.",
+    "invitations": "Uitnodigingen"
+  },
+  "Projects": {
+    "title": "Projecten",
+    "mainDescription": "De gecontracteerde opdrachten en locaties die je bedrijf uitvoert.",
+    "noCompanyTitle": "Je maakt nog geen deel uit van een bedrijf",
+    "noCompanyDescription": "Zodra een beheerder je account aan een bedrijf toevoegt, verschijnen projecten hier.",
+    "newProject": "Nieuw project",
+    "noProjectsTitle": "Nog geen projecten",
+    "noProjectsCreateDescription": "Maak je eerste project aan om te beginnen.",
+    "noProjectsNoAccessDescription": "Je hebt nog geen toegang tot projecten."
   }
 }

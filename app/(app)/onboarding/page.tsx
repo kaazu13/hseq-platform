@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { forbidden } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { FolderKanban, UserPlus, Upload } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -28,13 +29,13 @@ export default async function OnboardingPage() {
   const roleNames = await getUserRoleNames(currentCompanyId);
   if (!canAdministerCompany(roleNames)) forbidden();
 
-  const [checklist, supabase] = await Promise.all([getOnboardingChecklist(currentCompanyId), createClient()]);
+  const [checklist, supabase, t] = await Promise.all([getOnboardingChecklist(currentCompanyId), createClient(), getTranslations("Onboarding")]);
   const { data: companyRow } = await supabase.from("companies").select("logo_storage_path").eq("id", currentCompanyId).maybeSingle();
   const logoUrl = companyRow?.logo_storage_path ? getCompanyLogoPublicUrl(supabase, companyRow.logo_storage_path) : null;
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Company Setup" description="Get this company from zero to fully usable." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <OnboardingChecklist checklist={checklist} />
 
@@ -42,19 +43,19 @@ export default async function OnboardingPage() {
         <CardContent className="flex flex-wrap gap-2 pt-4">
           <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/projects/new" />}>
             <FolderKanban />
-            Create a project
+            {t("createProject")}
           </Button>
           <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/employees/new" />}>
             <UserPlus />
-            Add an employee
+            {t("addEmployee")}
           </Button>
           <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/employees/import" />}>
             <Upload />
-            Import employees
+            {t("importEmployees")}
           </Button>
           <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/admin/members" />}>
             <UserPlus />
-            Invite a member
+            {t("inviteMember")}
           </Button>
         </CardContent>
       </Card>

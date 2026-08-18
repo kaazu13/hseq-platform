@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Ingen sikkerhetsobservasjoner er registrert om deg.",
     "noObservationsFoundDescription": "Prøv et annet filter, eller rapporter den første observasjonen for et prosjekt.",
     "unknownProject": "Ukjent prosjekt"
+  },
+  "Employees": {
+    "title": "Ansatte",
+    "mainDescription": "Ansettelsesregistre for bedriften din.",
+    "noCompanyTitle": "Du er ikke del av en bedrift ennå",
+    "noCompanyDescription": "Så snart en administrator legger til kontoen din i en, vises ansattposter her.",
+    "import": "Importer",
+    "addEmployee": "Legg til ansatt",
+    "noEmployeesFoundTitle": "Ingen ansatte funnet",
+    "noEmployeesManageDescription": "Prøv et annet søk eller filter, eller legg til din første ansatt.",
+    "noEmployeesViewDescription": "Prøv et annet søk eller filter.",
+    "employeesLabel": "ansatte"
+  },
+  "Onboarding": {
+    "title": "Bedriftsoppsett",
+    "description": "Få denne bedriften fra null til fullt brukbar.",
+    "createProject": "Opprett et prosjekt",
+    "addEmployee": "Legg til en ansatt",
+    "importEmployees": "Importer ansatte",
+    "inviteMember": "Inviter et medlem"
+  },
+  "CompanyMembers": {
+    "title": "Bedriftsmedlemmer",
+    "description": "Status, roller og prosjekttildelinger for alle i denne bedriften.",
+    "noMembersTitle": "Ingen medlemmer funnet",
+    "noMembersDescription": "Denne bedriften har ingen medlemskap ennå.",
+    "invitations": "Invitasjoner"
+  },
+  "Projects": {
+    "title": "Prosjekter",
+    "mainDescription": "De kontrakterte jobbene og stedene bedriften din utfører.",
+    "noCompanyTitle": "Du er ikke del av en bedrift ennå",
+    "noCompanyDescription": "Så snart en administrator legger til kontoen din i en, vises prosjekter her.",
+    "newProject": "Nytt prosjekt",
+    "noProjectsTitle": "Ingen prosjekter ennå",
+    "noProjectsCreateDescription": "Opprett ditt første prosjekt for å komme i gang.",
+    "noProjectsNoAccessDescription": "Du har ikke tilgang til noen prosjekter ennå."
   }
 }

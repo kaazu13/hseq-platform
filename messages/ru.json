@@ -391,5 +391,42 @@
     "noObservationsEmployeeDescription": "Наблюдений по безопасности о вас не зафиксировано.",
     "noObservationsFoundDescription": "Попробуйте другой фильтр или сообщите о первом наблюдении для проекта.",
     "unknownProject": "Неизвестный проект"
+  },
+  "Employees": {
+    "title": "Сотрудники",
+    "mainDescription": "Кадровые записи вашей компании.",
+    "noCompanyTitle": "Вы ещё не состоите в компании",
+    "noCompanyDescription": "Как только администратор добавит вашу учётную запись в компанию, здесь появятся записи сотрудников.",
+    "import": "Импорт",
+    "addEmployee": "Добавить сотрудника",
+    "noEmployeesFoundTitle": "Сотрудники не найдены",
+    "noEmployeesManageDescription": "Попробуйте другой поиск или фильтр, или добавьте первого сотрудника.",
+    "noEmployeesViewDescription": "Попробуйте другой поиск или фильтр.",
+    "employeesLabel": "сотрудники"
+  },
+  "Onboarding": {
+    "title": "Настройка компании",
+    "description": "Доведите эту компанию с нуля до полной готовности к работе.",
+    "createProject": "Создать проект",
+    "addEmployee": "Добавить сотрудника",
+    "importEmployees": "Импортировать сотрудников",
+    "inviteMember": "Пригласить участника"
+  },
+  "CompanyMembers": {
+    "title": "Участники компании",
+    "description": "Статус, роли и назначения проектов для всех в этой компании.",
+    "noMembersTitle": "Участники не найдены",
+    "noMembersDescription": "В этой компании пока нет участников.",
+    "invitations": "Приглашения"
+  },
+  "Projects": {
+    "title": "Проекты",
+    "mainDescription": "Контрактные работы и объекты, которые выполняет ваша компания.",
+    "noCompanyTitle": "Вы ещё не состоите в компании",
+    "noCompanyDescription": "Как только администратор добавит вашу учётную запись в компанию, здесь появятся проекты.",
+    "newProject": "Новый проект",
+    "noProjectsTitle": "Пока нет проектов",
+    "noProjectsCreateDescription": "Создайте свой первый проект, чтобы начать.",
+    "noProjectsNoAccessDescription": "У вас пока нет доступа ни к одному проекту."
   }
 }
