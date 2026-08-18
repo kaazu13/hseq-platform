@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
@@ -16,8 +17,8 @@ type WorkforcePageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
 };
 
-function formatWorkDate(value: string): string {
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+function formatWorkDate(value: string, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  return format.dateTime(new Date(`${value}T00:00:00Z`), { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /**
@@ -46,22 +47,23 @@ export default async function WorkforcePage({ params, searchParams }: WorkforceP
   if (!canManage && !canViewBroadly) notFound();
 
   const basePath = `/companies/${companyId}/projects/${projectId}/workforce`;
+  const [t, format] = await Promise.all([getTranslations("Workforce"), getFormatter()]);
   // Task 3 Part 15 — project-local "today," not the server's.
   const workDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : getProjectLocalDate(project.timezone);
   const workforce = await listWorkforceForDate(companyId, projectId, workDate);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Workforce" description={`${formatWorkDate(workDate)} · ${project.name}`} />
+      <PageHeader title={t("title")} description={`${formatWorkDate(workDate, format)} · ${project.name}`} />
 
       <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="workforce" />
 
       <form action={basePath} method="GET" className="flex items-center gap-2">
-        <Input type="date" name="date" defaultValue={workDate} className="w-auto" aria-label="Select date" />
+        <Input type="date" name="date" defaultValue={workDate} className="w-auto" aria-label={t("selectDate")} />
       </form>
 
       {workforce.length === 0 ? (
-        <EmptyState icon={Users} title="No roster for this project yet" className="flex-1" />
+        <EmptyState icon={Users} title={t("noRosterTitle")} className="flex-1" />
       ) : (
         <DailyWorkforceRoster companyId={companyId} projectId={projectId} workDate={workDate} workforce={workforce} canManage={canManage} />
       )}

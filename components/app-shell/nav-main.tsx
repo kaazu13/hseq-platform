@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Collapsible, CollapsibleTrigger, CollapsiblePanel } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
@@ -33,6 +34,7 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isMobile, setOpenMobile } = useSidebar();
+  const t = useTranslations("Nav");
 
   // Server render and the pre-hydration client render both see the empty
   // snapshot (all-expanded) — no hydration mismatch — then React re-renders
@@ -51,15 +53,15 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
     [roleNames],
   );
 
-  const activeGroupLabel = useMemo(
-    () => visibleGroups.find((group) => group.items.some((item) => isNavItemActive(item, pathname, searchParams)))?.label,
+  const activeGroupId = useMemo(
+    () => visibleGroups.find((group) => group.items.some((item) => isNavItemActive(item, pathname, searchParams)))?.id,
     [visibleGroups, pathname, searchParams],
   );
 
-  function toggleGroup(label: string, open: boolean) {
+  function toggleGroup(id: string, open: boolean) {
     const next = new Set(collapsed);
-    if (open) next.delete(label);
-    else next.add(label);
+    if (open) next.delete(id);
+    else next.add(id);
     writeCollapsedGroups(serializeCollapsedGroups(next));
   }
 
@@ -72,12 +74,13 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
   return (
     <>
       {visibleGroups.map((group) => {
-        const isGroupActive = group.label === activeGroupLabel;
-        const isOpen = isGroupOpen(group.label, isGroupActive, collapsed);
-        const panelId = `nav-group-${group.label.toLowerCase().replace(/\s+/g, "-")}`;
+        const isGroupActive = group.id === activeGroupId;
+        const isOpen = isGroupOpen(group.id, isGroupActive, collapsed);
+        const panelId = `nav-group-${group.id}`;
+        const groupLabel = t(`groups.${group.id}`);
 
         return (
-          <Collapsible key={group.label} open={isOpen} onOpenChange={(open) => toggleGroup(group.label, open)}>
+          <Collapsible key={group.id} open={isOpen} onOpenChange={(open) => toggleGroup(group.id, open)}>
             <SidebarGroup>
               <CollapsibleTrigger
                 aria-controls={panelId}
@@ -86,7 +89,7 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
                   isGroupActive && "text-sidebar-foreground",
                 )}
               >
-                <span className="truncate">{group.label}</span>
+                <span className="truncate">{groupLabel}</span>
                 <ChevronRight className={cn("size-3.5 shrink-0 transition-transform duration-150", isOpen && "rotate-90")} aria-hidden="true" />
               </CollapsibleTrigger>
 
@@ -95,20 +98,21 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
                   <SidebarMenu>
                     {group.items.map((item) => {
                       const isActive = isNavItemActive(item, pathname, searchParams);
+                      const itemLabel = item.id ? t(`items.${item.id}.label`) : item.label;
 
                       if (item.buildHref) {
                         const resolvedHref = companyId && projectId ? item.buildHref({ companyId, projectId }) : null;
                         return (
                           <SidebarMenuItem key={item.href}>
                             {resolvedHref ? (
-                              <SidebarMenuButton isActive={isActive} tooltip={item.label} render={<Link href={resolvedHref} onClick={handleNavigate} />}>
+                              <SidebarMenuButton isActive={isActive} tooltip={itemLabel} render={<Link href={resolvedHref} onClick={handleNavigate} />}>
                                 <item.icon />
-                                <span>{item.label}</span>
+                                <span>{itemLabel}</span>
                               </SidebarMenuButton>
                             ) : (
-                              <SidebarMenuButton disabled aria-disabled tooltip="Select a project first">
+                              <SidebarMenuButton disabled aria-disabled tooltip={t("selectProjectFirst")}>
                                 <item.icon />
-                                <span>{item.label}</span>
+                                <span>{itemLabel}</span>
                               </SidebarMenuButton>
                             )}
                           </SidebarMenuItem>
@@ -119,11 +123,11 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
                         <SidebarMenuItem key={item.href}>
                           <SidebarMenuButton
                             isActive={isActive}
-                            tooltip={item.label}
+                            tooltip={itemLabel}
                             render={<Link href={item.href} onClick={handleNavigate} />}
                           >
                             <item.icon />
-                            <span>{item.label}</span>
+                            <span>{itemLabel}</span>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
                       );

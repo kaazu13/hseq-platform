@@ -61,6 +61,15 @@ const NON_EMPLOYEE_ROLES: RoleName[] = ROLE_NAMES.filter((role) => role !== "emp
 export type NavStatus = "available" | "planned";
 
 export type NavItem = {
+  /**
+   * Stable, locale-independent identifier used ONLY as the translation
+   * lookup key (`Nav.items.<id>.label` in messages/*.json) — `label` stays
+   * literal English text below, since it doubles as a stable identifier
+   * throughout nav-config.test.ts's assertions. Optional so hand-built
+   * NavItem literals in that test file (which never render, only exercise
+   * `isNavItemActive`) don't need to set it.
+   */
+  id?: string;
   label: string;
   /**
    * For most items, the real link. For project-scoped items (`buildHref`
@@ -118,15 +127,19 @@ export type NavItem = {
 };
 
 export type NavGroup = {
+  /** Stable identifier for the group's collapse-state storage key/DOM id/React key — see NavItem.id's comment. */
+  id: string;
   label: string;
   items: NavItem[];
 };
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    id: "overview",
     label: "Overview",
     items: [
       {
+        id: "yourDashboard",
         label: "Your Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
@@ -134,6 +147,7 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Your personal daily assignment, hours, observations, notifications, and leave — at a glance.",
       },
       {
+        id: "projectDashboard",
         label: "Project Dashboard",
         href: "/project-dashboard",
         icon: FolderKanban,
@@ -144,6 +158,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "safetyOverview",
         label: "Safety Overview",
         href: "/safety-overview",
         icon: ShieldAlert,
@@ -155,9 +170,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "workforce",
     label: "Workforce",
     items: [
       {
+        id: "employees",
         label: "Employees",
         href: "/employees",
         icon: Users,
@@ -169,9 +186,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "planningDaily",
     label: "Planning & Daily",
     items: [
       {
+        id: "todaysTeams",
         label: "Today's Teams",
         href: "/teams",
         icon: Users,
@@ -182,6 +201,7 @@ export const NAV_GROUPS: NavGroup[] = [
         matchSegment: "teams",
       },
       {
+        id: "workedHours",
         label: "Worked Hours",
         href: "/worked-hours",
         icon: Clock,
@@ -192,6 +212,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "myHours",
         label: "My Hours",
         href: "/my-hours",
         icon: Clock,
@@ -199,6 +220,7 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Your own worked hours — Day/Week/Month totals, category breakdown, correction history, and discrepancy reporting.",
       },
       {
+        id: "equipment",
         label: "Equipment",
         href: "/equipment",
         icon: Wrench,
@@ -210,6 +232,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "myEquipment",
         label: "My Equipment",
         href: "/my-equipment",
         icon: Wrench,
@@ -217,6 +240,7 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Equipment currently issued to you, your request history, and requesting new equipment — your own records only.",
       },
       {
+        id: "scaffoldRegister",
         label: "Scaffold Register",
         href: "/scaffolds",
         icon: HardHat,
@@ -228,6 +252,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "scaffoldInspections",
         label: "Scaffold Inspections",
         href: "/scaffolds/inspections",
         icon: ClipboardList,
@@ -239,6 +264,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "lmra",
         label: "LMRA",
         href: "/lmra",
         icon: ShieldCheck,
@@ -249,9 +275,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "safetyManagement",
     label: "Safety Management",
     items: [
       {
+        id: "toolboxMeetings",
         label: "Toolbox Meetings",
         href: "/toolbox-meetings",
         icon: MessagesSquare,
@@ -261,6 +289,7 @@ export const NAV_GROUPS: NavGroup[] = [
         matchQueryParam: { key: "section", value: null },
       },
       {
+        id: "toolboxTemplates",
         label: "Toolbox Templates",
         href: "/toolbox-meetings?section=templates",
         icon: BookOpen,
@@ -270,6 +299,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "safetyFlash",
         label: "Safety Flash",
         href: "/toolbox-meetings?section=safety-flash",
         icon: Siren,
@@ -278,6 +308,7 @@ export const NAV_GROUPS: NavGroup[] = [
         matchQueryParam: { key: "section", value: "safety-flash" },
       },
       {
+        id: "safetyObservations",
         label: "Safety Observations",
         href: "/observations",
         icon: Eye,
@@ -286,6 +317,7 @@ export const NAV_GROUPS: NavGroup[] = [
           "Site safety observations — positive recognition and safety issues (unsafe acts/conditions, PPE, housekeeping, and more), with corrective actions tracked to closure.",
       },
       {
+        id: "correctiveActions",
         label: "Corrective Actions",
         href: "/corrective-actions",
         icon: ListChecks,
@@ -294,6 +326,7 @@ export const NAV_GROUPS: NavGroup[] = [
           "An company-wide register of tracked remediation tasks — today, corrective actions are managed inline within the Safety Observation that raised them.",
       },
       {
+        id: "safetyWalks",
         label: "Safety Walks",
         href: "/inspections",
         icon: ClipboardCheck,
@@ -303,6 +336,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "incidentsNearMisses",
         label: "Incidents and Near Misses",
         href: "/incidents",
         icon: AlertTriangle,
@@ -314,9 +348,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "records",
     label: "Records",
     items: [
       {
+        id: "documents",
         label: "Documents",
         href: "/documents",
         icon: FileText,
@@ -332,6 +368,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "reports",
         label: "Reports",
         href: "/reports",
         icon: BarChart3,
@@ -341,6 +378,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "certificates",
         label: "Certificates",
         href: "/certificates",
         icon: FileBadge,
@@ -363,9 +401,11 @@ export const NAV_GROUPS: NavGroup[] = [
     // empty (Members/Company Setup already role-gated to
     // COMPANY_ADMIN_ROLES) and so never renders at all — see nav-main.tsx's
     // "hide empty groups" behavior.
+    id: "peopleAdministration",
     label: "People and Administration",
     items: [
       {
+        id: "members",
         label: "Members",
         href: "/admin/members",
         icon: Users,
@@ -374,6 +414,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: COMPANY_ADMIN_ROLES,
       },
       {
+        id: "companySetup",
         label: "Company Setup",
         href: "/onboarding",
         icon: Rocket,
@@ -382,6 +423,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: COMPANY_ADMIN_ROLES,
       },
       {
+        id: "companyGreetings",
         label: "Company Greetings",
         href: "/admin/greetings",
         icon: PartyPopper,
@@ -396,9 +438,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "platformAdministration",
     label: "Platform Administration",
     items: [
       {
+        id: "platformOverview",
         label: "Overview",
         href: "/platform-admin",
         icon: LayoutDashboard,
@@ -408,6 +452,7 @@ export const NAV_GROUPS: NavGroup[] = [
         exact: true,
       },
       {
+        id: "platformCompanies",
         label: "Companies",
         href: "/platform-admin/companies",
         icon: Building2,
@@ -416,6 +461,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["platform_super_admin"],
       },
       {
+        id: "platformUsers",
         label: "Users",
         href: "/platform-admin/users",
         icon: Users,
@@ -424,6 +470,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["platform_super_admin"],
       },
       {
+        id: "platformRoles",
         label: "Roles & Permissions",
         href: "/platform-admin/roles",
         icon: KeyRound,
@@ -432,6 +479,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["platform_super_admin"],
       },
       {
+        id: "platformSecurity",
         label: "Security",
         href: "/platform-admin/security",
         icon: ShieldAlert,
@@ -440,6 +488,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["platform_super_admin"],
       },
       {
+        id: "platformAuditLog",
         label: "Audit Log",
         href: "/platform-admin/audit",
         icon: ScrollText,
@@ -448,6 +497,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["platform_super_admin"],
       },
       {
+        id: "platformBilling",
         label: "Usage & Billing",
         href: "/platform-admin/billing",
         icon: CreditCard,
@@ -456,6 +506,7 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: ["platform_super_admin"],
       },
       {
+        id: "platformSettings",
         label: "Platform Settings",
         href: "/platform-admin/settings",
         icon: Settings,

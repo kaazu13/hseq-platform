@@ -1,4 +1,5 @@
 import { notFound, forbidden } from "next/navigation";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { UserX } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
@@ -25,8 +26,8 @@ type AbsencesPageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
 };
 
-function formatWorkDate(value: string): string {
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+function formatWorkDate(value: string, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  return format.dateTime(new Date(`${value}T00:00:00Z`), { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /**
@@ -73,12 +74,13 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
 
   const isClosed = dayLock !== null && dayLock.unlocked_at === null;
   const rosterOptions = toEmployeeOptions(roster.map((state) => state.employee));
+  const [t, format] = await Promise.all([getTranslations("Absences"), getFormatter()]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Absent Today"
-        description={`${formatWorkDate(workDate)} · ${project.name}`}
+        title={t("title")}
+        description={`${formatWorkDate(workDate, format)} · ${project.name}`}
         actions={<AbsenceExportDialog companyId={companyId} projectId={projectId} defaultDate={workDate} />}
       />
 
@@ -92,18 +94,18 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
       )}
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title="Absent" description="Employees currently marked unavailable for this day. They remain active on the project but cannot be assigned to Today's Teams." />
-        {absentToday.length === 0 ? <EmptyState icon={UserX} title="No one is absent today" /> : <AbsentTodayList rows={absentToday} />}
+        <SectionHeader title={t("absentTitle")} description={t("absentDescription")} />
+        {absentToday.length === 0 ? <EmptyState icon={UserX} title={t("noOneAbsentTitle")} /> : <AbsentTodayList rows={absentToday} />}
       </div>
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title="Self-reported absences" description="Reported by employee — review and confirm or reject." />
+        <SectionHeader title={t("selfReportedTitle")} description={t("selfReportedDescription")} />
         <AbsenceReportsReview companyId={companyId} projectId={projectId} reports={reports} canManage={canManage} />
       </div>
 
       {canReview && (
         <div className="flex flex-col gap-3">
-          <SectionHeader title="Attendance review requests" description="An employee believes an already-recorded attendance status is wrong — accept to correct the record, or reject with a note." />
+          <SectionHeader title={t("reviewRequestsTitle")} description={t("reviewRequestsDescription")} />
           <ReviewQueue companyId={companyId} projectId={projectId} requests={pendingReviews} />
         </div>
       )}

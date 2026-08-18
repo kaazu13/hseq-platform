@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Download, Wrench } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
@@ -84,6 +85,7 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
 
   const basePath = `/companies/${companyId}/projects/${projectId}/equipment`;
   const tab = TABS.some((t) => t.key === urlParams.tab) ? urlParams.tab! : "inventory";
+  const tr = await getTranslations("Equipment");
 
   function tabHref(key: string): string {
     return `${basePath}?tab=${key}`;
@@ -124,7 +126,7 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
           canManage={canManage}
           basePath={basePath}
         />
-        <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel="items" />
+        <PaginationBar page={page} pageSize={pageSize} totalCount={totalCount} itemLabel={tr("itemsLabel")} />
       </div>
     );
   } else if (tab === "issued") {
@@ -133,22 +135,16 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
     body = (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { key: "all", label: "All" },
-              { key: "expiring_soon", label: "Expiring soon" },
-              { key: "expired", label: "Expired" },
-            ] as const
-          ).map((option) => (
+          {(["all", "expiring_soon", "expired"] as const).map((key) => (
             <Link
-              key={option.key}
-              href={option.key === "all" ? tabHref("issued") : `${tabHref("issued")}&expiry=${option.key}`}
+              key={key}
+              href={key === "all" ? tabHref("issued") : `${tabHref("issued")}&expiry=${key}`}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                expiryFilter === option.key ? "border-primary bg-primary/10 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+                expiryFilter === key ? "border-primary bg-primary/10 text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              {option.label}
+              {tr(`expiryFilters.${key}`)}
             </Link>
           ))}
         </div>
@@ -157,7 +153,7 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
     );
   } else if (tab === "requests") {
     if (!canManage) {
-      body = <p className="text-sm text-muted-foreground">You don&apos;t have access to review equipment requests for this project.</p>;
+      body = <p className="text-sm text-muted-foreground">{tr("noAccessToRequests")}</p>;
     } else {
       const [requests, candidateItems, candidateEmployeeRows] = await Promise.all([
         listEquipmentRequests(companyId, projectId),
@@ -180,7 +176,7 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Equipment"
+        title={tr("title")}
         description={project.name}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -188,7 +184,7 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
             {canExport && (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href={exportHref} />} className="print:hidden">
                 <Download />
-                Export
+                {tr("export")}
               </Button>
             )}
             {canManage && tab === "inventory" && <AddEditEquipmentItemDialog companyId={companyId} projectId={projectId} projectName={project.name} />}
@@ -206,17 +202,17 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
               tab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
-            {t.label}
+            {tr(`tabs.${t.key}`)}
           </Link>
         ))}
       </div>
 
       {myEmployeeId === null && !canManage && (
         <p className="text-sm text-muted-foreground">
-          No employee record is linked to your account for this company —{" "}
+          {tr("noEmployeeRecord")}{" "}
           <span className="inline-flex items-center gap-1">
             <Wrench className="size-3.5" />
-            contact your administrator.
+            {tr("contactAdministrator")}
           </span>
         </p>
       )}

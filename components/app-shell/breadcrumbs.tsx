@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,7 +26,9 @@ import { ALL_NAV_ITEMS, isNavItemActive } from "@/components/app-shell/nav-confi
 export function Breadcrumbs() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations("Nav");
   const current = ALL_NAV_ITEMS.find((item) => isNavItemActive(item, pathname, searchParams));
+  const currentLabel = current?.id ? t(`items.${current.id}.label`) : current?.label;
 
   return (
     <Breadcrumb>
@@ -37,7 +40,7 @@ export function Breadcrumbs() {
           <>
             <BreadcrumbSeparator className="hidden sm:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>{current.label}</BreadcrumbPage>
+              <BreadcrumbPage>{currentLabel}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         ) : null}

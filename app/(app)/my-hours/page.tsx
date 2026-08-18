@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Clock, UserX } from "lucide-react";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
@@ -49,12 +50,13 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   const params = await searchParams;
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const t = await getTranslations("MyHours");
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Hours" />
-        <EmptyState icon={Clock} title="No company yet" description="Once you're part of a company, your worked hours will appear here." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={Clock} title={t("noCompanyTitle")} description={t("noCompanyDescription")} className="flex-1" />
       </div>
     );
   }
@@ -63,8 +65,8 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   if (!currentProjectId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Hours" />
-        <EmptyState icon={Clock} title="No active project" description="Choose a project from the dashboard first." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={Clock} title={t("noProjectTitle")} description={t("noProjectDescription")} className="flex-1" />
       </div>
     );
   }
@@ -73,8 +75,8 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   if (!myEmployeeId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Hours" />
-        <EmptyState icon={Clock} title="No linked employee record" description="Your account isn't linked to an employee record in this company yet." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={Clock} title={t("noEmployeeTitle")} description={t("noEmployeeDescription")} className="flex-1" />
       </div>
     );
   }
@@ -121,38 +123,38 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="My Hours" description={`${formatWorkedHoursPeriodLabel(period)} · ${totalHours.toFixed(1)}h total`} />
+      <PageHeader title={t("title")} description={t("periodTotal", { period: formatWorkedHoursPeriodLabel(period), hours: totalHours.toFixed(1) })} />
 
-      <MyHoursTabSwitcher active="hours" mode={mode} anchorDate={anchorDate} />
+      <MyHoursTabSwitcher active="hours" mode={mode} anchorDate={anchorDate} t={t} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={`${basePath}?view=day`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          Day
+          {t("day")}
         </Link>
         <span className="text-muted-foreground">/</span>
         <Link href={`${basePath}?view=week`} className={mode === "week" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          Week
+          {t("week")}
         </Link>
         <span className="text-muted-foreground">/</span>
         <Link href={`${basePath}?view=month`} className={mode === "month" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          Month
+          {t("month")}
         </Link>
       </div>
 
       <div className="flex items-center gap-3 text-sm">
         <Link href={`${basePath}?view=${mode}&date=${prevDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
-          ← Previous
+          ← {t("previous")}
         </Link>
         <Link href={basePath} className="text-muted-foreground transition-colors hover:text-foreground">
-          Today
+          {t("today")}
         </Link>
         <Link href={`${basePath}?view=${mode}&date=${nextDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
-          Next →
+          {t("next")} →
         </Link>
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState icon={Clock} title="No hours recorded" description="Nothing has been recorded for this period yet." className="flex-1" />
+        <EmptyState icon={Clock} title={t("noHoursTitle")} description={t("noHoursDescription")} className="flex-1" />
       ) : (
         <div className="flex flex-col gap-4">
           {mode !== "day" && (
@@ -165,10 +167,10 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
                   </span>
                 ))}
                 <span className="text-muted-foreground">
-                  Days worked <span className="font-medium text-foreground tabular-nums">{daysWorked}</span>
+                  {t("daysWorked")} <span className="font-medium text-foreground tabular-nums">{daysWorked}</span>
                 </span>
                 <span className="ml-auto font-semibold">
-                  Grand Total <span className="text-lg tabular-nums">{sumWorkedHoursCategoryBreakdown(periodCategoryTotals).toFixed(1)}h</span>
+                  {t("grandTotal")} <span className="text-lg tabular-nums">{sumWorkedHoursCategoryBreakdown(periodCategoryTotals).toFixed(1)}h</span>
                 </span>
               </CardContent>
             </Card>
@@ -186,16 +188,26 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
 }
 
 /** Hours / Absences — the top-level tab switcher shared by both views, preserving the current Day/Week/Month granularity and anchor date across the switch. */
-function MyHoursTabSwitcher({ active, mode, anchorDate }: { active: "hours" | "absences"; mode: WorkedHoursPeriodMode; anchorDate: string }) {
+function MyHoursTabSwitcher({
+  active,
+  mode,
+  anchorDate,
+  t,
+}: {
+  active: "hours" | "absences";
+  mode: WorkedHoursPeriodMode;
+  anchorDate: string;
+  t: Awaited<ReturnType<typeof getTranslations>>;
+}) {
   const suffix = `view=${mode}&date=${anchorDate}`;
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
       <Link href={`/my-hours?${suffix}`} className={active === "hours" ? "text-foreground" : "text-muted-foreground transition-colors hover:text-foreground"}>
-        Hours
+        {t("hoursTab")}
       </Link>
       <span className="text-muted-foreground">/</span>
       <Link href={`/my-hours?tab=absences&${suffix}`} className={active === "absences" ? "text-foreground" : "text-muted-foreground transition-colors hover:text-foreground"}>
-        Absences
+        {t("absencesTab")}
       </Link>
     </div>
   );
@@ -233,6 +245,7 @@ async function MyAbsencesTab({
   period: ReturnType<typeof resolveWorkedHoursPeriod>;
 }) {
   const absenceToDate = mode === "week" ? addDays(period.fromDate, 5) : period.toDate;
+  const [t, format] = await Promise.all([getTranslations("MyHours"), getFormatter()]);
 
   const [attendanceRows, absenceReports, reviewRequests] = await Promise.all([
     listMyAttendanceForPeriod(companyId, myEmployeeId, period.fromDate, absenceToDate),
@@ -255,42 +268,42 @@ async function MyAbsencesTab({
   const basePath = "/my-hours";
   const prevDate = shiftDate(anchorDate, mode, -1);
   const nextDate = shiftDate(anchorDate, mode, 1);
-  const periodLabel = mode === "week" ? `${formatDisplayDate(period.fromDate)} – ${formatDisplayDate(absenceToDate)}` : formatWorkedHoursPeriodLabel(period);
+  const periodLabel = mode === "week" ? `${formatDisplayDate(period.fromDate, format)} – ${formatDisplayDate(absenceToDate, format)}` : formatWorkedHoursPeriodLabel(period);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="My Hours" description={`${periodLabel} · ${genuineAbsences.length} ${genuineAbsences.length === 1 ? "day" : "days"} recorded`} />
+      <PageHeader title={t("title")} description={`${periodLabel} · ${t("daysRecorded", { count: genuineAbsences.length })}`} />
 
-      <MyHoursTabSwitcher active="absences" mode={mode} anchorDate={anchorDate} />
+      <MyHoursTabSwitcher active="absences" mode={mode} anchorDate={anchorDate} t={t} />
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Link href={`${basePath}?tab=absences&view=day`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          Day
+          {t("day")}
         </Link>
         <span className="text-muted-foreground">/</span>
         <Link href={`${basePath}?tab=absences&view=week`} className={mode === "week" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          Week
+          {t("week")}
         </Link>
         <span className="text-muted-foreground">/</span>
         <Link href={`${basePath}?tab=absences&view=month`} className={mode === "month" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          Month
+          {t("month")}
         </Link>
       </div>
 
       <div className="flex items-center gap-3 text-sm">
         <Link href={`${basePath}?tab=absences&view=${mode}&date=${prevDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
-          ← Previous
+          ← {t("previous")}
         </Link>
         <Link href={`${basePath}?tab=absences`} className="text-muted-foreground transition-colors hover:text-foreground">
-          Today
+          {t("today")}
         </Link>
         <Link href={`${basePath}?tab=absences&view=${mode}&date=${nextDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
-          Next →
+          {t("next")} →
         </Link>
       </div>
 
       {genuineAbsences.length === 0 ? (
-        <EmptyState icon={UserX} title="No absences recorded" description="Nothing has been recorded for this period." className="flex-1" />
+        <EmptyState icon={UserX} title={t("noAbsencesTitle")} description={t("noAbsencesDescription")} className="flex-1" />
       ) : (
         <div className="flex flex-col gap-2">
           {genuineAbsences.map((row) => {
@@ -301,7 +314,7 @@ async function MyAbsencesTab({
               <Card key={row.id}>
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-4">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium">{formatDisplayDate(row.work_date)}</span>
+                    <span className="text-sm font-medium">{formatDisplayDate(row.work_date, format)}</span>
                     {row.note && <span className="text-sm text-muted-foreground">{row.note}</span>}
                   </div>
                   <div className="flex items-center gap-2">
@@ -320,6 +333,6 @@ async function MyAbsencesTab({
   );
 }
 
-function formatDisplayDate(value: string): string {
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+function formatDisplayDate(value: string, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  return format.dateTime(new Date(`${value}T00:00:00Z`), { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }

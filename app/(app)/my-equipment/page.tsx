@@ -1,4 +1,5 @@
 import { Wrench } from "lucide-react";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
@@ -13,9 +14,9 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { SEMANTIC_TONE_TEXT_CLASSES } from "@/components/shared/status-tone";
 import { Card, CardContent } from "@/components/ui/card";
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, format: Awaited<ReturnType<typeof getFormatter>>): string {
   if (!value) return "—";
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+  return format.dateTime(new Date(`${value}T00:00:00Z`), { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 /**
@@ -28,12 +29,13 @@ function formatDate(value: string | null): string {
 export default async function MyEquipmentPage() {
   const { user } = await requireUser();
   const { currentCompanyId } = await resolveCurrentCompany(user.id);
+  const [t, format] = await Promise.all([getTranslations("MyEquipment"), getFormatter()]);
 
   if (!currentCompanyId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Equipment" />
-        <EmptyState icon={Wrench} title="You're not part of an company yet" description="Once an administrator adds your account to one, your equipment will appear here." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={Wrench} title={t("noCompanyTitle")} description={t("noCompanyDescription")} className="flex-1" />
       </div>
     );
   }
@@ -42,8 +44,8 @@ export default async function MyEquipmentPage() {
   if (!currentProjectId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Equipment" />
-        <EmptyState icon={Wrench} title="No active project selected" description="Choose a project using the switcher at the top of the page." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={Wrench} title={t("noProjectTitle")} description={t("noProjectDescription")} className="flex-1" />
       </div>
     );
   }
@@ -52,8 +54,8 @@ export default async function MyEquipmentPage() {
   if (!myEmployeeId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Equipment" />
-        <EmptyState icon={Wrench} title="No employee record linked" description="Contact your administrator to link your account to an employee record." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={Wrench} title={t("noEmployeeTitle")} description={t("noEmployeeDescription")} className="flex-1" />
       </div>
     );
   }
@@ -66,12 +68,12 @@ export default async function MyEquipmentPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="My Equipment" actions={<RequestEquipmentDialog companyId={currentCompanyId} projectId={currentProjectId} candidateItems={candidateItems} />} />
+      <PageHeader title={t("title")} actions={<RequestEquipmentDialog companyId={currentCompanyId} projectId={currentProjectId} candidateItems={candidateItems} />} />
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title="Currently issued" />
+        <SectionHeader title={t("currentlyIssued")} />
         {assignments.length === 0 ? (
-          <EmptyState icon={Wrench} title="Nothing issued to you right now" description="Equipment issued to you will appear here." />
+          <EmptyState icon={Wrench} title={t("nothingIssuedTitle")} description={t("nothingIssuedDescription")} />
         ) : (
           <div className="flex flex-col gap-2">
             {assignments.map((assignment) => {
@@ -82,15 +84,15 @@ export default async function MyEquipmentPage() {
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                       <span className="font-medium">{assignment.item.name}</span>
                       <span className="text-xs text-muted-foreground">{assignment.item.category}</span>
-                      {assignment.item.reference_number && <span className="text-xs text-muted-foreground">Ref {assignment.item.reference_number}</span>}
+                      {assignment.item.reference_number && <span className="text-xs text-muted-foreground">{t("refNumber", { ref: assignment.item.reference_number })}</span>}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                      <span>Issued {formatDate(assignment.issued_at)}{assignment.issuedByName ? ` by ${assignment.issuedByName}` : ""}</span>
-                      {assignment.item.tracking_mode === "quantity" && <span>Qty {assignment.quantity}</span>}
-                      <span>Condition: {EQUIPMENT_CONDITION_LABELS[assignment.condition_at_issue]}</span>
+                      <span>{assignment.issuedByName ? t("issuedByOn", { date: formatDate(assignment.issued_at, format), name: assignment.issuedByName }) : t("issuedOn", { date: formatDate(assignment.issued_at, format) })}</span>
+                      {assignment.item.tracking_mode === "quantity" && <span>{t("qty", { count: assignment.quantity })}</span>}
+                      <span>{t("condition", { condition: EQUIPMENT_CONDITION_LABELS[assignment.condition_at_issue] })}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                      <span className="text-muted-foreground">{assignment.expires_at ? `Validity: expires ${formatDate(assignment.expires_at)}` : "Validity: No expiry set"}</span>
+                      <span className="text-muted-foreground">{assignment.expires_at ? t("validityExpires", { date: formatDate(assignment.expires_at, format) }) : t("validityNoExpiry")}</span>
                       {assignment.expires_at && <span className={SEMANTIC_TONE_TEXT_CLASSES[expiry.tone]}>{expiry.label}</span>}
                     </div>
                   </div>
@@ -105,9 +107,9 @@ export default async function MyEquipmentPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title="My requests" />
+        <SectionHeader title={t("myRequests")} />
         {requests.length === 0 ? (
-          <EmptyState icon={Wrench} title="No requests yet" description="Equipment requests you submit will appear here." />
+          <EmptyState icon={Wrench} title={t("noRequestsTitle")} description={t("noRequestsDescription")} />
         ) : (
           <div className="flex flex-col gap-2">
             {requests.map((request) => (
@@ -118,7 +120,7 @@ export default async function MyEquipmentPage() {
                       {request.item_description}
                       {request.specification ? ` — ${request.specification}` : ""}
                     </span>
-                    <span className="text-xs text-muted-foreground">Qty {request.quantity} · {formatDate(request.created_at.slice(0, 10))}</span>
+                    <span className="text-xs text-muted-foreground">{t("qtyAndDate", { count: request.quantity, date: formatDate(request.created_at.slice(0, 10), format) })}</span>
                     {request.decision_comment && <span className="text-xs text-muted-foreground">{request.decision_comment}</span>}
                   </div>
                   <StatusBadge tone={equipmentRequestStatusTone(request.status)}>{EQUIPMENT_REQUEST_STATUS_LABELS[request.status]}</StatusBadge>

@@ -1,4 +1,5 @@
 import { CalendarPlus, CalendarOff } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
@@ -24,12 +25,13 @@ export default async function MyLeavePage() {
   const { user } = await requireUser();
   const { companies, currentCompanyId } = await resolveCurrentCompany(user.id);
   const company = companies.find((candidate) => candidate.id === currentCompanyId) ?? companies[0];
+  const t = await getTranslations("MyLeave");
 
   if (!company) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Leave" />
-        <EmptyState icon={CalendarOff} title="No company selected" className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={CalendarOff} title={t("noCompanyTitle")} className="flex-1" />
       </div>
     );
   }
@@ -40,8 +42,8 @@ export default async function MyLeavePage() {
   if (!currentProjectId || !myEmployeeId) {
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="My Leave" />
-        <EmptyState icon={CalendarOff} title="No linked employee record" description="Leave requests require a project and an employee record linked to your account." className="flex-1" />
+        <PageHeader title={t("title")} />
+        <EmptyState icon={CalendarOff} title={t("noEmployeeTitle")} description={t("noEmployeeDescription")} className="flex-1" />
       </div>
     );
   }
@@ -50,10 +52,10 @@ export default async function MyLeavePage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="My Leave" description="Your holiday and leave requests." actions={<RequestLeaveDialog companyId={company.id} projectId={currentProjectId} />} />
+      <PageHeader title={t("title")} description={t("description")} actions={<RequestLeaveDialog companyId={company.id} projectId={currentProjectId} />} />
 
       {requests.length === 0 ? (
-        <EmptyState icon={CalendarPlus} title="No leave requests yet" description="Use Request Holiday to submit one." className="flex-1" />
+        <EmptyState icon={CalendarPlus} title={t("noRequestsTitle")} description={t("noRequestsDescription")} className="flex-1" />
       ) : (
         <div className="flex flex-col gap-2">
           {requests.map((request) => (
@@ -61,10 +63,10 @@ export default async function MyLeavePage() {
               <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <span className="text-sm font-medium">
-                    {LEAVE_TYPE_LABELS[request.leave_type]} — {request.start_date} to {request.end_date} ({countLeaveCalendarDays(request.start_date, request.end_date)}d)
+                    {LEAVE_TYPE_LABELS[request.leave_type]} — {t("dateRange", { start: request.start_date, end: request.end_date, days: countLeaveCalendarDays(request.start_date, request.end_date) })}
                   </span>
                   {request.employee_comment && <span className="text-xs text-muted-foreground">{request.employee_comment}</span>}
-                  {request.management_comment && <span className="text-xs text-muted-foreground">Management: {request.management_comment}</span>}
+                  {request.management_comment && <span className="text-xs text-muted-foreground">{t("managementComment", { comment: request.management_comment })}</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={statusBadgeVariant(request.status)}>{LEAVE_REQUEST_STATUS_LABELS[request.status]}</Badge>

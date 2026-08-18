@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { CalendarOff } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
@@ -20,13 +21,7 @@ type LeavePageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
 };
 
-const STATUS_TABS: { key: LeaveRequestStatus | "all"; label: string }[] = [
-  { key: "pending", label: "Pending" },
-  { key: "approved", label: "Approved" },
-  { key: "returned", label: "Returned" },
-  { key: "denied", label: "Denied" },
-  { key: "all", label: "History" },
-];
+const STATUS_TAB_KEYS: (LeaveRequestStatus | "all")[] = ["pending", "approved", "returned", "denied", "all"];
 
 function statusBadgeVariant(status: string): "secondary" | "outline" | "destructive" | "default" {
   if (status === "approved") return "default";
@@ -49,34 +44,35 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
   const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
   if (!canManage) notFound();
 
-  const activeTab = STATUS_TABS.find((tab) => tab.key === urlParams.status)?.key ?? "pending";
+  const activeTab = STATUS_TAB_KEYS.includes((urlParams.status ?? "") as (typeof STATUS_TAB_KEYS)[number]) ? (urlParams.status as (typeof STATUS_TAB_KEYS)[number]) : "pending";
   const requests = await listLeaveRequestsForProject(companyId, projectId, activeTab === "all" ? undefined : { statuses: [activeTab as LeaveRequestStatus] });
 
   const basePath = `/companies/${companyId}/projects/${projectId}/leave`;
+  const t = await getTranslations("LeaveManagement");
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Holiday / Leave" description={project.name} actions={<LeaveExportDialog companyId={companyId} projectId={projectId} />} />
+      <PageHeader title={t("title")} description={project.name} actions={<LeaveExportDialog companyId={companyId} projectId={projectId} />} />
 
       <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="leave" />
 
       <div className="flex items-center gap-1 overflow-x-auto border-b">
-        {STATUS_TABS.map((tab) => (
+        {STATUS_TAB_KEYS.map((key) => (
           <Link
-            key={tab.key}
-            href={`${basePath}?status=${tab.key}`}
+            key={key}
+            href={`${basePath}?status=${key}`}
             className={cn(
               "shrink-0 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
-              activeTab === tab.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+              activeTab === key ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
-            {tab.label}
+            {t(`tabs.${key}`)}
           </Link>
         ))}
       </div>
 
       {requests.length === 0 ? (
-        <EmptyState icon={CalendarOff} title="No requests here" />
+        <EmptyState icon={CalendarOff} title={t("noRequestsTitle")} />
       ) : (
         <div className="flex flex-col gap-2">
           {requests.map((request) => (
@@ -87,10 +83,10 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
                     {request.employee.first_name} {request.employee.last_name} — {LEAVE_TYPE_LABELS[request.leave_type]}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {request.start_date} to {request.end_date} ({countLeaveCalendarDays(request.start_date, request.end_date)}d)
-                    {request.employee_comment ? ` — “${request.employee_comment}”` : ""}
+                    {t("dateRange", { start: request.start_date, end: request.end_date, days: countLeaveCalendarDays(request.start_date, request.end_date) })}
+                    {request.employee_comment ? ` — "${request.employee_comment}"` : ""}
                   </span>
-                  {request.management_comment && <span className="text-xs text-muted-foreground">Management: {request.management_comment}</span>}
+                  {request.management_comment && <span className="text-xs text-muted-foreground">{t("managementComment", { comment: request.management_comment })}</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={statusBadgeVariant(request.status)}>{LEAVE_REQUEST_STATUS_LABELS[request.status]}</Badge>

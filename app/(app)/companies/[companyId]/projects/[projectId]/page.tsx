@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, forbidden } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { LayoutDashboard, Settings2 } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
@@ -68,6 +69,7 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
 
   const canManage = canManageProject(roleNames, myProjectRoles);
   const canViewDailyOverview = canViewDailyWorkforceBroadly(roleNames, hasProjectAccess);
+  const t = await getTranslations("ProjectDashboard");
 
   type DailyOverviewProps = Parameters<typeof ProjectDailyOverview>[0];
   let dailyOverview: { today: DailyOverviewProps["today"]; safety: DailyOverviewProps["safety"]; actionRequired: DailyOverviewProps["actionRequired"] } | null = null;
@@ -140,7 +142,7 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
             {canManage && (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/projects/${project.id}/edit`} />}>
                 <Settings2 />
-                Manage project
+                {t("manageProject")}
               </Button>
             )}
           </>
@@ -157,11 +159,11 @@ export default async function ProjectDashboardPage({ params }: ProjectDashboardP
 
       {dailyOverview ? (
         <div className="flex flex-col gap-3">
-          <SectionHeader title="Daily overview" />
+          <SectionHeader title={t("dailyOverview")} />
           <ProjectDailyOverview companyId={companyId} projectId={projectId} today={dailyOverview.today} safety={dailyOverview.safety} actionRequired={dailyOverview.actionRequired} />
         </div>
       ) : (
-        <EmptyState icon={LayoutDashboard} title="No daily overview available" description="You don't have broad workforce visibility on this project." />
+        <EmptyState icon={LayoutDashboard} title={t("noDailyOverviewTitle")} description={t("noDailyOverviewDescription")} />
       )}
     </div>
   );

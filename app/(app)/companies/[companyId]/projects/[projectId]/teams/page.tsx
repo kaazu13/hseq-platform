@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { HardHat, Lock } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
@@ -28,8 +29,8 @@ type TeamsPageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
 };
 
-function formatWorkDate(value: string): string {
-  return new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+function formatWorkDate(value: string, format: Awaited<ReturnType<typeof getFormatter>>): string {
+  return format.dateTime(new Date(`${value}T00:00:00Z`), { weekday: "long", year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 
@@ -51,6 +52,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
   const urlParams = await searchParams;
   const { user } = await requireCompanyMembership(companyId);
   await requireProjectAccess(projectId);
+  const [t, format] = await Promise.all([getTranslations("TodaysTeams"), getFormatter()]);
 
   const project = await getProject(companyId, projectId);
   if (!project) {
@@ -83,8 +85,8 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
     if (!myEmployeeId) {
       return (
         <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-          <PageHeader title="Today's Team" description={project.name} />
-          <EmptyState icon={HardHat} title="No linked employee record" description="Contact your administrator to link your account to an employee record." className="flex-1" />
+          <PageHeader title={t("employeeTitle")} description={project.name} />
+          <EmptyState icon={HardHat} title={t("noEmployeeRecordTitle")} description={t("noEmployeeRecordDescription")} className="flex-1" />
         </div>
       );
     }
@@ -97,14 +99,14 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
 
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Today's Team" description={`${formatWorkDate(employeeWorkDate)} · ${project.name}`} actions={<RefreshButton />} />
+        <PageHeader title={t("employeeTitle")} description={`${formatWorkDate(employeeWorkDate, format)} · ${project.name}`} actions={<RefreshButton />} />
 
         <DateNav basePath={basePath} workDate={employeeWorkDate} todayDate={todayDate} />
 
         {todayCard.team ? (
           <EmployeeDailyTeamCard workDate={employeeWorkDate} team={todayCard.team} lmraEntries={lmraEntries} phoneByEmployeeId={phoneByEmployeeId} />
         ) : (
-          <EmptyState icon={HardHat} title="No team assigned to you for this date" className="flex-1" />
+          <EmptyState icon={HardHat} title={t("noTeamAssignedTitle")} className="flex-1" />
         )}
       </div>
     );
@@ -114,18 +116,18 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
     const archiveDays = await listDailyTeamsArchiveDays(companyId, projectId);
     return (
       <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-        <PageHeader title="Today's Teams" description={`${project.name} — archive of past workforce allocations.`} />
+        <PageHeader title={t("title")} description={t("archiveDescription", { project: project.name })} />
         <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="teams" />
         <div className="flex items-center gap-2">
           <Link href={basePath} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-            Today
+            {t("today")}
           </Link>
           <span className="text-sm text-muted-foreground">/</span>
-          <span className="text-sm font-medium">Archive</span>
+          <span className="text-sm font-medium">{t("archive")}</span>
         </div>
 
         {archiveDays.length === 0 ? (
-          <EmptyState icon={HardHat} title="No archived days yet" description="Locked Today's Teams days will appear here." className="flex-1" />
+          <EmptyState icon={HardHat} title={t("noArchivedDaysTitle")} description={t("noArchivedDaysDescription")} className="flex-1" />
         ) : (
           <div className="flex flex-col gap-2">
             {archiveDays.map((day) => (
@@ -133,7 +135,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
                 <Card className="transition-shadow hover:shadow-md">
                   <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-4">
                     <span className="text-sm font-medium">
-                      {formatWorkDate(day.workDate)} · {project.name} · {day.workerCount} {day.workerCount === 1 ? "worker" : "workers"}
+                      {formatWorkDate(day.workDate, format)} · {project.name} · {t("workerCount", { count: day.workerCount })}
                     </span>
                     {day.locked && (
                       <Badge variant="secondary" className="gap-1">
@@ -170,8 +172,8 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
       {/* Only the live "today" view polls — the archive view (returned earlier above) renders historical, no-longer-changing days. */}
       <AutoRefresh intervalMs={60000} />
       <PageHeader
-        title="Today's Teams"
-        description={`${formatWorkDate(workDate)} · ${project.name}`}
+        title={t("title")}
+        description={`${formatWorkDate(workDate, format)} · ${project.name}`}
         actions={
           <>
             <RefreshButton />
@@ -183,10 +185,10 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
       <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="teams" />
 
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Today</span>
+        <span className="text-sm font-medium">{t("today")}</span>
         <span className="text-sm text-muted-foreground">/</span>
         <Link href={`${basePath}?view=archive`} className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-          Archive
+          {t("archive")}
         </Link>
       </div>
 
@@ -204,8 +206,8 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
       {foremanGroups.length === 0 ? (
         <EmptyState
           icon={HardHat}
-          title="No foremen added for this day yet"
-          description={canManage ? "Add a foreman below to start building today's teams, or copy a previous day's structure." : "No foremen have been added for this day yet."}
+          title={t("noForemenTitle")}
+          description={canManage ? t("noForemenDescriptionManage") : t("noForemenDescriptionView")}
           action={canManage ? <CopyTeamsDialog companyId={companyId} projectId={projectId} destinationWorkDate={workDate} /> : undefined}
         />
       ) : (
