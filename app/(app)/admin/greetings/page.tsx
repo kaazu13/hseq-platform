@@ -1,4 +1,5 @@
 import { forbidden } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PartyPopper } from "lucide-react";
 import { requireUser, getUserRoleNames } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
@@ -26,13 +27,13 @@ export default async function AdminGreetingsPage() {
     forbidden();
   }
 
-  const settings = await listGreetingSettings(currentCompanyId);
+  const [settings, t] = await Promise.all([listGreetingSettings(currentCompanyId), getTranslations("CompanyGreetings")]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Company greetings"
-        description="Automated birthday, Christmas, New Year, and Easter messages. Birthday greetings are private — only the employee themselves ever sees one."
+        title={t("title")}
+        description={t("description")}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -44,7 +45,7 @@ export default async function AdminGreetingsPage() {
       {settings.length === 0 && (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
           <PartyPopper className="size-8" />
-          <p className="text-sm">No greeting settings found for this company.</p>
+          <p className="text-sm">{t("noSettingsFound")}</p>
         </div>
       )}
     </div>

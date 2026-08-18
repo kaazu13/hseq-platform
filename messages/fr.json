@@ -469,5 +469,10 @@
       "title": "Créer une entreprise",
       "description": "Un nouveau locataire sur la plateforme, avec son premier administrateur d'entreprise."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Messages de l'entreprise",
+    "description": "Messages automatiques d'anniversaire, de Noël, du Nouvel An et de Pâques. Les messages d'anniversaire sont privés — seul l'employé concerné en voit un.",
+    "noSettingsFound": "Aucun paramètre de message trouvé pour cette entreprise."
   }
 }

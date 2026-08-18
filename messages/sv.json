@@ -469,5 +469,10 @@
       "title": "Skapa företag",
       "description": "En ny klient på plattformen, med sin första företagsadministratör."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Företagshälsningar",
+    "description": "Automatiska meddelanden för födelsedag, jul, nyår och påsk. Födelsedagshälsningar är privata — endast den anställde själv ser en.",
+    "noSettingsFound": "Inga hälsningsinställningar hittades för detta företag."
   }
 }

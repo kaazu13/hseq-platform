@@ -469,5 +469,10 @@
       "title": "Unternehmen erstellen",
       "description": "Ein neuer Mandant auf der Plattform, mit seinem ersten Unternehmensadministrator."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Unternehmensgrüße",
+    "description": "Automatische Geburtstags-, Weihnachts-, Neujahrs- und Ostergrüße. Geburtstagsgrüße sind privat — nur der jeweilige Mitarbeiter sieht sie.",
+    "noSettingsFound": "Keine Grußeinstellungen für dieses Unternehmen gefunden."
   }
 }

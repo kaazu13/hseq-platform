@@ -469,5 +469,10 @@
       "title": "Crear empresa",
       "description": "Un nuevo inquilino en la plataforma, con su primer administrador de empresa."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Saludos de la empresa",
+    "description": "Mensajes automáticos de cumpleaños, Navidad, Año Nuevo y Pascua. Los saludos de cumpleaños son privados — solo el propio empleado los ve.",
+    "noSettingsFound": "No se encontró configuración de saludos para esta empresa."
   }
 }

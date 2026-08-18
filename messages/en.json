@@ -469,5 +469,10 @@
       "title": "Create Company",
       "description": "A new tenant on the platform, with its first company administrator."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Company greetings",
+    "description": "Automated birthday, Christmas, New Year, and Easter messages. Birthday greetings are private — only the employee themselves ever sees one.",
+    "noSettingsFound": "No greeting settings found for this company."
   }
 }

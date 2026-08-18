@@ -469,5 +469,10 @@
       "title": "Bedrijf aanmaken",
       "description": "Een nieuwe tenant op het platform, met zijn eerste bedrijfsbeheerder."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Bedrijfsgroeten",
+    "description": "Automatische verjaardags-, kerst-, nieuwjaars- en paasberichten. Verjaardagsgroeten zijn privé — alleen de medewerker zelf ziet er een.",
+    "noSettingsFound": "Geen groetinstellingen gevonden voor dit bedrijf."
   }
 }

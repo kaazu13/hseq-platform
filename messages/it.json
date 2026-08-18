@@ -469,5 +469,10 @@
       "title": "Crea azienda",
       "description": "Un nuovo inquilino sulla piattaforma, con il suo primo amministratore aziendale."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Auguri aziendali",
+    "description": "Messaggi automatici di compleanno, Natale, Capodanno e Pasqua. Gli auguri di compleanno sono privati — solo il dipendente interessato li vede.",
+    "noSettingsFound": "Nessuna impostazione di auguri trovata per questa azienda."
   }
 }

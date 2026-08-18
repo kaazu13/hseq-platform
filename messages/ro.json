@@ -469,5 +469,10 @@
       "title": "Creează companie",
       "description": "Un nou chiriaș pe platformă, cu primul său administrator de companie."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Felicitări companie",
+    "description": "Mesaje automate de ziua de naștere, Crăciun, Anul Nou și Paște. Felicitările de ziua de naștere sunt private — doar angajatul respectiv le vede.",
+    "noSettingsFound": "Nu s-au găsit setări de felicitări pentru această companie."
   }
 }

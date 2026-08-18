@@ -469,5 +469,10 @@
       "title": "Opprett bedrift",
       "description": "En ny leietaker på plattformen, med sin første bedriftsadministrator."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Bedriftshilsener",
+    "description": "Automatiske meldinger for bursdag, jul, nyttår og påske. Bursdagshilsener er private — bare den ansatte selv ser en.",
+    "noSettingsFound": "Ingen hilseninnstillinger funnet for denne bedriften."
   }
 }

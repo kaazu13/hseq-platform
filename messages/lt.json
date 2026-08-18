@@ -469,5 +469,10 @@
       "title": "Sukurti įmonę",
       "description": "Naujas platformos nuomininkas su pirmuoju įmonės administratoriumi."
     }
+  },
+  "CompanyGreetings": {
+    "title": "Įmonės sveikinimai",
+    "description": "Automatiniai gimtadienio, Kalėdų, Naujųjų metų ir Velykų sveikinimai. Gimtadienio sveikinimai yra privatūs — juos mato tik pats darbuotojas.",
+    "noSettingsFound": "Šiai įmonei sveikinimų nustatymų nerasta."
   }
 }
