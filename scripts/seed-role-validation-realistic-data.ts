@@ -173,6 +173,35 @@ async function waitForProfile(userId: string): Promise<void> {
   throw new Error(`profiles row for ${userId} never appeared`);
 }
 
+/**
+ * Closure fix — Today's Teams/Employee Dashboard's Foreman contact row has
+ * nothing to visibly render without at least one real fixture phone number.
+ * Only accounts with a real `profiles` row (i.e. a real login, unlike the
+ * "plain employee" HR-only records used for the rest of Team Alpha's
+ * roster) can have one at all — get_daily_team_phone_numbers() reads
+ * `profiles.phone` exclusively. E.164 format, matching the
+ * `profiles_phone_e164` constraint. `service_role` can write `profiles`
+ * directly (unlike `projects`, see ensureProject's own comment) — this is
+ * the same table `waitForProfile` above already updates.
+ */
+async function ensureFixturePhone(email: string, phoneE164: string): Promise<void> {
+  assertFixtureEmail(email);
+  const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (listErr) throw listErr;
+  const user = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+  if (!user) throw new Error(`ensureFixturePhone: no auth user found for ${email}`);
+
+  const { data: profile, error } = await admin.from("profiles").select("phone").eq("id", user.id).maybeSingle();
+  if (error) throw error;
+  if (profile?.phone === phoneE164) {
+    log("profile-phone", email, "reused", phoneE164);
+    return;
+  }
+  const { error: updErr } = await admin.from("profiles").update({ phone: phoneE164 }).eq("id", user.id);
+  if (updErr) throw updErr;
+  log("profile-phone", email, "updated", phoneE164);
+}
+
 async function ensureMembership(companyId: string, userId: string, email: string, status: "active" | "suspended" = "active"): Promise<string> {
   const { data: existing } = await admin.from("company_memberships").select("id, status").eq("company_id", companyId).eq("user_id", userId).maybeSingle();
   if (existing) {
@@ -1075,6 +1104,11 @@ async function main() {
 
   const { companyId, projectId, employeeIdByEmail } = await resolveCoreFixtures();
   console.log(`Company: ${companyId}\nProject: ${projectId}\n`);
+
+  // Closure fix — test.foreman is Team Alpha's foreman (test.employee's own
+  // team); a real phone number here is what makes the Foreman contact row
+  // actually demonstrable end to end.
+  await ensureFixturePhone("test.foreman@example.test", "+46701234567");
 
   const { data: staticTeam, error: staticTeamErr } = await admin.from("teams").select("id").eq("project_id", projectId).eq("name", "TEST Static Team").maybeSingle();
   if (staticTeamErr) throw staticTeamErr;

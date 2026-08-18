@@ -3,30 +3,14 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Bell, CheckCheck } from "lucide-react";
 import { markNotificationRead, markAllNotificationsRead } from "@/modules/worked-hours/actions";
 import type { AppNotification } from "@/modules/worked-hours/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-// Task 3 Part 27 — genuinely locale-aware, not a hand-rolled English "Xm
-// ago" template: `format.relativeTime()` wraps Intl.RelativeTimeFormat,
-// which picks correct grammar/units per locale on its own. Items 7+ days
-// old fall back to a short absolute date (`format.dateTime`, also
-// locale-aware) rather than an ever-growing "12d ago". Kept as a
-// module-scope function (not a closure inside the component) so its
-// `Date.now()` call isn't flagged by the render-purity lint rule, matching
-// this file's pre-existing pattern.
-function relativeTime(value: string, format: ReturnType<typeof useFormatter>, justNowLabel: string): string {
-  const date = new Date(value);
-  const diffMinutes = Math.round((Date.now() - date.getTime()) / 60000);
-  if (diffMinutes < 1) return justNowLabel;
-  const diffDays = Math.round(diffMinutes / 1440);
-  if (diffDays >= 7) return format.dateTime(date, { month: "short", day: "numeric" });
-  return format.relativeTime(date);
-}
+import { relativeTime } from "@/lib/relative-time";
 
 type NotificationBellProps = {
   /** The REAL total unread count (server-fetched, not derived from `notifications` below) — there can be more unread notifications than the compact list shows. */
@@ -53,6 +37,9 @@ export function NotificationBell({ unreadCount, notifications }: NotificationBel
   const router = useRouter();
   const t = useTranslations("Notifications");
   const format = useFormatter();
+  // 60s is plenty for "Xm/Xh ago" text to feel live without polling the
+  // server — this is a local timer only, see this file's header comment.
+  const now = useNow({ updateInterval: 60_000 });
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -118,7 +105,7 @@ export function NotificationBell({ unreadCount, notifications }: NotificationBel
                 <span className={cn("truncate text-sm", !notification.read_at ? "font-semibold" : "font-normal text-muted-foreground")}>{notification.title}</span>
               </div>
               {notification.body && <span className="line-clamp-2 text-xs text-muted-foreground">{notification.body}</span>}
-              <span className="text-[11px] text-muted-foreground">{relativeTime(notification.created_at, format, t("justNow"))}</span>
+              <span className="text-[11px] text-muted-foreground">{relativeTime(notification.created_at, format, now, t("justNow"))}</span>
             </DropdownMenuItem>
           ))
         )}

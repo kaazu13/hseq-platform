@@ -2,7 +2,6 @@ import { Phone } from "lucide-react";
 import type { BasicEmployee } from "@/modules/daily-workforce/types";
 import { formatE164ForDisplay } from "@/lib/phone";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 
 function initialsFor(firstName: string, lastName: string): string {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "?";
@@ -14,11 +13,19 @@ type TeamRosterRowProps = {
   phone?: string | null;
 };
 
+/**
+ * Closure fix — the phone number itself must be visible text next to each
+ * row it belongs to, not a bare icon-only button (which read as "no phone
+ * numbers visible" even when a tappable action existed). Stacks under the
+ * name/role line rather than sitting in the same flex row as the avatar,
+ * so it wraps naturally on narrow mobile widths instead of forcing the
+ * name to truncate to make room for it.
+ */
 function TeamRosterRow({ employee, roleLabel, phone }: TeamRosterRowProps) {
   const subtitleParts = [...new Set([roleLabel, employee.position_title].filter((part): part is string => Boolean(part)))];
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-start gap-3">
       <Avatar size="sm">
         <AvatarFallback>{initialsFor(employee.first_name, employee.last_name)}</AvatarFallback>
       </Avatar>
@@ -26,18 +33,18 @@ function TeamRosterRow({ employee, roleLabel, phone }: TeamRosterRowProps) {
         <span className="truncate text-sm font-medium">
           {employee.first_name} {employee.last_name}
         </span>
-        <span className="truncate text-xs text-muted-foreground">{subtitleParts.length > 0 ? subtitleParts.join(" · ") : " "}</span>
+        {subtitleParts.length > 0 && <span className="truncate text-xs text-muted-foreground">{subtitleParts.join(" · ")}</span>}
+        {phone && (
+          <a
+            href={`tel:${phone}`}
+            className="mt-0.5 inline-flex w-fit items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
+            aria-label={`Call ${employee.first_name} ${employee.last_name} at ${formatE164ForDisplay(phone)}`}
+          >
+            <Phone className="size-3" />
+            {formatE164ForDisplay(phone)}
+          </a>
+        )}
       </div>
-      {phone && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          nativeButton={false}
-          render={<a href={`tel:${phone}`} aria-label={`Call ${employee.first_name} ${employee.last_name} at ${formatE164ForDisplay(phone)}`} />}
-        >
-          <Phone />
-        </Button>
-      )}
     </div>
   );
 }

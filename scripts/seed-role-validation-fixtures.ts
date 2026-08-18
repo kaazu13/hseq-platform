@@ -112,6 +112,14 @@ const COMPANY_SLUG = "test-role-validation";
 const COMPANY_PREFIX = "TESTROLE";
 const PROJECT_NAME = "TEST — Role Validation Project";
 const PROJECT_CODE = "TEST-ROLE-01";
+// Closure fix — this fixture's project-local header clock, "today" date
+// resolution, etc. must be deterministic and distinct from a US-based
+// tester's own browser timezone so a real timezone leak (falling back to
+// the browser instead of the project's configured value) is actually
+// visible during manual testing rather than accidentally masked by both
+// happening to agree.
+const PROJECT_COUNTRY_CODE = "SE";
+const PROJECT_TIMEZONE = "Europe/Stockholm";
 const TODAY = new Date().toISOString().slice(0, 10);
 
 type RoleHolder = {
@@ -209,15 +217,41 @@ async function ensureCompany(): Promise<string> {
 }
 
 async function ensureProject(companyId: string): Promise<string> {
-  const { data: existing, error } = await admin.from("projects").select("id").eq("company_id", companyId).eq("code", PROJECT_CODE).maybeSingle();
+  const { data: existing, error } = await admin.from("projects").select("id, country_code, timezone").eq("company_id", companyId).eq("code", PROJECT_CODE).maybeSingle();
   if (error) throw error;
   if (existing) {
-    log("project", PROJECT_NAME, "reused", existing.id);
+    // NOTE: this script's admin client is `service_role`, which only has
+    // `select, insert` on `projects` (20260729090000_service_role_grants.sql)
+    // — country_code/timezone changes are deliberately restricted to the
+    // update_project_location_settings() RPC (authenticated + platform_super_admin/
+    // company_admin only), so an existing row that has drifted from
+    // PROJECT_COUNTRY_CODE/PROJECT_TIMEZONE (e.g. from live UI testing
+    // against this fixture) can't be self-healed here — only a fresh
+    // create gets the documented value. Correct a drifted existing row via
+    // the real RPC as an authenticated company_admin, not this script.
+    if (existing.country_code !== PROJECT_COUNTRY_CODE || existing.timezone !== PROJECT_TIMEZONE) {
+      log("project", PROJECT_NAME, "reused", existing.id);
+      console.warn(
+        `  ⚠ ${PROJECT_NAME} country_code/timezone (${existing.country_code}/${existing.timezone}) has drifted from the documented fixture value (${PROJECT_COUNTRY_CODE}/${PROJECT_TIMEZONE}). This script cannot correct it (service_role has no UPDATE grant on projects); fix it via the app's Edit Project page or update_project_location_settings() RPC as test.companyadmin@example.test.`,
+      );
+    } else {
+      log("project", PROJECT_NAME, "reused", existing.id);
+    }
     return existing.id;
   }
   const { data, error: insErr } = await admin
     .from("projects")
-    .insert({ company_id: companyId, name: PROJECT_NAME, code: PROJECT_CODE, status: "active", client_name: "TEST Fixture Client", location: "TEST Fixture Site", start_date: TODAY })
+    .insert({
+      company_id: companyId,
+      name: PROJECT_NAME,
+      code: PROJECT_CODE,
+      status: "active",
+      client_name: "TEST Fixture Client",
+      location: "TEST Fixture Site",
+      start_date: TODAY,
+      country_code: PROJECT_COUNTRY_CODE,
+      timezone: PROJECT_TIMEZONE,
+    })
     .select("id")
     .single();
   if (insErr) throw insErr;

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getNow } from "next-intl/server";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -68,7 +68,18 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // routing" mode — see that file's header comment). NextIntlClientProvider
   // makes both available to Client Components (useTranslations()); Server
   // Components use getTranslations() directly, no provider needed for them.
-  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  //
+  // Closure fix — `now` is the request-time snapshot next-intl's
+  // `useFormatter().relativeTime()`/`useNow()` read as their default
+  // reference point. Without it, next-intl falls back to each
+  // environment's own ambient clock (ENVIRONMENT_FALLBACK) — server render
+  // and client hydration read `Date.now()` at genuinely different
+  // instants, which is exactly the kind of impure, non-deterministic
+  // render next-intl warns about and React's hydration diffing can flag.
+  // Setting it once here, request-wide, makes every relativeTime() call in
+  // the app (not just the notification bell) deterministic without each
+  // call site needing to pass `now` explicitly.
+  const [locale, messages, now] = await Promise.all([getLocale(), getMessages(), getNow()]);
 
   return (
     <html
@@ -78,7 +89,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages} now={now}>
           <ThemeProvider attribute="class" defaultTheme={themeMode} enableSystem disableTransitionOnChange>
             <TooltipProvider delay={200}>
               {children}

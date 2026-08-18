@@ -98,7 +98,7 @@ export function NavMain({ roleNames, companyId, projectId }: { roleNames: RoleNa
                   <SidebarMenu>
                     {group.items.map((item) => {
                       const isActive = isNavItemActive(item, pathname, searchParams);
-                      const itemLabel = item.id ? t(`items.${item.id}.label`) : item.label;
+                      const itemLabel = item.id ? t(`items.${item.id}`) : item.label;
 
                       if (item.buildHref) {
                         const resolvedHref = companyId && projectId ? item.buildHref({ companyId, projectId }) : null;

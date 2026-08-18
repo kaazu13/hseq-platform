@@ -28,7 +28,7 @@ export function Breadcrumbs() {
   const searchParams = useSearchParams();
   const t = useTranslations("Nav");
   const current = ALL_NAV_ITEMS.find((item) => isNavItemActive(item, pathname, searchParams));
-  const currentLabel = current?.id ? t(`items.${current.id}.label`) : current?.label;
+  const currentLabel = current?.id ? t(`items.${current.id}`) : current?.label;
 
   return (
     <Breadcrumb>
