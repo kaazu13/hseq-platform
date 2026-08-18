@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Ban, Bell, Building2, ClipboardList, FolderKanban, ShieldAlert, ShieldOff, UserCheck, UserX, Users } from "lucide-react";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { getPlatformOverviewStats, listCompaniesWithoutAdmin, listAdminAuditEvents } from "@/modules/platform-admin/queries";
@@ -21,15 +22,16 @@ import { Button } from "@/components/ui/button";
 export default async function PlatformAdminOverviewPage() {
   await requirePlatformSuperAdmin();
 
-  const [stats, companiesWithoutAdmin, recentAudit] = await Promise.all([
+  const [stats, companiesWithoutAdmin, recentAudit, t] = await Promise.all([
     getPlatformOverviewStats(),
     listCompaniesWithoutAdmin(10),
     listAdminAuditEvents({}, 1, 10),
+    getTranslations("PlatformAdmin.overview"),
   ]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Platform Administration" description="Platform-wide operator console — global, not scoped to any one company." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <StatCard label="Active companies" value={stats.active_companies} icon={Building2} />

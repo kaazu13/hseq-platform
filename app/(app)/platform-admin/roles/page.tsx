@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listSystemRoles, listPermissionsCatalogue, listRolePermissionsForRoles, searchAdminCompanies, listCustomRolesForCompany, listAdminCompanyMembers } from "@/modules/platform-admin/queries";
 import { PERMISSION_DOMAIN_LABELS } from "@/modules/platform-admin/types";
@@ -48,9 +49,11 @@ export default async function PlatformAdminRolesPage({ searchParams }: PageProps
     }));
   }
 
+  const t = await getTranslations("PlatformAdmin.roles");
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Roles &amp; Permissions" description="The built-in system roles (read-only) and each company's custom roles." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <Card>
         <CardHeader>

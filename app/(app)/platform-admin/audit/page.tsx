@@ -1,4 +1,5 @@
 import { ScrollText } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listAdminAuditEvents, searchAdminCompanies, searchPlatformAccounts } from "@/modules/platform-admin/queries";
 import { AUDIT_ACTION_LABELS, type AuditAction } from "@/modules/platform-admin/types";
@@ -48,14 +49,15 @@ export default async function PlatformAdminAuditPage({ searchParams }: PageProps
     actorUserId = matches[0]?.id ?? null;
   }
 
-  const [{ items, totalCount }, companies] = await Promise.all([
+  const [{ items, totalCount }, companies, t] = await Promise.all([
     listAdminAuditEvents({ actorUserId, action, entityType, companyId, dateFrom, dateTo }, page, PAGE_SIZE),
     searchAdminCompanies(null, 50),
+    getTranslations("PlatformAdmin.audit"),
   ]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Audit Log" description="Every recorded audit event across the platform." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <AuditFilters companies={companies} />
       {actorQuery && !actorUserId && <p className="text-sm text-amber-600 dark:text-amber-500">No account matches &quot;{actorQuery}&quot; — showing unfiltered-by-actor results.</p>}

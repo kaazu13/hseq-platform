@@ -428,5 +428,46 @@
     "noProjectsTitle": "Kol kas nėra projektų",
     "noProjectsCreateDescription": "Sukurkite pirmą projektą, kad pradėtumėte.",
     "noProjectsNoAccessDescription": "Kol kas neturite prieigos prie jokio projekto."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Platformos administravimas",
+      "description": "Visos platformos operatoriaus konsolė — globali, nesusieta su viena įmone."
+    },
+    "companies": {
+      "title": "Įmonės",
+      "description": "Visi platformos nuomininkai — būsena, naudojimas, administratoriai, kvietimai ir prenumerata.",
+      "createCompany": "Sukurti įmonę"
+    },
+    "users": {
+      "title": "Vartotojai",
+      "description": "Visos platformos paskyros — ieškokite, filtruokite ir tvarkykite būseną, narystes ir vaidmenis."
+    },
+    "audit": {
+      "title": "Audito žurnalas",
+      "description": "Visi užregistruoti audito įvykiai visoje platformoje."
+    },
+    "roles": {
+      "title": "Vaidmenys ir leidimai",
+      "description": "Įmontuoti sistemos vaidmenys (tik skaitymui) ir kiekvienos įmonės pasirinktiniai vaidmenys."
+    },
+    "billing": {
+      "title": "Naudojimas ir atsiskaitymas",
+      "description": "Kiekvienos įmonės planas, prenumeratos būsena ir naudojimas pagal jos limitus. Rankinis atsiskaitymas — automatinio mokėjimų apdorojimo dar nėra."
+    },
+    "settings": {
+      "title": "Platformos nustatymai",
+      "description": "Visos platformos konfigūracijos pagrindas. Šiandien tai platformos super administratorių sąrašas.",
+      "rosterTitle": "Platformos super administratoriai"
+    },
+    "security": {
+      "title": "Sauga",
+      "description": "Visos platformos prisijungimų istorija, paskyros būsenos pakeitimai, sesijų atšaukimai ir platformos įspėjimai.",
+      "manageAccounts": "Tvarkyti paskyras"
+    },
+    "createCompany": {
+      "title": "Sukurti įmonę",
+      "description": "Naujas platformos nuomininkas su pirmuoju įmonės administratoriumi."
+    }
   }
 }

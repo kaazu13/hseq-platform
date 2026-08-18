@@ -428,5 +428,46 @@
     "noProjectsTitle": "Nog geen projecten",
     "noProjectsCreateDescription": "Maak je eerste project aan om te beginnen.",
     "noProjectsNoAccessDescription": "Je hebt nog geen toegang tot projecten."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Platformbeheer",
+      "description": "Platformbrede operatorconsole — globaal, niet beperkt tot één bedrijf."
+    },
+    "companies": {
+      "title": "Bedrijven",
+      "description": "Alle tenants op het platform — status, gebruik, beheerders, uitnodigingen en abonnement.",
+      "createCompany": "Bedrijf aanmaken"
+    },
+    "users": {
+      "title": "Gebruikers",
+      "description": "Alle accounts op het platform — zoek, filter en beheer status, lidmaatschappen en rollen."
+    },
+    "audit": {
+      "title": "Auditlog",
+      "description": "Alle geregistreerde auditgebeurtenissen op het hele platform."
+    },
+    "roles": {
+      "title": "Rollen en rechten",
+      "description": "De ingebouwde systeemrollen (alleen-lezen) en de eigen rollen van elk bedrijf."
+    },
+    "billing": {
+      "title": "Gebruik en facturering",
+      "description": "Het plan, de abonnementsstatus en het gebruik van elk bedrijf ten opzichte van de limieten. Handmatige facturering — nog geen geautomatiseerde betalingsverwerking."
+    },
+    "settings": {
+      "title": "Platforminstellingen",
+      "description": "Basis voor platformbrede configuratie. Vandaag is dit de lijst met platformbeheerders.",
+      "rosterTitle": "Platformbeheerders"
+    },
+    "security": {
+      "title": "Beveiliging",
+      "description": "Platformbrede aanmeldgeschiedenis, wijzigingen in accountstatus, sessie-intrekkingen en platformwaarschuwingen.",
+      "manageAccounts": "Accounts beheren"
+    },
+    "createCompany": {
+      "title": "Bedrijf aanmaken",
+      "description": "Een nieuwe tenant op het platform, met zijn eerste bedrijfsbeheerder."
+    }
   }
 }

@@ -428,5 +428,46 @@
     "noProjectsTitle": "Noch keine Projekte",
     "noProjectsCreateDescription": "Erstelle dein erstes Projekt, um loszulegen.",
     "noProjectsNoAccessDescription": "Du hast noch keinen Zugriff auf Projekte."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Plattformverwaltung",
+      "description": "Plattformweite Operator-Konsole — global, nicht auf ein einzelnes Unternehmen beschränkt."
+    },
+    "companies": {
+      "title": "Unternehmen",
+      "description": "Alle Mandanten auf der Plattform — Status, Nutzung, Administratoren, Einladungen und Abonnement.",
+      "createCompany": "Unternehmen erstellen"
+    },
+    "users": {
+      "title": "Benutzer",
+      "description": "Alle Konten auf der Plattform — suchen, filtern und Status, Mitgliedschaften und Rollen verwalten."
+    },
+    "audit": {
+      "title": "Prüfprotokoll",
+      "description": "Alle erfassten Prüfereignisse auf der gesamten Plattform."
+    },
+    "roles": {
+      "title": "Rollen und Berechtigungen",
+      "description": "Die integrierten Systemrollen (schreibgeschützt) und die eigenen Rollen jedes Unternehmens."
+    },
+    "billing": {
+      "title": "Nutzung und Abrechnung",
+      "description": "Plan, Abonnementstatus und Nutzung jedes Unternehmens im Vergleich zu seinen Limits. Manuelle Abrechnung — noch keine automatisierte Zahlungsabwicklung."
+    },
+    "settings": {
+      "title": "Plattformeinstellungen",
+      "description": "Grundlage für plattformweite Konfiguration. Heute ist dies die Liste der Plattform-Superadministratoren.",
+      "rosterTitle": "Plattform-Superadministratoren"
+    },
+    "security": {
+      "title": "Sicherheit",
+      "description": "Plattformweiter Anmeldeverlauf, Kontostatusänderungen, Sitzungswiderrufe und Plattformwarnungen.",
+      "manageAccounts": "Konten verwalten"
+    },
+    "createCompany": {
+      "title": "Unternehmen erstellen",
+      "description": "Ein neuer Mandant auf der Plattform, mit seinem ersten Unternehmensadministrator."
+    }
   }
 }

@@ -428,5 +428,46 @@
     "noProjectsTitle": "Aucun projet pour l'instant",
     "noProjectsCreateDescription": "Créez votre premier projet pour commencer.",
     "noProjectsNoAccessDescription": "Vous n'avez encore accès à aucun projet."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Administration de la plateforme",
+      "description": "Console d'opérateur à l'échelle de la plateforme — globale, non limitée à une seule entreprise."
+    },
+    "companies": {
+      "title": "Entreprises",
+      "description": "Tous les locataires de la plateforme — statut, utilisation, administrateurs, invitations et abonnement.",
+      "createCompany": "Créer une entreprise"
+    },
+    "users": {
+      "title": "Utilisateurs",
+      "description": "Tous les comptes de la plateforme — recherchez, filtrez et gérez le statut, les adhésions et les rôles."
+    },
+    "audit": {
+      "title": "Journal d'audit",
+      "description": "Tous les événements d'audit enregistrés sur la plateforme."
+    },
+    "roles": {
+      "title": "Rôles et permissions",
+      "description": "Les rôles système intégrés (lecture seule) et les rôles personnalisés de chaque entreprise."
+    },
+    "billing": {
+      "title": "Utilisation et facturation",
+      "description": "Le plan, le statut d'abonnement et l'utilisation de chaque entreprise par rapport à ses limites. Facturation manuelle — pas encore de traitement automatisé des paiements."
+    },
+    "settings": {
+      "title": "Paramètres de la plateforme",
+      "description": "Base de la configuration à l'échelle de la plateforme. Aujourd'hui, il s'agit de la liste des administrateurs de la plateforme.",
+      "rosterTitle": "Administrateurs de la plateforme"
+    },
+    "security": {
+      "title": "Sécurité",
+      "description": "Historique des connexions à l'échelle de la plateforme, changements de statut de compte, révocations de session et avertissements de la plateforme.",
+      "manageAccounts": "Gérer les comptes"
+    },
+    "createCompany": {
+      "title": "Créer une entreprise",
+      "description": "Un nouveau locataire sur la plateforme, avec son premier administrateur d'entreprise."
+    }
   }
 }

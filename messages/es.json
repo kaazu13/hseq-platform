@@ -428,5 +428,46 @@
     "noProjectsTitle": "Aún no hay proyectos",
     "noProjectsCreateDescription": "Crea tu primer proyecto para empezar.",
     "noProjectsNoAccessDescription": "Aún no tienes acceso a ningún proyecto."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Administración de la plataforma",
+      "description": "Consola de operador de toda la plataforma — global, no limitada a ninguna empresa concreta."
+    },
+    "companies": {
+      "title": "Empresas",
+      "description": "Todos los inquilinos de la plataforma — estado, uso, administradores, invitaciones y suscripción.",
+      "createCompany": "Crear empresa"
+    },
+    "users": {
+      "title": "Usuarios",
+      "description": "Todas las cuentas de la plataforma — busca, filtra y gestiona estado, membresías y roles."
+    },
+    "audit": {
+      "title": "Registro de auditoría",
+      "description": "Todos los eventos de auditoría registrados en la plataforma."
+    },
+    "roles": {
+      "title": "Roles y permisos",
+      "description": "Los roles del sistema integrados (solo lectura) y los roles personalizados de cada empresa."
+    },
+    "billing": {
+      "title": "Uso y facturación",
+      "description": "El plan, el estado de suscripción y el uso de cada empresa frente a sus límites. Facturación manual — aún sin procesamiento de pagos automatizado."
+    },
+    "settings": {
+      "title": "Configuración de la plataforma",
+      "description": "Base de configuración de toda la plataforma. Hoy, es la lista de administradores de la plataforma.",
+      "rosterTitle": "Administradores de la plataforma"
+    },
+    "security": {
+      "title": "Seguridad",
+      "description": "Historial de inicio de sesión de toda la plataforma, cambios de estado de cuenta, revocaciones de sesión y advertencias de la plataforma.",
+      "manageAccounts": "Gestionar cuentas"
+    },
+    "createCompany": {
+      "title": "Crear empresa",
+      "description": "Un nuevo inquilino en la plataforma, con su primer administrador de empresa."
+    }
   }
 }

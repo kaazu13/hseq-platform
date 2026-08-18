@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listAdminAccounts, searchAdminCompanies, getPlatformAccountMemberships, listSecurityEventsForUser, listPlatformWarningsForUser } from "@/modules/platform-admin/queries";
 import { ACCOUNT_STATUS_LABELS, SECURITY_EVENT_TYPE_LABELS, MEMBERSHIP_STATUS_LABELS, type MembershipStatus } from "@/modules/platform-admin/types";
@@ -40,9 +41,10 @@ export default async function PlatformAdminUsersPage({ searchParams }: PageProps
   const page = Math.max(1, Number(params.page) || 1);
   const expandedUserId = params.view || null;
 
-  const [{ items: accounts, totalCount }, companies] = await Promise.all([
+  const [{ items: accounts, totalCount }, companies, t] = await Promise.all([
     listAdminAccounts({ query, accountStatus, companyId, roleName }, page, PAGE_SIZE),
     searchAdminCompanies(null, 50),
+    getTranslations("PlatformAdmin.users"),
   ]);
 
   let memberships: Awaited<ReturnType<typeof getPlatformAccountMemberships>> = [];
@@ -64,7 +66,7 @@ export default async function PlatformAdminUsersPage({ searchParams }: PageProps
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Users" description="Every account on the platform — search, filter, and manage status, memberships, and roles." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <UserFilters companies={companies} />
 

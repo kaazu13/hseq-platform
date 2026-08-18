@@ -428,5 +428,46 @@
     "noProjectsTitle": "Niciun proiect încă",
     "noProjectsCreateDescription": "Creează primul tău proiect pentru a începe.",
     "noProjectsNoAccessDescription": "Nu ai încă acces la niciun proiect."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Administrarea platformei",
+      "description": "Consolă de operator la nivel de platformă — globală, nu limitată la o singură companie."
+    },
+    "companies": {
+      "title": "Companii",
+      "description": "Toți chiriașii de pe platformă — stare, utilizare, administratori, invitații și abonament.",
+      "createCompany": "Creează companie"
+    },
+    "users": {
+      "title": "Utilizatori",
+      "description": "Toate conturile de pe platformă — caută, filtrează și gestionează starea, apartenențele și rolurile."
+    },
+    "audit": {
+      "title": "Jurnal de audit",
+      "description": "Toate evenimentele de audit înregistrate pe platformă."
+    },
+    "roles": {
+      "title": "Roluri și permisiuni",
+      "description": "Rolurile de sistem încorporate (doar citire) și rolurile personalizate ale fiecărei companii."
+    },
+    "billing": {
+      "title": "Utilizare și facturare",
+      "description": "Planul, starea abonamentului și utilizarea fiecărei companii față de limitele sale. Facturare manuală — încă fără procesare automată a plăților."
+    },
+    "settings": {
+      "title": "Setările platformei",
+      "description": "Fundamentul configurării la nivel de platformă. Astăzi, aceasta este lista administratorilor platformei.",
+      "rosterTitle": "Administratorii platformei"
+    },
+    "security": {
+      "title": "Securitate",
+      "description": "Istoricul autentificărilor la nivel de platformă, schimbări de stare a contului, revocări de sesiune și avertismente ale platformei.",
+      "manageAccounts": "Gestionează conturile"
+    },
+    "createCompany": {
+      "title": "Creează companie",
+      "description": "Un nou chiriaș pe platformă, cu primul său administrator de companie."
+    }
   }
 }

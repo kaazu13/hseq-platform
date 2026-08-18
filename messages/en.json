@@ -428,5 +428,46 @@
     "noProjectsTitle": "No projects yet",
     "noProjectsCreateDescription": "Create your first project to get started.",
     "noProjectsNoAccessDescription": "You don't have access to any projects yet."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Platform Administration",
+      "description": "Platform-wide operator console — global, not scoped to any one company."
+    },
+    "companies": {
+      "title": "Companies",
+      "description": "Every tenant on the platform — status, usage, administrators, invitations, and subscription.",
+      "createCompany": "Create company"
+    },
+    "users": {
+      "title": "Users",
+      "description": "Every account on the platform — search, filter, and manage status, memberships, and roles."
+    },
+    "audit": {
+      "title": "Audit Log",
+      "description": "Every recorded audit event across the platform."
+    },
+    "roles": {
+      "title": "Roles & Permissions",
+      "description": "The built-in system roles (read-only) and each company's custom roles."
+    },
+    "billing": {
+      "title": "Usage & Billing",
+      "description": "Each company's plan, subscription status, and usage against its limits. Manual billing — no automated payment processing yet."
+    },
+    "settings": {
+      "title": "Platform Settings",
+      "description": "Platform-wide configuration foundation. Today, this is the platform super administrator roster.",
+      "rosterTitle": "Platform super administrators"
+    },
+    "security": {
+      "title": "Security",
+      "description": "Platform-wide login history, account status changes, session revocations, and platform warnings.",
+      "manageAccounts": "Manage accounts"
+    },
+    "createCompany": {
+      "title": "Create Company",
+      "description": "A new tenant on the platform, with its first company administrator."
+    }
   }
 }

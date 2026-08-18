@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CreditCard, Search } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listAdminCompanies } from "@/modules/platform-admin/queries";
 import { COMPANY_SUBSCRIPTION_STATUS_LABELS } from "@/modules/platform-admin/types";
@@ -20,11 +21,11 @@ export default async function PlatformAdminBillingPage({ searchParams }: { searc
   const query = params.q?.trim() || null;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { items, totalCount } = await listAdminCompanies(query, page, PAGE_SIZE);
+  const [{ items, totalCount }, t] = await Promise.all([listAdminCompanies(query, page, PAGE_SIZE), getTranslations("PlatformAdmin.billing")]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Usage &amp; Billing" description="Each company's plan, subscription status, and usage against its limits. Manual billing — no automated payment processing yet." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <form action="/platform-admin/billing" method="GET" className="relative max-w-sm">
         <Search className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground" />

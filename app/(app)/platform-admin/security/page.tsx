@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listAdminSecurityEvents } from "@/modules/platform-admin/queries";
 import { SECURITY_EVENT_TYPE_LABELS } from "@/modules/platform-admin/types";
@@ -24,16 +25,16 @@ export default async function PlatformAdminSecurityPage({ searchParams }: { sear
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { items, totalCount } = await listAdminSecurityEvents(page, PAGE_SIZE);
+  const [{ items, totalCount }, t] = await Promise.all([listAdminSecurityEvents(page, PAGE_SIZE), getTranslations("PlatformAdmin.security")]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Security"
-        description="Platform-wide login history, account status changes, session revocations, and platform warnings."
+        title={t("title")}
+        description={t("description")}
         actions={
           <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/platform-admin/users" />}>
-            Manage accounts
+            {t("manageAccounts")}
           </Button>
         }
       />

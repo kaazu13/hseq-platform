@@ -428,5 +428,46 @@
     "noProjectsTitle": "Ingen prosjekter ennå",
     "noProjectsCreateDescription": "Opprett ditt første prosjekt for å komme i gang.",
     "noProjectsNoAccessDescription": "Du har ikke tilgang til noen prosjekter ennå."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Plattformadministrasjon",
+      "description": "Plattformomfattende operatørkonsoll — global, ikke begrenset til én enkelt bedrift."
+    },
+    "companies": {
+      "title": "Bedrifter",
+      "description": "Alle leietakere på plattformen — status, bruk, administratorer, invitasjoner og abonnement.",
+      "createCompany": "Opprett bedrift"
+    },
+    "users": {
+      "title": "Brukere",
+      "description": "Alle kontoer på plattformen — søk, filtrer og administrer status, medlemskap og roller."
+    },
+    "audit": {
+      "title": "Revisjonslogg",
+      "description": "Alle registrerte revisjonshendelser på tvers av plattformen."
+    },
+    "roles": {
+      "title": "Roller og tillatelser",
+      "description": "De innebygde systemrollene (skrivebeskyttet) og hver bedrifts egne roller."
+    },
+    "billing": {
+      "title": "Bruk og fakturering",
+      "description": "Hver bedrifts plan, abonnementsstatus og bruk opp mot sine grenser. Manuell fakturering — ingen automatisert betalingsbehandling ennå."
+    },
+    "settings": {
+      "title": "Plattforminnstillinger",
+      "description": "Grunnlag for plattformomfattende konfigurasjon. I dag er det listen over plattformadministratorer.",
+      "rosterTitle": "Plattformadministratorer"
+    },
+    "security": {
+      "title": "Sikkerhet",
+      "description": "Plattformomfattende innloggingshistorikk, kontostatusendringer, sesjonstilbakekallinger og plattformvarsler.",
+      "manageAccounts": "Administrer kontoer"
+    },
+    "createCompany": {
+      "title": "Opprett bedrift",
+      "description": "En ny leietaker på plattformen, med sin første bedriftsadministrator."
+    }
   }
 }

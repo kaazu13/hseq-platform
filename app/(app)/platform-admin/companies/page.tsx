@@ -4,6 +4,7 @@ import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listAdminCompanies } from "@/modules/platform-admin/queries";
 import { COMPANY_STATUS_LABELS } from "@/modules/platform-admin/types";
 import { AdminPagination } from "@/modules/platform-admin/components/admin-pagination";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -26,17 +27,17 @@ export default async function PlatformAdminCompaniesPage({ searchParams }: { sea
   const query = params.q?.trim() || null;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { items, totalCount } = await listAdminCompanies(query, page, PAGE_SIZE);
+  const [{ items, totalCount }, t] = await Promise.all([listAdminCompanies(query, page, PAGE_SIZE), getTranslations("PlatformAdmin.companies")]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader
-        title="Companies"
-        description="Every tenant on the platform — status, usage, administrators, invitations, and subscription."
+        title={t("title")}
+        description={t("description")}
         actions={
           <Button size="sm" nativeButton={false} render={<Link href="/platform-admin/companies/new" />}>
             <Building2 />
-            Create company
+            {t("createCompany")}
           </Button>
         }
       />

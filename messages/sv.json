@@ -428,5 +428,46 @@
     "noProjectsTitle": "Inga projekt ännu",
     "noProjectsCreateDescription": "Skapa ditt första projekt för att komma igång.",
     "noProjectsNoAccessDescription": "Du har ännu inte tillgång till några projekt."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Plattformsadministration",
+      "description": "Plattformsövergripande operatörskonsol — global, inte begränsad till ett enskilt företag."
+    },
+    "companies": {
+      "title": "Företag",
+      "description": "Alla klienter på plattformen — status, användning, administratörer, inbjudningar och prenumeration.",
+      "createCompany": "Skapa företag"
+    },
+    "users": {
+      "title": "Användare",
+      "description": "Alla konton på plattformen — sök, filtrera och hantera status, medlemskap och roller."
+    },
+    "audit": {
+      "title": "Granskningslogg",
+      "description": "Alla registrerade granskningshändelser över hela plattformen."
+    },
+    "roles": {
+      "title": "Roller och behörigheter",
+      "description": "De inbyggda systemrollerna (skrivskyddade) och varje företags egna roller."
+    },
+    "billing": {
+      "title": "Användning och fakturering",
+      "description": "Varje företags plan, prenumerationsstatus och användning mot sina gränser. Manuell fakturering — ingen automatiserad betalningshantering ännu."
+    },
+    "settings": {
+      "title": "Plattformsinställningar",
+      "description": "Grund för plattformsövergripande konfiguration. Idag är det listan över plattformsadministratörer.",
+      "rosterTitle": "Plattformsadministratörer"
+    },
+    "security": {
+      "title": "Säkerhet",
+      "description": "Plattformsövergripande inloggningshistorik, kontostatusändringar, sessionsåterkallelser och plattformsvarningar.",
+      "manageAccounts": "Hantera konton"
+    },
+    "createCompany": {
+      "title": "Skapa företag",
+      "description": "En ny klient på plattformen, med sin första företagsadministratör."
+    }
   }
 }

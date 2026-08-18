@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requirePlatformSuperAdmin } from "@/lib/auth/session";
 import { listPlatformSuperAdminRoster } from "@/modules/platform-admin/queries";
 import { GrantSuperAdminForm, SuperAdminRosterTable } from "@/modules/platform-admin/components/super-admin-roster";
@@ -17,15 +18,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  */
 export default async function PlatformAdminSettingsPage() {
   const { user } = await requirePlatformSuperAdmin();
-  const roster = await listPlatformSuperAdminRoster();
+  const [roster, t] = await Promise.all([listPlatformSuperAdminRoster(), getTranslations("PlatformAdmin.settings")]);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title="Platform Settings" description="Platform-wide configuration foundation. Today, this is the platform super administrator roster." />
+      <PageHeader title={t("title")} description={t("description")} />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Platform super administrators</CardTitle>
+          <CardTitle className="text-sm font-medium">{t("rosterTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <SuperAdminRosterTable roster={roster} currentUserId={user.id} />

@@ -428,5 +428,46 @@
     "noProjectsTitle": "Nessun progetto ancora",
     "noProjectsCreateDescription": "Crea il tuo primo progetto per iniziare.",
     "noProjectsNoAccessDescription": "Non hai ancora accesso a nessun progetto."
+  },
+  "PlatformAdmin": {
+    "overview": {
+      "title": "Amministrazione piattaforma",
+      "description": "Console operatore a livello di piattaforma — globale, non limitata a una singola azienda."
+    },
+    "companies": {
+      "title": "Aziende",
+      "description": "Tutti gli inquilini della piattaforma — stato, utilizzo, amministratori, inviti e abbonamento.",
+      "createCompany": "Crea azienda"
+    },
+    "users": {
+      "title": "Utenti",
+      "description": "Tutti gli account sulla piattaforma — cerca, filtra e gestisci stato, appartenenze e ruoli."
+    },
+    "audit": {
+      "title": "Registro di controllo",
+      "description": "Tutti gli eventi di controllo registrati sulla piattaforma."
+    },
+    "roles": {
+      "title": "Ruoli e permessi",
+      "description": "I ruoli di sistema integrati (sola lettura) e i ruoli personalizzati di ciascuna azienda."
+    },
+    "billing": {
+      "title": "Utilizzo e fatturazione",
+      "description": "Il piano, lo stato dell'abbonamento e l'utilizzo di ogni azienda rispetto ai suoi limiti. Fatturazione manuale — nessuna elaborazione automatica dei pagamenti ancora."
+    },
+    "settings": {
+      "title": "Impostazioni piattaforma",
+      "description": "Base della configurazione a livello di piattaforma. Oggi è l'elenco dei super amministratori della piattaforma.",
+      "rosterTitle": "Super amministratori della piattaforma"
+    },
+    "security": {
+      "title": "Sicurezza",
+      "description": "Cronologia degli accessi a livello di piattaforma, modifiche allo stato dell'account, revoche di sessione e avvisi della piattaforma.",
+      "manageAccounts": "Gestisci account"
+    },
+    "createCompany": {
+      "title": "Crea azienda",
+      "description": "Un nuovo inquilino sulla piattaforma, con il suo primo amministratore aziendale."
+    }
   }
 }
