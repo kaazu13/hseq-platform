@@ -145,7 +145,9 @@
       "platformSecurity": "Sauga",
       "platformAuditLog": "Audito žurnalas",
       "platformBilling": "Naudojimas ir atsiskaitymas",
-      "platformSettings": "Platformos nustatymai"
+      "platformSettings": "Platformos nustatymai",
+      "inspectionDashboard": "Patikrų suvestinė",
+      "scaffoldMap": "Pastolių žemėlapis"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "HSE pareigūnas",
       "inspector": "Inspektorius",
       "member": "Narys"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Patikros dažnumas",
+    "description": "Kaip dažnai šie pastoliai turi būti pakartotinai patikrinti.",
+    "daily": "Kasdien",
+    "seven_days": "Kas 7 dienas",
+    "thirty_days": "Kas 30 dienų",
+    "custom": "Pasirinktinis",
+    "customDaysLabel": "Dienų skaičius"
+  },
+  "ScaffoldMap": {
+    "title": "Pastolių žemėlapis",
+    "viewScaffold": "Peržiūrėti pastolius",
+    "viewInspection": "Peržiūrėti patikrą",
+    "inspect": "Tikrinti",
+    "frequency": "Dažnumas",
+    "lastInspection": "Paskutinė patikra",
+    "nextDue": "Kitas terminas",
+    "mapLoadError": "Nepavyko įkelti žemėlapio. Bandykite iš naujo įkelti puslapį.",
+    "mapAriaLabel": "Pastolių vietų žemėlapis, spalvotas pagal patikros būseną.",
+    "unlocatedNote": "pastolių neturi nustatytos vietos ir nerodomi žemėlapyje.",
+    "geolocationDenied": "Nepavyko nustatyti jūsų dabartinės vietos. Patikrinkite naršyklės vietos leidimą.",
+    "geolocationUnsupported": "Jūsų naršyklė nepalaiko vietos nustatymo.",
+    "latitude": "Platuma",
+    "longitude": "Ilguma",
+    "scaffoldLocation": "Pastolių vieta",
+    "useCurrentLocation": "Naudoti dabartinę vietą",
+    "locationOptionalNote": "Neprivaloma — palikite tuščią, jei nežinote pastolių koordinačių.",
+    "stats": {
+      "active": "Aktyvūs",
+      "valid": "Galiojantys",
+      "dueToday": "Terminas šiandien",
+      "tomorrow": "Rytoj",
+      "awaitingInitial": "Laukia pirminės patikros"
+    },
+    "filters": {
+      "all_active": "Visi aktyvūs",
+      "valid": "Galiojantys",
+      "attention_today": "Reikia dėmesio šiandien",
+      "tomorrow": "Rytoj",
+      "awaiting_initial": "Laukia pirminės patikros"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Patikrų suvestinė",
+    "totalScaffoldsCreated": "Iš viso sukurta pastolių",
+    "activeScaffolds": "Aktyvūs pastoliai",
+    "dismantledArchived": "Išardyti / Archyvuoti",
+    "currentlyValid": "Šiuo metu galiojantys",
+    "expiredOrDueToday": "Pasibaigę / Terminas šiandien",
+    "expiringTomorrow": "Baigiasi rytoj",
+    "awaitingInitialInspection": "Laukia pirminės patikros",
+    "healthChartTitle": "Patikrų būsena",
+    "priorityTitle": "Patikros prioritetas",
+    "priorityAwaitingInitial": "Laukia pirminės patikros",
+    "priorityExpiredDueToday": "Pasibaigę / Terminas šiandien",
+    "priorityExpiringTomorrow": "Baigiasi rytoj",
+    "priorityEmpty": "Šiuo metu šioje kategorijoje nieko nėra.",
+    "notYetInspected": "Dar nepatikrinta",
+    "notYetSet": "Dar nenustatyta",
+    "everyNDays": "Kas {days} d.",
+    "nextDueOn": "Kitas terminas {date}",
+    "viewScaffold": "Peržiūrėti pastolius",
+    "inspect": "Tikrinti",
+    "latestInspectionsTitle": "Paskutinės patikros",
+    "viewAllInspections": "Peržiūrėti visas patikras",
+    "latestInspectionsEmpty": "Kol kas nebaigta nė viena patikra.",
+    "notAvailable": "Nepasiekiama",
+    "inspectorsTodayTitle": "Inspektoriai šiandien",
+    "inspectorsTodayEmpty": "Šiam projektui nepriskirta aktyvių inspektorių.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# patikra baigta šiandien} few {# patikros baigtos šiandien} other {# patikrų baigta šiandien}}",
+    "state": {
+      "awaiting_initial": "Laukia pirminės patikros",
+      "expired": "Pasibaigęs",
+      "due_today": "Terminas šiandien",
+      "expiring_tomorrow": "Baigiasi rytoj",
+      "valid": "Galiojantis",
+      "dismantled": "Išardytas"
+    },
+    "chartBucket": {
+      "green": "Galiojantys",
+      "orange": "Baigiasi rytoj",
+      "red": "Pasibaigę / Terminas šiandien",
+      "gray": "Laukia pirminės patikros"
+    },
+    "attendanceStatus": {
+      "not_set": "Nenustatyta",
+      "present": "Darbe",
+      "absent": "Neatvyko",
+      "sick": "Serga",
+      "leave": "Atostogos",
+      "training": "Mokymai",
+      "off_site": "Ne objekte"
     }
   }
 }

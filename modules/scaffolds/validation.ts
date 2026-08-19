@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { optionalText } from "@/lib/validation";
+import { SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS, SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS, SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS } from "./types";
 
 /**
  * Server Function validation for the Scaffolds/Scaffold Inspections
@@ -60,26 +61,87 @@ function optionalPositiveDecimal(fieldLabel: string) {
  * (was optional) — the UI defaults it to today, but the schema itself
  * still validates whatever value is actually submitted.
  */
-export const scaffoldFormSchema = z.object({
-  projectId: z.string().uuid("Choose a project"),
-  tagNumber: z.string().trim().min(1, "Tag number is required").max(50, "Keep it under 50 characters"),
-  workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
-  structureReference: optionalText,
-  scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
-  intendedUse: z.string().trim().min(1, "Intended use is required").max(200, "Keep it under 200 characters"),
-  maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required").max(100, "Keep it under 100 characters"),
-  heightMetres: optionalPositiveDecimal("height"),
-  lengthMetres: optionalPositiveDecimal("length"),
-  widthMetres: optionalPositiveDecimal("width"),
-  erectedBy: optionalText,
-  responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
-  erectedAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid erection date"),
-  notes: optionalText,
-  erectionTeamIds: z
-    .array(z.string().uuid("Each team must be a valid selection"))
-    .min(1, "Select at least one Today's Team that erected this scaffold")
-    .refine((ids) => new Set(ids).size === ids.length, { message: "The same team is selected more than once" }),
-});
+const SCAFFOLD_INSPECTION_INTERVAL_TYPE_VALUES = ["daily", "seven_days", "thirty_days", "custom"] as const;
+
+/**
+ * Configurable scaffold inspection frequency (Parts O-Q) — `type` and
+ * `days` are cross-validated against SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS
+ * exactly, mirroring the database's scaffolds_interval_type_days_consistent
+ * CHECK constraint, so a mismatched pair is caught here before ever
+ * reaching the database. `days` arrives as a raw form string (same
+ * optionalPositiveDecimal-style string-input convention as the dimension
+ * fields above), always required (never optional) — every scaffold has an
+ * explicit, visible frequency, never a silently-blank one.
+ */
+const scaffoldInspectionIntervalFields = z
+  .object({
+    inspectionIntervalType: z.enum(SCAFFOLD_INSPECTION_INTERVAL_TYPE_VALUES),
+    inspectionIntervalDays: z
+      .string()
+      .trim()
+      .transform((value, ctx) => {
+        const parsed = Number(value);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          ctx.addIssue({ code: "custom", message: "Enter a whole number of days greater than zero" });
+          return 0;
+        }
+        return parsed;
+      }),
+  })
+  .refine(
+    (data) => {
+      if (data.inspectionIntervalType === "custom") {
+        return data.inspectionIntervalDays >= SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS && data.inspectionIntervalDays <= SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS;
+      }
+      return data.inspectionIntervalDays === SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS[data.inspectionIntervalType];
+    },
+    { message: `Custom frequency must be between ${SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS} and ${SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS} days`, path: ["inspectionIntervalDays"] },
+  );
+
+/** A latitude/longitude pair for the Scaffold Map (Part U/V) — both-or-neither, standard WGS84 ranges, matching projects.site_latitude/site_longitude's own convention exactly. */
+const scaffoldLocationFields = z
+  .object({
+    latitude: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => (value === "" || value === undefined ? undefined : Number(value)))
+      .pipe(z.number().min(-90).max(90).optional()),
+    longitude: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => (value === "" || value === undefined ? undefined : Number(value)))
+      .pipe(z.number().min(-180).max(180).optional()),
+  })
+  .refine((data) => (data.latitude === undefined) === (data.longitude === undefined), {
+    message: "Set both latitude and longitude, or neither",
+    path: ["longitude"],
+  });
+
+export const scaffoldFormSchema = z
+  .object({
+    projectId: z.string().uuid("Choose a project"),
+    tagNumber: z.string().trim().min(1, "Tag number is required").max(50, "Keep it under 50 characters"),
+    workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
+    structureReference: optionalText,
+    scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
+    intendedUse: z.string().trim().min(1, "Intended use is required").max(200, "Keep it under 200 characters"),
+    maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required").max(100, "Keep it under 100 characters"),
+    heightMetres: optionalPositiveDecimal("height"),
+    lengthMetres: optionalPositiveDecimal("length"),
+    widthMetres: optionalPositiveDecimal("width"),
+    erectedBy: optionalText,
+    responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
+    erectedAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid erection date"),
+    notes: optionalText,
+    erectionTeamIds: z
+      .array(z.string().uuid("Each team must be a valid selection"))
+      .min(1, "Select at least one Today's Team that erected this scaffold")
+      .refine((ids) => new Set(ids).size === ids.length, { message: "The same team is selected more than once" }),
+  })
+  .and(scaffoldInspectionIntervalFields)
+  .and(scaffoldLocationFields);
 export type ScaffoldFormInput = z.input<typeof scaffoldFormSchema>;
 
 const SCAFFOLD_INSPECTION_REASON_VALUES = [

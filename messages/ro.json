@@ -145,7 +145,9 @@
       "platformSecurity": "Securitate",
       "platformAuditLog": "Jurnal de audit",
       "platformBilling": "Utilizare și facturare",
-      "platformSettings": "Setările platformei"
+      "platformSettings": "Setările platformei",
+      "inspectionDashboard": "Panou de inspecții",
+      "scaffoldMap": "Hartă schele"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "Ofițer HSE",
       "inspector": "Inspector",
       "member": "Membru"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Frecvența inspecției",
+    "description": "Cât de des trebuie reinspectată această schelă.",
+    "daily": "Zilnic",
+    "seven_days": "La fiecare 7 zile",
+    "thirty_days": "La fiecare 30 de zile",
+    "custom": "Personalizat",
+    "customDaysLabel": "Număr de zile"
+  },
+  "ScaffoldMap": {
+    "title": "Harta schelelor",
+    "viewScaffold": "Vezi schela",
+    "viewInspection": "Vezi inspecția",
+    "inspect": "Inspectează",
+    "frequency": "Frecvență",
+    "lastInspection": "Ultima inspecție",
+    "nextDue": "Următorul termen",
+    "mapLoadError": "Harta nu a putut fi încărcată. Încearcă să reîncarci pagina.",
+    "mapAriaLabel": "Hartă a locațiilor schelelor, colorată în funcție de starea inspecției.",
+    "unlocatedNote": "schelă(e) nu au o locație setată și nu apar pe hartă.",
+    "geolocationDenied": "Nu s-a putut obține locația ta curentă. Verifică permisiunea de locație a browserului.",
+    "geolocationUnsupported": "Browserul tău nu acceptă detectarea locației.",
+    "latitude": "Latitudine",
+    "longitude": "Longitudine",
+    "scaffoldLocation": "Locația schelei",
+    "useCurrentLocation": "Utilizează locația curentă",
+    "locationOptionalNote": "Opțional — lasă necompletat dacă nu cunoști coordonatele schelei.",
+    "stats": {
+      "active": "Active",
+      "valid": "Valide",
+      "dueToday": "Scadente azi",
+      "tomorrow": "Mâine",
+      "awaitingInitial": "Așteaptă inspecția inițială"
+    },
+    "filters": {
+      "all_active": "Toate active",
+      "valid": "Valide",
+      "attention_today": "Necesită atenție azi",
+      "tomorrow": "Mâine",
+      "awaiting_initial": "Așteaptă inspecția inițială"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Panou de inspecții",
+    "totalScaffoldsCreated": "Total schele create",
+    "activeScaffolds": "Schele active",
+    "dismantledArchived": "Demontate / Arhivate",
+    "currentlyValid": "Valide în prezent",
+    "expiredOrDueToday": "Expirate / Scadente azi",
+    "expiringTomorrow": "Expiră mâine",
+    "awaitingInitialInspection": "Așteaptă inspecția inițială",
+    "healthChartTitle": "Starea inspecțiilor",
+    "priorityTitle": "Prioritate de inspecție",
+    "priorityAwaitingInitial": "Așteaptă inspecția inițială",
+    "priorityExpiredDueToday": "Expirate / Scadente azi",
+    "priorityExpiringTomorrow": "Expiră mâine",
+    "priorityEmpty": "Nimic în această categorie momentan.",
+    "notYetInspected": "Neinspectată încă",
+    "notYetSet": "Nesetată încă",
+    "everyNDays": "La fiecare {days} zile",
+    "nextDueOn": "Următorul termen {date}",
+    "viewScaffold": "Vezi schela",
+    "inspect": "Inspectează",
+    "latestInspectionsTitle": "Ultimele inspecții",
+    "viewAllInspections": "Vezi toate inspecțiile",
+    "latestInspectionsEmpty": "Nicio inspecție nu a fost finalizată încă.",
+    "notAvailable": "Indisponibil",
+    "inspectorsTodayTitle": "Inspectori astăzi",
+    "inspectorsTodayEmpty": "Niciun inspector activ nu este alocat acestui proiect.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspecție finalizată astăzi} other {# inspecții finalizate astăzi}}",
+    "state": {
+      "awaiting_initial": "Așteaptă inspecția inițială",
+      "expired": "Expirată",
+      "due_today": "Scadentă azi",
+      "expiring_tomorrow": "Expiră mâine",
+      "valid": "Validă",
+      "dismantled": "Demontată"
+    },
+    "chartBucket": {
+      "green": "Valide",
+      "orange": "Expiră mâine",
+      "red": "Expirate / Scadente azi",
+      "gray": "Așteaptă inspecția inițială"
+    },
+    "attendanceStatus": {
+      "not_set": "Nesetat",
+      "present": "La lucru",
+      "absent": "Absent",
+      "sick": "Bolnav",
+      "leave": "Concediu",
+      "training": "Instruire",
+      "off_site": "În afara șantierului"
     }
   }
 }

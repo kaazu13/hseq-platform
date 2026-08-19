@@ -40,17 +40,27 @@ export function canManageOwnDailyTeam(roleNames: RoleName[], myProjectAssignment
   return canManageDailyWorkforce(roleNames, myProjectAssignmentRoles) || (roleNames.includes("foreman") && isTeamForeman);
 }
 
-const DAILY_WORKFORCE_BROAD_VIEWER_ROLES: RoleName[] = ["project_manager", "hseq_manager", "hse_officer", "inspector", "foreman"];
+const DAILY_WORKFORCE_BROAD_VIEWER_ROLES: RoleName[] = ["project_manager", "hseq_manager", "hse_officer", "foreman"];
 
 /**
  * Viewing the WHOLE day's workforce (every team, every employee's
  * attendance) rather than only one's own — company-wide managers, or any
- * of PM/HSE Manager/HSE Officer/Inspector/Foreman WITH project access.
- * Matches daily_attendance_select/daily_teams_select's RLS exactly — a
- * plain "employee" role (none of the above) falls through to seeing only
- * their own row, enforced by RLS itself, not by this function (there is no
+ * of PM/HSE Manager/HSE Officer/Foreman WITH project access. Matches
+ * daily_attendance_select/daily_teams_select's RLS exactly — a plain
+ * "employee" role (none of the above) falls through to seeing only their
+ * own row, enforced by RLS itself, not by this function (there is no
  * "view own" variant to compute here — the query layer simply returns
  * fewer rows for that caller).
+ *
+ * Inspector role correction (manual role testing): "inspector" was
+ * REMOVED from this list — Inspector is an operational scaffold-
+ * inspection role and must use the same PERSONAL "my own team" model as a
+ * plain Employee here, never broad workforce visibility, unless it ALSO
+ * holds a genuine broad-viewer/manage role (this function still grants
+ * broad access via that OTHER role — nothing here special-cases the
+ * role NAME "inspector" as denied, it's simply no longer in the allow-
+ * list). Mirrors the identical RLS tightening in
+ * supabase/migrations/20260901122000_inspector_role_correction.sql.
  */
 export function canViewDailyWorkforceBroadly(roleNames: RoleName[], hasProjectAccess: boolean): boolean {
   return roleNames.some((role) => COMPANY_WIDE_MANAGE_ROLES.includes(role)) || (hasProjectAccess && roleNames.some((role) => DAILY_WORKFORCE_BROAD_VIEWER_ROLES.includes(role)));

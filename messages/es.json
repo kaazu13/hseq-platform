@@ -145,7 +145,9 @@
       "platformSecurity": "Seguridad",
       "platformAuditLog": "Registro de auditoría",
       "platformBilling": "Uso y facturación",
-      "platformSettings": "Configuración de la plataforma"
+      "platformSettings": "Configuración de la plataforma",
+      "inspectionDashboard": "Panel de inspecciones",
+      "scaffoldMap": "Mapa de andamios"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "Oficial de HSE",
       "inspector": "Inspector",
       "member": "Miembro"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Frecuencia de inspección",
+    "description": "Con qué frecuencia debe volver a inspeccionarse este andamio.",
+    "daily": "Diaria",
+    "seven_days": "Cada 7 días",
+    "thirty_days": "Cada 30 días",
+    "custom": "Personalizada",
+    "customDaysLabel": "Número de días"
+  },
+  "ScaffoldMap": {
+    "title": "Mapa de andamios",
+    "viewScaffold": "Ver andamio",
+    "viewInspection": "Ver inspección",
+    "inspect": "Inspeccionar",
+    "frequency": "Frecuencia",
+    "lastInspection": "Última inspección",
+    "nextDue": "Próximo vencimiento",
+    "mapLoadError": "No se pudo cargar el mapa. Intenta actualizar la página.",
+    "mapAriaLabel": "Mapa de ubicaciones de andamios, coloreado según el estado de inspección.",
+    "unlocatedNote": "andamio(s) no tienen ubicación establecida y no aparecen en el mapa.",
+    "geolocationDenied": "No se pudo obtener tu ubicación actual. Comprueba el permiso de ubicación de tu navegador.",
+    "geolocationUnsupported": "Tu navegador no admite la detección de ubicación.",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "scaffoldLocation": "Ubicación del andamio",
+    "useCurrentLocation": "Usar ubicación actual",
+    "locationOptionalNote": "Opcional — déjalo en blanco si no conoces las coordenadas del andamio.",
+    "stats": {
+      "active": "Activos",
+      "valid": "Válidos",
+      "dueToday": "Vencen hoy",
+      "tomorrow": "Mañana",
+      "awaitingInitial": "Pendiente de inspección inicial"
+    },
+    "filters": {
+      "all_active": "Todos los activos",
+      "valid": "Válidos",
+      "attention_today": "Atención hoy",
+      "tomorrow": "Mañana",
+      "awaiting_initial": "Pendiente de inspección inicial"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Panel de inspecciones",
+    "totalScaffoldsCreated": "Total de andamios creados",
+    "activeScaffolds": "Andamios activos",
+    "dismantledArchived": "Desmontados / Archivados",
+    "currentlyValid": "Actualmente válidos",
+    "expiredOrDueToday": "Vencidos / Vencen hoy",
+    "expiringTomorrow": "Vencen mañana",
+    "awaitingInitialInspection": "Pendiente de inspección inicial",
+    "healthChartTitle": "Estado de las inspecciones",
+    "priorityTitle": "Prioridad de inspección",
+    "priorityAwaitingInitial": "Pendiente de inspección inicial",
+    "priorityExpiredDueToday": "Vencidos / Vencen hoy",
+    "priorityExpiringTomorrow": "Vencen mañana",
+    "priorityEmpty": "No hay nada en esta categoría por ahora.",
+    "notYetInspected": "Aún no inspeccionado",
+    "notYetSet": "Aún no establecida",
+    "everyNDays": "Cada {days} días",
+    "nextDueOn": "Próximo vencimiento: {date}",
+    "viewScaffold": "Ver andamio",
+    "inspect": "Inspeccionar",
+    "latestInspectionsTitle": "Últimas inspecciones",
+    "viewAllInspections": "Ver todas las inspecciones",
+    "latestInspectionsEmpty": "Aún no se ha finalizado ninguna inspección.",
+    "notAvailable": "No disponible",
+    "inspectorsTodayTitle": "Inspectores hoy",
+    "inspectorsTodayEmpty": "No hay personal con rol de inspector activo asignado a este proyecto.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspección finalizada hoy} other {# inspecciones finalizadas hoy}}",
+    "state": {
+      "awaiting_initial": "Pendiente de inspección inicial",
+      "expired": "Vencido",
+      "due_today": "Vence hoy",
+      "expiring_tomorrow": "Vence mañana",
+      "valid": "Válido",
+      "dismantled": "Desmontado"
+    },
+    "chartBucket": {
+      "green": "Válidos",
+      "orange": "Vencen mañana",
+      "red": "Vencidos / Vencen hoy",
+      "gray": "Pendiente de inspección inicial"
+    },
+    "attendanceStatus": {
+      "not_set": "Sin establecer",
+      "present": "En el trabajo",
+      "absent": "Ausente",
+      "sick": "Enfermo",
+      "leave": "Vacaciones",
+      "training": "Formación",
+      "off_site": "Fuera del sitio"
     }
   }
 }

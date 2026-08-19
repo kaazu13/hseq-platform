@@ -145,7 +145,9 @@
       "platformSecurity": "Sécurité",
       "platformAuditLog": "Journal d'audit",
       "platformBilling": "Utilisation et facturation",
-      "platformSettings": "Paramètres de la plateforme"
+      "platformSettings": "Paramètres de la plateforme",
+      "inspectionDashboard": "Tableau de bord des inspections",
+      "scaffoldMap": "Carte des échafaudages"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "Agent HSE",
       "inspector": "Inspecteur",
       "member": "Membre"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Fréquence d'inspection",
+    "description": "À quelle fréquence cet échafaudage doit être réinspecté.",
+    "daily": "Quotidienne",
+    "seven_days": "Tous les 7 jours",
+    "thirty_days": "Tous les 30 jours",
+    "custom": "Personnalisée",
+    "customDaysLabel": "Nombre de jours"
+  },
+  "ScaffoldMap": {
+    "title": "Carte des échafaudages",
+    "viewScaffold": "Voir l'échafaudage",
+    "viewInspection": "Voir l'inspection",
+    "inspect": "Inspecter",
+    "frequency": "Fréquence",
+    "lastInspection": "Dernière inspection",
+    "nextDue": "Prochaine échéance",
+    "mapLoadError": "Impossible de charger la carte. Essayez de recharger la page.",
+    "mapAriaLabel": "Carte des emplacements des échafaudages, colorée selon le statut d'inspection.",
+    "unlocatedNote": "échafaudage(s) n'ont pas d'emplacement défini et n'apparaissent pas sur la carte.",
+    "geolocationDenied": "Impossible d'obtenir votre position actuelle. Vérifiez l'autorisation de localisation de votre navigateur.",
+    "geolocationUnsupported": "Votre navigateur ne prend pas en charge la détection de position.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "scaffoldLocation": "Emplacement de l'échafaudage",
+    "useCurrentLocation": "Utiliser la position actuelle",
+    "locationOptionalNote": "Facultatif — laissez vide si vous ne connaissez pas les coordonnées de l'échafaudage.",
+    "stats": {
+      "active": "Actifs",
+      "valid": "Valides",
+      "dueToday": "Échéance aujourd'hui",
+      "tomorrow": "Demain",
+      "awaitingInitial": "En attente d'inspection initiale"
+    },
+    "filters": {
+      "all_active": "Tous actifs",
+      "valid": "Valides",
+      "attention_today": "Attention aujourd'hui",
+      "tomorrow": "Demain",
+      "awaiting_initial": "En attente d'inspection initiale"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Tableau de bord des inspections",
+    "totalScaffoldsCreated": "Total des échafaudages créés",
+    "activeScaffolds": "Échafaudages actifs",
+    "dismantledArchived": "Démontés / Archivés",
+    "currentlyValid": "Actuellement valides",
+    "expiredOrDueToday": "Expirés / Échéance aujourd'hui",
+    "expiringTomorrow": "Expirent demain",
+    "awaitingInitialInspection": "En attente d'inspection initiale",
+    "healthChartTitle": "État des inspections",
+    "priorityTitle": "Priorité d'inspection",
+    "priorityAwaitingInitial": "En attente d'inspection initiale",
+    "priorityExpiredDueToday": "Expirés / Échéance aujourd'hui",
+    "priorityExpiringTomorrow": "Expirent demain",
+    "priorityEmpty": "Rien dans cette catégorie pour le moment.",
+    "notYetInspected": "Pas encore inspecté",
+    "notYetSet": "Pas encore défini",
+    "everyNDays": "Tous les {days} jours",
+    "nextDueOn": "Prochaine échéance {date}",
+    "viewScaffold": "Voir l'échafaudage",
+    "inspect": "Inspecter",
+    "latestInspectionsTitle": "Dernières inspections",
+    "viewAllInspections": "Voir toutes les inspections",
+    "latestInspectionsEmpty": "Aucune inspection n'a encore été finalisée.",
+    "notAvailable": "Non disponible",
+    "inspectorsTodayTitle": "Inspecteurs aujourd'hui",
+    "inspectorsTodayEmpty": "Aucun inspecteur actif n'est affecté à ce projet.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspection finalisée aujourd'hui} other {# inspections finalisées aujourd'hui}}",
+    "state": {
+      "awaiting_initial": "En attente d'inspection initiale",
+      "expired": "Expiré",
+      "due_today": "Échéance aujourd'hui",
+      "expiring_tomorrow": "Expire demain",
+      "valid": "Valide",
+      "dismantled": "Démonté"
+    },
+    "chartBucket": {
+      "green": "Valides",
+      "orange": "Expirent demain",
+      "red": "Expirés / Échéance aujourd'hui",
+      "gray": "En attente d'inspection initiale"
+    },
+    "attendanceStatus": {
+      "not_set": "Non défini",
+      "present": "Au travail",
+      "absent": "Absent",
+      "sick": "Malade",
+      "leave": "Congé",
+      "training": "Formation",
+      "off_site": "Hors site"
     }
   }
 }

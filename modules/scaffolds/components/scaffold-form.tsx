@@ -2,10 +2,23 @@
 
 import { useState, useTransition, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Loader2, Lock, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { AlertCircle, Loader2, Lock, MapPin, Users } from "lucide-react";
 import { createScaffold, updateScaffold } from "@/modules/scaffolds/actions";
 import { listEligibleErectionTeamsAction } from "@/modules/scaffolds/team-actions";
-import { SCAFFOLD_TYPES, SCAFFOLD_TYPE_LABELS, type ScaffoldType, type ScaffoldDetail } from "@/modules/scaffolds/types";
+import {
+  SCAFFOLD_TYPES,
+  SCAFFOLD_TYPE_LABELS,
+  SCAFFOLD_INSPECTION_INTERVAL_TYPES,
+  SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS,
+  SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS,
+  SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS,
+  DEFAULT_SCAFFOLD_INSPECTION_INTERVAL_TYPE,
+  DEFAULT_SCAFFOLD_INSPECTION_INTERVAL_DAYS,
+  type ScaffoldType,
+  type ScaffoldDetail,
+  type ScaffoldInspectionIntervalType,
+} from "@/modules/scaffolds/types";
 import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -27,6 +40,9 @@ type ScaffoldFormProps = {
   /** V2: locks the Responsible Foreman field to the caller's own name (mustSelfLockResponsibleForeman()'s result) — a Foreman relying only on the self-only creation path can never pick anyone else, even by tampering with the client. Ignored in edit mode (editing is unchanged, hseq_manager/hse_officer/inspector only). */
   selfLockedForemanId?: string | null;
   today: string;
+  /** Part P — the project's EFFECTIVE inspection interval (company -> project -> system default of seven_days/7), pre-filled so a new scaffold never forces the creator to reselect 7 days every time. Ignored in edit mode (the scaffold's own current values are used instead). */
+  effectiveIntervalType?: ScaffoldInspectionIntervalType;
+  effectiveIntervalDays?: number;
 } & ({ mode: "create"; scaffold?: undefined } | { mode: "edit"; scaffold: ScaffoldDetail });
 
 /**
@@ -41,7 +57,20 @@ type ScaffoldFormProps = {
  * name (server-enforced regardless — see validate_scaffold_insert()) and
  * only their OWN Today's Teams offered as erection-team choices.
  */
-export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions, selfLockedForemanId, today, mode, scaffold }: ScaffoldFormProps) {
+export function ScaffoldForm({
+  companyId,
+  projectId,
+  projectName,
+  foremanOptions,
+  selfLockedForemanId,
+  today,
+  effectiveIntervalType = DEFAULT_SCAFFOLD_INSPECTION_INTERVAL_TYPE,
+  effectiveIntervalDays = DEFAULT_SCAFFOLD_INSPECTION_INTERVAL_DAYS,
+  mode,
+  scaffold,
+}: ScaffoldFormProps) {
+  const t = useTranslations("ScaffoldInspectionFrequency");
+  const tMap = useTranslations("ScaffoldMap");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -49,6 +78,37 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
   const [scaffoldType, setScaffoldType] = useState<ScaffoldType>(scaffold?.scaffold_type ?? "independent");
   const [responsibleForemanId, setResponsibleForemanId] = useState(scaffold?.responsible_foreman_id ?? selfLockedForemanId ?? "");
   const [erectedAt, setErectedAt] = useState(scaffold?.erected_at ?? today);
+  const [intervalType, setIntervalType] = useState<ScaffoldInspectionIntervalType>(scaffold?.inspection_interval_type ?? effectiveIntervalType);
+  const [customIntervalDays, setCustomIntervalDays] = useState(
+    String((scaffold?.inspection_interval_type === "custom" ? scaffold.inspection_interval_days : null) ?? effectiveIntervalDays),
+  );
+  const [latitude, setLatitude] = useState(scaffold?.latitude != null ? String(scaffold.latitude) : "");
+  const [longitude, setLongitude] = useState(scaffold?.longitude != null ? String(scaffold.longitude) : "");
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const resolvedIntervalDays = intervalType === "custom" ? Number(customIntervalDays) || 0 : SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS[intervalType];
+
+  function useCurrentLocation() {
+    setLocationError(null);
+    if (!("geolocation" in navigator)) {
+      setLocationError(tMap("geolocationUnsupported"));
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude.toFixed(6));
+        setLongitude(position.coords.longitude.toFixed(6));
+        setIsLocating(false);
+      },
+      () => {
+        setLocationError(tMap("geolocationDenied"));
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
 
   // `eligibleTeams === null` IS the loading state — deliberately no
   // separate `loading` boolean set synchronously inside the effect body
@@ -120,6 +180,10 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
       erectedAt,
       notes: String(formData.get("notes") ?? ""),
       erectionTeamIds: selectedTeamIds,
+      inspectionIntervalType: intervalType,
+      inspectionIntervalDays: String(resolvedIntervalDays),
+      latitude,
+      longitude,
     };
 
     startTransition(async () => {
@@ -307,6 +371,72 @@ export function ScaffoldForm({ companyId, projectId, projectName, foremanOptions
           </div>
         )}
         {fieldError("erectionTeamIds") && <p className="text-sm text-destructive">{fieldError("erectionTeamIds")}</p>}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <SectionHeader title={t("title")} description={t("description")} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="inspectionIntervalType">{t("title")}</Label>
+            <Select value={intervalType} onValueChange={(value) => setIntervalType(value as ScaffoldInspectionIntervalType)}>
+              <SelectTrigger id="inspectionIntervalType" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SCAFFOLD_INSPECTION_INTERVAL_TYPES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {intervalType === "custom" && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="customIntervalDays">{t("customDaysLabel")}</Label>
+              <Input
+                id="customIntervalDays"
+                type="number"
+                inputMode="numeric"
+                min={SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS}
+                max={SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS}
+                value={customIntervalDays}
+                onChange={(event) => setCustomIntervalDays(event.target.value)}
+                aria-invalid={Boolean(fieldError("inspectionIntervalDays"))}
+              />
+            </div>
+          )}
+        </div>
+        {fieldError("inspectionIntervalDays") && <p className="text-sm text-destructive">{fieldError("inspectionIntervalDays")}</p>}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <SectionHeader title={tMap("scaffoldLocation")} />
+        {locationError && (
+          <Alert variant="destructive" role="alert">
+            <AlertCircle />
+            <AlertDescription>{locationError}</AlertDescription>
+          </Alert>
+        )}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="latitude">{tMap("latitude")}</Label>
+            <Input id="latitude" type="number" step="0.000001" min={-90} max={90} inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} aria-invalid={Boolean(fieldError("latitude"))} />
+            {fieldError("latitude") && <p className="text-sm text-destructive">{fieldError("latitude")}</p>}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="longitude">{tMap("longitude")}</Label>
+            <Input id="longitude" type="number" step="0.000001" min={-180} max={180} inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} aria-invalid={Boolean(fieldError("longitude"))} />
+            {fieldError("longitude") && <p className="text-sm text-destructive">{fieldError("longitude")}</p>}
+          </div>
+        </div>
+        <div>
+          <Button type="button" variant="outline" size="sm" disabled={isLocating} onClick={useCurrentLocation}>
+            {isLocating ? <Loader2 className="animate-spin" /> : <MapPin />}
+            {tMap("useCurrentLocation")}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">{tMap("locationOptionalNote")}</p>
       </div>
 
       <div className="flex flex-col gap-4">

@@ -312,6 +312,9 @@ export type Database = {
           id: string
           logo_storage_path: string | null
           name: string
+          scaffold_inspection_interval_type:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days: number | null
           slug: string
           status: Database["public"]["Enums"]["company_status"]
@@ -324,6 +327,9 @@ export type Database = {
           id?: string
           logo_storage_path?: string | null
           name: string
+          scaffold_inspection_interval_type?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days?: number | null
           slug: string
           status?: Database["public"]["Enums"]["company_status"]
@@ -336,6 +342,9 @@ export type Database = {
           id?: string
           logo_storage_path?: string | null
           name?: string
+          scaffold_inspection_interval_type?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days?: number | null
           slug?: string
           status?: Database["public"]["Enums"]["company_status"]
@@ -2608,6 +2617,9 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          scaffold_inspection_interval_type:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days: number | null
           site_address: string | null
           site_latitude: number | null
@@ -2630,6 +2642,9 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
+          scaffold_inspection_interval_type?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days?: number | null
           site_address?: string | null
           site_latitude?: number | null
@@ -2652,6 +2667,9 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+          scaffold_inspection_interval_type?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days?: number | null
           site_address?: string | null
           site_latitude?: number | null
@@ -3606,6 +3624,10 @@ export type Database = {
           inspected_at: string
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
+          interval_days_at_finalization: number | null
+          interval_type_at_finalization:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           notes: string | null
           outcome:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
@@ -3636,6 +3658,10 @@ export type Database = {
           inspected_at?: string
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
+          interval_days_at_finalization?: number | null
+          interval_type_at_finalization?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           notes?: string | null
           outcome?:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
@@ -3666,6 +3692,10 @@ export type Database = {
           inspected_at?: string
           inspection_reason?: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id?: string
+          interval_days_at_finalization?: number | null
+          interval_type_at_finalization?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           notes?: string | null
           outcome?:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
@@ -3947,8 +3977,14 @@ export type Database = {
           erected_by: string | null
           height_metres: number | null
           id: string
+          inspection_interval_days: number | null
+          inspection_interval_type:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           intended_use: string
+          latitude: number | null
           length_metres: number | null
+          longitude: number | null
           max_load_class: string
           notes: string | null
           project_id: string
@@ -3971,8 +4007,14 @@ export type Database = {
           erected_by?: string | null
           height_metres?: number | null
           id?: string
+          inspection_interval_days?: number | null
+          inspection_interval_type?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           intended_use: string
+          latitude?: number | null
           length_metres?: number | null
+          longitude?: number | null
           max_load_class: string
           notes?: string | null
           project_id: string
@@ -3995,8 +4037,14 @@ export type Database = {
           erected_by?: string | null
           height_metres?: number | null
           id?: string
+          inspection_interval_days?: number | null
+          inspection_interval_type?:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           intended_use?: string
+          latitude?: number | null
           length_metres?: number | null
+          longitude?: number | null
           max_load_class?: string
           notes?: string | null
           project_id?: string
@@ -5511,6 +5559,9 @@ export type Database = {
           id: string
           logo_storage_path: string | null
           name: string
+          scaffold_inspection_interval_type:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days: number | null
           slug: string
           status: Database["public"]["Enums"]["company_status"]
@@ -5832,6 +5883,10 @@ export type Database = {
           inspected_at: string
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
+          interval_days_at_finalization: number | null
+          interval_type_at_finalization:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           notes: string | null
           outcome:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
@@ -5882,6 +5937,16 @@ export type Database = {
           phone: string
         }[]
       }
+      get_inspectors_today: {
+        Args: { target_project_id: string; target_work_date: string }
+        Returns: {
+          attendance_status: Database["public"]["Enums"]["daily_attendance_status"]
+          employee_id: string
+          finalized_inspections_today: number
+          first_name: string
+          last_name: string
+        }[]
+      }
       get_lmra_assessment_row: {
         Args: { target_id: string }
         Returns: {
@@ -5918,6 +5983,30 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_scaffold_inspection_overview: {
+        Args: { target_project_id: string }
+        Returns: {
+          latest_expires_at: string
+          latest_finalized_at: string
+          latest_inspection_id: string
+          latest_inspector_first_name: string
+          latest_inspector_id: string
+          latest_inspector_last_name: string
+          latest_interval_days: number
+          latest_interval_type: Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+          latest_outcome: Database["public"]["Enums"]["scaffold_inspection_outcome"]
+          latitude: number
+          longitude: number
+          responsible_foreman_first_name: string
+          responsible_foreman_id: string
+          responsible_foreman_last_name: string
+          scaffold_id: string
+          scaffold_number: number
+          status: Database["public"]["Enums"]["scaffold_status"]
+          tag_number: string
+          work_area: string
+        }[]
       }
       get_toolbox_authorized_employee_info: {
         Args: { target_employee_ids: string[] }
@@ -6959,9 +7048,19 @@ export type Database = {
         Returns: Json
       }
       resolve_public_report: { Args: { target_token: string }; Returns: Json }
-      resolve_scaffold_inspection_validity_days: {
+      resolve_scaffold_inspection_interval_for_project: {
         Args: { target_project_id: string }
-        Returns: number
+        Returns: {
+          interval_days: number
+          interval_type: Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+        }[]
+      }
+      resolve_scaffold_inspection_interval_for_scaffold: {
+        Args: { target_scaffold_id: string }
+        Returns: {
+          interval_days: number
+          interval_type: Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+        }[]
       }
       resolve_worked_hours_discrepancy: {
         Args: {
@@ -7732,6 +7831,9 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          scaffold_inspection_interval_type:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days: number | null
           site_address: string | null
           site_latitude: number | null
@@ -7768,6 +7870,9 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          scaffold_inspection_interval_type:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           scaffold_inspection_validity_days: number | null
           site_address: string | null
           site_latitude: number | null
@@ -7895,6 +8000,10 @@ export type Database = {
           inspected_at: string
           inspection_reason: Database["public"]["Enums"]["scaffold_inspection_reason"]
           inspector_id: string
+          interval_days_at_finalization: number | null
+          interval_type_at_finalization:
+            | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
+            | null
           notes: string | null
           outcome:
             | Database["public"]["Enums"]["scaffold_inspection_outcome"]
@@ -8131,6 +8240,11 @@ export type Database = {
         | "awaiting_verification"
         | "closed"
         | "rejected"
+      scaffold_inspection_interval_type:
+        | "daily"
+        | "seven_days"
+        | "thirty_days"
+        | "custom"
       scaffold_inspection_item_result:
         | "acceptable"
         | "defect_found"
@@ -8586,6 +8700,12 @@ export const Constants = {
         "awaiting_verification",
         "closed",
         "rejected",
+      ],
+      scaffold_inspection_interval_type: [
+        "daily",
+        "seven_days",
+        "thirty_days",
+        "custom",
       ],
       scaffold_inspection_item_result: [
         "acceptable",

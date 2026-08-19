@@ -21,6 +21,10 @@ const VALID_SCAFFOLD_INPUT = {
   erectedAt: "2026-08-10",
   notes: "",
   erectionTeamIds: [ERECTION_TEAM_A, ERECTION_TEAM_B],
+  inspectionIntervalType: "seven_days",
+  inspectionIntervalDays: "7",
+  latitude: "",
+  longitude: "",
 };
 
 describe("scaffoldFormSchema", () => {
@@ -107,6 +111,63 @@ describe("scaffoldFormSchema", () => {
   it("rejects a forged non-UUID erection team id", () => {
     const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: ["not-a-uuid"] });
     expect(result.success).toBe(false);
+  });
+
+  describe("inspection frequency (Parts O-Q)", () => {
+    it("accepts every fixed preset with its exact matching day count", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "daily", inspectionIntervalDays: "1" }).success).toBe(true);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "seven_days", inspectionIntervalDays: "7" }).success).toBe(true);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "thirty_days", inspectionIntervalDays: "30" }).success).toBe(true);
+    });
+
+    it("rejects a fixed preset paired with a mismatched day count — the DB's own consistency CHECK, mirrored client-side", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "daily", inspectionIntervalDays: "7" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "seven_days", inspectionIntervalDays: "1" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "thirty_days", inspectionIntervalDays: "31" }).success).toBe(false);
+    });
+
+    it("accepts a custom interval within [1, 365] days", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "14" }).success).toBe(true);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "1" }).success).toBe(true);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "365" }).success).toBe(true);
+    });
+
+    it("rejects a custom interval of zero, negative, non-integer, or beyond the max", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "0" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "-5" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "3.5" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "custom", inspectionIntervalDays: "366" }).success).toBe(false);
+    });
+
+    it("rejects an unrecognized interval type", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, inspectionIntervalType: "weekly", inspectionIntervalDays: "7" }).success).toBe(false);
+    });
+  });
+
+  describe("location (Parts U-V)", () => {
+    it("accepts no location set at all (both blank)", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "", longitude: "" }).success).toBe(true);
+    });
+
+    it("accepts a valid coordinate pair", () => {
+      const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "59.334591", longitude: "18.063240" });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.latitude).toBeCloseTo(59.334591);
+        expect(result.data.longitude).toBeCloseTo(18.06324);
+      }
+    });
+
+    it("rejects latitude/longitude set independently — both or neither", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "59.33", longitude: "" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "", longitude: "18.06" }).success).toBe(false);
+    });
+
+    it("rejects out-of-range coordinates", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "91", longitude: "18" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "59", longitude: "181" }).success).toBe(false);
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, latitude: "-91", longitude: "18" }).success).toBe(false);
+    });
   });
 });
 

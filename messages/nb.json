@@ -145,7 +145,9 @@
       "platformSecurity": "Sikkerhet",
       "platformAuditLog": "Revisjonslogg",
       "platformBilling": "Bruk og fakturering",
-      "platformSettings": "Plattforminnstillinger"
+      "platformSettings": "Plattforminnstillinger",
+      "inspectionDashboard": "Inspeksjonspanel",
+      "scaffoldMap": "Stillaskart"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "HSE-ansvarlig",
       "inspector": "Inspektør",
       "member": "Medlem"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Inspeksjonsfrekvens",
+    "description": "Hvor ofte dette stillaset må inspiseres på nytt.",
+    "daily": "Daglig",
+    "seven_days": "Hver 7. dag",
+    "thirty_days": "Hver 30. dag",
+    "custom": "Egendefinert",
+    "customDaysLabel": "Antall dager"
+  },
+  "ScaffoldMap": {
+    "title": "Stillaskart",
+    "viewScaffold": "Vis stillas",
+    "viewInspection": "Vis inspeksjon",
+    "inspect": "Inspiser",
+    "frequency": "Frekvens",
+    "lastInspection": "Siste inspeksjon",
+    "nextDue": "Neste forfall",
+    "mapLoadError": "Kunne ikke laste kartet. Prøv å laste inn siden på nytt.",
+    "mapAriaLabel": "Kart over stillasplasseringer, fargekodet etter inspeksjonsstatus.",
+    "unlocatedNote": "stillas mangler angitt plassering og vises ikke på kartet.",
+    "geolocationDenied": "Kunne ikke hente din nåværende plassering. Sjekk nettleserens posisjonstillatelse.",
+    "geolocationUnsupported": "Nettleseren din støtter ikke posisjonsgjenkjenning.",
+    "latitude": "Breddegrad",
+    "longitude": "Lengdegrad",
+    "scaffoldLocation": "Stillasplassering",
+    "useCurrentLocation": "Bruk nåværende posisjon",
+    "locationOptionalNote": "Valgfritt — la stå tomt hvis du ikke kjenner stillasets koordinater.",
+    "stats": {
+      "active": "Aktive",
+      "valid": "Gyldige",
+      "dueToday": "Forfaller i dag",
+      "tomorrow": "I morgen",
+      "awaitingInitial": "Venter på førstegangsinspeksjon"
+    },
+    "filters": {
+      "all_active": "Alle aktive",
+      "valid": "Gyldige",
+      "attention_today": "Krever handling i dag",
+      "tomorrow": "I morgen",
+      "awaiting_initial": "Venter på førstegangsinspeksjon"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Inspeksjonspanel",
+    "totalScaffoldsCreated": "Totalt antall opprettede stillaser",
+    "activeScaffolds": "Aktive stillaser",
+    "dismantledArchived": "Nedmontert / Arkivert",
+    "currentlyValid": "For øyeblikket gyldige",
+    "expiredOrDueToday": "Utløpt / Forfaller i dag",
+    "expiringTomorrow": "Utløper i morgen",
+    "awaitingInitialInspection": "Venter på førstegangsinspeksjon",
+    "healthChartTitle": "Inspeksjonsstatus",
+    "priorityTitle": "Inspeksjonsprioritet",
+    "priorityAwaitingInitial": "Venter på førstegangsinspeksjon",
+    "priorityExpiredDueToday": "Utløpt / Forfaller i dag",
+    "priorityExpiringTomorrow": "Utløper i morgen",
+    "priorityEmpty": "Ingenting i denne kategorien akkurat nå.",
+    "notYetInspected": "Ikke inspisert ennå",
+    "notYetSet": "Ikke angitt ennå",
+    "everyNDays": "Hver {days}. dag",
+    "nextDueOn": "Neste forfall {date}",
+    "viewScaffold": "Vis stillas",
+    "inspect": "Inspiser",
+    "latestInspectionsTitle": "Siste inspeksjoner",
+    "viewAllInspections": "Vis alle inspeksjoner",
+    "latestInspectionsEmpty": "Ingen inspeksjoner er fullført ennå.",
+    "notAvailable": "Ikke tilgjengelig",
+    "inspectorsTodayTitle": "Inspektører i dag",
+    "inspectorsTodayEmpty": "Ingen aktive inspektører er tildelt dette prosjektet.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspeksjon fullført i dag} other {# inspeksjoner fullført i dag}}",
+    "state": {
+      "awaiting_initial": "Venter på førstegangsinspeksjon",
+      "expired": "Utløpt",
+      "due_today": "Forfaller i dag",
+      "expiring_tomorrow": "Utløper i morgen",
+      "valid": "Gyldig",
+      "dismantled": "Nedmontert"
+    },
+    "chartBucket": {
+      "green": "Gyldige",
+      "orange": "Utløper i morgen",
+      "red": "Utløpt / Forfaller i dag",
+      "gray": "Venter på førstegangsinspeksjon"
+    },
+    "attendanceStatus": {
+      "not_set": "Ikke angitt",
+      "present": "På jobb",
+      "absent": "Fraværende",
+      "sick": "Syk",
+      "leave": "Ferie/permisjon",
+      "training": "Opplæring",
+      "off_site": "Utenfor anlegget"
     }
   }
 }

@@ -145,7 +145,9 @@
       "platformSecurity": "Sicherheit",
       "platformAuditLog": "Prüfprotokoll",
       "platformBilling": "Nutzung und Abrechnung",
-      "platformSettings": "Plattformeinstellungen"
+      "platformSettings": "Plattformeinstellungen",
+      "inspectionDashboard": "Inspektions-Dashboard",
+      "scaffoldMap": "Gerüstkarte"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "HSE-Beauftragter",
       "inspector": "Inspektor",
       "member": "Mitglied"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Inspektionsfrequenz",
+    "description": "Wie oft dieses Gerüst erneut inspiziert werden muss.",
+    "daily": "Täglich",
+    "seven_days": "Alle 7 Tage",
+    "thirty_days": "Alle 30 Tage",
+    "custom": "Benutzerdefiniert",
+    "customDaysLabel": "Anzahl der Tage"
+  },
+  "ScaffoldMap": {
+    "title": "Gerüstkarte",
+    "viewScaffold": "Gerüst anzeigen",
+    "viewInspection": "Inspektion anzeigen",
+    "inspect": "Inspizieren",
+    "frequency": "Häufigkeit",
+    "lastInspection": "Letzte Inspektion",
+    "nextDue": "Nächste Fälligkeit",
+    "mapLoadError": "Die Karte konnte nicht geladen werden. Versuche, die Seite neu zu laden.",
+    "mapAriaLabel": "Karte der Gerüststandorte, eingefärbt nach Inspektionsstatus.",
+    "unlocatedNote": "Gerüst(e) haben keinen festgelegten Standort und werden nicht auf der Karte angezeigt.",
+    "geolocationDenied": "Dein aktueller Standort konnte nicht ermittelt werden. Überprüfe die Standortberechtigung deines Browsers.",
+    "geolocationUnsupported": "Dein Browser unterstützt keine Standorterkennung.",
+    "latitude": "Breitengrad",
+    "longitude": "Längengrad",
+    "scaffoldLocation": "Gerüststandort",
+    "useCurrentLocation": "Aktuellen Standort verwenden",
+    "locationOptionalNote": "Optional — leer lassen, wenn du die Koordinaten des Gerüsts nicht kennst.",
+    "stats": {
+      "active": "Aktiv",
+      "valid": "Gültig",
+      "dueToday": "Heute fällig",
+      "tomorrow": "Morgen",
+      "awaitingInitial": "Wartet auf Erstinspektion"
+    },
+    "filters": {
+      "all_active": "Alle aktiven",
+      "valid": "Gültig",
+      "attention_today": "Heute Aufmerksamkeit nötig",
+      "tomorrow": "Morgen",
+      "awaiting_initial": "Wartet auf Erstinspektion"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Inspektions-Dashboard",
+    "totalScaffoldsCreated": "Insgesamt erstellte Gerüste",
+    "activeScaffolds": "Aktive Gerüste",
+    "dismantledArchived": "Abgebaut / Archiviert",
+    "currentlyValid": "Derzeit gültig",
+    "expiredOrDueToday": "Abgelaufen / Heute fällig",
+    "expiringTomorrow": "Läuft morgen ab",
+    "awaitingInitialInspection": "Wartet auf Erstinspektion",
+    "healthChartTitle": "Inspektionsstatus",
+    "priorityTitle": "Inspektionspriorität",
+    "priorityAwaitingInitial": "Wartet auf Erstinspektion",
+    "priorityExpiredDueToday": "Abgelaufen / Heute fällig",
+    "priorityExpiringTomorrow": "Läuft morgen ab",
+    "priorityEmpty": "Momentan nichts in dieser Kategorie.",
+    "notYetInspected": "Noch nicht inspiziert",
+    "notYetSet": "Noch nicht festgelegt",
+    "everyNDays": "Alle {days} Tage",
+    "nextDueOn": "Nächste Fälligkeit {date}",
+    "viewScaffold": "Gerüst anzeigen",
+    "inspect": "Inspizieren",
+    "latestInspectionsTitle": "Letzte Inspektionen",
+    "viewAllInspections": "Alle Inspektionen anzeigen",
+    "latestInspectionsEmpty": "Es wurden noch keine Inspektionen abgeschlossen.",
+    "notAvailable": "Nicht verfügbar",
+    "inspectorsTodayTitle": "Inspektoren heute",
+    "inspectorsTodayEmpty": "Diesem Projekt sind keine aktiven Inspektoren zugewiesen.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# Inspektion heute abgeschlossen} other {# Inspektionen heute abgeschlossen}}",
+    "state": {
+      "awaiting_initial": "Wartet auf Erstinspektion",
+      "expired": "Abgelaufen",
+      "due_today": "Heute fällig",
+      "expiring_tomorrow": "Läuft morgen ab",
+      "valid": "Gültig",
+      "dismantled": "Abgebaut"
+    },
+    "chartBucket": {
+      "green": "Gültig",
+      "orange": "Läuft morgen ab",
+      "red": "Abgelaufen / Heute fällig",
+      "gray": "Wartet auf Erstinspektion"
+    },
+    "attendanceStatus": {
+      "not_set": "Nicht festgelegt",
+      "present": "Bei der Arbeit",
+      "absent": "Abwesend",
+      "sick": "Krank",
+      "leave": "Urlaub",
+      "training": "Schulung",
+      "off_site": "Außerhalb der Baustelle"
     }
   }
 }

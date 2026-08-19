@@ -145,7 +145,9 @@
       "platformSecurity": "Beveiliging",
       "platformAuditLog": "Auditlog",
       "platformBilling": "Gebruik en facturering",
-      "platformSettings": "Platforminstellingen"
+      "platformSettings": "Platforminstellingen",
+      "inspectionDashboard": "Inspectiedashboard",
+      "scaffoldMap": "Steigerkaart"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "HSE-functionaris",
       "inspector": "Inspecteur",
       "member": "Lid"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Inspectiefrequentie",
+    "description": "Hoe vaak deze steiger opnieuw moet worden geïnspecteerd.",
+    "daily": "Dagelijks",
+    "seven_days": "Elke 7 dagen",
+    "thirty_days": "Elke 30 dagen",
+    "custom": "Aangepast",
+    "customDaysLabel": "Aantal dagen"
+  },
+  "ScaffoldMap": {
+    "title": "Steigerkaart",
+    "viewScaffold": "Steiger bekijken",
+    "viewInspection": "Inspectie bekijken",
+    "inspect": "Inspecteren",
+    "frequency": "Frequentie",
+    "lastInspection": "Laatste inspectie",
+    "nextDue": "Volgende vervaldatum",
+    "mapLoadError": "Kaart kon niet worden geladen. Probeer de pagina opnieuw te laden.",
+    "mapAriaLabel": "Kaart met steigerlocaties, gekleurd op basis van inspectiestatus.",
+    "unlocatedNote": "steiger(s) hebben geen locatie ingesteld en worden niet op de kaart weergegeven.",
+    "geolocationDenied": "Kon je huidige locatie niet ophalen. Controleer de locatietoestemming van je browser.",
+    "geolocationUnsupported": "Je browser ondersteunt geen locatiedetectie.",
+    "latitude": "Breedtegraad",
+    "longitude": "Lengtegraad",
+    "scaffoldLocation": "Steigerlocatie",
+    "useCurrentLocation": "Huidige locatie gebruiken",
+    "locationOptionalNote": "Optioneel — laat leeg als je de coördinaten van de steiger niet kent.",
+    "stats": {
+      "active": "Actief",
+      "valid": "Geldig",
+      "dueToday": "Vervalt vandaag",
+      "tomorrow": "Morgen",
+      "awaitingInitial": "Wacht op eerste inspectie"
+    },
+    "filters": {
+      "all_active": "Alle actieve",
+      "valid": "Geldig",
+      "attention_today": "Vandaag aandacht nodig",
+      "tomorrow": "Morgen",
+      "awaiting_initial": "Wacht op eerste inspectie"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Inspectiedashboard",
+    "totalScaffoldsCreated": "Totaal aantal gemaakte steigers",
+    "activeScaffolds": "Actieve steigers",
+    "dismantledArchived": "Gedemonteerd / Gearchiveerd",
+    "currentlyValid": "Momenteel geldig",
+    "expiredOrDueToday": "Verlopen / Vervalt vandaag",
+    "expiringTomorrow": "Vervalt morgen",
+    "awaitingInitialInspection": "Wacht op eerste inspectie",
+    "healthChartTitle": "Inspectiestatus",
+    "priorityTitle": "Inspectieprioriteit",
+    "priorityAwaitingInitial": "Wacht op eerste inspectie",
+    "priorityExpiredDueToday": "Verlopen / Vervalt vandaag",
+    "priorityExpiringTomorrow": "Vervalt morgen",
+    "priorityEmpty": "Niets in deze categorie op dit moment.",
+    "notYetInspected": "Nog niet geïnspecteerd",
+    "notYetSet": "Nog niet ingesteld",
+    "everyNDays": "Elke {days} dagen",
+    "nextDueOn": "Volgende vervaldatum {date}",
+    "viewScaffold": "Steiger bekijken",
+    "inspect": "Inspecteren",
+    "latestInspectionsTitle": "Laatste inspecties",
+    "viewAllInspections": "Alle inspecties bekijken",
+    "latestInspectionsEmpty": "Er zijn nog geen inspecties afgerond.",
+    "notAvailable": "Niet beschikbaar",
+    "inspectorsTodayTitle": "Inspecteurs vandaag",
+    "inspectorsTodayEmpty": "Er zijn geen actieve inspecteurs aan dit project toegewezen.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspectie vandaag afgerond} other {# inspecties vandaag afgerond}}",
+    "state": {
+      "awaiting_initial": "Wacht op eerste inspectie",
+      "expired": "Verlopen",
+      "due_today": "Vervalt vandaag",
+      "expiring_tomorrow": "Vervalt morgen",
+      "valid": "Geldig",
+      "dismantled": "Gedemonteerd"
+    },
+    "chartBucket": {
+      "green": "Geldig",
+      "orange": "Vervalt morgen",
+      "red": "Verlopen / Vervalt vandaag",
+      "gray": "Wacht op eerste inspectie"
+    },
+    "attendanceStatus": {
+      "not_set": "Niet ingesteld",
+      "present": "Aan het werk",
+      "absent": "Afwezig",
+      "sick": "Ziek",
+      "leave": "Verlof",
+      "training": "Training",
+      "off_site": "Buiten locatie"
     }
   }
 }

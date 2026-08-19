@@ -1,10 +1,10 @@
 import { notFound, forbidden } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { UserX } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
-import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
+import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
 import { listAbsentToday, getAbsenceDayLock, listAbsenceReportsForDate } from "@/modules/absences/queries";
 import { AbsentTodayList } from "@/modules/absences/components/absent-today-list";
@@ -47,16 +47,19 @@ export default async function AbsencesPage({ params, searchParams }: AbsencesPag
   }
 
   const [roleNames, myProjectRoles, isSuperAdmin] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id), isPlatformSuperAdmin()]);
-  // Employee-role correction pass 2: this page had no role gate at all —
-  // any project member, including a plain employee, could reach it by URL
-  // and see every OTHER employee's absence status, self-reported absence
-  // reports, and an always-rendered Export button. Every other role's
-  // behavior here is deliberately left untouched — this task is scoped to
-  // Employee only.
-  if (isEmployeeOnlyAccount(roleNames)) {
+  // Employee-role correction pass 2 + Inspector role correction (Part E):
+  // this page had no role gate at all — any project member, including a
+  // plain Employee, could reach it by URL and see every OTHER employee's
+  // absence status. Now uses the same "has neither manage nor broad-view
+  // rights" check as Today's Teams/Workforce/Leave, which — after
+  // removing "inspector" from DAILY_WORKFORCE_BROAD_VIEWER_ROLES — also
+  // correctly excludes a plain Inspector (never inferred merely from the
+  // role name; a multi-role account still passes via its other role).
+  const canManage = isSuperAdmin || canManageDailyWorkforce(roleNames, myProjectRoles);
+  const canViewBroadly = isSuperAdmin || canViewDailyWorkforceBroadly(roleNames, true);
+  if (!canManage && !canViewBroadly) {
     forbidden();
   }
-  const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
   // Task 3 Part 19 — deliberately NARROWER than canManage (hseq_manager/
   // hse_officer/foreman can manage daily workforce but are NOT attendance
   // review-request reviewers).

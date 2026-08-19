@@ -658,6 +658,12 @@ type ScaffoldSpec = {
   responsibleForemanId: string;
   erectedAtDaysAgo: number;
   erectionTeamId: string;
+  /** Inspection frequency override (Parts O-Q) — defaults to no override (inherits the project's effective default, which itself falls through to the system default of seven_days/7 since neither this fixture company nor project sets one). */
+  intervalType?: Database["public"]["Enums"]["scaffold_inspection_interval_type"];
+  intervalDays?: number;
+  /** Scaffold Map coordinates (Part U) — omitted entirely means "Location not set", matching a real never-configured scaffold. */
+  latitude?: number;
+  longitude?: number;
 };
 
 async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
@@ -676,6 +682,17 @@ async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
       if (count === 0) throw new Error(`scaffolds erected_at self-heal (${spec.tagNumber}): matched 0 rows — manageSession lacks scaffolds_update access`);
       log("scaffold", spec.tagNumber, "updated", `erected_at corrected to ${isoDate(spec.erectedAtDaysAgo)}`);
     }
+    // Idempotent self-heal for the frequency/location fixture additions too.
+    const { error: fixErr2 } = await spec.manageSession
+      .from("scaffolds")
+      .update({
+        inspection_interval_type: spec.intervalType ?? null,
+        inspection_interval_days: spec.intervalDays ?? null,
+        latitude: spec.latitude ?? null,
+        longitude: spec.longitude ?? null,
+      })
+      .eq("id", existing.id);
+    if (fixErr2) throw new Error(`scaffolds interval/location self-heal (${spec.tagNumber}): ${fixErr2.message}`);
   } else {
     const { data, error } = await spec.session
       .from("scaffolds")
@@ -695,6 +712,10 @@ async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
         responsible_foreman_id: spec.responsibleForemanId,
         erected_at: isoDate(spec.erectedAtDaysAgo),
         notes: "TEST fixture scaffold — role-validation realistic data seed.",
+        inspection_interval_type: spec.intervalType ?? null,
+        inspection_interval_days: spec.intervalDays ?? null,
+        latitude: spec.latitude ?? null,
+        longitude: spec.longitude ?? null,
       })
       .select("id")
       .single();
@@ -1240,6 +1261,25 @@ async function main() {
     log("attendance", `Test Recruiter (${TODAY})`, "created", "sick");
   }
 
+  // Part M (Inspectors Today) — test.inspector@example.test marked
+  // present today, so the dashboard's "Inspectors Today" summary/list has
+  // at least one real "At Work" example to smoke-test against. A full
+  // three-way (At Work / Absent / Holiday) demonstration would need
+  // multiple genuinely inspector-role accounts, which this fixture
+  // company only has one of (test.inspector) — the underlying query
+  // (get_inspectors_today) and its "not_set"/"absent"/"leave" branches
+  // are exercised generically elsewhere in this file (e.g. the recruiter/
+  // planner scenarios above use the same set_daily_attendance_status RPC),
+  // just not against a second/third inspector-role identity.
+  const { data: existingInspectorAttendance } = await companyAdminSession.from("daily_attendance").select("id, status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", inspectorEmployeeId).eq("work_date", TODAY).maybeSingle();
+  if (existingInspectorAttendance) {
+    log("attendance", `Test Inspector (${TODAY})`, "reused", existingInspectorAttendance.status);
+  } else {
+    const { error } = await companyAdminSession.rpc("set_daily_attendance_status", { target_project_id: projectId, target_employee_id: inspectorEmployeeId, target_work_date: TODAY, target_status: "present", target_note: undefined, target_reason: undefined });
+    if (error) throw new Error(`set_daily_attendance_status (inspector present today): ${error.message}`);
+    log("attendance", `Test Inspector (${TODAY})`, "created", "present");
+  }
+
   const plannerSession = await signInAs("test.planner@example.test", STABLE_PASSWORDS.planner);
   const plannerUser = await plannerSession.auth.getUser();
   const plannerLeaveId = await ensureLeaveRequest(plannerSession, companyId, projectId, plannerEmployeeId, plannerUser.data.user!.id, "annual", isoDate(5), isoDate(3), "TEST fixture: approved annual leave", "planner-approved-leave");
@@ -1545,6 +1585,58 @@ async function main() {
 
   await ensureScaffold({ session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-006", workArea: "Warehouse Yard", scaffoldType: "access_tower", responsibleForemanId: employeeIdByKey.foreman3, erectedAtDaysAgo: 1, erectionTeamId: alphaDay1 });
   // TEST-SC-006 deliberately has NO inspection yet — pending_inspection status, for that state to be manually testable too.
+
+  // Configurable inspection frequency + Scaffold Map fixture coverage
+  // (Part AL) — daily/7/30/custom frequencies, due-today, due-tomorrow,
+  // dismantled, with/without coordinates. Coordinates are a real
+  // industrial-site-shaped cluster near Stockholm (matching this fixture
+  // project's Europe/Stockholm timezone) purely for a realistic map view.
+  const scaffold7 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-007", workArea: "North Platform", scaffoldType: "independent",
+    responsibleForemanId: employeeIdByKey.foreman, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
+    intervalType: "seven_days", intervalDays: 7, latitude: 59.3346, longitude: 18.0632,
+  });
+  await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold7, scaffoldTag: "TEST-SC-007", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 7, reason: "routine_inspection", outcome: "safe_for_use" });
+  // 7 days ago + 7-day interval = due TODAY.
+
+  const scaffold8 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-008", workArea: "South Platform", scaffoldType: "birdcage",
+    responsibleForemanId: employeeIdByKey.foreman2, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
+    intervalType: "seven_days", intervalDays: 7, latitude: 59.336, longitude: 18.059,
+  });
+  await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold8, scaffoldTag: "TEST-SC-008", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 6, reason: "routine_inspection", outcome: "safe_for_use" });
+  // 6 days ago + 7-day interval = due TOMORROW.
+
+  const scaffold9 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-009", workArea: "Tank Farm", scaffoldType: "mobile",
+    responsibleForemanId: employeeIdByKey.foreman3, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
+    intervalType: "daily", intervalDays: 1,
+  });
+  await ensureInspection({ session: hseOfficerSession, companyId, projectId, scaffoldId: scaffold9, scaffoldTag: "TEST-SC-009", inspectorId: hseOfficerEmployeeId, inspectedAtDaysAgo: 0, reason: "routine_inspection", outcome: "safe_for_use" });
+  // Daily cadence, inspected today — no coordinates set ("Location not set").
+
+  const scaffold10 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-010", workArea: "Warehouse Yard", scaffoldType: "loading_bay",
+    responsibleForemanId: employeeIdByKey.foreman, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
+    intervalType: "thirty_days", intervalDays: 30,
+  });
+  await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold10, scaffoldTag: "TEST-SC-010", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 2, reason: "routine_inspection", outcome: "safe_for_use" });
+  // 30-day cadence, well within validity — no coordinates set.
+
+  const scaffold11 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-011", workArea: "North Platform", scaffoldType: "temporary_roof",
+    responsibleForemanId: employeeIdByKey.foreman2, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
+    intervalType: "custom", intervalDays: 14, latitude: 59.333, longitude: 18.066,
+  });
+  await ensureInspection({ session: hseOfficerSession, companyId, projectId, scaffoldId: scaffold11, scaffoldTag: "TEST-SC-011", inspectorId: hseOfficerEmployeeId, inspectedAtDaysAgo: 1, reason: "routine_inspection", outcome: "safe_for_use" });
+  // Custom 14-day cadence, well within validity.
+
+  const scaffold12 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-012", workArea: "South Platform", scaffoldType: "other",
+    responsibleForemanId: employeeIdByKey.foreman3, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9, latitude: 59.3378, longitude: 18.0602,
+  });
+  await ensureInspection({ session: hseqManagerSession, companyId, projectId, scaffoldId: scaffold12, scaffoldTag: "TEST-SC-012", inspectorId: hseqManagerEmployeeIdForScaffolds, inspectedAtDaysAgo: 1, reason: "other", outcome: "closed_dismantled" });
+  // Dismantled/archived — excluded from operational inspection health by default (Part I/J).
 
   // ==========================================================================
   // Phase J — Safety Observations + Corrective Actions.

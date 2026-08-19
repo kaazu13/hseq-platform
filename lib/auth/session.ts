@@ -4,7 +4,7 @@ import { forbidden, unauthorized } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { RoleName } from "@/modules/companies/types";
-export { isEmployeeOnlyAccount } from "@/lib/auth/role-checks";
+export { isEmployeeOnlyAccount, isEmployeeOrInspectorOnlyAccount } from "@/lib/auth/role-checks";
 
 /**
  * Reusable server-side auth utilities (docs/ARCHITECTURE.md §4, "lib/auth/

@@ -1,5 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Scaffold, ScaffoldDetail, ScaffoldInspection, ScaffoldInspectionDetail, ScaffoldInspectionWithScaffold, BasicEmployee, ScaffoldTeamMemberDetail, ScaffoldErectionTeamDetail, ScaffoldPhotoDetail } from "./types";
+import type {
+  Scaffold,
+  ScaffoldDetail,
+  ScaffoldInspection,
+  ScaffoldInspectionDetail,
+  ScaffoldInspectionWithScaffold,
+  BasicEmployee,
+  ScaffoldTeamMemberDetail,
+  ScaffoldErectionTeamDetail,
+  ScaffoldPhotoDetail,
+  ScaffoldInspectionOverviewRow,
+  InspectorTodayRow,
+  RecentInspectionRow,
+  ScaffoldInspectionIntervalType,
+} from "./types";
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
 import { getScaffoldPhotoSignedUrls } from "@/lib/storage/scaffold-photos";
 import { listDailyTeamsForDate } from "@/modules/daily-workforce/queries";
@@ -495,4 +509,97 @@ export async function getScaffoldOverviewCounts(companyId: string, projectId?: s
     expiringSoon,
     expired,
   };
+}
+
+// ── Scaffold Inspection Dashboard + Scaffold Map ────────────────────────
+
+/**
+ * The ONE aggregate query backing the Inspection Dashboard's KPIs/chart/
+ * priority list AND the Scaffold Map's marker payload — Part AE. Wraps
+ * get_scaffold_inspection_overview() (one lateral-joined SELECT server-
+ * side, see the migration) rather than looping per-scaffold queries.
+ * Returns EVERY scaffold in the project (active and dismantled/closed
+ * alike) — callers filter/bucket in TypeScript via
+ * modules/scaffolds/inspection-health.ts's resolveInspectionHealth(),
+ * which is also what keeps Dashboard and Map using identical logic.
+ */
+export async function getScaffoldInspectionOverview(projectId: string): Promise<ScaffoldInspectionOverviewRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_scaffold_inspection_overview", { target_project_id: projectId });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    scaffoldId: row.scaffold_id,
+    scaffoldNumber: row.scaffold_number,
+    tagNumber: row.tag_number,
+    workArea: row.work_area,
+    status: row.status,
+    responsibleForemanId: row.responsible_foreman_id,
+    responsibleForemanName: row.responsible_foreman_first_name ? `${row.responsible_foreman_first_name} ${row.responsible_foreman_last_name}` : null,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    latestInspectionId: row.latest_inspection_id,
+    latestFinalizedAt: row.latest_finalized_at,
+    latestInspectorId: row.latest_inspector_id,
+    latestInspectorName: row.latest_inspector_first_name ? `${row.latest_inspector_first_name} ${row.latest_inspector_last_name}` : null,
+    latestOutcome: row.latest_outcome,
+    latestExpiresAt: row.latest_expires_at,
+    latestIntervalType: row.latest_interval_type,
+    latestIntervalDays: row.latest_interval_days,
+  }));
+}
+
+/** Part M — active Inspector-role personnel on this project for one project-local date, their today's attendance, and how many inspections they've finalized today. Wraps get_inspectors_today() (one query, no N+1 per inspector). */
+export async function listInspectorsToday(projectId: string, workDate: string): Promise<InspectorTodayRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_inspectors_today", { target_project_id: projectId, target_work_date: workDate });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    employeeId: row.employee_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    attendanceStatus: row.attendance_status,
+    finalizedInspectionsToday: row.finalized_inspections_today,
+  }));
+}
+
+/** Part L — latest N finalized inspections project-wide, newest first. Bounded (default 10) — never an unbounded history load. */
+export async function listRecentInspections(companyId: string, projectId: string, limit = 10): Promise<RecentInspectionRow[]> {
+  const supabase = await createClient();
+  const { data: inspections, error } = await supabase
+    .from("scaffold_inspections")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("status", "finalized")
+    .order("finalized_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  if (!inspections || inspections.length === 0) return [];
+
+  const scaffoldIds = [...new Set(inspections.map((i) => i.scaffold_id))];
+  const inspectorIds = [...new Set(inspections.map((i) => i.inspector_id))];
+
+  const [{ data: scaffolds, error: scaffoldsError }, { data: inspectors, error: inspectorsError }] = await Promise.all([
+    supabase.from("scaffolds").select("id, scaffold_number, tag_number, work_area").in("id", scaffoldIds),
+    supabase.rpc("get_basic_employee_info", { target_employee_ids: inspectorIds }),
+  ]);
+  if (scaffoldsError) throw scaffoldsError;
+  if (inspectorsError) throw inspectorsError;
+
+  const scaffoldById = new Map((scaffolds ?? []).map((s) => [s.id, s]));
+  const inspectorById = new Map((inspectors ?? []).map((e: BasicEmployee) => [e.id, e]));
+
+  return inspections.map((inspection) => ({
+    ...inspection,
+    scaffold: scaffoldById.get(inspection.scaffold_id) ?? { id: inspection.scaffold_id, scaffold_number: 0, tag_number: "—", work_area: "—" },
+    inspector: inspectorById.get(inspection.inspector_id) ?? null,
+  }));
+}
+
+/** Part P/Q — the effective inspection interval a new scaffold in `projectId` would inherit, shown to the creator BEFORE they pick one (so they never have to reselect 7 days every time — it's just already the visible default). */
+export async function getEffectiveInspectionIntervalForProject(projectId: string): Promise<{ intervalType: ScaffoldInspectionIntervalType; intervalDays: number }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("resolve_scaffold_inspection_interval_for_project", { target_project_id: projectId }).single();
+  if (error) throw error;
+  return { intervalType: data.interval_type, intervalDays: data.interval_days };
 }

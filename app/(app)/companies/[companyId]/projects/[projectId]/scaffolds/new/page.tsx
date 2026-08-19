@@ -1,7 +1,7 @@
 import { notFound, forbidden } from "next/navigation";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
-import { listScaffoldRegisterCreatableProjects, listEligibleScaffoldForemen, isCallerEligibleScaffoldForeman } from "@/modules/scaffolds/queries";
+import { listScaffoldRegisterCreatableProjects, listEligibleScaffoldForemen, isCallerEligibleScaffoldForeman, getEffectiveInspectionIntervalForProject } from "@/modules/scaffolds/queries";
 import { isScaffoldBroadCreator, mustSelfLockResponsibleForeman } from "@/modules/scaffolds/permissions";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { ScaffoldForm } from "@/modules/scaffolds/components/scaffold-form";
@@ -39,9 +39,10 @@ export default async function NewScaffoldPage({ params }: NewScaffoldPageProps) 
   const isEligibleForeman = isBroadCreator ? false : await isCallerEligibleScaffoldForeman(companyId, project.id);
   const selfLocked = mustSelfLockResponsibleForeman(roleNames, true, isEligibleForeman);
 
-  const [foremanOptions, selfLockedForemanId] = await Promise.all([
+  const [foremanOptions, selfLockedForemanId, effectiveInterval] = await Promise.all([
     listEligibleScaffoldForemen(companyId, project.id),
     selfLocked ? getMyEmployeeId(companyId, user.id) : Promise.resolve(null),
+    getEffectiveInspectionIntervalForProject(project.id),
   ]);
 
   // Task 3 Part 15 — scaffold erection date defaults to the project's own local "today," not the server's.
@@ -59,6 +60,8 @@ export default async function NewScaffoldPage({ params }: NewScaffoldPageProps) 
           foremanOptions={foremanOptions}
           selfLockedForemanId={selfLockedForemanId}
           today={today}
+          effectiveIntervalType={effectiveInterval.intervalType}
+          effectiveIntervalDays={effectiveInterval.intervalDays}
         />
       </div>
     </div>

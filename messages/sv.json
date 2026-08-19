@@ -145,7 +145,9 @@
       "platformSecurity": "Säkerhet",
       "platformAuditLog": "Granskningslogg",
       "platformBilling": "Användning och fakturering",
-      "platformSettings": "Plattformsinställningar"
+      "platformSettings": "Plattformsinställningar",
+      "inspectionDashboard": "Inspektionspanel",
+      "scaffoldMap": "Ställningskarta"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "HSE-ansvarig",
       "inspector": "Inspektör",
       "member": "Medlem"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Inspektionsfrekvens",
+    "description": "Hur ofta denna ställning måste inspekteras på nytt.",
+    "daily": "Dagligen",
+    "seven_days": "Var 7:e dag",
+    "thirty_days": "Var 30:e dag",
+    "custom": "Anpassad",
+    "customDaysLabel": "Antal dagar"
+  },
+  "ScaffoldMap": {
+    "title": "Ställningskarta",
+    "viewScaffold": "Visa ställning",
+    "viewInspection": "Visa inspektion",
+    "inspect": "Inspektera",
+    "frequency": "Frekvens",
+    "lastInspection": "Senaste inspektion",
+    "nextDue": "Nästa förfallodag",
+    "mapLoadError": "Kunde inte läsa in kartan. Försök att uppdatera sidan.",
+    "mapAriaLabel": "Karta över ställningars platser, färgkodad efter inspektionsstatus.",
+    "unlocatedNote": "ställning(ar) saknar angiven plats och visas inte på kartan.",
+    "geolocationDenied": "Kunde inte hämta din nuvarande plats. Kontrollera webbläsarens platsbehörighet.",
+    "geolocationUnsupported": "Din webbläsare stöder inte platsidentifiering.",
+    "latitude": "Latitud",
+    "longitude": "Longitud",
+    "scaffoldLocation": "Ställningens plats",
+    "useCurrentLocation": "Använd nuvarande plats",
+    "locationOptionalNote": "Valfritt — lämna tomt om du inte känner till ställningens koordinater.",
+    "stats": {
+      "active": "Aktiva",
+      "valid": "Giltiga",
+      "dueToday": "Förfaller idag",
+      "tomorrow": "Imorgon",
+      "awaitingInitial": "Väntar på förstagångsinspektion"
+    },
+    "filters": {
+      "all_active": "Alla aktiva",
+      "valid": "Giltiga",
+      "attention_today": "Kräver åtgärd idag",
+      "tomorrow": "Imorgon",
+      "awaiting_initial": "Väntar på förstagångsinspektion"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Inspektionspanel",
+    "totalScaffoldsCreated": "Totalt antal skapade ställningar",
+    "activeScaffolds": "Aktiva ställningar",
+    "dismantledArchived": "Nedmonterade / Arkiverade",
+    "currentlyValid": "För närvarande giltiga",
+    "expiredOrDueToday": "Förfallna / Förfaller idag",
+    "expiringTomorrow": "Förfaller imorgon",
+    "awaitingInitialInspection": "Väntar på förstagångsinspektion",
+    "healthChartTitle": "Inspektionsstatus",
+    "priorityTitle": "Inspektionsprioritet",
+    "priorityAwaitingInitial": "Väntar på förstagångsinspektion",
+    "priorityExpiredDueToday": "Förfallna / Förfaller idag",
+    "priorityExpiringTomorrow": "Förfaller imorgon",
+    "priorityEmpty": "Inget i denna kategori just nu.",
+    "notYetInspected": "Inte inspekterad än",
+    "notYetSet": "Inte inställd än",
+    "everyNDays": "Var {days}:e dag",
+    "nextDueOn": "Nästa förfallodag {date}",
+    "viewScaffold": "Visa ställning",
+    "inspect": "Inspektera",
+    "latestInspectionsTitle": "Senaste inspektionerna",
+    "viewAllInspections": "Visa alla inspektioner",
+    "latestInspectionsEmpty": "Inga inspektioner har slutförts ännu.",
+    "notAvailable": "Ej tillgängligt",
+    "inspectorsTodayTitle": "Inspektörer idag",
+    "inspectorsTodayEmpty": "Ingen aktiv personal med inspektörsroll är tilldelad detta projekt.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspektion slutförd idag} other {# inspektioner slutförda idag}}",
+    "state": {
+      "awaiting_initial": "Väntar på förstagångsinspektion",
+      "expired": "Förfallen",
+      "due_today": "Förfaller idag",
+      "expiring_tomorrow": "Förfaller imorgon",
+      "valid": "Giltig",
+      "dismantled": "Nedmonterad"
+    },
+    "chartBucket": {
+      "green": "Giltiga",
+      "orange": "Förfaller imorgon",
+      "red": "Förfallna / Förfaller idag",
+      "gray": "Väntar på förstagångsinspektion"
+    },
+    "attendanceStatus": {
+      "not_set": "Ej angivet",
+      "present": "På jobbet",
+      "absent": "Frånvarande",
+      "sick": "Sjuk",
+      "leave": "Semester/ledighet",
+      "training": "Utbildning",
+      "off_site": "Utanför platsen"
     }
   }
 }

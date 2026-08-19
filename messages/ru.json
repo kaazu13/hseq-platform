@@ -145,7 +145,9 @@
       "platformSecurity": "Безопасность",
       "platformAuditLog": "Журнал аудита",
       "platformBilling": "Использование и биллинг",
-      "platformSettings": "Настройки платформы"
+      "platformSettings": "Настройки платформы",
+      "inspectionDashboard": "Панель инспекций",
+      "scaffoldMap": "Карта лесов"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "Специалист по HSE",
       "inspector": "Инспектор",
       "member": "Участник"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Периодичность проверки",
+    "description": "Как часто эти леса должны проходить повторную проверку.",
+    "daily": "Ежедневно",
+    "seven_days": "Каждые 7 дней",
+    "thirty_days": "Каждые 30 дней",
+    "custom": "Особая",
+    "customDaysLabel": "Количество дней"
+  },
+  "ScaffoldMap": {
+    "title": "Карта лесов",
+    "viewScaffold": "Просмотреть леса",
+    "viewInspection": "Просмотреть проверку",
+    "inspect": "Проверить",
+    "frequency": "Периодичность",
+    "lastInspection": "Последняя проверка",
+    "nextDue": "Следующий срок",
+    "mapLoadError": "Не удалось загрузить карту. Попробуйте обновить страницу.",
+    "mapAriaLabel": "Карта расположения лесов, окрашенная по статусу проверки.",
+    "unlocatedNote": "лесов не имеют указанного расположения и не отображаются на карте.",
+    "geolocationDenied": "Не удалось определить ваше текущее местоположение. Проверьте разрешение на геолокацию в браузере.",
+    "geolocationUnsupported": "Ваш браузер не поддерживает определение местоположения.",
+    "latitude": "Широта",
+    "longitude": "Долгота",
+    "scaffoldLocation": "Расположение лесов",
+    "useCurrentLocation": "Использовать текущее местоположение",
+    "locationOptionalNote": "Необязательно — оставьте пустым, если координаты лесов неизвестны.",
+    "stats": {
+      "active": "Активные",
+      "valid": "Действительны",
+      "dueToday": "Срок сегодня",
+      "tomorrow": "Завтра",
+      "awaitingInitial": "Ожидает первичной проверки"
+    },
+    "filters": {
+      "all_active": "Все активные",
+      "valid": "Действительны",
+      "attention_today": "Требуют внимания сегодня",
+      "tomorrow": "Завтра",
+      "awaiting_initial": "Ожидает первичной проверки"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Панель инспекций",
+    "totalScaffoldsCreated": "Всего создано лесов",
+    "activeScaffolds": "Активные леса",
+    "dismantledArchived": "Демонтированные / Архивные",
+    "currentlyValid": "Действительны сейчас",
+    "expiredOrDueToday": "Просрочены / Срок сегодня",
+    "expiringTomorrow": "Истекают завтра",
+    "awaitingInitialInspection": "Ожидает первичной проверки",
+    "healthChartTitle": "Статус проверок",
+    "priorityTitle": "Приоритет проверки",
+    "priorityAwaitingInitial": "Ожидает первичной проверки",
+    "priorityExpiredDueToday": "Просрочены / Срок сегодня",
+    "priorityExpiringTomorrow": "Истекают завтра",
+    "priorityEmpty": "В этой категории пока ничего нет.",
+    "notYetInspected": "Ещё не проверено",
+    "notYetSet": "Ещё не задано",
+    "everyNDays": "Каждые {days} дн.",
+    "nextDueOn": "Следующий срок {date}",
+    "viewScaffold": "Просмотреть леса",
+    "inspect": "Проверить",
+    "latestInspectionsTitle": "Последние проверки",
+    "viewAllInspections": "Показать все проверки",
+    "latestInspectionsEmpty": "Пока не завершено ни одной проверки.",
+    "notAvailable": "Недоступно",
+    "inspectorsTodayTitle": "Инспекторы сегодня",
+    "inspectorsTodayEmpty": "Активные инспекторы не назначены на этот проект.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# проверка завершена сегодня} few {# проверки завершены сегодня} many {# проверок завершено сегодня} other {# проверки завершены сегодня}}",
+    "state": {
+      "awaiting_initial": "Ожидает первичной проверки",
+      "expired": "Просрочено",
+      "due_today": "Срок сегодня",
+      "expiring_tomorrow": "Истекает завтра",
+      "valid": "Действительно",
+      "dismantled": "Демонтировано"
+    },
+    "chartBucket": {
+      "green": "Действительны",
+      "orange": "Истекают завтра",
+      "red": "Просрочены / Срок сегодня",
+      "gray": "Ожидает первичной проверки"
+    },
+    "attendanceStatus": {
+      "not_set": "Не задано",
+      "present": "На работе",
+      "absent": "Отсутствует",
+      "sick": "Болен",
+      "leave": "Отпуск",
+      "training": "Обучение",
+      "off_site": "Вне объекта"
     }
   }
 }

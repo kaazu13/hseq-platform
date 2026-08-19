@@ -85,6 +85,10 @@ export async function createScaffold(companyId: string, input: ScaffoldFormInput
       responsible_foreman_id: parsed.data.responsibleForemanId,
       erected_at: parsed.data.erectedAt,
       notes: parsed.data.notes ?? null,
+      inspection_interval_type: parsed.data.inspectionIntervalType,
+      inspection_interval_days: parsed.data.inspectionIntervalDays,
+      latitude: parsed.data.latitude ?? null,
+      longitude: parsed.data.longitude ?? null,
       created_by: user.id,
       updated_by: user.id,
     })
@@ -162,6 +166,10 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
         responsible_foreman_id: parsed.data.responsibleForemanId,
         erected_at: parsed.data.erectedAt,
         notes: parsed.data.notes ?? null,
+        inspection_interval_type: parsed.data.inspectionIntervalType,
+        inspection_interval_days: parsed.data.inspectionIntervalDays,
+        latitude: parsed.data.latitude ?? null,
+        longitude: parsed.data.longitude ?? null,
         updated_by: user.id,
       },
       { count: "exact" },
@@ -429,6 +437,13 @@ export async function finalizeInspection(
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/inspections/${inspectionId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-inspections`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}`);
+  // Part AD (live/fresh data): the Inspection Dashboard and Scaffold Map
+  // both read getScaffoldInspectionOverview() for this same project —
+  // revalidating them here means a finalized inspection's new validity/
+  // due-date/priority-list/marker-color state shows up on next navigation
+  // or AutoRefresh tick, without a full reload.
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-inspection-dashboard`);
+  revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffold-map`);
   return { ok: true, data: null };
 }
 

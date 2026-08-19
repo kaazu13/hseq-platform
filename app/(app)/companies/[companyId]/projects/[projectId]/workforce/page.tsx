@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate, isCallerProjectAccessible } from "@/modules/daily-workforce/queries";
 import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
@@ -36,13 +36,17 @@ export default async function WorkforcePage({ params, searchParams }: WorkforceP
   const project = await getProject(companyId, projectId);
   if (!project) notFound();
 
-  const [roleNames, myProjectRoles, hasProjectAccess] = await Promise.all([
+  const [roleNames, myProjectRoles, hasProjectAccess, isSuperAdmin] = await Promise.all([
     getUserRoleNames(companyId),
     getMyProjectAssignmentRoles(companyId, projectId, user.id),
     isCallerProjectAccessible(projectId),
+    isPlatformSuperAdmin(),
   ]);
-  const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
-  const canViewBroadly = canViewDailyWorkforceBroadly(roleNames, hasProjectAccess);
+  // Part G (Workforce attendance correction): platform_super_admin has
+  // global authority here, same OR treatment as every other manage-tier
+  // check in this app (e.g. the Equipment page's isSuperAdmin || ...).
+  const canManage = isSuperAdmin || canManageDailyWorkforce(roleNames, myProjectRoles);
+  const canViewBroadly = isSuperAdmin || canViewDailyWorkforceBroadly(roleNames, hasProjectAccess);
 
   if (!canManage && !canViewBroadly) notFound();
 

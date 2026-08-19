@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { CalendarOff } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
-import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
+import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
 import { listLeaveRequestsForProject } from "@/modules/leave-requests/queries";
 import { LEAVE_TYPE_LABELS, LEAVE_REQUEST_STATUS_LABELS, countLeaveCalendarDays, type LeaveRequestStatus } from "@/modules/leave-requests/types";
@@ -30,7 +30,21 @@ function statusBadgeVariant(status: string): "secondary" | "outline" | "destruct
   return "outline";
 }
 
-/** Holiday/Leave management view (Phase 9) — Pending/Approved/Returned/Denied/History, scoped to this project. "Employee sees only their own; authorized management sees only the correct company/project scope" — canManage gates the whole page. */
+/**
+ * Holiday/Leave management view (Phase 9) — Pending/Approved/Returned/
+ * Denied/History, scoped to this project.
+ *
+ * Route fix (manual-testing regression): this page used to 404 for any
+ * "broad viewer" role (project_manager not the project's own assigned PM,
+ * hseq_manager, hse_officer, foreman) even though DailyWorkforceSubnav
+ * shows the "Holiday / Leave" tab to that exact same audience on every
+ * sibling page (Teams/Workforce/Absent Today) — clicking the tab landed
+ * on a 404 that looked like a broken/renamed route, when the route itself
+ * was correct all along. Now matches its siblings' own gate exactly:
+ * canManage OR canViewBroadly may view the page; only canManage sees the
+ * approve/deny controls and the export button (decision authority is
+ * unchanged — see LeaveRequestDecisionControls/LeaveExportDialog below).
+ */
 export default async function LeavePage({ params, searchParams }: LeavePageProps) {
   const { companyId, projectId } = await params;
   const urlParams = await searchParams;
@@ -40,9 +54,10 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
   const project = await getProject(companyId, projectId);
   if (!project) notFound();
 
-  const [roleNames, myProjectRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
-  const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
-  if (!canManage) notFound();
+  const [roleNames, myProjectRoles, isSuperAdmin] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id), isPlatformSuperAdmin()]);
+  const canManage = isSuperAdmin || canManageDailyWorkforce(roleNames, myProjectRoles);
+  const canViewBroadly = isSuperAdmin || canViewDailyWorkforceBroadly(roleNames, true);
+  if (!canManage && !canViewBroadly) notFound();
 
   const activeTab = STATUS_TAB_KEYS.includes((urlParams.status ?? "") as (typeof STATUS_TAB_KEYS)[number]) ? (urlParams.status as (typeof STATUS_TAB_KEYS)[number]) : "pending";
   const requests = await listLeaveRequestsForProject(companyId, projectId, activeTab === "all" ? undefined : { statuses: [activeTab as LeaveRequestStatus] });
@@ -52,7 +67,7 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title={t("title")} description={project.name} actions={<LeaveExportDialog companyId={companyId} projectId={projectId} />} />
+      <PageHeader title={t("title")} description={project.name} actions={canManage ? <LeaveExportDialog companyId={companyId} projectId={projectId} /> : undefined} />
 
       <DailyWorkforceSubnav companyId={companyId} projectId={projectId} active="leave" />
 
@@ -90,7 +105,7 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={statusBadgeVariant(request.status)}>{LEAVE_REQUEST_STATUS_LABELS[request.status]}</Badge>
-                  {request.status === "pending" && <LeaveRequestDecisionControls companyId={companyId} projectId={projectId} leaveRequestId={request.id} />}
+                  {canManage && request.status === "pending" && <LeaveRequestDecisionControls companyId={companyId} projectId={projectId} leaveRequestId={request.id} />}
                 </div>
               </CardContent>
             </Card>

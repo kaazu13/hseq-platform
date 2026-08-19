@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
-import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -41,12 +41,16 @@ import type { DailyAttendance, DailyTeam, DailyTeamMember, DailyTeamShift, CopyD
 
 async function requireDailyWorkforceManageAccess(companyId: string, projectId: string) {
   const { user } = await requireCompanyMembership(companyId);
-  const [roleNames, myProjectAssignmentRoles] = await Promise.all([
+  const [roleNames, myProjectAssignmentRoles, isSuperAdmin] = await Promise.all([
     getUserRoleNames(companyId),
     getMyProjectAssignmentRoles(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
   ]);
 
-  if (!canManageDailyWorkforce(roleNames, myProjectAssignmentRoles)) {
+  // Part G (Workforce attendance correction): platform_super_admin has
+  // global authority, same OR treatment as every other manage-tier check
+  // in this app (e.g. is_scaffold_broad_creator()).
+  if (!isSuperAdmin && !canManageDailyWorkforce(roleNames, myProjectAssignmentRoles)) {
     forbidden();
   }
 

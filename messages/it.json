@@ -145,7 +145,9 @@
       "platformSecurity": "Sicurezza",
       "platformAuditLog": "Registro di controllo",
       "platformBilling": "Utilizzo e fatturazione",
-      "platformSettings": "Impostazioni piattaforma"
+      "platformSettings": "Impostazioni piattaforma",
+      "inspectionDashboard": "Dashboard ispezioni",
+      "scaffoldMap": "Mappa ponteggi"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "Addetto HSE",
       "inspector": "Ispettore",
       "member": "Membro"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Frequenza di ispezione",
+    "description": "Ogni quanto questo ponteggio deve essere ispezionato di nuovo.",
+    "daily": "Giornaliera",
+    "seven_days": "Ogni 7 giorni",
+    "thirty_days": "Ogni 30 giorni",
+    "custom": "Personalizzata",
+    "customDaysLabel": "Numero di giorni"
+  },
+  "ScaffoldMap": {
+    "title": "Mappa ponteggi",
+    "viewScaffold": "Vedi ponteggio",
+    "viewInspection": "Vedi ispezione",
+    "inspect": "Ispeziona",
+    "frequency": "Frequenza",
+    "lastInspection": "Ultima ispezione",
+    "nextDue": "Prossima scadenza",
+    "mapLoadError": "Impossibile caricare la mappa. Prova a ricaricare la pagina.",
+    "mapAriaLabel": "Mappa delle posizioni dei ponteggi, colorata in base allo stato di ispezione.",
+    "unlocatedNote": "ponteggio/i non hanno una posizione impostata e non sono mostrati sulla mappa.",
+    "geolocationDenied": "Impossibile ottenere la tua posizione attuale. Controlla il permesso di posizione del browser.",
+    "geolocationUnsupported": "Il tuo browser non supporta il rilevamento della posizione.",
+    "latitude": "Latitudine",
+    "longitude": "Longitudine",
+    "scaffoldLocation": "Posizione del ponteggio",
+    "useCurrentLocation": "Usa posizione attuale",
+    "locationOptionalNote": "Facoltativo — lascia vuoto se non conosci le coordinate del ponteggio.",
+    "stats": {
+      "active": "Attivi",
+      "valid": "Validi",
+      "dueToday": "Scadenza oggi",
+      "tomorrow": "Domani",
+      "awaitingInitial": "In attesa di ispezione iniziale"
+    },
+    "filters": {
+      "all_active": "Tutti attivi",
+      "valid": "Validi",
+      "attention_today": "Attenzione oggi",
+      "tomorrow": "Domani",
+      "awaiting_initial": "In attesa di ispezione iniziale"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Dashboard ispezioni",
+    "totalScaffoldsCreated": "Totale ponteggi creati",
+    "activeScaffolds": "Ponteggi attivi",
+    "dismantledArchived": "Smontati / Archiviati",
+    "currentlyValid": "Attualmente validi",
+    "expiredOrDueToday": "Scaduti / Scadenza oggi",
+    "expiringTomorrow": "Scadono domani",
+    "awaitingInitialInspection": "In attesa di ispezione iniziale",
+    "healthChartTitle": "Stato delle ispezioni",
+    "priorityTitle": "Priorità di ispezione",
+    "priorityAwaitingInitial": "In attesa di ispezione iniziale",
+    "priorityExpiredDueToday": "Scaduti / Scadenza oggi",
+    "priorityExpiringTomorrow": "Scadono domani",
+    "priorityEmpty": "Nessun elemento in questa categoria al momento.",
+    "notYetInspected": "Non ancora ispezionato",
+    "notYetSet": "Non ancora impostata",
+    "everyNDays": "Ogni {days} giorni",
+    "nextDueOn": "Prossima scadenza {date}",
+    "viewScaffold": "Vedi ponteggio",
+    "inspect": "Ispeziona",
+    "latestInspectionsTitle": "Ultime ispezioni",
+    "viewAllInspections": "Vedi tutte le ispezioni",
+    "latestInspectionsEmpty": "Nessuna ispezione è stata ancora finalizzata.",
+    "notAvailable": "Non disponibile",
+    "inspectorsTodayTitle": "Ispettori oggi",
+    "inspectorsTodayEmpty": "Nessun ispettore attivo è assegnato a questo progetto.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# ispezione finalizzata oggi} other {# ispezioni finalizzate oggi}}",
+    "state": {
+      "awaiting_initial": "In attesa di ispezione iniziale",
+      "expired": "Scaduto",
+      "due_today": "Scadenza oggi",
+      "expiring_tomorrow": "Scade domani",
+      "valid": "Valido",
+      "dismantled": "Smontato"
+    },
+    "chartBucket": {
+      "green": "Validi",
+      "orange": "Scadono domani",
+      "red": "Scaduti / Scadenza oggi",
+      "gray": "In attesa di ispezione iniziale"
+    },
+    "attendanceStatus": {
+      "not_set": "Non impostato",
+      "present": "Al lavoro",
+      "absent": "Assente",
+      "sick": "Malato",
+      "leave": "Ferie",
+      "training": "Formazione",
+      "off_site": "Fuori sede"
     }
   }
 }

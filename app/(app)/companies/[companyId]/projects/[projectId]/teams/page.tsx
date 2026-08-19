@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { HardHat, Lock } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster, getEmployeeTodayCard, getMyEmployeeId, getDailyTeamPhoneNumbers } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
-import { canManageDailyWorkforce } from "@/modules/daily-workforce/permissions";
+import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
 import { groupTeamsByForemanRoster, DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
@@ -59,8 +59,9 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
     notFound();
   }
 
-  const [roleNames, myProjectRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
-  const canManage = canManageDailyWorkforce(roleNames, myProjectRoles);
+  const [roleNames, myProjectRoles, isSuperAdmin] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id), isPlatformSuperAdmin()]);
+  const canManage = isSuperAdmin || canManageDailyWorkforce(roleNames, myProjectRoles);
+  const canViewBroadly = isSuperAdmin || canViewDailyWorkforceBroadly(roleNames, true);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/teams`;
   // Task 3 Part 15 — "today" for Today's Teams is the PROJECT's own local
@@ -69,16 +70,23 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
   // already tomorrow (or still yesterday) there.
   const todayDate = getProjectLocalDate(project.timezone);
 
-  // Part 3 (second Employee correction pass): a plain employee gets a
-  // genuine personal view here — their own team for the selected date
-  // only, never the Workforce/Absent Today/Holiday-Leave tabs, Archive
-  // browsing, Export, or any other team's roster. Scoped server-side via
+  // Part 3 (second Employee correction pass) + Inspector role correction
+  // (Part E): a plain Employee — and, per manual role testing, Inspector
+  // too, unless Inspector also holds a genuine broad-viewer/manage role —
+  // gets a personal view here: their own team for the selected date only,
+  // never the Workforce/Absent Today/Holiday-Leave tabs, Archive
+  // browsing, Export, or any other team's roster. This is exactly "has
+  // neither manage nor broad-view rights" rather than a role-name check,
+  // so it automatically covers both Employee and Inspector (and any
+  // other role this app never grants broad workforce visibility to)
+  // uniformly, and never wrongly narrows a multi-role account that also
+  // holds e.g. foreman/project_manager. Scoped server-side via
   // getEmployeeTodayCard (queried by employee_id, never client-trusted)
   // and daily_teams_select/daily_team_members_select RLS underneath it —
   // not a UI-only filter. Checked and returned before any of the
   // management branches below so no management data is ever fetched for
   // this caller.
-  if (isEmployeeOnlyAccount(roleNames)) {
+  if (!canManage && !canViewBroadly) {
     const employeeWorkDate = urlParams.date && /^\d{4}-\d{2}-\d{2}$/.test(urlParams.date) ? urlParams.date : todayDate;
     const myEmployeeId = await getMyEmployeeId(companyId, user.id);
 

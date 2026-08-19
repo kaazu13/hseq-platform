@@ -32,6 +32,7 @@ export type ScaffoldInspectionReason = Enums<"scaffold_inspection_reason">;
 export type ScaffoldInspectionItemType = Enums<"scaffold_inspection_item_type">;
 export type ScaffoldInspectionItemResult = Enums<"scaffold_inspection_item_result">;
 export type ScaffoldDefectSeverity = Enums<"scaffold_defect_severity">;
+export type ScaffoldInspectionIntervalType = Enums<"scaffold_inspection_interval_type">;
 
 export const SCAFFOLD_TYPES: ScaffoldType[] = [
   "independent",
@@ -350,3 +351,73 @@ export const SCAFFOLD_TEAM_MAX_SIZE = 50;
 // ── Scaffold completion photos (Part 4F) ───────────────────────────────
 export const SCAFFOLD_PHOTOS_MAX_COUNT = 30;
 export const SCAFFOLD_PHOTO_MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB per raw upload
+
+// ── Configurable scaffold inspection frequency ─────────────────────────
+export const SCAFFOLD_INSPECTION_INTERVAL_TYPES: ScaffoldInspectionIntervalType[] = ["daily", "seven_days", "thirty_days", "custom"];
+
+export const SCAFFOLD_INSPECTION_INTERVAL_TYPE_LABELS: Record<ScaffoldInspectionIntervalType, string> = {
+  daily: "Daily",
+  seven_days: "Every 7 days",
+  thirty_days: "Every 30 days",
+  custom: "Custom",
+};
+
+/** The fixed day count for every interval type except "custom" (which carries its own arbitrary positive day count) — mirrors the DB's own scaffolds_interval_type_days_consistent CHECK constraint exactly, so the UI can never submit a mismatched pair. */
+export const SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS: Record<Exclude<ScaffoldInspectionIntervalType, "custom">, number> = {
+  daily: 1,
+  seven_days: 7,
+  thirty_days: 30,
+};
+
+export const SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS = 1;
+export const SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS = 365;
+
+/** New-scaffold default — Part O's explicit "new scaffold default: every 7 days." */
+export const DEFAULT_SCAFFOLD_INSPECTION_INTERVAL_TYPE: ScaffoldInspectionIntervalType = "seven_days";
+export const DEFAULT_SCAFFOLD_INSPECTION_INTERVAL_DAYS = 7;
+
+/** Formats an effective interval for display — "Every 7 days", "Daily", or "Every 14 days" for a custom value (never just "Custom" with no number attached). */
+export function formatInspectionInterval(intervalType: ScaffoldInspectionIntervalType, intervalDays: number, everyNDaysLabel: (days: number) => string): string {
+  if (intervalType === "custom") return everyNDaysLabel(intervalDays);
+  return SCAFFOLD_INSPECTION_INTERVAL_TYPE_LABELS[intervalType];
+}
+
+// ── Scaffold Inspection Dashboard + Scaffold Map ────────────────────────
+/**
+ * One row of get_scaffold_inspection_overview() — the ONE aggregate RPC
+ * backing both the Dashboard (KPIs/chart/priority list/latest) and the
+ * Map (marker payload), never re-fetched separately per surface (Part AE).
+ */
+export type ScaffoldInspectionOverviewRow = {
+  scaffoldId: string;
+  scaffoldNumber: number;
+  tagNumber: string;
+  workArea: string;
+  status: ScaffoldStatus;
+  responsibleForemanId: string | null;
+  responsibleForemanName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  latestInspectionId: string | null;
+  latestFinalizedAt: string | null;
+  latestInspectorId: string | null;
+  latestInspectorName: string | null;
+  latestOutcome: ScaffoldInspectionOutcome | null;
+  latestExpiresAt: string | null;
+  latestIntervalType: ScaffoldInspectionIntervalType | null;
+  latestIntervalDays: number | null;
+};
+
+export type InspectorTodayRow = {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  attendanceStatus: Database["public"]["Enums"]["daily_attendance_status"];
+  finalizedInspectionsToday: number;
+};
+
+/** One row of the project-wide recent-inspections list (Part L) — bounded, newest first. */
+export type RecentInspectionRow = ScaffoldInspection & {
+  scaffold: Pick<Scaffold, "id" | "scaffold_number" | "tag_number" | "work_area">;
+  inspector: BasicEmployee | null;
+};

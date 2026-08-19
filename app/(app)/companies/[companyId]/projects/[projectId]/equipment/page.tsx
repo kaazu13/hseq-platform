@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Download, Wrench } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOrInspectorOnlyAccount, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { canManageEquipment } from "@/modules/equipment/permissions";
@@ -70,12 +70,15 @@ export default async function EquipmentPage({ params, searchParams }: EquipmentP
     isPlatformSuperAdmin(),
   ]);
 
-  // Employee-role correction: this is the management inventory/issue/
-  // admin surface — a plain Employee gets the personal "My Equipment"
-  // page instead (own assignments/requests only). Redirected (not just
-  // hidden from the nav) so direct URL entry lands somewhere useful
-  // rather than a bare denial.
-  if (isEmployeeOnlyAccount(roleNames)) {
+  // Employee-role correction + Inspector role correction (Part D): this
+  // is the management inventory/issue/admin surface — a plain Employee OR
+  // a plain Inspector gets the personal "My Equipment" page instead (own
+  // assignments/requests only). Redirected (not just hidden from the
+  // nav) so direct URL entry lands somewhere useful rather than a bare
+  // denial. An Inspector who ALSO holds a genuine management role is
+  // unaffected (isEmployeeOrInspectorOnlyAccount never wrongly narrows a
+  // multi-role account).
+  if (isEmployeeOrInspectorOnlyAccount(roleNames)) {
     redirect("/my-equipment");
   }
 

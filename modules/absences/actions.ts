@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden } from "next/navigation";
-import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
@@ -23,8 +23,13 @@ import type { AbsenceReport, DailyAttendanceDayLock } from "./types";
 
 async function requireAbsenceManageAccess(companyId: string, projectId: string) {
   const { user } = await requireCompanyMembership(companyId);
-  const [roleNames, myProjectAssignmentRoles] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id)]);
-  if (!canManageDailyWorkforce(roleNames, myProjectAssignmentRoles)) forbidden();
+  const [roleNames, myProjectAssignmentRoles, isSuperAdmin] = await Promise.all([
+    getUserRoleNames(companyId),
+    getMyProjectAssignmentRoles(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
+  ]);
+  // Part G (Workforce attendance correction): platform_super_admin has global authority.
+  if (!isSuperAdmin && !canManageDailyWorkforce(roleNames, myProjectAssignmentRoles)) forbidden();
   return { user, roleNames };
 }
 

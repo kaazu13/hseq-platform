@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canManageScaffold, canViewScaffoldRegister, canCreateScaffold, isScaffoldBroadCreator, mustSelfLockResponsibleForeman } from "./permissions";
+import { canManageScaffold, canViewScaffoldRegister, canCreateScaffold, isScaffoldBroadCreator, mustSelfLockResponsibleForeman, canViewInspectionDashboard } from "./permissions";
 
 describe("canManageScaffold", () => {
   it("allows an HSE Manager regardless of project access", () => {
@@ -121,5 +121,33 @@ describe("canCreateScaffold / isScaffoldBroadCreator / mustSelfLockResponsibleFo
     expect(mustSelfLockResponsibleForeman(["foreman", "project_manager"], true, true)).toBe(false);
     expect(mustSelfLockResponsibleForeman(["foreman"], true, false)).toBe(false);
     expect(mustSelfLockResponsibleForeman(["project_manager"], true, false)).toBe(false);
+  });
+});
+
+describe("canViewInspectionDashboard — Part N's explicit access matrix (Inspection Dashboard / Scaffold Map)", () => {
+  it("allows company_admin unconditionally (no project access needed)", () => {
+    expect(canViewInspectionDashboard(["company_admin"], false)).toBe(true);
+  });
+
+  it("allows inspector/foreman/hse_officer/hseq_manager/project_manager/operations_manager/planner WITH project access", () => {
+    for (const role of ["inspector", "foreman", "hse_officer", "hseq_manager", "project_manager", "operations_manager", "planner"] as const) {
+      expect(canViewInspectionDashboard([role], true)).toBe(true);
+    }
+  });
+
+  it("denies every one of those roles WITHOUT project access", () => {
+    for (const role of ["inspector", "foreman", "hse_officer", "hseq_manager", "project_manager", "operations_manager", "planner"] as const) {
+      expect(canViewInspectionDashboard([role], false)).toBe(false);
+    }
+  });
+
+  it("denies employee and recruiter even WITH project access — explicitly excluded by Part N", () => {
+    expect(canViewInspectionDashboard(["employee"], true)).toBe(false);
+    expect(canViewInspectionDashboard(["recruiter"], true)).toBe(false);
+  });
+
+  it("dashboard read access does not imply inspection manage/finalize authority — canManageScaffold is unchanged", () => {
+    expect(canViewInspectionDashboard(["foreman"], true)).toBe(true);
+    expect(canManageScaffold(["foreman"], true)).toBe(false);
   });
 });

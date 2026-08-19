@@ -145,7 +145,9 @@
       "platformSecurity": "Security",
       "platformAuditLog": "Audit Log",
       "platformBilling": "Usage & Billing",
-      "platformSettings": "Platform Settings"
+      "platformSettings": "Platform Settings",
+      "inspectionDashboard": "Inspection Dashboard",
+      "scaffoldMap": "Scaffold Map"
     }
   },
   "TodaysTeams": {
@@ -573,6 +575,101 @@
       "hse_officer": "HSE Officer",
       "inspector": "Inspector",
       "member": "Member"
+    }
+  },
+  "ScaffoldInspectionFrequency": {
+    "title": "Inspection Frequency",
+    "description": "How often this scaffold must be re-inspected.",
+    "daily": "Daily",
+    "seven_days": "Every 7 days",
+    "thirty_days": "Every 30 days",
+    "custom": "Custom",
+    "customDaysLabel": "Number of days"
+  },
+  "ScaffoldMap": {
+    "title": "Scaffold Map",
+    "viewScaffold": "View Scaffold",
+    "viewInspection": "View Inspection",
+    "inspect": "Inspect",
+    "frequency": "Frequency",
+    "lastInspection": "Last inspection",
+    "nextDue": "Next due",
+    "mapLoadError": "Couldn't load the map. Try refreshing the page.",
+    "mapAriaLabel": "Map of scaffold locations, colored by inspection status.",
+    "unlocatedNote": "scaffold(s) have no location set and aren't shown on the map.",
+    "geolocationDenied": "Couldn't get your current location. Check your browser's location permission.",
+    "geolocationUnsupported": "Your browser doesn't support location detection.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "scaffoldLocation": "Scaffold Location",
+    "useCurrentLocation": "Use current location",
+    "locationOptionalNote": "Optional — leave blank if you don't know the scaffold's coordinates.",
+    "stats": {
+      "active": "Active",
+      "valid": "Valid",
+      "dueToday": "Due Today",
+      "tomorrow": "Tomorrow",
+      "awaitingInitial": "Awaiting Initial Inspection"
+    },
+    "filters": {
+      "all_active": "All Active",
+      "valid": "Valid",
+      "attention_today": "Attention Today",
+      "tomorrow": "Tomorrow",
+      "awaiting_initial": "Awaiting Initial Inspection"
+    }
+  },
+  "InspectionDashboard": {
+    "title": "Inspection Dashboard",
+    "totalScaffoldsCreated": "Total Scaffolds Created",
+    "activeScaffolds": "Active Scaffolds",
+    "dismantledArchived": "Dismantled / Archived",
+    "currentlyValid": "Currently Valid",
+    "expiredOrDueToday": "Expired / Due Today",
+    "expiringTomorrow": "Expiring Tomorrow",
+    "awaitingInitialInspection": "Awaiting Initial Inspection",
+    "healthChartTitle": "Inspection Health",
+    "priorityTitle": "Inspection Priority",
+    "priorityAwaitingInitial": "Awaiting Initial Inspection",
+    "priorityExpiredDueToday": "Expired / Due Today",
+    "priorityExpiringTomorrow": "Expiring Tomorrow",
+    "priorityEmpty": "Nothing in this category right now.",
+    "notYetInspected": "Not yet inspected",
+    "notYetSet": "Not yet set",
+    "everyNDays": "Every {days} days",
+    "nextDueOn": "Next due {date}",
+    "viewScaffold": "View Scaffold",
+    "inspect": "Inspect",
+    "latestInspectionsTitle": "Latest Inspections",
+    "viewAllInspections": "View all inspections",
+    "latestInspectionsEmpty": "No inspections have been finalized yet.",
+    "notAvailable": "Not available",
+    "inspectorsTodayTitle": "Inspectors Today",
+    "inspectorsTodayEmpty": "No active Inspector-role personnel are assigned to this project.",
+    "inspectorsSummary": "{count} {status}",
+    "finalizedToday": "{count, plural, one {# inspection finalized today} other {# inspections finalized today}}",
+    "state": {
+      "awaiting_initial": "Awaiting Initial Inspection",
+      "expired": "Expired",
+      "due_today": "Due Today",
+      "expiring_tomorrow": "Expiring Tomorrow",
+      "valid": "Valid",
+      "dismantled": "Dismantled"
+    },
+    "chartBucket": {
+      "green": "Valid",
+      "orange": "Expiring Tomorrow",
+      "red": "Expired / Due Today",
+      "gray": "Awaiting Initial Inspection"
+    },
+    "attendanceStatus": {
+      "not_set": "Not Set",
+      "present": "At Work",
+      "absent": "Absent",
+      "sick": "Sick",
+      "leave": "Holiday Leave",
+      "training": "Training",
+      "off_site": "Off Site"
     }
   }
 }

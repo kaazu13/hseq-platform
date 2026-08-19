@@ -23,3 +23,19 @@ import type { RoleName } from "@/modules/companies/types";
 export function isEmployeeOnlyAccount(roleNames: RoleName[]): boolean {
   return roleNames.length === 0 || roleNames.every((role) => role === "employee");
 }
+
+/**
+ * Inspector role correction (manual role testing) — same shape as
+ * isEmployeeOnlyAccount() above, extended to also treat a plain Inspector
+ * (or an Employee+Inspector combo, still no OTHER role) as lacking access
+ * to the small set of management-only surfaces Inspector was wrongly
+ * reaching: the Equipment management screen (redirects to My Equipment,
+ * same treatment as Employee) and Safety Overview (forbidden, same
+ * treatment as Employee). `false` for anyone who ALSO holds a genuine
+ * management/broad role alongside employee/inspector, so a multi-role
+ * account is never wrongly narrowed — same "never infer broad access
+ * denial from role name alone" principle as isEmployeeOnlyAccount().
+ */
+export function isEmployeeOrInspectorOnlyAccount(roleNames: RoleName[]): boolean {
+  return roleNames.length === 0 || roleNames.every((role) => role === "employee" || role === "inspector");
+}

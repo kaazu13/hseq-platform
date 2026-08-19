@@ -97,3 +97,23 @@ export function canCreateScaffold(roleNames: RoleName[], hasProjectAccess: boole
 export function mustSelfLockResponsibleForeman(roleNames: RoleName[], hasProjectAccess: boolean, isEligibleForeman: boolean): boolean {
   return isEligibleForeman && !isScaffoldBroadCreator(roleNames, hasProjectAccess);
 }
+
+/**
+ * Inspection Dashboard + Scaffold Map read access (Part N of the Inspector
+ * role correction) — a DELIBERATELY explicit allow-list, not a reuse of
+ * canViewScaffoldRegister/NON_EMPLOYEE_ROLES, because the task's own
+ * matrix draws a different line than the register does: `employee` and
+ * `recruiter` are excluded here just as they are from the register, but
+ * `planner` is ADDED (planner already holds real, existing scaffold/site
+ * planning authority — see canEditProjectSiteLocation in
+ * modules/projects/permissions.ts — so extending READ access to
+ * inspection currency data is a legitimate, narrow extension of that same
+ * responsibility, not a new grant invented for this task). Dashboard READ
+ * access never implies inspection creation/finalization authority — that
+ * remains exactly canManageScaffold, unchanged.
+ */
+const INSPECTION_DASHBOARD_VIEW_ROLES: RoleName[] = ["inspector", "foreman", "hse_officer", "hseq_manager", "project_manager", "operations_manager", "planner"];
+
+export function canViewInspectionDashboard(roleNames: RoleName[], hasProjectAccess: boolean): boolean {
+  return roleNames.includes("company_admin") || (hasProjectAccess && roleNames.some((role) => INSPECTION_DASHBOARD_VIEW_ROLES.includes(role)));
+}

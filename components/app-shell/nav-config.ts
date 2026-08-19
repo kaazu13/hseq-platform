@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   BarChart3,
   BookOpen,
@@ -15,6 +16,7 @@ import {
   KeyRound,
   LayoutDashboard,
   ListChecks,
+  Map,
   MessagesSquare,
   PartyPopper,
   Rocket,
@@ -40,6 +42,26 @@ import { COMPANY_ADMIN_ROLES } from "@/modules/admin/permissions";
  * page's own server-side check (added alongside each nav change below).
  */
 const NON_EMPLOYEE_ROLES: RoleName[] = ROLE_NAMES.filter((role) => role !== "employee");
+
+/**
+ * Inspector role correction (manual role testing): Inspector is an
+ * operational scaffold-inspection role, not a generic manager — it must
+ * NOT see the broad management/aggregate nav items every other non-
+ * employee role sees purely by virtue of "not employee." Used only on
+ * the specific items Inspector's final nav explicitly excludes (Project
+ * Dashboard, Safety Overview, Employees, Worked Hours, Equipment,
+ * Toolbox Templates, the planned Safety Walks/Incidents/Documents/
+ * Reports/Certificates placeholders) — every item Inspector legitimately
+ * keeps (Today's Teams, My Hours, My Equipment, Scaffold Register/
+ * Inspections/Map/Dashboard, LMRA, Toolbox Meetings, Safety Flash,
+ * Safety Observations) is untouched, still gated by NON_EMPLOYEE_ROLES,
+ * `undefined` (everyone), or its own new explicit allow-list. No other
+ * role's visibility changes.
+ */
+const NON_EMPLOYEE_NON_INSPECTOR_ROLES: RoleName[] = NON_EMPLOYEE_ROLES.filter((role) => role !== "inspector");
+
+/** Read access to the new Scaffold Inspection Dashboard / Scaffold Map — mirrors canViewInspectionDashboard() (modules/scaffolds/permissions.ts) exactly, see Part N of the Inspector role correction. */
+const INSPECTION_DASHBOARD_NAV_ROLES: RoleName[] = ["company_admin", "operations_manager", "project_manager", "hseq_manager", "hse_officer", "foreman", "inspector", "planner", "platform_super_admin"];
 
 /**
  * Single source of truth for the primary navigation — see
@@ -155,7 +177,7 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Workforce, Today's Teams, Worked Hours, LMRA activity, Scaffold inspections, Safety Observations, and Corrective Actions for your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}`,
         matchSegment: "",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "safetyOverview",
@@ -165,7 +187,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description:
           "LMRA activity, open safety items, and expiring qualifications across your company, filterable by project, work area, date, and status.",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
     ],
   },
@@ -181,7 +203,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description:
           "Company employment records for your company — name, position, employment status, and (once activated) company roles.",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
     ],
   },
@@ -209,7 +231,7 @@ export const NAV_GROUPS: NavGroup[] = [
         description: "Credited hours per employee per day — draft/submitted lifecycle, independent of Today's Teams locking. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/worked-hours`,
         matchSegment: "worked-hours",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "myHours",
@@ -229,7 +251,7 @@ export const NAV_GROUPS: NavGroup[] = [
           "Company and project equipment — inventory, issuance, employee requests, returns, and full history. Scoped to your currently selected project.",
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/equipment`,
         matchSegment: "equipment",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "myEquipment",
@@ -252,6 +274,22 @@ export const NAV_GROUPS: NavGroup[] = [
         roles: NON_EMPLOYEE_ROLES,
       },
       {
+        id: "inspectionDashboard",
+        label: "Inspection Dashboard",
+        href: "/scaffold-inspection-dashboard",
+        icon: Activity,
+        status: "available",
+        description: "Project-scoped scaffold inspection KPIs, health chart, and priority list — awaiting-initial, expired/due-today, and expiring-tomorrow scaffolds surfaced first. Scoped to your currently selected project.",
+        // A sibling top-level route (not nested under /scaffolds/), same
+        // reason scaffoldInspections below is also a sibling rather than
+        // /scaffolds/inspections — matchSegment's own regex matches
+        // "segment(/|$)", so a segment nested under /scaffolds/ would also
+        // (wrongly) light up the Scaffold Register nav item.
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffold-inspection-dashboard`,
+        matchSegment: "scaffold-inspection-dashboard",
+        roles: INSPECTION_DASHBOARD_NAV_ROLES,
+      },
+      {
         id: "scaffoldInspections",
         label: "Scaffold Inspections",
         href: "/scaffolds/inspections",
@@ -262,6 +300,17 @@ export const NAV_GROUPS: NavGroup[] = [
         buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffold-inspections`,
         matchSegment: "scaffold-inspections",
         roles: NON_EMPLOYEE_ROLES,
+      },
+      {
+        id: "scaffoldMap",
+        label: "Scaffold Map",
+        href: "/scaffold-map",
+        icon: Map,
+        status: "available",
+        description: "Geographic view of your currently selected project's scaffolds, colored by inspection health — valid, expiring tomorrow, due today/expired, or awaiting initial inspection.",
+        buildHref: ({ companyId, projectId }) => `/companies/${companyId}/projects/${projectId}/scaffold-map`,
+        matchSegment: "scaffold-map",
+        roles: INSPECTION_DASHBOARD_NAV_ROLES,
       },
       {
         id: "lmra",
@@ -296,7 +345,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description: "A reusable, company-wide library of toolbox meeting PDF templates.",
         matchQueryParam: { key: "section", value: "templates" },
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "safetyFlash",
@@ -333,7 +382,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "General safety walks across a project, with checklist results and photo evidence — distinct from Scaffold Inspections, which has its own dedicated module.",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "incidentsNearMisses",
@@ -343,7 +392,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "Formal records of incidents and near-misses, with severity classification, investigation, and follow-up.",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
     ],
   },
@@ -365,7 +414,7 @@ export const NAV_GROUPS: NavGroup[] = [
         // rather than exposing an eventual company-wide document browser
         // under a name that will mean something different later. See this
         // milestone's final report for the required future design.
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "reports",
@@ -375,7 +424,7 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "planned",
         description:
           "Role-scoped dashboards and exports summarizing hours, attendance, safety, and compliance.",
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
       {
         id: "certificates",
@@ -387,7 +436,7 @@ export const NAV_GROUPS: NavGroup[] = [
           "Required documents and certificates per employee, with expiry tracking and renewal reminders.",
         // Unbuilt (no modules/certificates exists yet) — hidden from
         // Employee rather than linking to a placeholder; see final report.
-        roles: NON_EMPLOYEE_ROLES,
+        roles: NON_EMPLOYEE_NON_INSPECTOR_ROLES,
       },
     ],
   },

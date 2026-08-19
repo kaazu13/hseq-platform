@@ -291,3 +291,45 @@ describe("Employee-role correction: management/aggregate nav items are hidden fr
     }
   });
 });
+
+describe("Inspector role correction: management/aggregate nav items are hidden from Inspector too (Part B/C/D/F)", () => {
+  const INSPECTOR_HIDDEN_LABELS = ["Project Dashboard", "Safety Overview", "Employees", "Worked Hours", "Equipment", "Toolbox Templates", "Safety Walks", "Incidents and Near Misses", "Documents", "Reports", "Certificates"];
+
+  it.each(INSPECTOR_HIDDEN_LABELS)("'%s' has a roles array that excludes 'inspector'", (label) => {
+    const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+    expect(item).toBeDefined();
+    expect(item.roles).toBeDefined();
+    expect(item.roles).not.toContain("inspector");
+  });
+
+  it("every one of those items STILL excludes 'employee' too — the Inspector correction narrows Inspector without touching Employee's own restrictions", () => {
+    for (const label of INSPECTOR_HIDDEN_LABELS) {
+      const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+      expect(item.roles).not.toContain("employee");
+    }
+  });
+
+  it("Inspector's final nav (Part B): Today's Teams, My Hours, My Equipment, LMRA, Toolbox Meetings, Safety Flash, Safety Observations remain visible (no roles array, or explicitly include inspector)", () => {
+    for (const label of ["Today's Teams", "My Hours", "My Equipment", "LMRA", "Toolbox Meetings", "Safety Flash", "Safety Observations"]) {
+      const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+      expect(item).toBeDefined();
+      expect(item.roles === undefined || item.roles.includes("inspector")).toBe(true);
+    }
+  });
+
+  it("Inspector's final nav (Part B/H/N): Scaffold Register, Inspection Dashboard, Scaffold Inspections, Scaffold Map all explicitly include inspector", () => {
+    for (const label of ["Scaffold Register", "Inspection Dashboard", "Scaffold Inspections", "Scaffold Map"]) {
+      const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+      expect(item).toBeDefined();
+      expect(item.roles).toContain("inspector");
+    }
+  });
+
+  it("the new Inspection Dashboard / Scaffold Map items exclude employee and recruiter (Part N)", () => {
+    for (const label of ["Inspection Dashboard", "Scaffold Map"]) {
+      const item = ALL_NAV_ITEMS.find((i) => i.label === label)!;
+      expect(item.roles).not.toContain("employee");
+      expect(item.roles).not.toContain("recruiter");
+    }
+  });
+});

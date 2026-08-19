@@ -50,8 +50,8 @@ describe("canViewDailyWorkforceBroadly", () => {
     expect(canViewDailyWorkforceBroadly(["company_admin"], false)).toBe(true);
   });
 
-  it("grants PM/HSE Manager/HSE Officer/Inspector/Foreman only WITH project access", () => {
-    for (const role of ["project_manager", "hseq_manager", "hse_officer", "inspector", "foreman"] as RoleName[]) {
+  it("grants PM/HSE Manager/HSE Officer/Foreman only WITH project access", () => {
+    for (const role of ["project_manager", "hseq_manager", "hse_officer", "foreman"] as RoleName[]) {
       expect(canViewDailyWorkforceBroadly([role], true)).toBe(true);
       expect(canViewDailyWorkforceBroadly([role], false)).toBe(false);
     }
@@ -59,5 +59,14 @@ describe("canViewDailyWorkforceBroadly", () => {
 
   it("denies a plain employee even with project access — falls through to RLS's own-row-only view", () => {
     expect(canViewDailyWorkforceBroadly(["employee" as RoleName], true)).toBe(false);
+  });
+
+  it("Inspector role correction: denies a plain Inspector even WITH project access — same personal 'own team only' treatment as Employee, never broad workforce visibility inferred from the role alone", () => {
+    expect(canViewDailyWorkforceBroadly(["inspector"], true)).toBe(false);
+    expect(canViewDailyWorkforceBroadly(["inspector"], false)).toBe(false);
+  });
+
+  it("an Inspector who ALSO holds a genuine broad-viewer role still gets broad access, via that OTHER role", () => {
+    expect(canViewDailyWorkforceBroadly(["inspector", "foreman"], true)).toBe(true);
   });
 });
