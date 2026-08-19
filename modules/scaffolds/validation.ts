@@ -135,10 +135,30 @@ export const scaffoldFormSchema = z
     responsibleForemanId: z.string().uuid("Choose the responsible foreman"),
     erectedAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid erection date"),
     notes: optionalText,
+    // Part 3 — Today's Team selection is now ONLY a fast-fill helper, no
+    // longer a hard requirement: erectionTeamIds records which teams were
+    // used as an import source (audit trail, may be empty if every
+    // participant was added manually), while `participants` is the
+    // actual, authoritative erection crew (at least one required).
     erectionTeamIds: z
       .array(z.string().uuid("Each team must be a valid selection"))
-      .min(1, "Select at least one Today's Team that erected this scaffold")
+      .default([])
       .refine((ids) => new Set(ids).size === ids.length, { message: "The same team is selected more than once" }),
+    participants: z
+      .array(
+        z.object({
+          employeeId: z.string().uuid("Each participant must be a valid selection"),
+          source: z.enum(["manual", "team_import"]),
+          sourceDailyTeamId: z
+            .string()
+            .trim()
+            .optional()
+            .transform((value) => (value === "" || value === undefined ? undefined : value))
+            .pipe(z.string().uuid().optional()),
+        }),
+      )
+      .min(1, "Add at least one person to the erection crew")
+      .refine((rows) => new Set(rows.map((row) => row.employeeId)).size === rows.length, { message: "The same person is added more than once" }),
   })
   .and(scaffoldInspectionIntervalFields)
   .and(scaffoldLocationFields);

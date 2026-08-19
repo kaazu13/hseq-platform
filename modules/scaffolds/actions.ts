@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { forbidden, redirect } from "next/navigation";
-import { requireCompanyMembership, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException, isUniqueViolation } from "@/lib/supabase/errors";
-import { canManageScaffold, canCreateScaffold } from "./permissions";
+import { canManageScaffold, canCreateScaffold, canManageScaffoldInspection } from "./permissions";
 import { isCallerProjectAccessible, isCallerEligibleScaffoldForeman } from "./queries";
+import { getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import {
   scaffoldFormSchema,
   inspectionFormSchema,
@@ -41,6 +42,23 @@ async function requireScaffoldManageAccess(companyId: string, projectId: string)
   }
 
   return { user, roleNames };
+}
+
+/** Part 8 — the WIDER tier for inspection creation/correction/checklist/finalize/void: everything requireScaffoldManageAccess() grants, plus company_admin/the project's own project_manager/platform_super_admin. Scaffold EDIT (updateScaffold) intentionally still uses the narrower requireScaffoldManageAccess only. */
+async function requireScaffoldInspectionManageAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, hasProjectAccess, myProjectAssignmentRoles, isSuperAdmin] = await Promise.all([
+    getUserRoleNames(companyId),
+    isCallerProjectAccessible(projectId),
+    getMyProjectAssignmentRoles(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
+  ]);
+
+  if (!isSuperAdmin && !canManageScaffoldInspection(roleNames, hasProjectAccess, myProjectAssignmentRoles)) {
+    forbidden();
+  }
+
+  return { user, roleNames, hasProjectAccess, myProjectAssignmentRoles, isSuperAdmin };
 }
 
 async function requireScaffoldCreateAccess(companyId: string, projectId: string) {
@@ -126,8 +144,28 @@ export async function createScaffold(companyId: string, input: ScaffoldFormInput
     daily_team_id: dailyTeamId,
     added_by: user.id,
   }));
-  const { error: teamError } = await supabase.from("scaffold_erection_teams").insert(erectionTeamRows);
-  if (teamError) {
+  if (erectionTeamRows.length > 0) {
+    const { error: teamError } = await supabase.from("scaffold_erection_teams").insert(erectionTeamRows);
+    if (teamError) {
+      revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
+      redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}/edit?teamError=1`);
+    }
+  }
+
+  // Part 3-5: the authoritative erection crew — independent of the team
+  // links above, which are now only an audit trail of fast-fill sources.
+  const participantRows = parsed.data.participants.map((participant) => ({
+    company_id: companyId,
+    project_id: parsed.data.projectId,
+    scaffold_id: data.id,
+    employee_id: participant.employeeId,
+    work_date: parsed.data.erectedAt,
+    source: participant.source,
+    source_daily_team_id: participant.sourceDailyTeamId ?? null,
+    added_by: user.id,
+  }));
+  const { error: participantError } = await supabase.from("scaffold_erection_participants").insert(participantRows);
+  if (participantError) {
     revalidatePath(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds`);
     redirect(`/companies/${companyId}/projects/${parsed.data.projectId}/scaffolds/${data.id}/edit?teamError=1`);
   }
@@ -196,6 +234,11 @@ export async function updateScaffold(companyId: string, scaffoldId: string, proj
     return teamResult;
   }
 
+  const participantResult = await reconcileScaffoldErectionParticipants(supabase, companyId, projectId, scaffoldId, user.id, parsed.data.erectedAt, parsed.data.participants);
+  if (!participantResult.ok) {
+    return participantResult;
+  }
+
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}`);
   revalidatePath(`/companies/${companyId}/projects/${projectId}/scaffolds/${scaffoldId}/edit`);
@@ -260,6 +303,72 @@ async function reconcileScaffoldErectionTeams(
   return { ok: true, data: null };
 }
 
+/**
+ * Reconciles a scaffold's erection PARTICIPANTS (Parts 3-5) to exactly
+ * `nextParticipants` — the authoritative "who worked on this scaffold"
+ * list, independent of scaffold_erection_teams. Diffed by employee_id:
+ * dropped participants are SOFT-removed (removed_at/removed_by, matching
+ * the table's own history-preserving design — see the migration), never
+ * hard-deleted; newly added ones are inserted fresh with their own
+ * source/source_daily_team_id. An employee already active is left alone
+ * even if their `source` changed client-side (e.g. imported from a
+ * second team after already being added manually) — the FIRST add is
+ * what's recorded, matching "do not duplicate participants."
+ */
+async function reconcileScaffoldErectionParticipants(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  companyId: string,
+  projectId: string,
+  scaffoldId: string,
+  actingUserId: string,
+  workDate: string,
+  nextParticipants: { employeeId: string; source: "manual" | "team_import"; sourceDailyTeamId?: string }[],
+): Promise<ActionResult<null>> {
+  const { data: current, error: currentError } = await supabase.from("scaffold_erection_participants").select("id, employee_id").eq("scaffold_id", scaffoldId).is("removed_at", null);
+  if (currentError) throw currentError;
+
+  const nextSet = new Set(nextParticipants.map((p) => p.employeeId));
+  const currentByEmployeeId = new Map((current ?? []).map((row) => [row.employee_id, row]));
+
+  const toRemove = (current ?? []).filter((row) => !nextSet.has(row.employee_id));
+  const toAdd = nextParticipants.filter((p) => !currentByEmployeeId.has(p.employeeId));
+
+  if (toRemove.length > 0) {
+    const { error: removeError } = await supabase
+      .from("scaffold_erection_participants")
+      .update({ removed_at: new Date().toISOString(), removed_by: actingUserId })
+      .in(
+        "id",
+        toRemove.map((row) => row.id),
+      );
+    if (removeError) {
+      return { ok: false, error: { code: "server_error", message: "Couldn't update the erection crew. Try again." } };
+    }
+  }
+
+  if (toAdd.length > 0) {
+    const participantRows = toAdd.map((p) => ({
+      company_id: companyId,
+      project_id: projectId,
+      scaffold_id: scaffoldId,
+      employee_id: p.employeeId,
+      work_date: workDate,
+      source: p.source,
+      source_daily_team_id: p.sourceDailyTeamId ?? null,
+      added_by: actingUserId,
+    }));
+    const { error: addError } = await supabase.from("scaffold_erection_participants").insert(participantRows);
+    if (addError) {
+      if (isRaisedException(addError)) {
+        return { ok: false, error: { code: "validation_error", message: addError.message } };
+      }
+      return { ok: false, error: { code: "server_error", message: "Couldn't add the new erection crew members. Try again." } };
+    }
+  }
+
+  return { ok: true, data: null };
+}
+
 export async function createInspection(
   companyId: string,
   scaffoldId: string,
@@ -271,7 +380,7 @@ export async function createInspection(
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(companyId, projectId);
+  const { user } = await requireScaffoldInspectionManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -320,7 +429,7 @@ export async function startInspectionCorrection(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  const { user } = await requireScaffoldManageAccess(companyId, projectId);
+  const { user } = await requireScaffoldInspectionManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data: original, error: originalError } = await supabase.from("scaffold_inspections").select("inspection_reason, inspector_id, inspected_at, notes").eq("id", correctsInspectionId).single();
@@ -377,7 +486,7 @@ export async function updateInspectionItems(
     return { ok: false, error: { code: "validation_error", message: "Check the checklist — every field is required." } };
   }
 
-  await requireScaffoldManageAccess(companyId, projectId);
+  await requireScaffoldInspectionManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("save_scaffold_inspection_items", {
@@ -415,7 +524,7 @@ export async function finalizeInspection(
     return { ok: false, error: { code: "validation_error", message: "Check the outcome.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  await requireScaffoldManageAccess(companyId, projectId);
+  await requireScaffoldInspectionManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("finalize_scaffold_inspection", {
@@ -468,7 +577,7 @@ export async function voidInspection(
     return { ok: false, error: { code: "validation_error", message: "A reason is required.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  await requireScaffoldManageAccess(companyId, projectId);
+  await requireScaffoldInspectionManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("void_scaffold_inspection", {

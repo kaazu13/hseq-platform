@@ -617,7 +617,11 @@
       "attention_today": "Atención hoy",
       "tomorrow": "Mañana",
       "awaiting_initial": "Pendiente de inspección inicial"
-    }
+    },
+    "editLocation": "Editar ubicación",
+    "viewOnMap": "Ver en el mapa",
+    "directions": "Cómo llegar",
+    "locationNotSet": "Ubicación no establecida"
   },
   "InspectionDashboard": {
     "title": "Panel de inspecciones",
@@ -670,6 +674,41 @@
       "leave": "Vacaciones",
       "training": "Formación",
       "off_site": "Fuera del sitio"
-    }
+    },
+    "allScaffolds": "Todos los andamios"
+  },
+  "ScaffoldCrew": {
+    "title": "Cuadrilla de montaje / Personas implicadas",
+    "description": "Quién trabajó realmente en este andamio — importar un equipo es solo un atajo de llenado rápido; añade o elimina personas libremente después.",
+    "legacyRosterTitle": "Plantilla de equipo antigua (conservada tal cual)",
+    "legacyRosterNote": "Este andamio se registró antes de que existiera la vinculación con los Equipos de Hoy — su plantilla original se conserva exactamente como se registró y ya no es editable aquí. Usa los selectores de abajo para añadir personas reales en adelante.",
+    "addFromTeam": "Añadir desde Equipo de Hoy",
+    "loadingTeams": "Cargando equipos para {date}…",
+    "noTeamsTitle": "No se encontraron Equipos de Hoy para esta fecha",
+    "noTeamsDescription": "Aún no existen Equipos de Hoy para este proyecto en esta fecha.",
+    "noTeamsDescriptionForeman": "No tienes ningún Equipo de Hoy en esta fecha para este proyecto — crea uno primero y luego vuelve a registrar el andamio.",
+    "foremanLabel": "Encargado: {name}",
+    "workerCount": "{count, plural, one {# trabajador} other {# trabajadores}}",
+    "importTeam": "Añadir equipo",
+    "reimportTeam": "Añadir nuevos miembros",
+    "addWorker": "Añadir trabajador",
+    "addWorkerPlaceholder": "Buscar por nombre o número de empleado…",
+    "loadingWorkers": "Cargando trabajadores disponibles…",
+    "noAvailableWorkers": "No se encontraron trabajadores disponibles para esta fecha.",
+    "availabilityNote": "Solo muestra a personas asignadas a este proyecto que están En el trabajo (no ausentes ni de vacaciones aprobadas) en la fecha de montaje.",
+    "crewListTitle": "Cuadrilla de montaje ({count})",
+    "crewEmpty": "Aún no se ha añadido nadie a la cuadrilla de montaje.",
+    "fromTeam": "De {name}",
+    "removeWorker": "Eliminar a {name}",
+    "manualBadge": "Añadido manualmente",
+    "importedFromTeams": "Equipos usados para llenar esta cuadrilla: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Nueva inspección",
+    "inspector": "Inspector",
+    "yourself": "Tú mismo",
+    "inspectorLockedToYou": "Inspector fijado en ti",
+    "inspectorSearchPlaceholder": "Buscar por nombre o número de empleado…",
+    "noEligibleInspectors": "No se encontró ningún Inspector o Encargado elegible para este proyecto."
   }
 }

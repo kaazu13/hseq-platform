@@ -736,6 +736,50 @@ async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
   return scaffoldId;
 }
 
+type ScaffoldParticipantSpec = {
+  session: Awaited<ReturnType<typeof signInAs>>;
+  companyId: string;
+  projectId: string;
+  scaffoldId: string;
+  scaffoldTag: string;
+  employeeId: string;
+  workDate: string;
+  source: "manual" | "team_import";
+  sourceDailyTeamId?: string;
+};
+
+/**
+ * Part 17 fixture — an actual `scaffold_erection_participants` row
+ * (Parts 3-5's new authoritative crew model). The active-unique index is
+ * per-scaffold, not global, so re-running this for the same employee on a
+ * DIFFERENT scaffold/same date is expected and is exactly Part 13's
+ * multi-scaffold-per-day fixture requirement, not a conflict.
+ */
+async function ensureScaffoldParticipant(spec: ScaffoldParticipantSpec): Promise<void> {
+  const { data: existing } = await spec.session
+    .from("scaffold_erection_participants")
+    .select("id")
+    .eq("scaffold_id", spec.scaffoldId)
+    .eq("employee_id", spec.employeeId)
+    .is("removed_at", null)
+    .maybeSingle();
+  if (existing) {
+    log("scaffold-participant", spec.scaffoldTag, "reused", spec.employeeId);
+    return;
+  }
+  const { error } = await spec.session.from("scaffold_erection_participants").insert({
+    company_id: spec.companyId,
+    project_id: spec.projectId,
+    scaffold_id: spec.scaffoldId,
+    employee_id: spec.employeeId,
+    work_date: spec.workDate,
+    source: spec.source,
+    source_daily_team_id: spec.sourceDailyTeamId ?? null,
+  });
+  if (error) throw new Error(`scaffold_erection_participants insert (${spec.scaffoldTag}): ${error.message}`);
+  log("scaffold-participant", spec.scaffoldTag, "created", `${spec.employeeId} (${spec.source})`);
+}
+
 type InspectionSpec = {
   session: Awaited<ReturnType<typeof signInAs>>;
   companyId: string;
@@ -762,6 +806,24 @@ async function ensureInspection(spec: InspectionSpec): Promise<string> {
   if (existingRows && existingRows.length > 0) {
     log("scaffold-inspection", `${spec.scaffoldTag} (${isoDate(spec.inspectedAtDaysAgo)})`, "reused", existingRows[0].status);
     return existingRows[0].id;
+  }
+  // The exact-date match above can miss on a re-run days later (today's
+  // relative "N days ago" now resolves to a different absolute date than
+  // the row an earlier run created) — for a scaffold this fixture set
+  // deliberately closes (outcome: closed_dismantled), the closed-scaffold
+  // guard in validate_scaffold_inspection_insert() would then correctly
+  // reject a second closing inspection. Idempotency for THIS case means
+  // "the scaffold is already closed", not "an inspection exists on this
+  // exact date" — fall back to that check before attempting the insert.
+  if (spec.outcome === "closed_dismantled") {
+    const { data: scaffoldRow } = await spec.session.from("scaffolds").select("status").eq("id", spec.scaffoldId).single();
+    if (scaffoldRow?.status === "closed") {
+      const { data: latestRows } = await spec.session.from("scaffold_inspections").select("id").eq("scaffold_id", spec.scaffoldId).order("created_at", { ascending: false }).limit(1);
+      if (latestRows && latestRows.length > 0) {
+        log("scaffold-inspection", `${spec.scaffoldTag}`, "reused", "already closed_dismantled");
+        return latestRows[0].id;
+      }
+    }
   }
   const { data, error } = await spec.session
     .from("scaffold_inspections")
@@ -1599,6 +1661,22 @@ async function main() {
   await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold7, scaffoldTag: "TEST-SC-007", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 7, reason: "routine_inspection", outcome: "safe_for_use" });
   // 7 days ago + 7-day interval = due TODAY.
 
+  // Part 17 crew fixture — TEST-SC-007 has a real located map card AND a
+  // multi-source erection crew: four people fast-filled from Team Alpha
+  // (source=team_import), plus worker05 added manually even though
+  // worker05's home team is Bravo, not Alpha (source=manual — Part 3B's
+  // "worker from Team A and Team B on the same scaffold" case).
+  for (const key of ["employee", "worker01", "worker02", "worker03", "worker04"] as const) {
+    await ensureScaffoldParticipant({
+      session: companyAdminSession, companyId, projectId, scaffoldId: scaffold7, scaffoldTag: "TEST-SC-007",
+      employeeId: employeeIdByKey[key], workDate: isoDate(9), source: "team_import", sourceDailyTeamId: alphaDay9,
+    });
+  }
+  await ensureScaffoldParticipant({
+    session: companyAdminSession, companyId, projectId, scaffoldId: scaffold7, scaffoldTag: "TEST-SC-007",
+    employeeId: plainEmployeeIdByKey.worker05, workDate: isoDate(9), source: "manual",
+  });
+
   const scaffold8 = await ensureScaffold({
     session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-008", workArea: "South Platform", scaffoldType: "birdcage",
     responsibleForemanId: employeeIdByKey.foreman2, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
@@ -1606,6 +1684,15 @@ async function main() {
   });
   await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold8, scaffoldTag: "TEST-SC-008", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 6, reason: "routine_inspection", outcome: "safe_for_use" });
   // 6 days ago + 7-day interval = due TOMORROW.
+
+  // Part 13 fixture — worker01 also worked TEST-SC-008 the SAME work_date
+  // (day 9) as their TEST-SC-007 team_import participation above. The
+  // active-unique index is per-scaffold only, so this is expected to
+  // succeed, not conflict — proving one worker on two scaffolds same day.
+  await ensureScaffoldParticipant({
+    session: companyAdminSession, companyId, projectId, scaffoldId: scaffold8, scaffoldTag: "TEST-SC-008",
+    employeeId: plainEmployeeIdByKey.worker01, workDate: isoDate(9), source: "manual",
+  });
 
   const scaffold9 = await ensureScaffold({
     session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-009", workArea: "Tank Farm", scaffoldType: "mobile",

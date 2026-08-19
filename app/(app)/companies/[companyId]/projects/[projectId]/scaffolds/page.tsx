@@ -5,8 +5,11 @@ import { HardHat, Plus } from "lucide-react";
 import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
 import { getProject } from "@/modules/projects/queries";
 import { listScaffolds, getCurrentInspectionExpiryByScaffold, type ScaffoldListFilters } from "@/modules/scaffolds/queries";
+import { resolveInspectionHealth, type InspectionHealthState } from "@/modules/scaffolds/inspection-health";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { ScaffoldCard } from "@/modules/scaffolds/components/scaffold-card";
 import { ScaffoldFilters } from "@/modules/scaffolds/components/scaffold-filters";
+import { ScaffoldHealthQuickFilters } from "@/modules/scaffolds/components/scaffold-health-quick-filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CreateSuccessToast } from "@/components/shared/create-success-toast";
@@ -64,6 +67,20 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
   const basePath = `/companies/${companyId}/projects/${projectId}/scaffolds`;
   const t = await getTranslations("ScaffoldRegister");
 
+  // Part 10 — quick filter chips reuse the SAME shared health resolver the
+  // Inspection Dashboard/Scaffold Map use (never a second, independent
+  // status rule), computed from the expiry data this page already fetches
+  // — no new query. Filtering happens here, server-side, from the ALREADY
+  // company/project-scoped `scaffolds` list — the `?health=` param never
+  // widens what RLS/listScaffolds already resolved.
+  const todayDate = getProjectLocalDate(project.timezone);
+  const healthByScaffoldId = new Map(scaffolds.map((scaffold) => [scaffold.id, resolveInspectionHealth(scaffold.status, expiryByScaffold.get(scaffold.id) ?? null, todayDate)]));
+  const healthCounts: Record<InspectionHealthState, number> = { awaiting_initial: 0, expired: 0, due_today: 0, expiring_tomorrow: 0, valid: 0, dismantled: 0 };
+  for (const state of healthByScaffoldId.values()) healthCounts[state]++;
+
+  const activeHealthFilter = urlParams.health as InspectionHealthState | undefined;
+  const visibleScaffolds = activeHealthFilter ? scaffolds.filter((scaffold) => healthByScaffoldId.get(scaffold.id) === activeHealthFilter) : scaffolds;
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <CreateSuccessToast
@@ -87,8 +104,9 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
       />
 
       <ScaffoldFilters basePath={basePath} />
+      <ScaffoldHealthQuickFilters basePath={basePath} activeHealth={activeHealthFilter} counts={healthCounts} />
 
-      {scaffolds.length === 0 ? (
+      {visibleScaffolds.length === 0 ? (
         <EmptyState
           icon={HardHat}
           title={t("noScaffoldsTitle")}
@@ -103,7 +121,7 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {scaffolds.map((scaffold) => (
+          {visibleScaffolds.map((scaffold) => (
             <ScaffoldCard
               key={scaffold.id}
               scaffold={scaffold}

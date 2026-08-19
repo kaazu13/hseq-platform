@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { canManageScaffold, canViewScaffoldRegister, canCreateScaffold, isScaffoldBroadCreator, mustSelfLockResponsibleForeman, canViewInspectionDashboard } from "./permissions";
+import {
+  canManageScaffold,
+  canViewScaffoldRegister,
+  canCreateScaffold,
+  isScaffoldBroadCreator,
+  mustSelfLockResponsibleForeman,
+  canViewInspectionDashboard,
+  canManageScaffoldInspection,
+  mustSelfLockInspector,
+} from "./permissions";
 
 describe("canManageScaffold", () => {
   it("allows an HSE Manager regardless of project access", () => {
@@ -149,5 +158,55 @@ describe("canViewInspectionDashboard — Part N's explicit access matrix (Inspec
   it("dashboard read access does not imply inspection manage/finalize authority — canManageScaffold is unchanged", () => {
     expect(canViewInspectionDashboard(["foreman"], true)).toBe(true);
     expect(canManageScaffold(["foreman"], true)).toBe(false);
+  });
+});
+
+describe("canManageScaffoldInspection — Part 8's expanded inspection creation tier", () => {
+  it("still allows the pre-existing canManageScaffold tiers", () => {
+    expect(canManageScaffoldInspection(["hseq_manager"], false, [])).toBe(true);
+    expect(canManageScaffoldInspection(["hse_officer"], true, [])).toBe(true);
+    expect(canManageScaffoldInspection(["inspector"], true, [])).toBe(true);
+    expect(canManageScaffoldInspection(["hse_officer"], false, [])).toBe(false);
+  });
+
+  it("adds company_admin unconditionally", () => {
+    expect(canManageScaffoldInspection(["company_admin"], false, [])).toBe(true);
+  });
+
+  it("adds the project's own assigned project_manager", () => {
+    expect(canManageScaffoldInspection(["employee"], true, ["project_manager"])).toBe(true);
+    expect(canManageScaffoldInspection(["employee"], true, [])).toBe(false);
+  });
+
+  it("does NOT grant scaffold EDIT authority (canManageScaffold is a separate, unchanged function) — a regression guard against accidentally widening updateScaffold's gate", () => {
+    expect(canManageScaffold(["company_admin"], true)).toBe(false);
+  });
+
+  it("still denies foreman, employee, recruiter, planner, operations_manager with no other qualifying role", () => {
+    for (const role of ["foreman", "employee", "recruiter", "planner", "operations_manager"] as const) {
+      expect(canManageScaffoldInspection([role], true, [])).toBe(false);
+    }
+  });
+});
+
+describe("mustSelfLockInspector — Part 7/8's self-lock vs free-pick tiers", () => {
+  it("locks inspector and foreman (project-scoped roles with no admin/HSE-tier role held)", () => {
+    expect(mustSelfLockInspector(["inspector"], true, [])).toBe(true);
+    expect(mustSelfLockInspector(["foreman"], true, [])).toBe(true);
+  });
+
+  it("gives a free pick to hseq_manager, hse_officer (with project access), company_admin, and the project's own project_manager", () => {
+    expect(mustSelfLockInspector(["hseq_manager"], false, [])).toBe(false);
+    expect(mustSelfLockInspector(["hse_officer"], true, [])).toBe(false);
+    expect(mustSelfLockInspector(["company_admin"], false, [])).toBe(false);
+    expect(mustSelfLockInspector(["employee"], true, ["project_manager"])).toBe(false);
+  });
+
+  it("hse_officer WITHOUT project access is still locked (matches canManageScaffold's own project-scoping — though canManageScaffoldInspection would deny them the page entirely in that case)", () => {
+    expect(mustSelfLockInspector(["hse_officer"], false, [])).toBe(true);
+  });
+
+  it("a multi-role account is free-pick if ANY held role qualifies", () => {
+    expect(mustSelfLockInspector(["inspector", "hseq_manager"], true, [])).toBe(false);
   });
 });

@@ -617,7 +617,11 @@
       "attention_today": "Reikia dėmesio šiandien",
       "tomorrow": "Rytoj",
       "awaiting_initial": "Laukia pirminės patikros"
-    }
+    },
+    "editLocation": "Redaguoti vietą",
+    "viewOnMap": "Žiūrėti žemėlapyje",
+    "directions": "Kryptys",
+    "locationNotSet": "Vieta nenustatyta"
   },
   "InspectionDashboard": {
     "title": "Patikrų suvestinė",
@@ -670,6 +674,41 @@
       "leave": "Atostogos",
       "training": "Mokymai",
       "off_site": "Ne objekte"
-    }
+    },
+    "allScaffolds": "Visi pastoliai"
+  },
+  "ScaffoldCrew": {
+    "title": "Montavimo brigada / Dalyvaujantys asmenys",
+    "description": "Kas iš tikrųjų dirbo prie šių pastolių — komandos importavimas yra tik greito užpildymo nuoroda; vėliau laisvai pridėkite ar pašalinkite žmones.",
+    "legacyRosterTitle": "Ankstesnis komandos sąrašas (išsaugotas kaip užregistruota)",
+    "legacyRosterNote": "Šie pastoliai buvo užregistruoti prieš atsirandant ryšiui su šiandienos komandomis — jų pradinis sąrašas išsaugotas lygiai toks, koks buvo užregistruotas, ir čia nebegali būti redaguojamas. Naudokite žemiau esančius rinkiklius, kad ateityje pridėtumėte tikrus žmones.",
+    "addFromTeam": "Pridėti iš šiandienos komandos",
+    "loadingTeams": "Įkeliamos {date} komandos…",
+    "noTeamsTitle": "Šiai datai šiandienos komandų nerasta",
+    "noTeamsDescription": "Šiam projektui šia data šiandienos komandų dar nėra.",
+    "noTeamsDescriptionForeman": "Šia data šiam projektui neturite šiandienos komandos — pirmiausia sukurkite ją, tada grįžkite registruoti pastolius.",
+    "foremanLabel": "Brigadininkas: {name}",
+    "workerCount": "{count, plural, one {# darbuotojas} few {# darbuotojai} other {# darbuotojų}}",
+    "importTeam": "Pridėti komandą",
+    "reimportTeam": "Pridėti naujus narius",
+    "addWorker": "Pridėti darbuotoją",
+    "addWorkerPlaceholder": "Ieškoti pagal vardą ar darbuotojo numerį…",
+    "loadingWorkers": "Įkeliami galimi darbuotojai…",
+    "noAvailableWorkers": "Šiai datai galimų darbuotojų nerasta.",
+    "availabilityNote": "Rodo tik šiam projektui priskirtus žmones, kurie montavimo datą yra Darbe (neatvyko arba nėra patvirtintose atostogose).",
+    "crewListTitle": "Montavimo brigada ({count})",
+    "crewEmpty": "Į montavimo brigadą dar niekas nepridėtas.",
+    "fromTeam": "Iš {name}",
+    "removeWorker": "Pašalinti {name}",
+    "manualBadge": "Pridėta rankiniu būdu",
+    "importedFromTeams": "Komandos, naudotos šiai brigadai greitai užpildyti: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Nauja patikra",
+    "inspector": "Inspektorius",
+    "yourself": "Jūs patys",
+    "inspectorLockedToYou": "Inspektorius užfiksuotas kaip jūs",
+    "inspectorSearchPlaceholder": "Ieškoti pagal vardą ar darbuotojo numerį…",
+    "noEligibleInspectors": "Šiam projektui tinkamo inspektoriaus ar brigadininko nerasta."
   }
 }

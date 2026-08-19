@@ -617,7 +617,11 @@
       "attention_today": "Attention aujourd'hui",
       "tomorrow": "Demain",
       "awaiting_initial": "En attente d'inspection initiale"
-    }
+    },
+    "editLocation": "Modifier l'emplacement",
+    "viewOnMap": "Voir sur la carte",
+    "directions": "Itinéraire",
+    "locationNotSet": "Emplacement non défini"
   },
   "InspectionDashboard": {
     "title": "Tableau de bord des inspections",
@@ -670,6 +674,41 @@
       "leave": "Congé",
       "training": "Formation",
       "off_site": "Hors site"
-    }
+    },
+    "allScaffolds": "Tous les échafaudages"
+  },
+  "ScaffoldCrew": {
+    "title": "Équipe de montage / Personnes impliquées",
+    "description": "Qui a réellement travaillé sur cet échafaudage — importer une équipe n'est qu'un raccourci de remplissage rapide ; ajoutez ou supprimez des personnes librement ensuite.",
+    "legacyRosterTitle": "Ancienne composition d'équipe (conservée telle qu'enregistrée)",
+    "legacyRosterNote": "Cet échafaudage a été enregistré avant l'existence du lien avec les équipes du jour — sa composition d'origine est conservée exactement telle qu'enregistrée et n'est plus modifiable ici. Utilisez les sélecteurs ci-dessous pour ajouter de vraies personnes à l'avenir.",
+    "addFromTeam": "Ajouter depuis l'équipe du jour",
+    "loadingTeams": "Chargement des équipes pour {date}…",
+    "noTeamsTitle": "Aucune équipe du jour trouvée pour cette date",
+    "noTeamsDescription": "Aucune équipe du jour n'existe encore pour ce projet à cette date.",
+    "noTeamsDescriptionForeman": "Vous n'avez aucune équipe du jour à cette date pour ce projet — créez-en une d'abord, puis revenez enregistrer l'échafaudage.",
+    "foremanLabel": "Chef d'équipe : {name}",
+    "workerCount": "{count, plural, one {# ouvrier} other {# ouvriers}}",
+    "importTeam": "Ajouter l'équipe",
+    "reimportTeam": "Ajouter de nouveaux membres",
+    "addWorker": "Ajouter un ouvrier",
+    "addWorkerPlaceholder": "Rechercher par nom ou numéro d'employé…",
+    "loadingWorkers": "Chargement des ouvriers disponibles…",
+    "noAvailableWorkers": "Aucun ouvrier disponible trouvé pour cette date.",
+    "availabilityNote": "Affiche uniquement les personnes affectées à ce projet qui sont Au travail (non absentes ou en congé approuvé) à la date de montage.",
+    "crewListTitle": "Équipe de montage ({count})",
+    "crewEmpty": "Personne n'a encore été ajouté à l'équipe de montage.",
+    "fromTeam": "De {name}",
+    "removeWorker": "Retirer {name}",
+    "manualBadge": "Ajouté manuellement",
+    "importedFromTeams": "Équipes utilisées pour remplir rapidement cette équipe : {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Nouvelle inspection",
+    "inspector": "Inspecteur",
+    "yourself": "Vous-même",
+    "inspectorLockedToYou": "Inspecteur verrouillé sur vous",
+    "inspectorSearchPlaceholder": "Rechercher par nom ou numéro d'employé…",
+    "noEligibleInspectors": "Aucun Inspecteur ou Chef d'équipe éligible trouvé pour ce projet."
   }
 }

@@ -617,7 +617,11 @@
       "attention_today": "Necesită atenție azi",
       "tomorrow": "Mâine",
       "awaiting_initial": "Așteaptă inspecția inițială"
-    }
+    },
+    "editLocation": "Editează locația",
+    "viewOnMap": "Vezi pe hartă",
+    "directions": "Indicații de drum",
+    "locationNotSet": "Locație nesetată"
   },
   "InspectionDashboard": {
     "title": "Panou de inspecții",
@@ -670,6 +674,41 @@
       "leave": "Concediu",
       "training": "Instruire",
       "off_site": "În afara șantierului"
-    }
+    },
+    "allScaffolds": "Toate schelele"
+  },
+  "ScaffoldCrew": {
+    "title": "Echipa de montaj / Persoane implicate",
+    "description": "Cine a lucrat de fapt la această schelă — importul unei echipe este doar o comandă rapidă de completare; adaugă sau elimină persoane liber ulterior.",
+    "legacyRosterTitle": "Componență echipă anterioară (păstrată așa cum a fost înregistrată)",
+    "legacyRosterNote": "Această schelă a fost înregistrată înainte de a exista legătura cu Echipele de Azi — componența ei originală este păstrată exact cum a fost înregistrată și nu mai poate fi editată aici. Folosește selectoarele de mai jos pentru a adăuga persoane reale de acum înainte.",
+    "addFromTeam": "Adaugă din Echipa de Azi",
+    "loadingTeams": "Se încarcă echipele pentru {date}…",
+    "noTeamsTitle": "Nu s-au găsit Echipe de Azi pentru această dată",
+    "noTeamsDescription": "Nu există încă Echipe de Azi pentru acest proiect la această dată.",
+    "noTeamsDescriptionForeman": "Nu ai nicio Echipă de Azi la această dată pentru acest proiect — creează una mai întâi, apoi revino pentru a înregistra schela.",
+    "foremanLabel": "Șef de echipă: {name}",
+    "workerCount": "{count, plural, one {# lucrător} other {# lucrători}}",
+    "importTeam": "Adaugă echipă",
+    "reimportTeam": "Adaugă membri noi",
+    "addWorker": "Adaugă lucrător",
+    "addWorkerPlaceholder": "Caută după nume sau număr de angajat…",
+    "loadingWorkers": "Se încarcă lucrătorii disponibili…",
+    "noAvailableWorkers": "Niciun lucrător disponibil pentru această dată.",
+    "availabilityNote": "Afișează doar persoanele alocate acestui proiect care sunt La lucru (nu absente sau în concediu aprobat) la data montajului.",
+    "crewListTitle": "Echipa de montaj ({count})",
+    "crewEmpty": "Nimeni nu a fost adăugat încă în echipa de montaj.",
+    "fromTeam": "Din {name}",
+    "removeWorker": "Elimină {name}",
+    "manualBadge": "Adăugat manual",
+    "importedFromTeams": "Echipe folosite pentru completarea rapidă: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Inspecție nouă",
+    "inspector": "Inspector",
+    "yourself": "Tu însuți",
+    "inspectorLockedToYou": "Inspector fixat pe tine",
+    "inspectorSearchPlaceholder": "Caută după nume sau număr de angajat…",
+    "noEligibleInspectors": "Niciun Inspector sau Șef de echipă eligibil găsit pentru acest proiect."
   }
 }

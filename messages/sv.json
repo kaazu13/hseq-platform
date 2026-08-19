@@ -617,7 +617,11 @@
       "attention_today": "Kräver åtgärd idag",
       "tomorrow": "Imorgon",
       "awaiting_initial": "Väntar på förstagångsinspektion"
-    }
+    },
+    "editLocation": "Redigera plats",
+    "viewOnMap": "Visa på kartan",
+    "directions": "Vägbeskrivning",
+    "locationNotSet": "Plats ej angiven"
   },
   "InspectionDashboard": {
     "title": "Inspektionspanel",
@@ -670,6 +674,41 @@
       "leave": "Semester/ledighet",
       "training": "Utbildning",
       "off_site": "Utanför platsen"
-    }
+    },
+    "allScaffolds": "Alla ställningar"
+  },
+  "ScaffoldCrew": {
+    "title": "Monteringslag / Inblandade personer",
+    "description": "Vem som faktiskt arbetade på denna ställning — att importera ett team är bara en snabbfyllnadsgenväg; lägg till eller ta bort personer fritt efteråt.",
+    "legacyRosterTitle": "Äldre teamlista (bevarad som registrerad)",
+    "legacyRosterNote": "Denna ställning registrerades innan koppling till dagens team fanns — dess ursprungliga lista bevaras exakt som registrerad och kan inte längre redigeras här. Använd väljarna nedan för att lägga till riktiga personer framöver.",
+    "addFromTeam": "Lägg till från dagens team",
+    "loadingTeams": "Laddar team för {date}…",
+    "noTeamsTitle": "Inga dagens team hittades för detta datum",
+    "noTeamsDescription": "Det finns ännu inga dagens team för detta projekt på detta datum.",
+    "noTeamsDescriptionForeman": "Du har inget dagens team på detta datum för detta projekt — skapa ett först och kom sedan tillbaka för att registrera ställningen.",
+    "foremanLabel": "Förman: {name}",
+    "workerCount": "{count, plural, one {# arbetare} other {# arbetare}}",
+    "importTeam": "Lägg till team",
+    "reimportTeam": "Lägg till nya medlemmar",
+    "addWorker": "Lägg till arbetare",
+    "addWorkerPlaceholder": "Sök efter namn eller anställningsnummer…",
+    "loadingWorkers": "Laddar tillgängliga arbetare…",
+    "noAvailableWorkers": "Inga tillgängliga arbetare hittades för detta datum.",
+    "availabilityNote": "Visar endast personer tilldelade detta projekt som är På jobbet (inte frånvarande eller på godkänd ledighet) på monteringsdatumet.",
+    "crewListTitle": "Monteringslag ({count})",
+    "crewEmpty": "Ingen har lagts till i monteringslaget än.",
+    "fromTeam": "Från {name}",
+    "removeWorker": "Ta bort {name}",
+    "manualBadge": "Tillagd manuellt",
+    "importedFromTeams": "Team som använts för att snabbfylla laget: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Ny inspektion",
+    "inspector": "Inspektör",
+    "yourself": "Dig själv",
+    "inspectorLockedToYou": "Inspektör låst till dig",
+    "inspectorSearchPlaceholder": "Sök efter namn eller anställningsnummer…",
+    "noEligibleInspectors": "Ingen behörig inspektör eller förman hittades för detta projekt."
   }
 }

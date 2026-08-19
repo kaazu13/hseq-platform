@@ -617,7 +617,11 @@
       "attention_today": "Attention Today",
       "tomorrow": "Tomorrow",
       "awaiting_initial": "Awaiting Initial Inspection"
-    }
+    },
+    "editLocation": "Edit location",
+    "viewOnMap": "View on map",
+    "directions": "Directions",
+    "locationNotSet": "Location not set"
   },
   "InspectionDashboard": {
     "title": "Inspection Dashboard",
@@ -670,6 +674,41 @@
       "leave": "Holiday Leave",
       "training": "Training",
       "off_site": "Off Site"
-    }
+    },
+    "allScaffolds": "All Scaffolds"
+  },
+  "ScaffoldCrew": {
+    "title": "Erection crew / People involved",
+    "description": "Who actually worked on this scaffold — importing a team is only a fast-fill shortcut; add or remove people freely afterward.",
+    "legacyRosterTitle": "Legacy team roster (preserved as recorded)",
+    "legacyRosterNote": "This scaffold was registered before Today's Team linking existed — its original roster is kept exactly as recorded and is no longer editable here. Use the pickers below to additionally add real people going forward.",
+    "addFromTeam": "Add from Today's Team",
+    "loadingTeams": "Loading teams for {date}…",
+    "noTeamsTitle": "No Today's Teams found for this date",
+    "noTeamsDescription": "No Today's Teams exist for this project on this date yet.",
+    "noTeamsDescriptionForeman": "You have no Today's Team on this date for this project — create one first, then come back to register the scaffold.",
+    "foremanLabel": "Foreman: {name}",
+    "workerCount": "{count, plural, one {# worker} other {# workers}}",
+    "importTeam": "Add team",
+    "reimportTeam": "Add new members",
+    "addWorker": "Add worker",
+    "addWorkerPlaceholder": "Search by name or employee number…",
+    "loadingWorkers": "Loading available workers…",
+    "noAvailableWorkers": "No available workers found for this date.",
+    "availabilityNote": "Only shows people assigned to this project who are At Work (not absent or on approved leave) for the erection date.",
+    "crewListTitle": "Erection crew ({count})",
+    "crewEmpty": "No one has been added to the erection crew yet.",
+    "fromTeam": "From {name}",
+    "removeWorker": "Remove {name}",
+    "manualBadge": "Added manually",
+    "importedFromTeams": "Teams used to fast-fill this crew: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "New inspection",
+    "inspector": "Inspector",
+    "yourself": "Yourself",
+    "inspectorLockedToYou": "Inspector locked to you",
+    "inspectorSearchPlaceholder": "Search by name or employee number…",
+    "noEligibleInspectors": "No eligible Inspector or Foreman found for this project."
   }
 }

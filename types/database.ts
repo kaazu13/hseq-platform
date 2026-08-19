@@ -3465,6 +3465,94 @@ export type Database = {
           },
         ]
       }
+      scaffold_erection_participants: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          company_id: string
+          employee_id: string
+          id: string
+          project_id: string
+          removed_at: string | null
+          removed_by: string | null
+          scaffold_id: string
+          source: Database["public"]["Enums"]["scaffold_participant_source"]
+          source_daily_team_id: string | null
+          work_date: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          company_id: string
+          employee_id: string
+          id?: string
+          project_id: string
+          removed_at?: string | null
+          removed_by?: string | null
+          scaffold_id: string
+          source?: Database["public"]["Enums"]["scaffold_participant_source"]
+          source_daily_team_id?: string | null
+          work_date: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          company_id?: string
+          employee_id?: string
+          id?: string
+          project_id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          scaffold_id?: string
+          source?: Database["public"]["Enums"]["scaffold_participant_source"]
+          source_daily_team_id?: string | null
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scaffold_erection_participants_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_participants_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_participants_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_participants_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_participants_scaffold_fk"
+            columns: ["scaffold_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "scaffolds"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "scaffold_erection_participants_source_daily_team_id_fkey"
+            columns: ["source_daily_team_id"]
+            isOneToOne: false
+            referencedRelation: "daily_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scaffold_erection_teams: {
         Row: {
           added_at: string
@@ -5284,6 +5372,14 @@ export type Database = {
         Args: { target_employee_id: string; target_organization_id: string }
         Returns: undefined
       }
+      assert_valid_inspection_inspector: {
+        Args: {
+          target_company_id: string
+          target_inspector_id: string
+          target_project_id: string
+        }
+        Returns: undefined
+      }
       ban_account: {
         Args: { target_reason: string; target_user_id: string }
         Returns: {
@@ -6204,6 +6300,16 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+        }[]
+      }
+      list_eligible_scaffold_inspectors: {
+        Args: { target_organization_id: string; target_project_id: string }
+        Returns: {
+          employee_number: string
+          first_name: string
+          id: string
+          last_name: string
+          role_name: string
         }[]
       }
       list_eligible_scaffold_team_members: {
@@ -8290,6 +8396,7 @@ export type Database = {
         | "reinspection_following_defects"
         | "other"
       scaffold_inspection_status: "draft" | "finalized"
+      scaffold_participant_source: "manual" | "team_import"
       scaffold_status:
         | "pending_inspection"
         | "safe"
@@ -8756,6 +8863,7 @@ export const Constants = {
         "other",
       ],
       scaffold_inspection_status: ["draft", "finalized"],
+      scaffold_participant_source: ["manual", "team_import"],
       scaffold_status: [
         "pending_inspection",
         "safe",

@@ -617,7 +617,11 @@
       "attention_today": "Heute Aufmerksamkeit nötig",
       "tomorrow": "Morgen",
       "awaiting_initial": "Wartet auf Erstinspektion"
-    }
+    },
+    "editLocation": "Standort bearbeiten",
+    "viewOnMap": "Auf Karte anzeigen",
+    "directions": "Route",
+    "locationNotSet": "Standort nicht festgelegt"
   },
   "InspectionDashboard": {
     "title": "Inspektions-Dashboard",
@@ -670,6 +674,41 @@
       "leave": "Urlaub",
       "training": "Schulung",
       "off_site": "Außerhalb der Baustelle"
-    }
+    },
+    "allScaffolds": "Alle Gerüste"
+  },
+  "ScaffoldCrew": {
+    "title": "Montagetrupp / Beteiligte Personen",
+    "description": "Wer tatsächlich an diesem Gerüst gearbeitet hat — das Importieren eines Teams ist nur eine Schnellausfüll-Abkürzung; füge danach frei Personen hinzu oder entferne sie.",
+    "legacyRosterTitle": "Ältere Teamliste (wie erfasst beibehalten)",
+    "legacyRosterNote": "Dieses Gerüst wurde registriert, bevor die Verknüpfung mit den heutigen Teams existierte — seine ursprüngliche Liste wird genau wie erfasst beibehalten und ist hier nicht mehr bearbeitbar. Verwende die Auswahlfelder unten, um künftig echte Personen hinzuzufügen.",
+    "addFromTeam": "Aus heutigem Team hinzufügen",
+    "loadingTeams": "Teams für {date} werden geladen…",
+    "noTeamsTitle": "Keine heutigen Teams für dieses Datum gefunden",
+    "noTeamsDescription": "Für dieses Projekt existieren an diesem Datum noch keine heutigen Teams.",
+    "noTeamsDescriptionForeman": "Du hast an diesem Datum kein heutiges Team für dieses Projekt — erstelle zuerst eines und kehre dann zurück, um das Gerüst zu registrieren.",
+    "foremanLabel": "Vorarbeiter: {name}",
+    "workerCount": "{count, plural, one {# Arbeiter} other {# Arbeiter}}",
+    "importTeam": "Team hinzufügen",
+    "reimportTeam": "Neue Mitglieder hinzufügen",
+    "addWorker": "Arbeiter hinzufügen",
+    "addWorkerPlaceholder": "Nach Name oder Mitarbeiternummer suchen…",
+    "loadingWorkers": "Verfügbare Arbeiter werden geladen…",
+    "noAvailableWorkers": "Keine verfügbaren Arbeiter für dieses Datum gefunden.",
+    "availabilityNote": "Zeigt nur Personen, die diesem Projekt zugewiesen sind und am Montagedatum Bei der Arbeit sind (nicht abwesend oder in genehmigtem Urlaub).",
+    "crewListTitle": "Montagetrupp ({count})",
+    "crewEmpty": "Dem Montagetrupp wurde noch niemand hinzugefügt.",
+    "fromTeam": "Von {name}",
+    "removeWorker": "{name} entfernen",
+    "manualBadge": "Manuell hinzugefügt",
+    "importedFromTeams": "Teams, die zum Schnellausfüllen dieses Trupps verwendet wurden: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Neue Inspektion",
+    "inspector": "Inspektor",
+    "yourself": "Du selbst",
+    "inspectorLockedToYou": "Inspektor auf dich festgelegt",
+    "inspectorSearchPlaceholder": "Nach Name oder Mitarbeiternummer suchen…",
+    "noEligibleInspectors": "Kein berechtigter Inspektor oder Vorarbeiter für dieses Projekt gefunden."
   }
 }

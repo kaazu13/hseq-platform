@@ -4,6 +4,8 @@ import { SCAFFOLD_INSPECTION_ITEM_TYPES } from "./types";
 
 const ERECTION_TEAM_A = "123e4567-e89b-42d3-a456-426614174010";
 const ERECTION_TEAM_B = "123e4567-e89b-42d3-a456-426614174011";
+const WORKER_A = "123e4567-e89b-42d3-a456-426614174020";
+const WORKER_B = "123e4567-e89b-42d3-a456-426614174021";
 
 const VALID_SCAFFOLD_INPUT = {
   projectId: "123e4567-e89b-42d3-a456-426614174000",
@@ -21,6 +23,10 @@ const VALID_SCAFFOLD_INPUT = {
   erectedAt: "2026-08-10",
   notes: "",
   erectionTeamIds: [ERECTION_TEAM_A, ERECTION_TEAM_B],
+  participants: [
+    { employeeId: WORKER_A, source: "team_import", sourceDailyTeamId: ERECTION_TEAM_A },
+    { employeeId: WORKER_B, source: "manual" },
+  ],
   inspectionIntervalType: "seven_days",
   inspectionIntervalDays: "7",
   latitude: "",
@@ -98,9 +104,9 @@ describe("scaffoldFormSchema", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectedAt: "08/10/2026" }).success).toBe(false);
   });
 
-  it("accepts one or more erectionTeamIds, rejects an empty selection", () => {
+  it("Part 3: erectionTeamIds is now OPTIONAL (an audit trail of fast-fill import sources only) — an empty array is valid as long as participants has at least one person", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: [ERECTION_TEAM_A] }).success).toBe(true);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: [] }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: [] }).success).toBe(true);
   });
 
   it("rejects the same erection team selected more than once", () => {
@@ -111,6 +117,43 @@ describe("scaffoldFormSchema", () => {
   it("rejects a forged non-UUID erection team id", () => {
     const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, erectionTeamIds: ["not-a-uuid"] });
     expect(result.success).toBe(false);
+  });
+
+  describe("erection crew participants (Parts 3-5)", () => {
+    it("rejects an empty crew — at least one participant is required", () => {
+      expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, participants: [] }).success).toBe(false);
+    });
+
+    it("accepts a single manually-added participant with no team source", () => {
+      const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, participants: [{ employeeId: WORKER_A, source: "manual" }] });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts a team-imported participant carrying its source team id", () => {
+      const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, participants: [{ employeeId: WORKER_A, source: "team_import", sourceDailyTeamId: ERECTION_TEAM_A }] });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects the same employee listed twice — Part 4's 'do not duplicate participants'", () => {
+      const result = scaffoldFormSchema.safeParse({
+        ...VALID_SCAFFOLD_INPUT,
+        participants: [
+          { employeeId: WORKER_A, source: "manual" },
+          { employeeId: WORKER_A, source: "team_import", sourceDailyTeamId: ERECTION_TEAM_A },
+        ],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects a forged non-UUID employee id", () => {
+      const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, participants: [{ employeeId: "not-a-uuid", source: "manual" }] });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects an unrecognized source value", () => {
+      const result = scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, participants: [{ employeeId: WORKER_A, source: "invented" }] });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("inspection frequency (Parts O-Q)", () => {

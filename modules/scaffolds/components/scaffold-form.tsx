@@ -3,9 +3,10 @@
 import { useState, useTransition, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AlertCircle, Loader2, Lock, MapPin, Users } from "lucide-react";
+import { AlertCircle, Loader2, Lock, MapPin, Plus, Users, X } from "lucide-react";
 import { createScaffold, updateScaffold } from "@/modules/scaffolds/actions";
-import { listEligibleErectionTeamsAction } from "@/modules/scaffolds/team-actions";
+import { listEligibleErectionTeamsAction, listAvailableScaffoldWorkersAction } from "@/modules/scaffolds/team-actions";
+import type { EligibleErectionTeam } from "@/modules/scaffolds/queries";
 import {
   SCAFFOLD_TYPES,
   SCAFFOLD_TYPE_LABELS,
@@ -19,18 +20,24 @@ import {
   type ScaffoldDetail,
   type ScaffoldInspectionIntervalType,
 } from "@/modules/scaffolds/types";
-import { EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
+import { EmployeeCombobox, EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
 
-type EligibleErectionTeam = { id: string; name: string; shift: string | null; workArea: string | null; foremanName: string | null; workerCount: number };
+type StagedParticipant = {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  source: "manual" | "team_import";
+  sourceDailyTeamId?: string;
+  sourceTeamName?: string;
+};
 
 type ScaffoldFormProps = {
   companyId: string;
@@ -71,6 +78,7 @@ export function ScaffoldForm({
 }: ScaffoldFormProps) {
   const t = useTranslations("ScaffoldInspectionFrequency");
   const tMap = useTranslations("ScaffoldMap");
+  const tCrew = useTranslations("ScaffoldCrew");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -118,31 +126,67 @@ export function ScaffoldForm({
   // setState call below happens inside the fetch's .then()/.catch(),
   // never synchronously in the effect body itself.
   const [eligibleTeams, setEligibleTeams] = useState<EligibleErectionTeam[] | null>(null);
-  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(mode === "edit" ? scaffold.erectionTeams.map((t) => t.dailyTeamId) : []);
+  const [availableWorkers, setAvailableWorkers] = useState<EmployeeOption[] | null>(null);
+  // Part 3 — a Today's Team is ONLY a fast-fill helper now: importing it
+  // populates `participants` (the authoritative crew list) but never
+  // permanently ties the scaffold to that team's live membership.
+  // `importedTeamIds` is a separate, append-only audit set (which teams
+  // were EVER used as an import source this session) — erectionTeamIds
+  // on submit, kept even if every imported member is later individually
+  // removed from `participants`.
+  const [importedTeamIds, setImportedTeamIds] = useState<string[]>(mode === "edit" ? scaffold.erectionTeams.map((t) => t.dailyTeamId) : []);
+  const [participants, setParticipants] = useState<StagedParticipant[]>(
+    mode === "edit"
+      ? scaffold.participants.map((p) => ({ employeeId: p.employeeId, firstName: p.firstName, lastName: p.lastName, source: p.source, sourceTeamName: p.sourceTeamName ?? undefined }))
+      : [],
+  );
 
-  // Refetch eligible teams whenever the erection date changes — never a
-  // stale list for a date the caller has since moved away from. Also
-  // clears/revalidates any selected team that no longer appears in the
-  // refreshed list (e.g. the date changed to one that team didn't work).
+  // Refetch eligible teams + available workers whenever the erection date
+  // changes — never a stale list for a date the caller has since moved
+  // away from.
   useEffect(() => {
     if (!erectedAt) return;
     let cancelled = false;
     listEligibleErectionTeamsAction(companyId, projectId, erectedAt)
       .then((teams) => {
-        if (cancelled) return;
-        setEligibleTeams(teams);
-        setSelectedTeamIds((prev) => prev.filter((id) => teams.some((t) => t.id === id)));
+        if (!cancelled) setEligibleTeams(teams);
       })
       .catch(() => {
         if (!cancelled) setEligibleTeams([]);
+      });
+    listAvailableScaffoldWorkersAction(companyId, projectId, erectedAt)
+      .then((workers) => {
+        if (!cancelled) setAvailableWorkers(workers);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableWorkers([]);
       });
     return () => {
       cancelled = true;
     };
   }, [companyId, projectId, erectedAt]);
 
-  function toggleTeam(teamId: string, checked: boolean) {
-    setSelectedTeamIds((prev) => (checked ? [...prev, teamId] : prev.filter((id) => id !== teamId)));
+  function importTeam(team: EligibleErectionTeam) {
+    setImportedTeamIds((prev) => (prev.includes(team.id) ? prev : [...prev, team.id]));
+    setParticipants((prev) => {
+      const existingIds = new Set(prev.map((p) => p.employeeId));
+      const imported = team.workers
+        .filter((worker) => !existingIds.has(worker.id))
+        .map((worker): StagedParticipant => ({ employeeId: worker.id, firstName: worker.firstName, lastName: worker.lastName, source: "team_import", sourceDailyTeamId: team.id, sourceTeamName: team.name }));
+      return [...prev, ...imported];
+    });
+  }
+
+  function addManualWorker(option: EmployeeOption) {
+    setParticipants((prev) => {
+      if (prev.some((p) => p.employeeId === option.value)) return prev;
+      const [firstName, ...rest] = option.label.split(" ");
+      return [...prev, { employeeId: option.value, firstName, lastName: rest.join(" "), source: "manual" }];
+    });
+  }
+
+  function removeParticipant(employeeId: string) {
+    setParticipants((prev) => prev.filter((p) => p.employeeId !== employeeId));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -155,8 +199,8 @@ export function ScaffoldForm({
       setFormError("Choose the Responsible Foreman.");
       return;
     }
-    if (selectedTeamIds.length === 0) {
-      setFormError("Select at least one Today's Team that erected this scaffold.");
+    if (participants.length === 0) {
+      setFormError("Add at least one person to the erection crew.");
       return;
     }
 
@@ -179,7 +223,8 @@ export function ScaffoldForm({
       responsibleForemanId: effectiveForemanId,
       erectedAt,
       notes: String(formData.get("notes") ?? ""),
-      erectionTeamIds: selectedTeamIds,
+      erectionTeamIds: importedTeamIds,
+      participants: participants.map((p) => ({ employeeId: p.employeeId, source: p.source, sourceDailyTeamId: p.sourceDailyTeamId })),
       inspectionIntervalType: intervalType,
       inspectionIntervalDays: String(resolvedIntervalDays),
       latitude,
@@ -334,43 +379,92 @@ export function ScaffoldForm({
       </div>
 
       <div className="flex flex-col gap-4">
-        <SectionHeader title="Teams assigned to scaffold erection" />
-        <p className="text-sm text-muted-foreground">Select one or more of that date&apos;s Today&apos;s Teams. Changing the erection date refreshes which teams are available.</p>
+        <SectionHeader title={tCrew("title")} description={tCrew("description")} />
 
         {mode === "edit" && scaffold.teamMembers.length > 0 && (
           <div className="flex flex-col gap-1.5 rounded-md border bg-muted/40 p-3">
-            <p className="text-xs font-medium text-muted-foreground uppercase">Legacy team roster (preserved as recorded)</p>
-            <p className="text-sm text-muted-foreground">
-              {scaffold.teamMembers.map((member) => `${member.firstName} ${member.lastName}`).join(", ")}
-            </p>
-            <p className="text-xs text-muted-foreground">This scaffold was registered before Today&apos;s Team linking existed — its original roster is kept exactly as recorded and is no longer editable here. Use the picker below to additionally link real Today&apos;s Teams going forward.</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase">{tCrew("legacyRosterTitle")}</p>
+            <p className="text-sm text-muted-foreground">{scaffold.teamMembers.map((member) => `${member.firstName} ${member.lastName}`).join(", ")}</p>
+            <p className="text-xs text-muted-foreground">{tCrew("legacyRosterNote")}</p>
           </div>
         )}
 
-        {eligibleTeams === null ? (
-          <p className="text-sm text-muted-foreground">Loading teams for {erectedAt}…</p>
-        ) : eligibleTeams.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No Today's Teams found for this date"
-            description={selfLockedForemanId ? "You have no Today's Team on this date for this project — create one first, then come back to register the scaffold." : "No Today's Teams exist for this project on this date yet."}
+        <div className="flex flex-col gap-2">
+          <Label>{tCrew("addFromTeam")}</Label>
+          {eligibleTeams === null ? (
+            <p className="text-sm text-muted-foreground">{tCrew("loadingTeams", { date: erectedAt })}</p>
+          ) : eligibleTeams.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title={tCrew("noTeamsTitle")}
+              description={selfLockedForemanId ? tCrew("noTeamsDescriptionForeman") : tCrew("noTeamsDescription")}
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {eligibleTeams.map((team) => {
+                const alreadyImported = importedTeamIds.includes(team.id);
+                return (
+                  <div key={team.id} className="flex items-center gap-3 rounded-md border p-3 text-sm">
+                    <span className="flex-1">
+                      <span className="font-medium">{team.name}</span>
+                      {team.workArea ? <span className="text-muted-foreground"> · {team.workArea}</span> : null}
+                      {team.foremanName ? <span className="text-muted-foreground"> · {tCrew("foremanLabel", { name: team.foremanName })}</span> : null}
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {tCrew("workerCount", { count: team.workerCount })}
+                      </span>
+                    </span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => importTeam(team)}>
+                      <Plus />
+                      {alreadyImported ? tCrew("reimportTeam") : tCrew("importTeam")}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>{tCrew("addWorker")}</Label>
+          <EmployeeCombobox
+            value={null}
+            onValueChange={(id) => {
+              const option = (availableWorkers ?? []).find((candidate) => candidate.value === id);
+              if (option) addManualWorker(option);
+            }}
+            options={availableWorkers ?? []}
+            excludeIds={participants.map((p) => p.employeeId)}
+            placeholder={tCrew("addWorkerPlaceholder")}
+            emptyMessage={availableWorkers === null ? tCrew("loadingWorkers") : tCrew("noAvailableWorkers")}
+            clearable={false}
           />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {eligibleTeams.map((team) => (
-              <label key={team.id} className="flex items-center gap-3 rounded-md border p-3 text-sm hover:bg-muted/40">
-                <Checkbox checked={selectedTeamIds.includes(team.id)} onCheckedChange={(checked) => toggleTeam(team.id, checked === true)} />
-                <span className="flex-1">
-                  <span className="font-medium">{team.name}</span>
-                  {team.workArea ? <span className="text-muted-foreground"> · {team.workArea}</span> : null}
-                  {team.foremanName ? <span className="text-muted-foreground"> · Foreman: {team.foremanName}</span> : null}
-                  <span className="text-muted-foreground"> · {team.workerCount} {team.workerCount === 1 ? "worker" : "workers"}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-        {fieldError("erectionTeamIds") && <p className="text-sm text-destructive">{fieldError("erectionTeamIds")}</p>}
+          <p className="text-xs text-muted-foreground">{tCrew("availabilityNote")}</p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>{tCrew("crewListTitle", { count: participants.length })}</Label>
+          {participants.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{tCrew("crewEmpty")}</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {participants.map((participant) => (
+                <div key={participant.employeeId} className="flex items-center justify-between gap-2 rounded-md border p-2.5 text-sm">
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium">
+                      {participant.firstName} {participant.lastName}
+                    </span>
+                    {participant.source === "team_import" && participant.sourceTeamName && <span className="text-muted-foreground"> · {tCrew("fromTeam", { name: participant.sourceTeamName })}</span>}
+                  </span>
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={tCrew("removeWorker", { name: `${participant.firstName} ${participant.lastName}` })} onClick={() => removeParticipant(participant.employeeId)}>
+                    <X />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {fieldError("participants") && <p className="text-sm text-destructive">{fieldError("participants")}</p>}
       </div>
 
       <div className="flex flex-col gap-4">

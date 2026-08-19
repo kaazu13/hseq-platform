@@ -33,6 +33,8 @@ export type ScaffoldInspectionItemType = Enums<"scaffold_inspection_item_type">;
 export type ScaffoldInspectionItemResult = Enums<"scaffold_inspection_item_result">;
 export type ScaffoldDefectSeverity = Enums<"scaffold_defect_severity">;
 export type ScaffoldInspectionIntervalType = Enums<"scaffold_inspection_interval_type">;
+export type ScaffoldParticipantSource = Enums<"scaffold_participant_source">;
+export type ScaffoldErectionParticipant = Database["public"]["Tables"]["scaffold_erection_participants"]["Row"];
 
 export const SCAFFOLD_TYPES: ScaffoldType[] = [
   "independent",
@@ -292,13 +294,34 @@ export type ScaffoldPhotoDetail = {
   orderIndex: number;
 };
 
+/**
+ * One resolved erection PARTICIPANT — the authoritative "who actually
+ * worked on this scaffold" record (Parts 3-5 of the usability
+ * correction), independent of scaffold_erection_teams. `sourceTeamName`
+ * is resolved only when `source === "team_import"` and the source team
+ * link still exists (null otherwise — a deleted source team never hides
+ * the participant themselves).
+ */
+export type ScaffoldParticipantDetail = {
+  id: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  positionTitle: string | null;
+  source: ScaffoldParticipantSource;
+  sourceTeamName: string | null;
+  addedAt: string;
+};
+
 /** One scaffold with everything a detail page needs, resolved in one place. */
 export type ScaffoldDetail = Scaffold & {
   responsibleForeman: BasicEmployee | null;
   /** Legacy manual roster — populated ONLY for scaffolds created before V2 that still have scaffold_team_members rows; empty for every V2 scaffold. */
   teamMembers: ScaffoldTeamMemberDetail[];
-  /** V2's real Today's Team links — empty for legacy scaffolds that predate this table. */
+  /** V2's Today's Team LINKS — kept as an audit trail of which teams were used as fast-fill import sources; no longer the authoritative worker list (see `participants`). Empty for legacy scaffolds that predate this table. */
   erectionTeams: ScaffoldErectionTeamDetail[];
+  /** The authoritative "who actually worked on this scaffold" list (Parts 3-5) — active (non-removed) scaffold_erection_participants rows, resolved to display fields. */
+  participants: ScaffoldParticipantDetail[];
   photos: ScaffoldPhotoDetail[];
 };
 

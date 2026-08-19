@@ -13,10 +13,12 @@ import type {
   InspectorTodayRow,
   RecentInspectionRow,
   ScaffoldInspectionIntervalType,
+  ScaffoldParticipantDetail,
 } from "./types";
 import { SCAFFOLD_INSPECTION_EXPIRING_SOON_DAYS } from "./types";
 import { getScaffoldPhotoSignedUrls } from "@/lib/storage/scaffold-photos";
-import { listDailyTeamsForDate } from "@/modules/daily-workforce/queries";
+import { listDailyTeamsForDate, listWorkforceForDate } from "@/modules/daily-workforce/queries";
+import { dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import type { Project } from "@/modules/projects/types";
 import type { RoleName } from "@/modules/companies/types";
 import type { EmployeeOption } from "@/modules/employees/employee-options";
@@ -74,12 +76,18 @@ export async function canManageScaffoldPhotos(scaffoldId: string): Promise<boole
  * side; this is the matching UI-side narrowing so the picker itself never
  * offers a choice that would be rejected).
  */
-export async function listEligibleErectionTeams(
-  companyId: string,
-  projectId: string,
-  workDate: string,
-  restrictToOwnTeamsForEmployeeId?: string,
-): Promise<{ id: string; name: string; shift: string | null; workArea: string | null; foremanName: string | null; workerCount: number }[]> {
+export type EligibleErectionTeam = {
+  id: string;
+  name: string;
+  shift: string | null;
+  workArea: string | null;
+  foremanName: string | null;
+  workerCount: number;
+  /** Part 3 — the team's actual resolved members, so "Add from Today's Team" can import real people, not just a headcount. */
+  workers: { id: string; firstName: string; lastName: string }[];
+};
+
+export async function listEligibleErectionTeams(companyId: string, projectId: string, workDate: string, restrictToOwnTeamsForEmployeeId?: string): Promise<EligibleErectionTeam[]> {
   const teams = await listDailyTeamsForDate(companyId, projectId, workDate);
   const filtered = restrictToOwnTeamsForEmployeeId ? teams.filter((team) => team.foreman_employee_id === restrictToOwnTeamsForEmployeeId) : teams;
   return filtered.map((team) => ({
@@ -89,6 +97,7 @@ export async function listEligibleErectionTeams(
     workArea: team.work_area,
     foremanName: team.foreman ? `${team.foreman.first_name} ${team.foreman.last_name}` : null,
     workerCount: team.workers.length,
+    workers: team.workers.map((worker) => ({ id: worker.employee.id, firstName: worker.employee.first_name, lastName: worker.employee.last_name })),
   }));
 }
 
@@ -120,16 +129,28 @@ export async function getScaffold(companyId: string, scaffoldId: string): Promis
   if (error) throw error;
   if (!scaffold) return null;
 
-  const [{ data: teamRows, error: teamError }, { data: erectionTeamRows, error: erectionTeamError }, { data: photoRows, error: photoError }] = await Promise.all([
+  const [{ data: teamRows, error: teamError }, { data: erectionTeamRows, error: erectionTeamError }, { data: participantRows, error: participantError }, { data: photoRows, error: photoError }] = await Promise.all([
     supabase.from("scaffold_team_members").select("id, employee_id, team_position").eq("scaffold_id", scaffoldId).is("removed_at", null).order("team_position", { ascending: true }),
     supabase.from("scaffold_erection_teams").select("id, daily_team_id").eq("scaffold_id", scaffoldId),
+    supabase
+      .from("scaffold_erection_participants")
+      .select("id, employee_id, source, source_daily_team_id, added_at")
+      .eq("scaffold_id", scaffoldId)
+      .is("removed_at", null)
+      .order("added_at", { ascending: true }),
     supabase.from("scaffold_photos").select("id, storage_object_path, original_filename, uploaded_by, uploaded_at, order_index").eq("scaffold_id", scaffoldId).order("order_index", { ascending: true }),
   ]);
   if (teamError) throw teamError;
   if (erectionTeamError) throw erectionTeamError;
+  if (participantError) throw participantError;
   if (photoError) throw photoError;
 
-  const dailyTeamIds = (erectionTeamRows ?? []).map((row) => row.daily_team_id);
+  // Union with participants' own source_daily_team_id — a participant's
+  // source team link may still be worth resolving for display even if
+  // the scaffold_erection_teams audit row itself was later removed.
+  const dailyTeamIds = [
+    ...new Set([...(erectionTeamRows ?? []).map((row) => row.daily_team_id), ...(participantRows ?? []).map((row) => row.source_daily_team_id).filter((id): id is string => Boolean(id))]),
+  ];
   const { data: dailyTeamRows, error: dailyTeamsError } =
     dailyTeamIds.length > 0
       ? await supabase.from("daily_teams").select("id, name, shift, work_area, foreman_employee_id").in("id", dailyTeamIds)
@@ -150,6 +171,7 @@ export async function getScaffold(companyId: string, scaffoldId: string): Promis
     scaffold.responsible_foreman_id,
     ...(teamRows ?? []).map((row) => row.employee_id),
     ...(dailyTeamRows ?? []).map((row) => row.foreman_employee_id).filter((id): id is string => Boolean(id)),
+    ...(participantRows ?? []).map((row) => row.employee_id),
   ];
   const [{ data: employees, error: employeesError }, { data: uploaderProfiles, error: uploaderProfilesError }] = await Promise.all([
     supabase.rpc("get_basic_employee_info", { target_employee_ids: [...new Set(employeeIds)] }),
@@ -209,7 +231,22 @@ export async function getScaffold(companyId: string, scaffoldId: string): Promis
     });
   }
 
-  return { ...scaffold, responsibleForeman: employeeById.get(scaffold.responsible_foreman_id) ?? null, teamMembers, erectionTeams, photos };
+  const participants: ScaffoldParticipantDetail[] = (participantRows ?? []).map((row) => {
+    const employee = employeeById.get(row.employee_id);
+    const sourceTeam = row.source_daily_team_id ? dailyTeamById.get(row.source_daily_team_id) : null;
+    return {
+      id: row.id,
+      employeeId: row.employee_id,
+      firstName: employee?.first_name ?? "Unknown",
+      lastName: employee?.last_name ?? "employee",
+      positionTitle: employee?.position_title ?? null,
+      source: row.source,
+      sourceTeamName: sourceTeam?.name ?? null,
+      addedAt: row.added_at,
+    };
+  });
+
+  return { ...scaffold, responsibleForeman: employeeById.get(scaffold.responsible_foreman_id) ?? null, teamMembers, erectionTeams, participants, photos };
 }
 
 /** The current (finalized, not superseded) inspection's `expires_at` for each scaffold in `scaffoldIds` — the one query every "is this scaffold's status still valid right now" display needs (list badges, Safety Overview counts). Null entries mean no finalized inspection has ever applied (e.g. still pending_inspection). */
@@ -602,4 +639,41 @@ export async function getEffectiveInspectionIntervalForProject(projectId: string
   const { data, error } = await supabase.rpc("resolve_scaffold_inspection_interval_for_project", { target_project_id: projectId }).single();
   if (error) throw error;
   return { intervalType: data.interval_type, intervalDays: data.interval_days };
+}
+
+// ── Scaffold erection participants + eligible inspectors ────────────────
+
+/** Part 8/9 — candidate pool for the alternate-inspector picker shown to admin/HSE-tier callers: active, non-archived, non-offboarded employees who hold the company inspector or foreman role AND have an open project assignment. Wraps list_eligible_scaffold_inspectors() (SQL) — the same eligibility the insert trigger (assert_valid_inspection_inspector) enforces, never re-derived in TypeScript. */
+export async function listEligibleScaffoldInspectors(companyId: string, projectId: string): Promise<EmployeeOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_eligible_scaffold_inspectors", { target_organization_id: companyId, target_project_id: projectId });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    value: row.id,
+    label: `${row.first_name} ${row.last_name}`,
+    employeeNumber: row.employee_number,
+    roleLabel: row.role_name === "foreman" ? "Foreman" : "Inspector",
+  }));
+}
+
+/**
+ * Part 12 — candidate pool for the "Add worker" manual erection-participant
+ * picker: reuses listWorkforceForDate() (the SAME data/attendance source
+ * Today's Teams itself uses — no second, competing availability model),
+ * filtered to employees whose attendance status for `workDate` permits
+ * work (dailyAttendancePermitsWork — not_set/present). Deliberately NOT
+ * filtered by current team membership — Part 3's explicit "allow worker
+ * from Team A and Team B on the same scaffold if both are available."
+ */
+export async function listAvailableScaffoldWorkers(companyId: string, projectId: string, workDate: string): Promise<EmployeeOption[]> {
+  const workforce = await listWorkforceForDate(companyId, projectId, workDate);
+  return workforce
+    .filter((state) => dailyAttendancePermitsWork(state.attendanceStatus))
+    .map((state) => ({
+      value: state.employee.id,
+      label: `${state.employee.first_name} ${state.employee.last_name}`,
+      employeeNumber: null,
+      roleLabel: state.employee.position_title,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }

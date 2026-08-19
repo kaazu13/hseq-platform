@@ -617,7 +617,11 @@
       "attention_today": "Attenzione oggi",
       "tomorrow": "Domani",
       "awaiting_initial": "In attesa di ispezione iniziale"
-    }
+    },
+    "editLocation": "Modifica posizione",
+    "viewOnMap": "Vedi sulla mappa",
+    "directions": "Indicazioni",
+    "locationNotSet": "Posizione non impostata"
   },
   "InspectionDashboard": {
     "title": "Dashboard ispezioni",
@@ -670,6 +674,41 @@
       "leave": "Ferie",
       "training": "Formazione",
       "off_site": "Fuori sede"
-    }
+    },
+    "allScaffolds": "Tutti i ponteggi"
+  },
+  "ScaffoldCrew": {
+    "title": "Squadra di montaggio / Persone coinvolte",
+    "description": "Chi ha effettivamente lavorato su questo ponteggio — importare una squadra è solo una scorciatoia di compilazione rapida; aggiungi o rimuovi liberamente persone in seguito.",
+    "legacyRosterTitle": "Composizione squadra precedente (conservata come registrata)",
+    "legacyRosterNote": "Questo ponteggio è stato registrato prima che esistesse il collegamento con le squadre di oggi — la sua composizione originale è conservata esattamente come registrata e non è più modificabile qui. Usa i selettori sottostanti per aggiungere persone reali d'ora in poi.",
+    "addFromTeam": "Aggiungi dalla squadra di oggi",
+    "loadingTeams": "Caricamento squadre per {date}…",
+    "noTeamsTitle": "Nessuna squadra di oggi trovata per questa data",
+    "noTeamsDescription": "Non esistono ancora squadre di oggi per questo progetto in questa data.",
+    "noTeamsDescriptionForeman": "Non hai nessuna squadra di oggi in questa data per questo progetto — creane una prima, poi torna a registrare il ponteggio.",
+    "foremanLabel": "Caposquadra: {name}",
+    "workerCount": "{count, plural, one {# lavoratore} other {# lavoratori}}",
+    "importTeam": "Aggiungi squadra",
+    "reimportTeam": "Aggiungi nuovi membri",
+    "addWorker": "Aggiungi lavoratore",
+    "addWorkerPlaceholder": "Cerca per nome o numero dipendente…",
+    "loadingWorkers": "Caricamento lavoratori disponibili…",
+    "noAvailableWorkers": "Nessun lavoratore disponibile trovato per questa data.",
+    "availabilityNote": "Mostra solo le persone assegnate a questo progetto che sono Al lavoro (non assenti o in ferie approvate) alla data di montaggio.",
+    "crewListTitle": "Squadra di montaggio ({count})",
+    "crewEmpty": "Nessuno è stato ancora aggiunto alla squadra di montaggio.",
+    "fromTeam": "Da {name}",
+    "removeWorker": "Rimuovi {name}",
+    "manualBadge": "Aggiunto manualmente",
+    "importedFromTeams": "Squadre usate per compilare rapidamente questa squadra: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Nuova ispezione",
+    "inspector": "Ispettore",
+    "yourself": "Te stesso",
+    "inspectorLockedToYou": "Ispettore bloccato su di te",
+    "inspectorSearchPlaceholder": "Cerca per nome o numero dipendente…",
+    "noEligibleInspectors": "Nessun Ispettore o Caposquadra idoneo trovato per questo progetto."
   }
 }

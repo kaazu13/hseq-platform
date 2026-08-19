@@ -99,6 +99,39 @@ export function mustSelfLockResponsibleForeman(roleNames: RoleName[], hasProject
 }
 
 /**
+ * Part 8 of the Scaffold Register/Inspection usability correction —
+ * company_admin (company-wide), the project's own assigned project_manager,
+ * and platform_super_admin (via the caller's own isSuperAdmin check, same
+ * OR-pattern used everywhere else in this app) can now ALSO create/manage
+ * scaffold inspections, in addition to the pre-existing canManageScaffold
+ * tiers (hseq_manager unconditional; hse_officer/inspector project-scoped).
+ * Deliberately a SEPARATE, WIDER function from canManageScaffold — scaffold
+ * EDIT (updateScaffold) is unchanged and still uses canManageScaffold alone;
+ * only inspection creation/correction/checklist/finalize/void actions use
+ * this wider tier. Mirrors scaffold_inspections_insert/_update RLS exactly
+ * (see 20260901125000_scaffold_participants_and_inspector_lock.sql).
+ */
+export function canManageScaffoldInspection(roleNames: RoleName[], hasProjectAccess: boolean, myProjectAssignmentRoles: string[]): boolean {
+  return canManageScaffold(roleNames, hasProjectAccess) || roleNames.includes("company_admin") || myProjectAssignmentRoles.includes("project_manager");
+}
+
+/**
+ * Part 7/8 — who must be locked to themselves as Inspector vs. who gets a
+ * free pick (self or an eligible Inspector/Foreman alternate). Mirrors
+ * assert_valid_inspection_inspector()'s (SQL) own tiers exactly — this is
+ * a UI-rendering mirror only, the database trigger is the real
+ * enforcement (never trust this alone). Inspector/Foreman-tier callers
+ * (i.e. anyone reaching the New Inspection flow who is NOT admin/HSE-tier)
+ * are always locked; hse_officer without project access can't reach this
+ * flow at all (canManageScaffoldInspection already denies it), so it never
+ * reaches this function in a state that would matter.
+ */
+export function mustSelfLockInspector(roleNames: RoleName[], hasProjectAccess: boolean, myProjectAssignmentRoles: string[]): boolean {
+  const isAdminOrHseTier = roleNames.includes("hseq_manager") || roleNames.includes("company_admin") || (hasProjectAccess && roleNames.includes("hse_officer")) || myProjectAssignmentRoles.includes("project_manager");
+  return !isAdminOrHseTier;
+}
+
+/**
  * Inspection Dashboard + Scaffold Map read access (Part N of the Inspector
  * role correction) — a DELIBERATELY explicit allow-list, not a reuse of
  * canViewScaffoldRegister/NON_EMPLOYEE_ROLES, because the task's own

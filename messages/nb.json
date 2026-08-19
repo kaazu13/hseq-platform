@@ -617,7 +617,11 @@
       "attention_today": "Krever handling i dag",
       "tomorrow": "I morgen",
       "awaiting_initial": "Venter på førstegangsinspeksjon"
-    }
+    },
+    "editLocation": "Rediger plassering",
+    "viewOnMap": "Vis på kart",
+    "directions": "Veibeskrivelse",
+    "locationNotSet": "Plassering ikke angitt"
   },
   "InspectionDashboard": {
     "title": "Inspeksjonspanel",
@@ -670,6 +674,41 @@
       "leave": "Ferie/permisjon",
       "training": "Opplæring",
       "off_site": "Utenfor anlegget"
-    }
+    },
+    "allScaffolds": "Alle stillaser"
+  },
+  "ScaffoldCrew": {
+    "title": "Monteringslag / Involverte personer",
+    "description": "Hvem som faktisk jobbet på dette stillaset — å importere et team er bare en hurtigfylling-snarvei; legg til eller fjern personer fritt etterpå.",
+    "legacyRosterTitle": "Eldre teamliste (bevart som registrert)",
+    "legacyRosterNote": "Dette stillaset ble registrert før kobling til dagens team fantes — den opprinnelige listen bevares nøyaktig som registrert og kan ikke lenger redigeres her. Bruk velgerne nedenfor for å legge til reelle personer fremover.",
+    "addFromTeam": "Legg til fra dagens team",
+    "loadingTeams": "Laster team for {date}…",
+    "noTeamsTitle": "Ingen dagens team funnet for denne datoen",
+    "noTeamsDescription": "Det finnes ennå ingen dagens team for dette prosjektet på denne datoen.",
+    "noTeamsDescriptionForeman": "Du har ikke noe dagens team på denne datoen for dette prosjektet — opprett ett først, kom deretter tilbake for å registrere stillaset.",
+    "foremanLabel": "Formann: {name}",
+    "workerCount": "{count, plural, one {# arbeider} other {# arbeidere}}",
+    "importTeam": "Legg til team",
+    "reimportTeam": "Legg til nye medlemmer",
+    "addWorker": "Legg til arbeider",
+    "addWorkerPlaceholder": "Søk etter navn eller ansattnummer…",
+    "loadingWorkers": "Laster tilgjengelige arbeidere…",
+    "noAvailableWorkers": "Ingen tilgjengelige arbeidere funnet for denne datoen.",
+    "availabilityNote": "Viser kun personer tildelt dette prosjektet som er På jobb (ikke fraværende eller på godkjent permisjon) på monteringsdatoen.",
+    "crewListTitle": "Monteringslag ({count})",
+    "crewEmpty": "Ingen er lagt til monteringslaget ennå.",
+    "fromTeam": "Fra {name}",
+    "removeWorker": "Fjern {name}",
+    "manualBadge": "Lagt til manuelt",
+    "importedFromTeams": "Team brukt til å hurtigfylle laget: {teams}"
+  },
+  "ScaffoldInspection": {
+    "newInspectionTitle": "Ny inspeksjon",
+    "inspector": "Inspektør",
+    "yourself": "Deg selv",
+    "inspectorLockedToYou": "Inspektør låst til deg",
+    "inspectorSearchPlaceholder": "Søk etter navn eller ansattnummer…",
+    "noEligibleInspectors": "Ingen kvalifisert inspektør eller formann funnet for dette prosjektet."
   }
 }

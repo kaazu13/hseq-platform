@@ -2,12 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
 import { Pencil, Plus } from "lucide-react";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
-import { getProject } from "@/modules/projects/queries";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
+import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { getScaffold, listInspectionsForScaffold, isCallerProjectAccessible, getCurrentInspectionExpiryByScaffold, canManageScaffoldPhotos } from "@/modules/scaffolds/queries";
-import { canManageScaffold } from "@/modules/scaffolds/permissions";
+import { canManageScaffold, canManageScaffoldInspection } from "@/modules/scaffolds/permissions";
+import { resolveInspectionHealth } from "@/modules/scaffolds/inspection-health";
 import { SCAFFOLD_TYPE_LABELS, formatScaffoldDimensions } from "@/modules/scaffolds/types";
+import { getProjectLocalDate } from "@/lib/project-date";
 import { ScaffoldStatusBadge } from "@/modules/scaffolds/components/scaffold-status-badge";
+import { ScaffoldLocationCard } from "@/modules/scaffolds/components/scaffold-location-card";
+import { ScaffoldParticipantsList } from "@/modules/scaffolds/components/scaffold-participants-list";
 import { InspectionHistoryList } from "@/modules/scaffolds/components/inspection-history-list";
 import { ScaffoldPhotoGallery } from "@/modules/scaffolds/components/scaffold-photo-gallery";
 import { ScaffoldPrintButton } from "@/modules/scaffolds/components/scaffold-print-button";
@@ -45,7 +49,7 @@ function formatDate(value: string | null, format: Awaited<ReturnType<typeof getF
  */
 export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageProps) {
   const { companyId, projectId, scaffoldId } = await params;
-  await requireCompanyMembership(companyId);
+  const { user } = await requireCompanyMembership(companyId);
   await requireProjectAccess(projectId);
 
   const project = await getProject(companyId, projectId);
@@ -58,18 +62,36 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
     notFound();
   }
 
-  const [roleNames, hasProjectAccess, inspections, canManagePhotos] = await Promise.all([
+  const [roleNames, hasProjectAccess, myProjectAssignmentRoles, isSuperAdmin, inspections, canManagePhotos] = await Promise.all([
     getUserRoleNames(companyId),
     isCallerProjectAccessible(scaffold.project_id),
+    getMyProjectAssignmentRoles(companyId, scaffold.project_id, user.id),
+    isPlatformSuperAdmin(),
     listInspectionsForScaffold(companyId, scaffoldId),
     canManageScaffoldPhotos(scaffoldId),
   ]);
 
   const projectName = project.name;
+  // Part 1/14: editing scaffold location follows the SAME "existing
+  // scaffold edit permissions" as everything else on this page (Edit
+  // button, photos, etc.) — canManageScaffold, unchanged, never a new
+  // location-specific permission. An ordinary Employee never reaches this
+  // page at all (scaffolds_select RLS already excludes plain employees).
   const canManage = canManageScaffold(roleNames, hasProjectAccess);
+  // Part 8/11: "New inspection" uses the WIDER inspection-creation tier
+  // (company_admin/project's own PM/platform_super_admin, in addition to
+  // canManage's own hseq_manager/hse_officer/inspector).
+  const canInspect = isSuperAdmin || canManageScaffoldInspection(roleNames, hasProjectAccess, myProjectAssignmentRoles);
   const expiryByScaffold = await getCurrentInspectionExpiryByScaffold(companyId, [scaffoldId]);
   const basePath = `/companies/${companyId}/projects/${projectId}/scaffolds/${scaffold.id}`;
-  const [t, format] = await Promise.all([getTranslations("ScaffoldDetail"), getFormatter()]);
+  const [t, tDash, tCrew, format] = await Promise.all([
+    getTranslations("ScaffoldDetail"),
+    getTranslations("InspectionDashboard"),
+    getTranslations("ScaffoldCrew"),
+    getFormatter(),
+  ]);
+  const todayDate = getProjectLocalDate(project.timezone);
+  const healthState = resolveInspectionHealth(scaffold.status, expiryByScaffold.get(scaffoldId) ?? null, todayDate);
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4 sm:p-6 print:p-0">
@@ -93,6 +115,20 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
         <ScaffoldStatusBadge status={scaffold.status} currentInspectionExpiresAt={expiryByScaffold.get(scaffoldId) ?? null} />
         <span className="text-sm text-muted-foreground">{SCAFFOLD_TYPE_LABELS[scaffold.scaffold_type]}</span>
       </div>
+
+      <ScaffoldLocationCard
+        scaffoldId={scaffold.id}
+        scaffoldNumber={scaffold.scaffold_number}
+        workArea={scaffold.work_area}
+        latitude={scaffold.latitude}
+        longitude={scaffold.longitude}
+        healthState={healthState}
+        healthLabel={tDash(`state.${healthState}`)}
+        projectName={projectName}
+        mapHref={`/companies/${companyId}/projects/${projectId}/scaffold-map`}
+        editHref={`${basePath}/edit`}
+        canEdit={canManage}
+      />
 
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
@@ -148,24 +184,17 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
       </Card>
 
       <div className="flex flex-col gap-3">
-        <SectionHeader title={`${t("erectionTeamsTitle")}${scaffold.erectionTeams.length > 0 ? ` — ${scaffold.erectionTeams.length}` : ""}`} />
-        {scaffold.erectionTeams.length === 0 ? (
-          <EmptyState icon={HardHat} title={t("noErectionTeamsTitle")} />
+        <SectionHeader title={`${tCrew("title")}${scaffold.participants.length > 0 ? ` — ${scaffold.participants.length}` : ""}`} description={tCrew("description")} />
+        {scaffold.participants.length === 0 ? (
+          <EmptyState icon={HardHat} title={tCrew("crewEmpty")} />
         ) : (
-          <Card>
-            <CardContent className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2">
-              {scaffold.erectionTeams.map((team) => (
-                <div key={team.id} className="rounded-lg border p-3 text-sm">
-                  <p className="font-medium">{team.name}</p>
-                  <p className="text-muted-foreground">
-                    {[team.workArea, team.shift].filter(Boolean).join(" · ") || "—"}
-                  </p>
-                  <p className="text-muted-foreground">{t("foremanLabel", { name: team.foremanName ?? "—" })}</p>
-                  <p className="text-muted-foreground">{t("workerCount", { count: team.workerCount })}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <ScaffoldParticipantsList participants={scaffold.participants} manualLabel={tCrew("manualBadge")} fromTeamLabel={(name) => tCrew("fromTeam", { name })} />
+        )}
+        {/* Team links are kept as secondary/audit context (Part 5) — the participant list above is authoritative. */}
+        {scaffold.erectionTeams.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {tCrew("importedFromTeams", { teams: scaffold.erectionTeams.map((team) => team.name).join(", ") })}
+          </p>
         )}
       </div>
 
@@ -203,7 +232,7 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
         <SectionHeader
           title={t("inspectionHistoryTitle")}
           actions={
-            canManage && scaffold.status !== "closed" ? (
+            canInspect && scaffold.status !== "closed" ? (
               <Button size="sm" nativeButton={false} render={<Link href={`${basePath}/inspections/new`} />} className="print:hidden">
                 <Plus />
                 {t("newInspection")}
