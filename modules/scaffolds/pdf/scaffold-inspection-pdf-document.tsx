@@ -40,12 +40,13 @@ export type ScaffoldInspectionPdfData = {
 };
 
 /** Adapts the internal scaffold + inspection + defects reads into the same shape resolve_public_report() returns, for the public share path — see modules/lmra/pdf/lmra-pdf-document.tsx's toPublicLmraReport() for the identical pattern. */
-export function toPublicScaffoldInspectionReport(scaffold: Pick<Scaffold, "scaffold_number" | "tag_number" | "work_area" | "scaffold_type">, inspection: ScaffoldInspectionDetail, defects: ScaffoldDefectDetail[]): PublicScaffoldInspectionReport {
+export function toPublicScaffoldInspectionReport(scaffold: Pick<Scaffold, "scaffold_number" | "tag_number" | "client_name" | "work_area" | "scaffold_type">, inspection: ScaffoldInspectionDetail, defects: ScaffoldDefectDetail[]): PublicScaffoldInspectionReport {
   return {
     id: inspection.id,
     scaffold_number: scaffold.scaffold_number,
     sequence_number: inspection.sequence_number,
     tag_number: scaffold.tag_number,
+    client_name: scaffold.client_name,
     work_area: scaffold.work_area,
     scaffold_type: scaffold.scaffold_type,
     inspected_at: inspection.inspected_at,
@@ -108,6 +109,7 @@ export function ScaffoldInspectionPdfDocument({ companyName, projectName, record
         <PdfFieldGrid>
           <PdfField label="Scaffold number" value={record.scaffold_number} />
           <PdfField label="Tag number" value={record.tag_number} />
+          <PdfField label="Client" value={record.client_name ?? "Not set"} />
           <PdfField label="Work area" value={record.work_area} />
           <PdfField label="Scaffold type" value={SCAFFOLD_TYPE_LABELS[record.scaffold_type as ScaffoldType] ?? formatPdfEnumLabel(record.scaffold_type)} />
           <PdfField label="Inspected at" value={formatPdfDate(record.inspected_at)} />

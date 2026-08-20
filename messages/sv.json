@@ -189,7 +189,32 @@
     "absencesTab": "Frånvaro",
     "noAbsencesTitle": "Ingen frånvaro registrerad",
     "noAbsencesDescription": "Inget har registrerats för denna period.",
-    "daysRecorded": "{count, plural, one {# dag registrerad} other {# dagar registrerade}}"
+    "daysRecorded": "{count, plural, one {# dag registrerad} other {# dagar registrerade}}",
+    "weekday": {
+      "mon": "Mån",
+      "tue": "Tis",
+      "wed": "Ons",
+      "thu": "Tor",
+      "fri": "Fre",
+      "sat": "Lör",
+      "sun": "Sön"
+    },
+    "conflictBadge": "Motstridiga registreringar",
+    "pendingBadge": "Väntar",
+    "legend": {
+      "worked": "Arbetat",
+      "approvedLeave": "Godkänd semester",
+      "confirmedAbsent": "Bekräftad frånvaro",
+      "pending": "Väntande ansökan",
+      "sunday": "Söndag"
+    },
+    "total": "Totalt",
+    "noHoursThisDay": "Inga timmar registrerade denna dag.",
+    "attendance": "Närvaro",
+    "discrepancy": "Avvikelse",
+    "correctionCount": "{count} rättelse(r) registrerad(e).",
+    "calendarView": "Kalender",
+    "listView": "Lista"
   },
   "WorkedHours": {
     "title": "Arbetade timmar",
@@ -295,7 +320,10 @@
     "myRequests": "Mina förfrågningar",
     "noRequestsTitle": "Inga förfrågningar ännu",
     "noRequestsDescription": "Utrustningsförfrågningar du skickar visas här.",
-    "qtyAndDate": "Antal {count} · {date}"
+    "qtyAndDate": "Antal {count} · {date}",
+    "price": "Pris {price}",
+    "priceEach": "Pris {price} styck",
+    "totalAssignedValue": "Totalt värde av tilldelad utrustning"
   },
   "ScaffoldRegister": {
     "createdMessage": "Ställning {param:tag} registrerades.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Besiktningshistorik",
     "newInspection": "Ny besiktning",
     "noInspectionsTitle": "Inga besiktningar ännu",
-    "noInspectionsDescription": "Denna ställning har inte besiktigats ännu."
+    "noInspectionsDescription": "Denna ställning har inte besiktigats ännu.",
+    "fieldClient": "Kund",
+    "clientNotSet": "Ej angivet"
   },
   "ScaffoldInspections": {
     "title": "Ställningsbesiktningar",
@@ -541,7 +571,25 @@
     "language": "Språk",
     "theme": "Tema",
     "accentColor": "Accentfärg",
-    "openSettings": "Öppna inställningar"
+    "openSettings": "Öppna inställningar",
+    "tabProfile": "Profil",
+    "tabRequests": "Förfrågningar",
+    "tabRates": "Löneuppgifter",
+    "tabSecurity": "Säkerhet",
+    "requestsDescription": "Dina egna semester-/frånvaroansökningar.",
+    "ratesDescription": "Din egen timlön och löneshistorik.",
+    "noRequestsTitle": "Inga förfrågningar än",
+    "noRequestsDescription": "Förfrågningar du skickar in visas här.",
+    "requestTypeLeave": "Semester",
+    "requestTypeAbsence": "Frånvaro",
+    "submittedOn": "Skickad {date}",
+    "reviewedBy": "Granskad av {name}",
+    "noRateSetTitle": "Ingen lön angiven",
+    "noRateSetDescription": "Ingen timlön har registrerats för dig ännu.",
+    "currentRate": "Aktuell lön",
+    "perHour": "/ timme",
+    "effectiveFrom": "Gäller från {date}",
+    "previousRates": "Tidigare löner"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Redigera plats",
     "viewOnMap": "Visa på kartan",
     "directions": "Vägbeskrivning",
-    "locationNotSet": "Plats ej angiven"
+    "locationNotSet": "Plats ej angiven",
+    "selectOnMap": "Välj på karta",
+    "advancedCoordinates": "Avancerat / koordinater",
+    "mapPickerHint": "Klicka eller tryck på kartan för att placera markören, eller dra den för att justera.",
+    "confirmLocation": "Bekräfta plats",
+    "cancel": "Avbryt"
   },
   "InspectionDashboard": {
     "title": "Inspektionspanel",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspektör låst till dig",
     "inspectorSearchPlaceholder": "Sök efter namn eller anställningsnummer…",
     "noEligibleInspectors": "Ingen behörig inspektör eller förman hittades för detta projekt."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Information",
+      "crew": "Monteringspersonal",
+      "inspectionLocation": "Besiktning & plats",
+      "review": "Anteckningar & granskning"
+    },
+    "project": "Projekt",
+    "client": "Kund",
+    "tagNumber": "Ställnings-ID / nummer",
+    "workArea": "Arbetsområde / plats",
+    "structureReference": "Struktur-, utrustnings- eller enhetsreferens (valfritt)",
+    "scaffoldType": "Ställningstyp",
+    "intendedUse": "Avsedd användning (valfritt)",
+    "dimensionsTitle": "Dimensioner och last",
+    "heightMetres": "Ställningshöjd, meter (valfritt)",
+    "lengthMetres": "Ställningslängd, meter (valfritt)",
+    "widthMetres": "Ställningsbredd, meter (valfritt)",
+    "maxLoadClass": "Maximalt tillåten last / lastklass",
+    "maxLoadClassPlaceholder": "t.ex. Lätt last (2,0 kN/m2)",
+    "responsibleForemanTitle": "Ansvarig förman",
+    "selfLockedForeman": "{name} (dig själv)",
+    "selfLockedForemanNote": "Som förman kan du bara registrera en ställning med dig själv som ansvarig förman.",
+    "noForemenAvailable": "Inga aktiva förmän är tilldelade detta projekt.",
+    "searchForemanPlaceholder": "Sök förman efter namn eller anställningsnummer…",
+    "you": "Du",
+    "datesTitle": "Datum",
+    "erectionDate": "Monteringsdatum",
+    "erectedBy": "Monterad av (underentreprenörsteam, om tillämpligt — valfritt)",
+    "notesTitle": "Anteckningar",
+    "notesLabel": "Anteckningar (valfritt)",
+    "photosAfterCreateNote": "Slutförande-/monteringsfoton kan läggas till när ställningen är registrerad.",
+    "photosAfterSaveNote": "Hantera slutförande-/monteringsfoton från ställningens detaljsida.",
+    "reviewTitle": "Granskning",
+    "crewCount": "{count} personer",
+    "customDays": "Var {days}:e dag",
+    "locationSet": "Angiven",
+    "back": "Tillbaka",
+    "next": "Nästa",
+    "cancel": "Avbryt",
+    "saving": "Sparar…",
+    "registerScaffold": "Registrera ställning",
+    "saveChanges": "Spara ändringar",
+    "chooseForemanError": "Välj ansvarig förman.",
+    "emptyCrewError": "Lägg till minst en person i monteringspersonalen."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Dina senaste besiktningar",
+    "noInspectionsTitle": "Inga besiktningar än",
+    "noInspectionsDescription": "Besiktningar du slutför visas här.",
+    "inspectionOverviewTitle": "Besiktningsöversikt",
+    "openFullDashboard": "Öppna besiktningspanel",
+    "quickActionsTitle": "Snabbåtgärder",
+    "scaffoldMap": "Ställningskarta",
+    "myHours": "Mina timmar",
+    "myEquipment": "Min utrustning"
   }
 }

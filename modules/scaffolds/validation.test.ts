@@ -10,6 +10,7 @@ const WORKER_B = "123e4567-e89b-42d3-a456-426614174021";
 const VALID_SCAFFOLD_INPUT = {
   projectId: "123e4567-e89b-42d3-a456-426614174000",
   tagNumber: "SC-042",
+  clientName: "Acme Construction Ltd",
   workArea: "North elevation, level 2",
   structureReference: "",
   scaffoldType: "independent",
@@ -44,17 +45,21 @@ describe("scaffoldFormSchema", () => {
     }
   });
 
-  it("rejects blank tag number/work area/intended use/max load class", () => {
+  it("rejects blank tag number/client/work area/max load class", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, tagNumber: "  " }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, clientName: "  " }).success).toBe(false);
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, workArea: "" }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, intendedUse: "" }).success).toBe(false);
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxLoadClass: "" }).success).toBe(false);
   });
 
-  it("rejects an oversized tag number/work area/intended use/max load class (Phase 11 input-limit audit)", () => {
+  it("Part 4 — intended use is now OPTIONAL: blank is accepted, unlike tag/client/work area/max load class", () => {
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, intendedUse: "" }).success).toBe(true);
+  });
+
+  it("rejects an oversized tag number/client/work area/max load class (Phase 11 input-limit audit)", () => {
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, tagNumber: "a".repeat(51) }).success).toBe(false);
+    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, clientName: "a".repeat(151) }).success).toBe(false);
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, workArea: "a".repeat(101) }).success).toBe(false);
-    expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, intendedUse: "a".repeat(201) }).success).toBe(false);
     expect(scaffoldFormSchema.safeParse({ ...VALID_SCAFFOLD_INPUT, maxLoadClass: "a".repeat(101) }).success).toBe(false);
   });
 

@@ -9,6 +9,16 @@ import type { Database, Enums } from "@/types/database";
  * decisions are their own complete history by construction).
  */
 export type EquipmentItem = Database["public"]["Tables"]["equipment_items"]["Row"];
+
+/**
+ * Part 24 — what a REQUESTER is allowed to see about a catalog item:
+ * name/category/description only, deliberately excluding quantity/
+ * available_quantity/unit_price/status/location/notes. Used by
+ * listEquipmentCandidateItems() (the self-service request picker's data
+ * source) so stock/pricing never even reaches the client payload for that
+ * flow, not just gets hidden in the UI.
+ */
+export type RequestableEquipmentItem = Pick<EquipmentItem, "id" | "name" | "category" | "description">;
 export type EquipmentAssignment = Database["public"]["Tables"]["equipment_assignments"]["Row"];
 export type EquipmentRequest = Database["public"]["Tables"]["equipment_requests"]["Row"];
 export type EquipmentHistoryEntry = Database["public"]["Tables"]["equipment_history"]["Row"];
@@ -73,6 +83,7 @@ export const EQUIPMENT_HISTORY_EVENT_LABELS: Record<EquipmentHistoryEvent, strin
   out_of_service: "Out of service",
   retired: "Retired",
   expiry_updated: "Expiry updated",
+  stock_adjusted: "Stock adjusted",
 };
 
 /**
@@ -140,7 +151,7 @@ export function equipmentIssuedQuantity(item: Pick<EquipmentItem, "quantity" | "
 /** One assignment resolved with its employee and item display fields — the Issued view / employee "My Equipment" view's row shape. */
 export type EquipmentAssignmentWithDetail = EquipmentAssignment & {
   employee: BasicEmployee;
-  item: Pick<EquipmentItem, "id" | "name" | "reference_number" | "category" | "tracking_mode">;
+  item: Pick<EquipmentItem, "id" | "name" | "reference_number" | "category" | "tracking_mode" | "unit_price" | "currency">;
   issuedByName: string | null;
 };
 

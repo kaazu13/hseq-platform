@@ -3,6 +3,7 @@ import type { PageSize } from "@/lib/pagination";
 import { offsetFor } from "@/lib/pagination";
 import type {
   EquipmentItem,
+  RequestableEquipmentItem,
   EquipmentAssignmentWithDetail,
   EquipmentRequestWithDetail,
   EquipmentHistoryEntryWithDetail,
@@ -129,6 +130,29 @@ export async function listEquipmentCandidateItems(companyId: string, projectId: 
   return data ?? [];
 }
 
+/**
+ * Part 24 — the SELF-SERVICE request dialog's candidate list, distinct
+ * from listEquipmentCandidateItems() above (which management flows like
+ * Issue Equipment still use and legitimately need full stock/status
+ * data for). Selects ONLY requester-safe columns (name/category/
+ * description) — quantity, available_quantity, unit_price, status,
+ * location, and notes must never reach this payload, not just be hidden
+ * in the UI.
+ */
+export async function listRequestableEquipmentItems(companyId: string, projectId: string): Promise<RequestableEquipmentItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("equipment_items")
+    .select("id, name, category, description")
+    .eq("company_id", companyId)
+    .or(`project_id.eq.${projectId},project_id.is.null`)
+    .is("archived_at", null)
+    .in("status", ["available", "issued"])
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** Employee ids currently rostered onto `projectId` — the same "only project-assigned employees are selectable" convention as modules/lmra/queries.ts's listLmraCandidateEmployees, reused for the Issue Equipment employee picker. */
 export async function listEquipmentCandidateEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();
@@ -227,7 +251,7 @@ export async function listMyEquipmentAssignments(companyId: string, employeeId: 
   if (!assignmentRows || assignmentRows.length === 0) return [];
 
   const itemIds = [...new Set(assignmentRows.map((row) => row.equipment_item_id))];
-  const { data: itemRows, error: itemsError } = await supabase.from("equipment_items").select("id, name, reference_number, category, tracking_mode").in("id", itemIds);
+  const { data: itemRows, error: itemsError } = await supabase.from("equipment_items").select("id, name, reference_number, category, tracking_mode, unit_price, currency").in("id", itemIds);
   if (itemsError) throw itemsError;
   const itemById = new Map((itemRows ?? []).map((item) => [item.id, item]));
 

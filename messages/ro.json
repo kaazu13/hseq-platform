@@ -189,7 +189,32 @@
     "absencesTab": "Absențe",
     "noAbsencesTitle": "Nicio absență înregistrată",
     "noAbsencesDescription": "Nimic nu a fost înregistrat pentru această perioadă.",
-    "daysRecorded": "{count, plural, one {# zi înregistrată} few {# zile înregistrate} other {# de zile înregistrate}}"
+    "daysRecorded": "{count, plural, one {# zi înregistrată} few {# zile înregistrate} other {# de zile înregistrate}}",
+    "weekday": {
+      "mon": "Lu",
+      "tue": "Ma",
+      "wed": "Mi",
+      "thu": "Jo",
+      "fri": "Vi",
+      "sat": "Sâ",
+      "sun": "Du"
+    },
+    "conflictBadge": "Înregistrări contradictorii",
+    "pendingBadge": "În așteptare",
+    "legend": {
+      "worked": "Lucrat",
+      "approvedLeave": "Concediu aprobat",
+      "confirmedAbsent": "Absență confirmată",
+      "pending": "Cerere în așteptare",
+      "sunday": "Duminică"
+    },
+    "total": "Total",
+    "noHoursThisDay": "Nu sunt înregistrate ore în această zi.",
+    "attendance": "Prezență",
+    "discrepancy": "Discrepanță",
+    "correctionCount": "{count} corecție(i) înregistrată(e).",
+    "calendarView": "Calendar",
+    "listView": "Listă"
   },
   "WorkedHours": {
     "title": "Ore lucrate",
@@ -295,7 +320,10 @@
     "myRequests": "Cererile mele",
     "noRequestsTitle": "Nicio cerere încă",
     "noRequestsDescription": "Cererile de echipament pe care le trimiți vor apărea aici.",
-    "qtyAndDate": "Cant. {count} · {date}"
+    "qtyAndDate": "Cant. {count} · {date}",
+    "price": "Preț {price}",
+    "priceEach": "Preț {price} fiecare",
+    "totalAssignedValue": "Valoarea totală a echipamentului alocat"
   },
   "ScaffoldRegister": {
     "createdMessage": "Schela {param:tag} a fost înregistrată cu succes.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Istoric inspecții",
     "newInspection": "Inspecție nouă",
     "noInspectionsTitle": "Nicio inspecție încă",
-    "noInspectionsDescription": "Această schelă nu a fost încă inspectată."
+    "noInspectionsDescription": "Această schelă nu a fost încă inspectată.",
+    "fieldClient": "Client",
+    "clientNotSet": "Nesetat"
   },
   "ScaffoldInspections": {
     "title": "Inspecții schele",
@@ -541,7 +571,25 @@
     "language": "Limbă",
     "theme": "Temă",
     "accentColor": "Culoare de accent",
-    "openSettings": "Deschide Setările"
+    "openSettings": "Deschide Setările",
+    "tabProfile": "Profil",
+    "tabRequests": "Cereri",
+    "tabRates": "Tarife",
+    "tabSecurity": "Securitate",
+    "requestsDescription": "Propriile dvs. cereri de concediu/absență.",
+    "ratesDescription": "Propriul tarif orar și istoricul plăților.",
+    "noRequestsTitle": "Nicio cerere încă",
+    "noRequestsDescription": "Cererile trimise vor apărea aici.",
+    "requestTypeLeave": "Concediu",
+    "requestTypeAbsence": "Absență",
+    "submittedOn": "Trimisă la {date}",
+    "reviewedBy": "Analizată de {name}",
+    "noRateSetTitle": "Niciun tarif setat",
+    "noRateSetDescription": "Niciun tarif orar nu a fost încă înregistrat pentru dvs.",
+    "currentRate": "Tarif curent",
+    "perHour": "/ oră",
+    "effectiveFrom": "Valabil de la {date}",
+    "previousRates": "Tarife anterioare"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Editează locația",
     "viewOnMap": "Vezi pe hartă",
     "directions": "Indicații de drum",
-    "locationNotSet": "Locație nesetată"
+    "locationNotSet": "Locație nesetată",
+    "selectOnMap": "Selectați pe hartă",
+    "advancedCoordinates": "Avansat / coordonate",
+    "mapPickerHint": "Faceți clic sau atingeți harta pentru a plasa marcajul, sau trageți-l pentru a-l ajusta.",
+    "confirmLocation": "Confirmați locația",
+    "cancel": "Anulare"
   },
   "InspectionDashboard": {
     "title": "Panou de inspecții",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspector fixat pe tine",
     "inspectorSearchPlaceholder": "Caută după nume sau număr de angajat…",
     "noEligibleInspectors": "Niciun Inspector sau Șef de echipă eligibil găsit pentru acest proiect."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informații",
+      "crew": "Echipa de montaj",
+      "inspectionLocation": "Inspecție și locație",
+      "review": "Note și verificare"
+    },
+    "project": "Proiect",
+    "client": "Client",
+    "tagNumber": "Eticheta / numărul de identificare al schelei",
+    "workArea": "Zonă de lucru / locație",
+    "structureReference": "Referință structură, echipament sau unitate (opțional)",
+    "scaffoldType": "Tip de schelă",
+    "intendedUse": "Destinație (opțional)",
+    "dimensionsTitle": "Dimensiuni și încărcare",
+    "heightMetres": "Înălțimea schelei, metri (opțional)",
+    "lengthMetres": "Lungimea schelei, metri (opțional)",
+    "widthMetres": "Lățimea schelei, metri (opțional)",
+    "maxLoadClass": "Sarcina maximă admisă / clasa de sarcină",
+    "maxLoadClassPlaceholder": "ex. Sarcină ușoară (2,0 kN/m2)",
+    "responsibleForemanTitle": "Șef de echipă responsabil",
+    "selfLockedForeman": "{name} (dumneavoastră)",
+    "selfLockedForemanNote": "În calitate de șef de echipă, puteți înregistra o schelă doar cu dumneavoastră ca șef de echipă responsabil.",
+    "noForemenAvailable": "Niciun șef de echipă activ nu este alocat acestui proiect.",
+    "searchForemanPlaceholder": "Căutați șef de echipă după nume sau număr de angajat…",
+    "you": "Dumneavoastră",
+    "datesTitle": "Date",
+    "erectionDate": "Data montajului",
+    "erectedBy": "Montat de (echipă subcontractantă, dacă este cazul — opțional)",
+    "notesTitle": "Note",
+    "notesLabel": "Note (opțional)",
+    "photosAfterCreateNote": "Fotografiile de finalizare/montaj pot fi adăugate după înregistrarea schelei.",
+    "photosAfterSaveNote": "Gestionați fotografiile de finalizare/montaj din pagina de detalii a schelei.",
+    "reviewTitle": "Verificare",
+    "crewCount": "{count} persoane",
+    "customDays": "La fiecare {days} zile",
+    "locationSet": "Setată",
+    "back": "Înapoi",
+    "next": "Următorul",
+    "cancel": "Anulare",
+    "saving": "Se salvează…",
+    "registerScaffold": "Înregistrare schelă",
+    "saveChanges": "Salvare modificări",
+    "chooseForemanError": "Alegeți șeful de echipă responsabil.",
+    "emptyCrewError": "Adăugați cel puțin o persoană în echipa de montaj."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Cele mai recente inspecții ale dvs.",
+    "noInspectionsTitle": "Nicio inspecție încă",
+    "noInspectionsDescription": "Inspecțiile pe care le finalizați vor apărea aici.",
+    "inspectionOverviewTitle": "Prezentare generală inspecții",
+    "openFullDashboard": "Deschide panoul de inspecții",
+    "quickActionsTitle": "Acțiuni rapide",
+    "scaffoldMap": "Hartă schele",
+    "myHours": "Orele mele",
+    "myEquipment": "Echipamentul meu"
   }
 }

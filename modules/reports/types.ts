@@ -107,6 +107,7 @@ export type PublicScaffoldInspectionReport = {
   scaffold_number: number;
   sequence_number: number;
   tag_number: string;
+  client_name: string | null;
   work_area: string;
   scaffold_type: string;
   inspected_at: string;

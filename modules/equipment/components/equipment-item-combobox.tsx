@@ -14,12 +14,17 @@ import {
   ComboboxItem,
   useComboboxFilter,
 } from "@/components/ui/combobox";
-import type { EquipmentItem } from "@/modules/equipment/types";
+import type { EquipmentItem, RequestableEquipmentItem } from "@/modules/equipment/types";
 
-export type EquipmentItemOption = { value: string; label: string; category: string; referenceNumber: string | null; availableQuantity: number };
+/** availableQuantity is deliberately OPTIONAL (Part 24) — the self-service request flow's items never carry it at all (its source query never selects that column), so the picker simply omits the "X available" line rather than showing stock data to a requester. Management flows (Issue dialog) pass full EquipmentItem rows and keep seeing it. */
+export type EquipmentItemOption = { value: string; label: string; category: string; referenceNumber: string | null; availableQuantity?: number };
 
 export function toEquipmentItemOptions(items: EquipmentItem[]): EquipmentItemOption[] {
   return items.map((item) => ({ value: item.id, label: item.name, category: item.category, referenceNumber: item.reference_number, availableQuantity: item.available_quantity }));
+}
+
+export function toRequestableEquipmentItemOptions(items: RequestableEquipmentItem[]): EquipmentItemOption[] {
+  return items.map((item) => ({ value: item.id, label: item.name, category: item.category, referenceNumber: null }));
 }
 
 type EquipmentItemComboboxProps = {
@@ -65,7 +70,7 @@ export function EquipmentItemCombobox({ id, "aria-label": ariaLabel, value, onVa
               <div className="flex min-w-0 flex-col">
                 <span className="truncate font-medium">{option.label}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {[option.category, option.referenceNumber, `${option.availableQuantity} available`].filter(Boolean).join(" · ")}
+                  {[option.category, option.referenceNumber, option.availableQuantity !== undefined ? `${option.availableQuantity} available` : null].filter(Boolean).join(" · ")}
                 </span>
               </div>
             </ComboboxItem>

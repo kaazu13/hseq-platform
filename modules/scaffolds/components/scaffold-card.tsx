@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Tag } from "lucide-react";
+import { Building2, MapPin, Tag } from "lucide-react";
 import type { Scaffold } from "@/modules/scaffolds/types";
 import { SCAFFOLD_TYPE_LABELS } from "@/modules/scaffolds/types";
 import { ScaffoldStatusBadge } from "@/modules/scaffolds/components/scaffold-status-badge";
@@ -28,6 +28,12 @@ export function ScaffoldCard({ scaffold, projectName, currentInspectionExpiresAt
             {scaffold.work_area}
           </span>
           <span>{SCAFFOLD_TYPE_LABELS[scaffold.scaffold_type]}</span>
+          {scaffold.client_name && (
+            <span className="flex items-center gap-1.5">
+              <Building2 className="size-3.5 shrink-0" />
+              {scaffold.client_name}
+            </span>
+          )}
         </CardContent>
       </Card>
     </Link>

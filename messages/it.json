@@ -189,7 +189,32 @@
     "absencesTab": "Assenze",
     "noAbsencesTitle": "Nessuna assenza registrata",
     "noAbsencesDescription": "Non è stato registrato nulla per questo periodo.",
-    "daysRecorded": "{count, plural, one {# giorno registrato} other {# giorni registrati}}"
+    "daysRecorded": "{count, plural, one {# giorno registrato} other {# giorni registrati}}",
+    "weekday": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mer",
+      "thu": "Gio",
+      "fri": "Ven",
+      "sat": "Sab",
+      "sun": "Dom"
+    },
+    "conflictBadge": "Registrazioni in conflitto",
+    "pendingBadge": "In attesa",
+    "legend": {
+      "worked": "Lavorato",
+      "approvedLeave": "Ferie approvate",
+      "confirmedAbsent": "Assenza confermata",
+      "pending": "Richiesta in attesa",
+      "sunday": "Domenica"
+    },
+    "total": "Totale",
+    "noHoursThisDay": "Nessuna ora registrata in questo giorno.",
+    "attendance": "Presenza",
+    "discrepancy": "Discrepanza",
+    "correctionCount": "{count} correzione/i registrata/e.",
+    "calendarView": "Calendario",
+    "listView": "Elenco"
   },
   "WorkedHours": {
     "title": "Ore lavorate",
@@ -295,7 +320,10 @@
     "myRequests": "Le mie richieste",
     "noRequestsTitle": "Nessuna richiesta ancora",
     "noRequestsDescription": "Le richieste di attrezzatura che invii appariranno qui.",
-    "qtyAndDate": "Qtà {count} · {date}"
+    "qtyAndDate": "Qtà {count} · {date}",
+    "price": "Prezzo {price}",
+    "priceEach": "Prezzo {price} ciascuno",
+    "totalAssignedValue": "Valore totale dell'attrezzatura assegnata"
   },
   "ScaffoldRegister": {
     "createdMessage": "Ponteggio {param:tag} registrato con successo.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Cronologia ispezioni",
     "newInspection": "Nuova ispezione",
     "noInspectionsTitle": "Nessuna ispezione ancora",
-    "noInspectionsDescription": "Questo ponteggio non è ancora stato ispezionato."
+    "noInspectionsDescription": "Questo ponteggio non è ancora stato ispezionato.",
+    "fieldClient": "Cliente",
+    "clientNotSet": "Non impostato"
   },
   "ScaffoldInspections": {
     "title": "Ispezioni ponteggi",
@@ -541,7 +571,25 @@
     "language": "Lingua",
     "theme": "Tema",
     "accentColor": "Colore accento",
-    "openSettings": "Apri Impostazioni"
+    "openSettings": "Apri Impostazioni",
+    "tabProfile": "Profilo",
+    "tabRequests": "Richieste",
+    "tabRates": "Tariffe",
+    "tabSecurity": "Sicurezza",
+    "requestsDescription": "Le tue richieste di ferie/permesso e assenza.",
+    "ratesDescription": "La tua tariffa oraria e cronologia retributiva.",
+    "noRequestsTitle": "Nessuna richiesta ancora",
+    "noRequestsDescription": "Le richieste inviate appariranno qui.",
+    "requestTypeLeave": "Ferie / Permesso",
+    "requestTypeAbsence": "Assenza",
+    "submittedOn": "Inviata il {date}",
+    "reviewedBy": "Rivista da {name}",
+    "noRateSetTitle": "Nessuna tariffa impostata",
+    "noRateSetDescription": "Non è ancora stata registrata alcuna tariffa oraria per te.",
+    "currentRate": "Tariffa attuale",
+    "perHour": "/ ora",
+    "effectiveFrom": "In vigore dal {date}",
+    "previousRates": "Tariffe precedenti"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Modifica posizione",
     "viewOnMap": "Vedi sulla mappa",
     "directions": "Indicazioni",
-    "locationNotSet": "Posizione non impostata"
+    "locationNotSet": "Posizione non impostata",
+    "selectOnMap": "Seleziona sulla mappa",
+    "advancedCoordinates": "Avanzate / coordinate",
+    "mapPickerHint": "Fai clic o tocca la mappa per posizionare il marcatore, oppure trascinalo per regolarlo.",
+    "confirmLocation": "Conferma posizione",
+    "cancel": "Annulla"
   },
   "InspectionDashboard": {
     "title": "Dashboard ispezioni",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Ispettore bloccato su di te",
     "inspectorSearchPlaceholder": "Cerca per nome o numero dipendente…",
     "noEligibleInspectors": "Nessun Ispettore o Caposquadra idoneo trovato per questo progetto."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informazioni",
+      "crew": "Squadra di montaggio",
+      "inspectionLocation": "Ispezione e posizione",
+      "review": "Note e riepilogo"
+    },
+    "project": "Progetto",
+    "client": "Cliente",
+    "tagNumber": "Etichetta / numero identificativo del ponteggio",
+    "workArea": "Area di lavoro / posizione",
+    "structureReference": "Riferimento struttura, apparecchiatura o unità (opzionale)",
+    "scaffoldType": "Tipo di ponteggio",
+    "intendedUse": "Uso previsto (opzionale)",
+    "dimensionsTitle": "Dimensioni e carico",
+    "heightMetres": "Altezza del ponteggio, metri (opzionale)",
+    "lengthMetres": "Lunghezza del ponteggio, metri (opzionale)",
+    "widthMetres": "Larghezza del ponteggio, metri (opzionale)",
+    "maxLoadClass": "Carico massimo consentito / classe di carico",
+    "maxLoadClassPlaceholder": "es. Servizio leggero (2,0 kN/m2)",
+    "responsibleForemanTitle": "Caposquadra responsabile",
+    "selfLockedForeman": "{name} (tu stesso)",
+    "selfLockedForemanNote": "Come caposquadra, puoi registrare un ponteggio solo indicando te stesso come caposquadra responsabile.",
+    "noForemenAvailable": "Nessun caposquadra attivo assegnato a questo progetto.",
+    "searchForemanPlaceholder": "Cerca caposquadra per nome o numero dipendente…",
+    "you": "Tu",
+    "datesTitle": "Date",
+    "erectionDate": "Data di montaggio",
+    "erectedBy": "Montato da (squadra subappaltatrice, se applicabile — opzionale)",
+    "notesTitle": "Note",
+    "notesLabel": "Note (opzionale)",
+    "photosAfterCreateNote": "Le foto di completamento/montaggio possono essere aggiunte dopo la registrazione del ponteggio.",
+    "photosAfterSaveNote": "Gestisci le foto di completamento/montaggio dalla pagina dei dettagli del ponteggio.",
+    "reviewTitle": "Riepilogo",
+    "crewCount": "{count} persone",
+    "customDays": "Ogni {days} giorni",
+    "locationSet": "Impostata",
+    "back": "Indietro",
+    "next": "Avanti",
+    "cancel": "Annulla",
+    "saving": "Salvataggio…",
+    "registerScaffold": "Registra ponteggio",
+    "saveChanges": "Salva modifiche",
+    "chooseForemanError": "Scegli il caposquadra responsabile.",
+    "emptyCrewError": "Aggiungi almeno una persona alla squadra di montaggio."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Le tue ultime ispezioni",
+    "noInspectionsTitle": "Nessuna ispezione ancora",
+    "noInspectionsDescription": "Le ispezioni che finalizzi appariranno qui.",
+    "inspectionOverviewTitle": "Panoramica ispezioni",
+    "openFullDashboard": "Apri dashboard ispezioni",
+    "quickActionsTitle": "Azioni rapide",
+    "scaffoldMap": "Mappa ponteggi",
+    "myHours": "Le mie ore",
+    "myEquipment": "La mia attrezzatura"
   }
 }

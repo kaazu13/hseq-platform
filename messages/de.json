@@ -189,7 +189,32 @@
     "absencesTab": "Abwesenheiten",
     "noAbsencesTitle": "Keine Abwesenheit erfasst",
     "noAbsencesDescription": "Für diesen Zeitraum wurde nichts erfasst.",
-    "daysRecorded": "{count, plural, one {# Tag erfasst} other {# Tage erfasst}}"
+    "daysRecorded": "{count, plural, one {# Tag erfasst} other {# Tage erfasst}}",
+    "weekday": {
+      "mon": "Mo",
+      "tue": "Di",
+      "wed": "Mi",
+      "thu": "Do",
+      "fri": "Fr",
+      "sat": "Sa",
+      "sun": "So"
+    },
+    "conflictBadge": "Widersprüchliche Einträge",
+    "pendingBadge": "Ausstehend",
+    "legend": {
+      "worked": "Gearbeitet",
+      "approvedLeave": "Genehmigter Urlaub",
+      "confirmedAbsent": "Bestätigt abwesend",
+      "pending": "Ausstehender Antrag",
+      "sunday": "Sonntag"
+    },
+    "total": "Gesamt",
+    "noHoursThisDay": "An diesem Tag sind keine Stunden erfasst.",
+    "attendance": "Anwesenheit",
+    "discrepancy": "Abweichung",
+    "correctionCount": "{count} Korrektur(en) erfasst.",
+    "calendarView": "Kalender",
+    "listView": "Liste"
   },
   "WorkedHours": {
     "title": "Gearbeitete Stunden",
@@ -295,7 +320,10 @@
     "myRequests": "Meine Anfragen",
     "noRequestsTitle": "Noch keine Anfragen",
     "noRequestsDescription": "Von dir eingereichte Ausrüstungsanfragen erscheinen hier.",
-    "qtyAndDate": "Menge {count} · {date}"
+    "qtyAndDate": "Menge {count} · {date}",
+    "price": "Preis {price}",
+    "priceEach": "Preis {price} pro Stück",
+    "totalAssignedValue": "Gesamtwert der zugewiesenen Ausrüstung"
   },
   "ScaffoldRegister": {
     "createdMessage": "Gerüst {param:tag} erfolgreich registriert.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Prüfverlauf",
     "newInspection": "Neue Prüfung",
     "noInspectionsTitle": "Noch keine Prüfungen",
-    "noInspectionsDescription": "Dieses Gerüst wurde noch nicht geprüft."
+    "noInspectionsDescription": "Dieses Gerüst wurde noch nicht geprüft.",
+    "fieldClient": "Kunde",
+    "clientNotSet": "Nicht festgelegt"
   },
   "ScaffoldInspections": {
     "title": "Gerüstprüfungen",
@@ -541,7 +571,25 @@
     "language": "Sprache",
     "theme": "Design",
     "accentColor": "Akzentfarbe",
-    "openSettings": "Einstellungen öffnen"
+    "openSettings": "Einstellungen öffnen",
+    "tabProfile": "Profil",
+    "tabRequests": "Anträge",
+    "tabRates": "Stundensätze",
+    "tabSecurity": "Sicherheit",
+    "requestsDescription": "Ihre eigenen Urlaubs-/Abwesenheitsanträge.",
+    "ratesDescription": "Ihr eigener Stundensatz und Ihre Lohnhistorie.",
+    "noRequestsTitle": "Noch keine Anträge",
+    "noRequestsDescription": "Von Ihnen eingereichte Anträge werden hier angezeigt.",
+    "requestTypeLeave": "Urlaub",
+    "requestTypeAbsence": "Abwesenheit",
+    "submittedOn": "Eingereicht am {date}",
+    "reviewedBy": "Geprüft von {name}",
+    "noRateSetTitle": "Kein Stundensatz festgelegt",
+    "noRateSetDescription": "Für Sie wurde noch kein Stundensatz erfasst.",
+    "currentRate": "Aktueller Satz",
+    "perHour": "/ Stunde",
+    "effectiveFrom": "Gültig ab {date}",
+    "previousRates": "Frühere Sätze"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Standort bearbeiten",
     "viewOnMap": "Auf Karte anzeigen",
     "directions": "Route",
-    "locationNotSet": "Standort nicht festgelegt"
+    "locationNotSet": "Standort nicht festgelegt",
+    "selectOnMap": "Auf Karte auswählen",
+    "advancedCoordinates": "Erweitert / Koordinaten",
+    "mapPickerHint": "Klicken oder tippen Sie auf die Karte, um den Marker zu setzen, oder ziehen Sie ihn zum Anpassen.",
+    "confirmLocation": "Standort bestätigen",
+    "cancel": "Abbrechen"
   },
   "InspectionDashboard": {
     "title": "Inspektions-Dashboard",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspektor auf dich festgelegt",
     "inspectorSearchPlaceholder": "Nach Name oder Mitarbeiternummer suchen…",
     "noEligibleInspectors": "Kein berechtigter Inspektor oder Vorarbeiter für dieses Projekt gefunden."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informationen",
+      "crew": "Aufbaumannschaft",
+      "inspectionLocation": "Inspektion & Standort",
+      "review": "Notizen & Überprüfung"
+    },
+    "project": "Projekt",
+    "client": "Kunde",
+    "tagNumber": "Gerüst-Kennung / ID-Nummer",
+    "workArea": "Arbeitsbereich / Standort",
+    "structureReference": "Bauwerk-, Anlagen- oder Einheitsreferenz (optional)",
+    "scaffoldType": "Gerüsttyp",
+    "intendedUse": "Verwendungszweck (optional)",
+    "dimensionsTitle": "Abmessungen und Belastung",
+    "heightMetres": "Gerüsthöhe, Meter (optional)",
+    "lengthMetres": "Gerüstlänge, Meter (optional)",
+    "widthMetres": "Gerüstbreite, Meter (optional)",
+    "maxLoadClass": "Maximal zulässige Last / Lastklasse",
+    "maxLoadClassPlaceholder": "z. B. Leichte Nutzlast (2,0 kN/m2)",
+    "responsibleForemanTitle": "Verantwortlicher Vorarbeiter",
+    "selfLockedForeman": "{name} (Sie selbst)",
+    "selfLockedForemanNote": "Als Vorarbeiter können Sie ein Gerüst nur mit sich selbst als verantwortlichem Vorarbeiter registrieren.",
+    "noForemenAvailable": "Diesem Projekt sind keine aktiven Vorarbeiter zugewiesen.",
+    "searchForemanPlaceholder": "Vorarbeiter nach Name oder Personalnummer suchen…",
+    "you": "Sie",
+    "datesTitle": "Termine",
+    "erectionDate": "Aufbaudatum",
+    "erectedBy": "Aufgebaut von (Subunternehmer-Team, falls zutreffend — optional)",
+    "notesTitle": "Notizen",
+    "notesLabel": "Notizen (optional)",
+    "photosAfterCreateNote": "Fertigstellungs-/Aufbaufotos können nach der Registrierung des Gerüsts hinzugefügt werden.",
+    "photosAfterSaveNote": "Verwalten Sie Fertigstellungs-/Aufbaufotos über die Gerüst-Detailseite.",
+    "reviewTitle": "Überprüfung",
+    "crewCount": "{count} Personen",
+    "customDays": "Alle {days} Tage",
+    "locationSet": "Festgelegt",
+    "back": "Zurück",
+    "next": "Weiter",
+    "cancel": "Abbrechen",
+    "saving": "Wird gespeichert…",
+    "registerScaffold": "Gerüst registrieren",
+    "saveChanges": "Änderungen speichern",
+    "chooseForemanError": "Wählen Sie den verantwortlichen Vorarbeiter.",
+    "emptyCrewError": "Fügen Sie mindestens eine Person zur Aufbaumannschaft hinzu."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Ihre neuesten Inspektionen",
+    "noInspectionsTitle": "Noch keine Inspektionen",
+    "noInspectionsDescription": "Von Ihnen abgeschlossene Inspektionen werden hier angezeigt.",
+    "inspectionOverviewTitle": "Inspektionsübersicht",
+    "openFullDashboard": "Inspektions-Dashboard öffnen",
+    "quickActionsTitle": "Schnellzugriff",
+    "scaffoldMap": "Gerüstkarte",
+    "myHours": "Meine Stunden",
+    "myEquipment": "Meine Ausrüstung"
   }
 }

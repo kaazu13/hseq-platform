@@ -58,6 +58,7 @@ export default async function ScaffoldsPage({ params, searchParams }: ScaffoldsP
   const filters: ScaffoldListFilters = {
     projectId,
     workAreaSearch: urlParams.workArea,
+    clientSearch: urlParams.client,
     scaffoldType: urlParams.scaffoldType,
     status: urlParams.status,
   };

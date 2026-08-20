@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { AlertCircle, Loader2, Lock, MapPin, Plus, Users, X } from "lucide-react";
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Loader2, Lock, Users, X } from "lucide-react";
 import { createScaffold, updateScaffold } from "@/modules/scaffolds/actions";
 import { listEligibleErectionTeamsAction, listAvailableScaffoldWorkersAction } from "@/modules/scaffolds/team-actions";
 import type { EligibleErectionTeam } from "@/modules/scaffolds/queries";
@@ -21,6 +21,7 @@ import {
   type ScaffoldInspectionIntervalType,
 } from "@/modules/scaffolds/types";
 import { EmployeeCombobox, EmployeeComboboxField, type EmployeeOption } from "@/components/shared/employee-combobox";
+import { ScaffoldLocationPicker } from "@/modules/scaffolds/components/scaffold-location-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionHeader } from "@/components/shared/section-header";
-import { EmptyState } from "@/components/shared/empty-state";
+import { cn } from "@/lib/utils";
 
 type StagedParticipant = {
   employeeId: string;
@@ -43,6 +44,10 @@ type ScaffoldFormProps = {
   companyId: string;
   projectId: string;
   projectName: string;
+  /** Part 4/36 — pre-fills Step 1's Client field as a suggestion only; the scaffold's own client_name is a separate, editable, per-scaffold value (see the client_name migration's header for why this isn't just a read of projects.client_name). */
+  projectClientName?: string | null;
+  siteLatitude?: number | null;
+  siteLongitude?: number | null;
   foremanOptions: EmployeeOption[];
   /** V2: locks the Responsible Foreman field to the caller's own name (mustSelfLockResponsibleForeman()'s result) — a Foreman relying only on the self-only creation path can never pick anyone else, even by tampering with the client. Ignored in edit mode (editing is unchanged, hseq_manager/hse_officer/inspector only). */
   selfLockedForemanId?: string | null;
@@ -52,22 +57,45 @@ type ScaffoldFormProps = {
   effectiveIntervalDays?: number;
 } & ({ mode: "create"; scaffold?: undefined } | { mode: "edit"; scaffold: ScaffoldDetail });
 
+const STEP_KEYS = ["information", "crew", "inspectionLocation", "review"] as const;
+type StepKey = (typeof STEP_KEYS)[number];
+
+/** Which step each server-validated field belongs to — used to jump the wizard back to the first step containing an error after a failed submit, so a create-mode user is never left staring at a "Review" step with no visible explanation. */
+const FIELD_STEP: Record<string, StepKey> = {
+  tagNumber: "information",
+  clientName: "information",
+  workArea: "information",
+  intendedUse: "information",
+  maxLoadClass: "information",
+  heightMetres: "information",
+  lengthMetres: "information",
+  widthMetres: "information",
+  responsibleForemanId: "information",
+  erectedAt: "information",
+  participants: "crew",
+  inspectionIntervalDays: "inspectionLocation",
+  latitude: "inspectionLocation",
+  longitude: "inspectionLocation",
+};
+
 /**
- * Combined create/edit scaffold-registration form — see the audit's
- * Scaffold Register V2 implementation report for the "before" state.
- * V2 changes (Part 4 of the post-audit implementation package): the old
- * "Scaffold team size" + "Team member 1/2/3…" manual roster is replaced
- * with "Teams assigned to scaffold erection" — one or more real Today's
- * Teams, refetched whenever the erection date changes (never a stale
- * list for a different date). A Foreman relying only on the self-only
- * creation path sees the Responsible Foreman field locked to their own
- * name (server-enforced regardless — see validate_scaffold_insert()) and
- * only their OWN Today's Teams offered as erection-team choices.
+ * Combined create/edit scaffold-registration form, restructured (Part 3 of
+ * the operational UX package) into a 4-step wizard for CREATE (Step
+ * indicator + Back/Next), and the same 4 sections as directly-clickable
+ * tabs for EDIT (Part 3's "editing... may use step navigation/tabs rather
+ * than forcing all content into one long page. Do not make editing slower
+ * than creation" — a manager fixing one field shouldn't have to click
+ * through 3 screens first). All fields share ONE flat set of top-level
+ * React state regardless of which step is visible, so nothing is
+ * unmounted/remounted between steps and Back/Next never loses input.
  */
 export function ScaffoldForm({
   companyId,
   projectId,
   projectName,
+  projectClientName,
+  siteLatitude,
+  siteLongitude,
   foremanOptions,
   selfLockedForemanId,
   today,
@@ -79,10 +107,16 @@ export function ScaffoldForm({
   const t = useTranslations("ScaffoldInspectionFrequency");
   const tMap = useTranslations("ScaffoldMap");
   const tCrew = useTranslations("ScaffoldCrew");
+  const tWizard = useTranslations("ScaffoldWizard");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [step, setStep] = useState<StepKey>("information");
+
+  const [clientName, setClientName] = useState(scaffold?.client_name ?? projectClientName ?? "");
+  const [tagNumber, setTagNumber] = useState(scaffold?.tag_number ?? "");
+  const [workArea, setWorkArea] = useState(scaffold?.work_area ?? "");
   const [scaffoldType, setScaffoldType] = useState<ScaffoldType>(scaffold?.scaffold_type ?? "independent");
   const [responsibleForemanId, setResponsibleForemanId] = useState(scaffold?.responsible_foreman_id ?? selfLockedForemanId ?? "");
   const [erectedAt, setErectedAt] = useState(scaffold?.erected_at ?? today);
@@ -92,31 +126,8 @@ export function ScaffoldForm({
   );
   const [latitude, setLatitude] = useState(scaffold?.latitude != null ? String(scaffold.latitude) : "");
   const [longitude, setLongitude] = useState(scaffold?.longitude != null ? String(scaffold.longitude) : "");
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
 
   const resolvedIntervalDays = intervalType === "custom" ? Number(customIntervalDays) || 0 : SCAFFOLD_INSPECTION_INTERVAL_TYPE_DAYS[intervalType];
-
-  function useCurrentLocation() {
-    setLocationError(null);
-    if (!("geolocation" in navigator)) {
-      setLocationError(tMap("geolocationUnsupported"));
-      return;
-    }
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude.toFixed(6));
-        setLongitude(position.coords.longitude.toFixed(6));
-        setIsLocating(false);
-      },
-      () => {
-        setLocationError(tMap("geolocationDenied"));
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  }
 
   // `eligibleTeams === null` IS the loading state — deliberately no
   // separate `loading` boolean set synchronously inside the effect body
@@ -189,26 +200,13 @@ export function ScaffoldForm({
     setParticipants((prev) => prev.filter((p) => p.employeeId !== employeeId));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(null);
-    setFieldErrors({});
-
+  function buildInput(formData: FormData) {
     const effectiveForemanId = selfLockedForemanId ?? responsibleForemanId;
-    if (!effectiveForemanId) {
-      setFormError("Choose the Responsible Foreman.");
-      return;
-    }
-    if (participants.length === 0) {
-      setFormError("Add at least one person to the erection crew.");
-      return;
-    }
-
-    const formData = new FormData(event.currentTarget);
-    const input = {
+    return {
       projectId,
-      tagNumber: String(formData.get("tagNumber") ?? ""),
-      workArea: String(formData.get("workArea") ?? ""),
+      tagNumber,
+      clientName,
+      workArea,
       structureReference: String(formData.get("structureReference") ?? ""),
       scaffoldType,
       intendedUse: String(formData.get("intendedUse") ?? ""),
@@ -230,13 +228,39 @@ export function ScaffoldForm({
       latitude,
       longitude,
     };
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError(null);
+    setFieldErrors({});
+
+    const effectiveForemanId = selfLockedForemanId ?? responsibleForemanId;
+    if (!effectiveForemanId) {
+      setFormError(tWizard("chooseForemanError"));
+      setStep("information");
+      return;
+    }
+    if (participants.length === 0) {
+      setFormError(tWizard("emptyCrewError"));
+      setStep("crew");
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const input = buildInput(formData);
 
     startTransition(async () => {
       const result = mode === "create" ? await createScaffold(companyId, input) : await updateScaffold(companyId, scaffold.id, projectId, input);
 
       if (!result.ok) {
         setFormError(result.error.message);
-        setFieldErrors(result.error.fieldErrors ?? {});
+        const errors = result.error.fieldErrors ?? {};
+        setFieldErrors(errors);
+        const firstErroredField = Object.keys(errors)[0];
+        if (firstErroredField && FIELD_STEP[firstErroredField]) {
+          setStep(FIELD_STEP[firstErroredField]);
+        }
       }
     });
   }
@@ -246,9 +270,11 @@ export function ScaffoldForm({
   }
 
   const selfLockedForemanOption = selfLockedForemanId ? foremanOptions.find((option) => option.value === selfLockedForemanId) : null;
+  const stepIndex = STEP_KEYS.indexOf(step);
+  const siteCenter = siteLatitude != null && siteLongitude != null ? { latitude: siteLatitude, longitude: siteLongitude } : null;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-8" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
       {formError && (
         <Alert variant="destructive" role="alert">
           <AlertCircle />
@@ -256,129 +282,159 @@ export function ScaffoldForm({
         </Alert>
       )}
 
-      <div className="flex flex-col gap-4">
-        <SectionHeader title="Scaffold details" />
-        <div className="flex flex-col gap-1.5">
-          <Label>Project</Label>
-          <p className="text-sm text-muted-foreground">{projectName}</p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tagNumber">Scaffold tag / ID number</Label>
-            <Input id="tagNumber" name="tagNumber" required defaultValue={scaffold?.tag_number} aria-invalid={Boolean(fieldError("tagNumber"))} />
-            {fieldError("tagNumber") && <p className="text-sm text-destructive">{fieldError("tagNumber")}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="workArea">Work area / location</Label>
-            <Input id="workArea" name="workArea" required defaultValue={scaffold?.work_area} aria-invalid={Boolean(fieldError("workArea"))} />
-            {fieldError("workArea") && <p className="text-sm text-destructive">{fieldError("workArea")}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label htmlFor="structureReference">Structure, equipment, or unit reference (optional)</Label>
-            <Input id="structureReference" name="structureReference" defaultValue={scaffold?.structure_reference ?? ""} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="scaffoldType">Scaffold type</Label>
-            <Select value={scaffoldType} onValueChange={(value) => setScaffoldType(value as ScaffoldType)}>
-              <SelectTrigger id="scaffoldType" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SCAFFOLD_TYPES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {SCAFFOLD_TYPE_LABELS[value]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="intendedUse">Intended use</Label>
-            <Input id="intendedUse" name="intendedUse" required defaultValue={scaffold?.intended_use} aria-invalid={Boolean(fieldError("intendedUse"))} />
-            {fieldError("intendedUse") && <p className="text-sm text-destructive">{fieldError("intendedUse")}</p>}
-          </div>
-        </div>
+      {/* Stepper header — Next/Back sequence for create, freely-clickable tabs for edit (Part 3: "do not make editing slower than creation"). */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:gap-2">
+        {STEP_KEYS.map((key, index) => {
+          const isActive = key === step;
+          const isDone = mode === "create" && index < stepIndex;
+          const clickable = mode === "edit" || isDone || isActive;
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={!clickable}
+              onClick={() => clickable && setStep(key)}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
+                isActive ? "border-primary bg-primary/10 text-foreground" : isDone ? "border-transparent text-muted-foreground hover:text-foreground" : "border-transparent text-muted-foreground",
+                !clickable && "cursor-not-allowed opacity-60",
+              )}
+            >
+              {isDone ? <Check className="size-3.5" /> : <span className="flex size-4 items-center justify-center rounded-full bg-muted text-[10px] sm:size-5">{index + 1}</span>}
+              <span className="hidden sm:inline">{tWizard(`step.${key}`)}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex flex-col gap-4">
-        <SectionHeader title="Dimensions and loading" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* ── Step 1: Information ─────────────────────────────────────── */}
+      <div className={cn("flex flex-col gap-6", step !== "information" && "hidden")}>
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={tWizard("step.information")} />
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="heightMetres">Scaffold height, metres (optional)</Label>
-            <Input id="heightMetres" name="heightMetres" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={scaffold?.height_metres ?? ""} aria-invalid={Boolean(fieldError("heightMetres"))} />
-            {fieldError("heightMetres") && <p className="text-sm text-destructive">{fieldError("heightMetres")}</p>}
+            <Label>{tWizard("project")}</Label>
+            <p className="text-sm text-muted-foreground">{projectName}</p>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lengthMetres">Scaffold length, metres (optional)</Label>
-            <Input id="lengthMetres" name="lengthMetres" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={scaffold?.length_metres ?? ""} aria-invalid={Boolean(fieldError("lengthMetres"))} />
-            {fieldError("lengthMetres") && <p className="text-sm text-destructive">{fieldError("lengthMetres")}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="widthMetres">Scaffold width, metres (optional)</Label>
-            <Input id="widthMetres" name="widthMetres" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={scaffold?.width_metres ?? ""} aria-invalid={Boolean(fieldError("widthMetres"))} />
-            {fieldError("widthMetres") && <p className="text-sm text-destructive">{fieldError("widthMetres")}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5 sm:col-span-3">
-            <Label htmlFor="maxLoadClass">Maximum permitted load / load class</Label>
-            <Input id="maxLoadClass" name="maxLoadClass" required placeholder="e.g. Light Duty (2.0 kN/m2)" defaultValue={scaffold?.max_load_class} aria-invalid={Boolean(fieldError("maxLoadClass"))} />
-            {fieldError("maxLoadClass") && <p className="text-sm text-destructive">{fieldError("maxLoadClass")}</p>}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <SectionHeader title="Responsible Foreman" />
-
-        {selfLockedForemanId ? (
-          <div className="flex flex-col gap-1.5">
-            <Label>Responsible Foreman</Label>
-            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-              <Lock className="size-3.5 text-muted-foreground" />
-              <span>{selfLockedForemanOption?.label ?? "You"} (yourself)</span>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="tagNumber">{tWizard("tagNumber")}</Label>
+              <Input id="tagNumber" name="tagNumber" required value={tagNumber} onChange={(event) => setTagNumber(event.target.value)} aria-invalid={Boolean(fieldError("tagNumber"))} />
+              {fieldError("tagNumber") && <p className="text-sm text-destructive">{fieldError("tagNumber")}</p>}
             </div>
-            <p className="text-xs text-muted-foreground">As a Foreman, you can only register a scaffold with yourself as the Responsible Foreman.</p>
-          </div>
-        ) : foremanOptions.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No active Foremen are assigned to this project."
-            description="A Foreman must hold the Foreman role and an active Foreman team assignment on this project before they can be selected here."
-          />
-        ) : (
-          <EmployeeComboboxField
-            label="Responsible Foreman"
-            htmlFor="responsibleForemanId"
-            value={responsibleForemanId || null}
-            onValueChange={(id) => setResponsibleForemanId(id ?? "")}
-            options={foremanOptions}
-            placeholder="Search Foreman by name or employee number…"
-            emptyMessage="No active Foremen are assigned to this project."
-            clearable={false}
-            error={fieldError("responsibleForemanId")}
-          />
-        )}
-      </div>
 
-      <div className="flex flex-col gap-4">
-        <SectionHeader title="Dates" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="erectedAt">Erection date</Label>
-            <Input id="erectedAt" name="erectedAt" type="date" required value={erectedAt} onChange={(event) => setErectedAt(event.target.value)} aria-invalid={Boolean(fieldError("erectedAt"))} />
-            {fieldError("erectedAt") && <p className="text-sm text-destructive">{fieldError("erectedAt")}</p>}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="clientName">{tWizard("client")}</Label>
+              <Input id="clientName" name="clientName" required value={clientName} onChange={(event) => setClientName(event.target.value)} aria-invalid={Boolean(fieldError("clientName"))} />
+              {fieldError("clientName") && <p className="text-sm text-destructive">{fieldError("clientName")}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="workArea">{tWizard("workArea")}</Label>
+              <Input id="workArea" name="workArea" required value={workArea} onChange={(event) => setWorkArea(event.target.value)} aria-invalid={Boolean(fieldError("workArea"))} />
+              {fieldError("workArea") && <p className="text-sm text-destructive">{fieldError("workArea")}</p>}
+            </div>
+
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="structureReference">{tWizard("structureReference")}</Label>
+              <Input id="structureReference" name="structureReference" defaultValue={scaffold?.structure_reference ?? ""} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="scaffoldType">{tWizard("scaffoldType")}</Label>
+              <Select value={scaffoldType} onValueChange={(value) => setScaffoldType(value as ScaffoldType)}>
+                <SelectTrigger id="scaffoldType" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SCAFFOLD_TYPES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {SCAFFOLD_TYPE_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="intendedUse">{tWizard("intendedUse")}</Label>
+              <Input id="intendedUse" name="intendedUse" defaultValue={scaffold?.intended_use ?? ""} aria-invalid={Boolean(fieldError("intendedUse"))} />
+              {fieldError("intendedUse") && <p className="text-sm text-destructive">{fieldError("intendedUse")}</p>}
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="erectedBy">Erected by (subcontractor crew, if applicable — optional)</Label>
-            <Input id="erectedBy" name="erectedBy" defaultValue={scaffold?.erected_by ?? ""} />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={tWizard("dimensionsTitle")} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="heightMetres">{tWizard("heightMetres")}</Label>
+              <Input id="heightMetres" name="heightMetres" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={scaffold?.height_metres ?? ""} aria-invalid={Boolean(fieldError("heightMetres"))} />
+              {fieldError("heightMetres") && <p className="text-sm text-destructive">{fieldError("heightMetres")}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lengthMetres">{tWizard("lengthMetres")}</Label>
+              <Input id="lengthMetres" name="lengthMetres" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={scaffold?.length_metres ?? ""} aria-invalid={Boolean(fieldError("lengthMetres"))} />
+              {fieldError("lengthMetres") && <p className="text-sm text-destructive">{fieldError("lengthMetres")}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="widthMetres">{tWizard("widthMetres")}</Label>
+              <Input id="widthMetres" name="widthMetres" type="number" step="0.01" min="0" inputMode="decimal" defaultValue={scaffold?.width_metres ?? ""} aria-invalid={Boolean(fieldError("widthMetres"))} />
+              {fieldError("widthMetres") && <p className="text-sm text-destructive">{fieldError("widthMetres")}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-3">
+              <Label htmlFor="maxLoadClass">{tWizard("maxLoadClass")}</Label>
+              <Input id="maxLoadClass" name="maxLoadClass" required placeholder={tWizard("maxLoadClassPlaceholder")} defaultValue={scaffold?.max_load_class} aria-invalid={Boolean(fieldError("maxLoadClass"))} />
+              {fieldError("maxLoadClass") && <p className="text-sm text-destructive">{fieldError("maxLoadClass")}</p>}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={tWizard("responsibleForemanTitle")} />
+          {selfLockedForemanId ? (
+            <div className="flex flex-col gap-1.5">
+              <Label>{tWizard("responsibleForemanTitle")}</Label>
+              <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <Lock className="size-3.5 text-muted-foreground" />
+                <span>{tWizard("selfLockedForeman", { name: selfLockedForemanOption?.label ?? tWizard("you") })}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{tWizard("selfLockedForemanNote")}</p>
+            </div>
+          ) : foremanOptions.length === 0 ? (
+            <p className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">{tWizard("noForemenAvailable")}</p>
+          ) : (
+            <EmployeeComboboxField
+              label={tWizard("responsibleForemanTitle")}
+              htmlFor="responsibleForemanId"
+              value={responsibleForemanId || null}
+              onValueChange={(id) => setResponsibleForemanId(id ?? "")}
+              options={foremanOptions}
+              placeholder={tWizard("searchForemanPlaceholder")}
+              emptyMessage={tWizard("noForemenAvailable")}
+              clearable={false}
+              error={fieldError("responsibleForemanId")}
+            />
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={tWizard("datesTitle")} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="erectedAt">{tWizard("erectionDate")}</Label>
+              <Input id="erectedAt" name="erectedAt" type="date" required value={erectedAt} onChange={(event) => setErectedAt(event.target.value)} aria-invalid={Boolean(fieldError("erectedAt"))} />
+              {fieldError("erectedAt") && <p className="text-sm text-destructive">{fieldError("erectedAt")}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="erectedBy">{tWizard("erectedBy")}</Label>
+              <Input id="erectedBy" name="erectedBy" defaultValue={scaffold?.erected_by ?? ""} />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      {/* ── Step 2: Erection Crew ───────────────────────────────────── */}
+      <div className={cn("flex flex-col gap-4", step !== "crew" && "hidden")}>
         <SectionHeader title={tCrew("title")} description={tCrew("description")} />
 
         {mode === "edit" && scaffold.teamMembers.length > 0 && (
@@ -394,11 +450,10 @@ export function ScaffoldForm({
           {eligibleTeams === null ? (
             <p className="text-sm text-muted-foreground">{tCrew("loadingTeams", { date: erectedAt })}</p>
           ) : eligibleTeams.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title={tCrew("noTeamsTitle")}
-              description={selfLockedForemanId ? tCrew("noTeamsDescriptionForeman") : tCrew("noTeamsDescription")}
-            />
+            // Part 5 — a compact single line, never a giant empty-state box.
+            <p className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+              {selfLockedForemanId ? tCrew("noTeamsCompactForeman", { date: erectedAt }) : tCrew("noTeamsCompact", { date: erectedAt })}
+            </p>
           ) : (
             <div className="flex flex-col gap-2">
               {eligibleTeams.map((team) => {
@@ -415,7 +470,7 @@ export function ScaffoldForm({
                       </span>
                     </span>
                     <Button type="button" variant="outline" size="sm" onClick={() => importTeam(team)}>
-                      <Plus />
+                      <Users />
                       {alreadyImported ? tCrew("reimportTeam") : tCrew("importTeam")}
                     </Button>
                   </div>
@@ -467,89 +522,122 @@ export function ScaffoldForm({
         {fieldError("participants") && <p className="text-sm text-destructive">{fieldError("participants")}</p>}
       </div>
 
-      <div className="flex flex-col gap-4">
-        <SectionHeader title={t("title")} description={t("description")} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="inspectionIntervalType">{t("title")}</Label>
-            <Select value={intervalType} onValueChange={(value) => setIntervalType(value as ScaffoldInspectionIntervalType)}>
-              <SelectTrigger id="inspectionIntervalType" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SCAFFOLD_INSPECTION_INTERVAL_TYPES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(value)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {intervalType === "custom" && (
+      {/* ── Step 3: Inspection & Location ───────────────────────────── */}
+      <div className={cn("flex flex-col gap-6", step !== "inspectionLocation" && "hidden")}>
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={t("title")} description={t("description")} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="customIntervalDays">{t("customDaysLabel")}</Label>
-              <Input
-                id="customIntervalDays"
-                type="number"
-                inputMode="numeric"
-                min={SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS}
-                max={SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS}
-                value={customIntervalDays}
-                onChange={(event) => setCustomIntervalDays(event.target.value)}
-                aria-invalid={Boolean(fieldError("inspectionIntervalDays"))}
-              />
+              <Label htmlFor="inspectionIntervalType">{t("title")}</Label>
+              <Select value={intervalType} onValueChange={(value) => setIntervalType(value as ScaffoldInspectionIntervalType)}>
+                <SelectTrigger id="inspectionIntervalType" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SCAFFOLD_INSPECTION_INTERVAL_TYPES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(value)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            {intervalType === "custom" && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="customIntervalDays">{t("customDaysLabel")}</Label>
+                <Input
+                  id="customIntervalDays"
+                  type="number"
+                  inputMode="numeric"
+                  min={SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MIN_DAYS}
+                  max={SCAFFOLD_INSPECTION_CUSTOM_INTERVAL_MAX_DAYS}
+                  value={customIntervalDays}
+                  onChange={(event) => setCustomIntervalDays(event.target.value)}
+                  aria-invalid={Boolean(fieldError("inspectionIntervalDays"))}
+                />
+              </div>
+            )}
+          </div>
+          {fieldError("inspectionIntervalDays") && <p className="text-sm text-destructive">{fieldError("inspectionIntervalDays")}</p>}
         </div>
-        {fieldError("inspectionIntervalDays") && <p className="text-sm text-destructive">{fieldError("inspectionIntervalDays")}</p>}
+
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={tMap("scaffoldLocation")} />
+          <ScaffoldLocationPicker
+            latitude={latitude}
+            longitude={longitude}
+            onChange={(nextLat, nextLng) => {
+              setLatitude(nextLat);
+              setLongitude(nextLng);
+            }}
+            siteCenter={siteCenter}
+            latitudeError={fieldError("latitude")}
+            longitudeError={fieldError("longitude")}
+          />
+          <p className="text-xs text-muted-foreground">{tMap("locationOptionalNote")}</p>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <SectionHeader title={tMap("scaffoldLocation")} />
-        {locationError && (
-          <Alert variant="destructive" role="alert">
-            <AlertCircle />
-            <AlertDescription>{locationError}</AlertDescription>
-          </Alert>
-        )}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* ── Step 4: Notes / Photos / Review ─────────────────────────── */}
+      <div className={cn("flex flex-col gap-6", step !== "review" && "hidden")}>
+        <div className="flex flex-col gap-4">
+          <SectionHeader title={tWizard("notesTitle")} />
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="latitude">{tMap("latitude")}</Label>
-            <Input id="latitude" type="number" step="0.000001" min={-90} max={90} inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} aria-invalid={Boolean(fieldError("latitude"))} />
-            {fieldError("latitude") && <p className="text-sm text-destructive">{fieldError("latitude")}</p>}
+            <Label htmlFor="notes">{tWizard("notesLabel")}</Label>
+            <Textarea id="notes" name="notes" rows={3} defaultValue={scaffold?.notes ?? ""} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="longitude">{tMap("longitude")}</Label>
-            <Input id="longitude" type="number" step="0.000001" min={-180} max={180} inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} aria-invalid={Boolean(fieldError("longitude"))} />
-            {fieldError("longitude") && <p className="text-sm text-destructive">{fieldError("longitude")}</p>}
-          </div>
+          {mode === "edit" && <p className="text-xs text-muted-foreground">{tWizard("photosAfterSaveNote")}</p>}
+          {mode === "create" && <p className="text-xs text-muted-foreground">{tWizard("photosAfterCreateNote")}</p>}
         </div>
-        <div>
-          <Button type="button" variant="outline" size="sm" disabled={isLocating} onClick={useCurrentLocation}>
-            {isLocating ? <Loader2 className="animate-spin" /> : <MapPin />}
-            {tMap("useCurrentLocation")}
+
+        <div className="flex flex-col gap-3 rounded-lg border p-4">
+          <SectionHeader title={tWizard("reviewTitle")} />
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            <ReviewRow label={tWizard("client")} value={clientName || "—"} />
+            <ReviewRow label={tWizard("tagNumber")} value={tagNumber || "—"} />
+            <ReviewRow label={tWizard("scaffoldType")} value={SCAFFOLD_TYPE_LABELS[scaffoldType]} />
+            <ReviewRow label={tWizard("workArea")} value={workArea || "—"} />
+            <ReviewRow label={tWizard("responsibleForemanTitle")} value={selfLockedForemanOption?.label ?? foremanOptions.find((o) => o.value === responsibleForemanId)?.label ?? "—"} />
+            <ReviewRow label={tCrew("title")} value={tWizard("crewCount", { count: participants.length })} />
+            <ReviewRow label={t("title")} value={intervalType === "custom" ? tWizard("customDays", { days: resolvedIntervalDays }) : t(intervalType)} />
+            <ReviewRow label={tMap("scaffoldLocation")} value={latitude && longitude ? tWizard("locationSet") : tMap("locationNotSet")} />
+          </dl>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <div className="flex items-center gap-2">
+          {stepIndex > 0 && (
+            <Button type="button" variant="outline" onClick={() => setStep(STEP_KEYS[stepIndex - 1])} disabled={isPending}>
+              <ChevronLeft />
+              {tWizard("back")}
+            </Button>
+          )}
+          <Button type="button" variant="ghost" disabled={isPending} onClick={() => router.back()}>
+            {tWizard("cancel")}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">{tMap("locationOptionalNote")}</p>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <SectionHeader title="Notes" />
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="notes">Notes (optional)</Label>
-          <Textarea id="notes" name="notes" rows={3} defaultValue={scaffold?.notes ?? ""} />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? <Loader2 className="animate-spin" /> : null}
-          {isPending ? "Saving…" : mode === "create" ? "Register scaffold" : "Save changes"}
-        </Button>
-        <Button type="button" variant="outline" disabled={isPending} onClick={() => router.back()}>
-          Cancel
-        </Button>
+        {stepIndex < STEP_KEYS.length - 1 ? (
+          <Button type="button" onClick={() => setStep(STEP_KEYS[stepIndex + 1])}>
+            {tWizard("next")}
+            <ChevronRight />
+          </Button>
+        ) : (
+          <Button type="submit" disabled={isPending}>
+            {isPending ? <Loader2 className="animate-spin" /> : null}
+            {isPending ? tWizard("saving") : mode === "create" ? tWizard("registerScaffold") : tWizard("saveChanges")}
+          </Button>
+        )}
       </div>
     </form>
+  );
+}
+
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-medium">{value}</dd>
+    </div>
   );
 }

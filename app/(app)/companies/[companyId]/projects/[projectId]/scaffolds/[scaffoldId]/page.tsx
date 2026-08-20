@@ -137,6 +137,10 @@ export default async function ScaffoldDetailPage({ params }: ScaffoldDetailPageP
             <p className="text-sm">{projectName}</p>
           </div>
           <div>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t("fieldClient")}</p>
+            <p className="text-sm">{scaffold.client_name ?? t("clientNotSet")}</p>
+          </div>
+          <div>
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t("fieldWorkArea")}</p>
             <p className="text-sm">{scaffold.work_area}</p>
           </div>

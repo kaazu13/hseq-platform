@@ -189,7 +189,32 @@
     "absencesTab": "Absences",
     "noAbsencesTitle": "No absences recorded",
     "noAbsencesDescription": "Nothing has been recorded for this period.",
-    "daysRecorded": "{count, plural, one {# day recorded} other {# days recorded}}"
+    "daysRecorded": "{count, plural, one {# day recorded} other {# days recorded}}",
+    "weekday": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "conflictBadge": "Conflicting records",
+    "pendingBadge": "Pending",
+    "legend": {
+      "worked": "Worked",
+      "approvedLeave": "Approved leave",
+      "confirmedAbsent": "Confirmed absent",
+      "pending": "Pending request",
+      "sunday": "Sunday"
+    },
+    "total": "Total",
+    "noHoursThisDay": "No hours recorded this day.",
+    "attendance": "Attendance",
+    "discrepancy": "Discrepancy",
+    "correctionCount": "{count} correction(s) recorded.",
+    "calendarView": "Calendar",
+    "listView": "List"
   },
   "WorkedHours": {
     "title": "Worked Hours",
@@ -295,7 +320,10 @@
     "myRequests": "My requests",
     "noRequestsTitle": "No requests yet",
     "noRequestsDescription": "Equipment requests you submit will appear here.",
-    "qtyAndDate": "Qty {count} · {date}"
+    "qtyAndDate": "Qty {count} · {date}",
+    "price": "Price {price}",
+    "priceEach": "Price {price} each",
+    "totalAssignedValue": "Total assigned equipment value"
   },
   "ScaffoldRegister": {
     "createdMessage": "Scaffold {param:tag} registered successfully.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Inspection history",
     "newInspection": "New inspection",
     "noInspectionsTitle": "No inspections yet",
-    "noInspectionsDescription": "This scaffold has not been inspected yet."
+    "noInspectionsDescription": "This scaffold has not been inspected yet.",
+    "fieldClient": "Client",
+    "clientNotSet": "Not set"
   },
   "ScaffoldInspections": {
     "title": "Scaffold Inspections",
@@ -541,7 +571,25 @@
     "language": "Language",
     "theme": "Theme",
     "accentColor": "Accent color",
-    "openSettings": "Open Settings"
+    "openSettings": "Open Settings",
+    "tabProfile": "Profile",
+    "tabRequests": "Requests",
+    "tabRates": "Rates",
+    "tabSecurity": "Security",
+    "requestsDescription": "Your own holiday/leave and absence requests.",
+    "ratesDescription": "Your own hourly rate and pay history.",
+    "noRequestsTitle": "No requests yet",
+    "noRequestsDescription": "Requests you submit will appear here.",
+    "requestTypeLeave": "Holiday / Leave",
+    "requestTypeAbsence": "Absence",
+    "submittedOn": "Submitted {date}",
+    "reviewedBy": "Reviewed by {name}",
+    "noRateSetTitle": "No rate set",
+    "noRateSetDescription": "No hourly rate has been recorded for you yet.",
+    "currentRate": "Current rate",
+    "perHour": "/ hour",
+    "effectiveFrom": "Effective from {date}",
+    "previousRates": "Previous rates"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Edit location",
     "viewOnMap": "View on map",
     "directions": "Directions",
-    "locationNotSet": "Location not set"
+    "locationNotSet": "Location not set",
+    "selectOnMap": "Select on map",
+    "advancedCoordinates": "Advanced / coordinates",
+    "mapPickerHint": "Click or tap the map to place the marker, or drag it to adjust.",
+    "confirmLocation": "Confirm location",
+    "cancel": "Cancel"
   },
   "InspectionDashboard": {
     "title": "Inspection Dashboard",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspector locked to you",
     "inspectorSearchPlaceholder": "Search by name or employee number…",
     "noEligibleInspectors": "No eligible Inspector or Foreman found for this project."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Information",
+      "crew": "Erection Crew",
+      "inspectionLocation": "Inspection & Location",
+      "review": "Notes & Review"
+    },
+    "project": "Project",
+    "client": "Client",
+    "tagNumber": "Scaffold tag / ID number",
+    "workArea": "Work area / location",
+    "structureReference": "Structure, equipment, or unit reference (optional)",
+    "scaffoldType": "Scaffold type",
+    "intendedUse": "Intended use (optional)",
+    "dimensionsTitle": "Dimensions and loading",
+    "heightMetres": "Scaffold height, metres (optional)",
+    "lengthMetres": "Scaffold length, metres (optional)",
+    "widthMetres": "Scaffold width, metres (optional)",
+    "maxLoadClass": "Maximum permitted load / load class",
+    "maxLoadClassPlaceholder": "e.g. Light Duty (2.0 kN/m2)",
+    "responsibleForemanTitle": "Responsible Foreman",
+    "selfLockedForeman": "{name} (yourself)",
+    "selfLockedForemanNote": "As a Foreman, you can only register a scaffold with yourself as the Responsible Foreman.",
+    "noForemenAvailable": "No active Foremen are assigned to this project.",
+    "searchForemanPlaceholder": "Search Foreman by name or employee number…",
+    "you": "You",
+    "datesTitle": "Dates",
+    "erectionDate": "Erection date",
+    "erectedBy": "Erected by (subcontractor crew, if applicable — optional)",
+    "notesTitle": "Notes",
+    "notesLabel": "Notes (optional)",
+    "photosAfterCreateNote": "Completion/erection photos can be added once the scaffold is registered.",
+    "photosAfterSaveNote": "Manage completion/erection photos from the scaffold detail page.",
+    "reviewTitle": "Review",
+    "crewCount": "{count} people",
+    "customDays": "Every {days} days",
+    "locationSet": "Set",
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "registerScaffold": "Register scaffold",
+    "saveChanges": "Save changes",
+    "chooseForemanError": "Choose the Responsible Foreman.",
+    "emptyCrewError": "Add at least one person to the erection crew."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Your Latest Inspections",
+    "noInspectionsTitle": "No inspections yet",
+    "noInspectionsDescription": "Inspections you finalize will appear here.",
+    "inspectionOverviewTitle": "Inspection Overview",
+    "openFullDashboard": "Open Inspection Dashboard",
+    "quickActionsTitle": "Quick Actions",
+    "scaffoldMap": "Scaffold Map",
+    "myHours": "My Hours",
+    "myEquipment": "My Equipment"
   }
 }

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { submitEquipmentRequest } from "@/modules/equipment/actions";
-import { EquipmentItemCombobox, toEquipmentItemOptions, type EquipmentItemOption } from "@/modules/equipment/components/equipment-item-combobox";
-import type { EquipmentItem } from "@/modules/equipment/types";
+import { EquipmentItemCombobox, toRequestableEquipmentItemOptions, type EquipmentItemOption } from "@/modules/equipment/components/equipment-item-combobox";
+import type { RequestableEquipmentItem } from "@/modules/equipment/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 type RequestEquipmentDialogProps = {
   companyId: string;
   projectId: string;
-  candidateItems: EquipmentItem[];
+  candidateItems: RequestableEquipmentItem[];
   trigger?: React.ReactNode;
 };
 
@@ -34,7 +34,7 @@ export function RequestEquipmentDialog({ companyId, projectId, candidateItems, t
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const itemOptions = toEquipmentItemOptions(candidateItems);
+  const itemOptions = toRequestableEquipmentItemOptions(candidateItems);
   const [itemId, setItemId] = useState<string | null>(null);
   const [customDescription, setCustomDescription] = useState("");
   const [specification, setSpecification] = useState("");

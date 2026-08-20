@@ -12,7 +12,8 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { requireUser, getUserRoleNames, isEmployeeOnlyAccount } from "@/lib/auth/session";
+import { requireUser, getUserRoleNames, isEmployeeOnlyAccount, isEmployeeOrInspectorOnlyAccount } from "@/lib/auth/session";
+import { InspectorDashboardSection } from "@/modules/scaffolds/components/inspector-dashboard-section";
 import {
   countActiveMembers,
   getCurrentUserProfile,
@@ -34,7 +35,7 @@ import { listMyLmraAssessmentsForDate } from "@/modules/lmra/queries";
 import { listToolboxMeetings } from "@/modules/toolbox-meetings/queries";
 import { listActiveSafetyFlashesForEmployee } from "@/modules/safety-flash/queries";
 import { listMyCorrectiveActions } from "@/modules/corrective-actions/queries";
-import { listEquipmentCandidateItems } from "@/modules/equipment/queries";
+import { listRequestableEquipmentItems } from "@/modules/equipment/queries";
 import { EmployeeDashboardSection } from "@/modules/daily-workforce/components/employee-dashboard-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -149,6 +150,14 @@ export default async function DashboardPage() {
   // no management quick actions. Every other role's dashboard is
   // completely unchanged.
   const isPlainEmployee = isEmployeeOnlyAccount(roleNames);
+  // Part 22/23/34 — an Inspector-only account (no other elevated role)
+  // gets its own focused dashboard content instead of the generic
+  // company-wide "Overview"/"Activity & compliance" placeholders, which
+  // were never meant for a single-purpose operational role. Reuses the
+  // SAME precise, non-crude role check (isEmployeeOrInspectorOnlyAccount)
+  // already established for Equipment/Safety Overview gating in the
+  // prior Inspector role correction — never a fresh NON_EMPLOYEE_ROLES bucket.
+  const isInspectorOnly = isEmployeeOrInspectorOnlyAccount(roleNames) && roleNames.includes("inspector");
   const currentProject = effectiveProjectId ? await getProject(current.id, effectiveProjectId) : null;
 
   // Employee Dashboard section (Phase F) — only when the signed-in user
@@ -156,8 +165,14 @@ export default async function DashboardPage() {
   // every query below is explicitly scoped to that one employee, never
   // exposing another employee's records.
   let employeeSection: ReactNode = null;
+  let inspectorSection: ReactNode = null;
   if (effectiveProjectId) {
     const myEmployeeId = await getMyEmployeeId(current.id, user.id);
+    if (myEmployeeId && isInspectorOnly) {
+      inspectorSection = (
+        <InspectorDashboardSection companyId={current.id} projectId={effectiveProjectId} projectTimezone={currentProject?.timezone ?? null} inspectorEmployeeId={myEmployeeId} basePath={`/companies/${current.id}/projects/${effectiveProjectId}`} />
+      );
+    }
     if (myEmployeeId) {
       const today = getProjectLocalDate(currentProject?.timezone);
       const weekPeriod = resolveWorkedHoursPeriod("week", today);
@@ -174,7 +189,7 @@ export default async function DashboardPage() {
           listToolboxMeetings(current.id, { projectId: effectiveProjectId, dateFrom: today, dateTo: today }),
           listActiveSafetyFlashesForEmployee(current.id, effectiveProjectId),
           listMyCorrectiveActions(current.id, myEmployeeId),
-          listEquipmentCandidateItems(current.id, effectiveProjectId),
+          listRequestableEquipmentItems(current.id, effectiveProjectId),
         ]);
 
       const hoursThisWeek = weekRows[0]?.totalHours ?? 0;
@@ -237,7 +252,9 @@ export default async function DashboardPage() {
 
       {employeeSection}
 
-      {!isPlainEmployee && (
+      {inspectorSection}
+
+      {!isPlainEmployee && !isInspectorOnly && (
         <>
           <Card>
             <CardContent className="flex flex-wrap items-center justify-between gap-4">

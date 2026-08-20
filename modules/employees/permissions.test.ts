@@ -5,6 +5,7 @@ import {
   canManageEmployeeRoles,
   canManageEmploymentLifecycle,
   assignableRoleNamesFor,
+  isAssignableAsOrdinaryWorker,
 } from "./permissions";
 
 describe("canManageEmployees", () => {
@@ -111,5 +112,37 @@ describe("assignableRoleNamesFor", () => {
     const assignable = assignableRoleNamesFor(["employee"], [...allRoles]);
     expect(assignable).not.toContain("company_admin");
     expect(assignable).toContain("planner");
+  });
+});
+
+describe("isAssignableAsOrdinaryWorker — Part 9's management self-participation rule", () => {
+  it("blocks an account holding ONLY management-only roles", () => {
+    expect(isAssignableAsOrdinaryWorker(["platform_super_admin"])).toBe(false);
+    expect(isAssignableAsOrdinaryWorker(["company_admin"])).toBe(false);
+    expect(isAssignableAsOrdinaryWorker(["project_manager"])).toBe(false);
+    expect(isAssignableAsOrdinaryWorker(["planner"])).toBe(false);
+  });
+
+  it("blocks a combination of multiple management-only roles", () => {
+    expect(isAssignableAsOrdinaryWorker(["company_admin", "planner"])).toBe(false);
+  });
+
+  it("allows an ordinary operational role", () => {
+    expect(isAssignableAsOrdinaryWorker(["employee"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["foreman"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["inspector"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["hse_officer"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["hseq_manager"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["operations_manager"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["recruiter"])).toBe(true);
+  });
+
+  it("allows a genuine multi-role account holding a management role ALONGSIDE an operational one (never wrongly narrowed)", () => {
+    expect(isAssignableAsOrdinaryWorker(["project_manager", "foreman"])).toBe(true);
+    expect(isAssignableAsOrdinaryWorker(["company_admin", "employee"])).toBe(true);
+  });
+
+  it("treats an account with no roles at all as assignable (not blocked by this rule — other eligibility checks apply)", () => {
+    expect(isAssignableAsOrdinaryWorker([])).toBe(true);
   });
 });

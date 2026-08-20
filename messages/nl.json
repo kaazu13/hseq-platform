@@ -189,7 +189,32 @@
     "absencesTab": "Afwezigheden",
     "noAbsencesTitle": "Geen afwezigheid geregistreerd",
     "noAbsencesDescription": "Er is niets geregistreerd voor deze periode.",
-    "daysRecorded": "{count, plural, one {# dag geregistreerd} other {# dagen geregistreerd}}"
+    "daysRecorded": "{count, plural, one {# dag geregistreerd} other {# dagen geregistreerd}}",
+    "weekday": {
+      "mon": "Ma",
+      "tue": "Di",
+      "wed": "Wo",
+      "thu": "Do",
+      "fri": "Vr",
+      "sat": "Za",
+      "sun": "Zo"
+    },
+    "conflictBadge": "Tegenstrijdige registraties",
+    "pendingBadge": "In behandeling",
+    "legend": {
+      "worked": "Gewerkt",
+      "approvedLeave": "Goedgekeurd verlof",
+      "confirmedAbsent": "Bevestigd afwezig",
+      "pending": "Aanvraag in behandeling",
+      "sunday": "Zondag"
+    },
+    "total": "Totaal",
+    "noHoursThisDay": "Geen uren geregistreerd op deze dag.",
+    "attendance": "Aanwezigheid",
+    "discrepancy": "Afwijking",
+    "correctionCount": "{count} correctie(s) geregistreerd.",
+    "calendarView": "Kalender",
+    "listView": "Lijst"
   },
   "WorkedHours": {
     "title": "Gewerkte uren",
@@ -295,7 +320,10 @@
     "myRequests": "Mijn aanvragen",
     "noRequestsTitle": "Nog geen aanvragen",
     "noRequestsDescription": "Uitrustingsaanvragen die je indient, verschijnen hier.",
-    "qtyAndDate": "Aantal {count} · {date}"
+    "qtyAndDate": "Aantal {count} · {date}",
+    "price": "Prijs {price}",
+    "priceEach": "Prijs {price} per stuk",
+    "totalAssignedValue": "Totale waarde toegewezen uitrusting"
   },
   "ScaffoldRegister": {
     "createdMessage": "Steiger {param:tag} succesvol geregistreerd.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Inspectiegeschiedenis",
     "newInspection": "Nieuwe inspectie",
     "noInspectionsTitle": "Nog geen inspecties",
-    "noInspectionsDescription": "Deze steiger is nog niet geïnspecteerd."
+    "noInspectionsDescription": "Deze steiger is nog niet geïnspecteerd.",
+    "fieldClient": "Klant",
+    "clientNotSet": "Niet ingesteld"
   },
   "ScaffoldInspections": {
     "title": "Steigerinspecties",
@@ -541,7 +571,25 @@
     "language": "Taal",
     "theme": "Thema",
     "accentColor": "Accentkleur",
-    "openSettings": "Instellingen openen"
+    "openSettings": "Instellingen openen",
+    "tabProfile": "Profiel",
+    "tabRequests": "Aanvragen",
+    "tabRates": "Tarieven",
+    "tabSecurity": "Beveiliging",
+    "requestsDescription": "Uw eigen verlof- en afwezigheidsaanvragen.",
+    "ratesDescription": "Uw eigen uurtarief en betalingsgeschiedenis.",
+    "noRequestsTitle": "Nog geen aanvragen",
+    "noRequestsDescription": "Aanvragen die u indient, verschijnen hier.",
+    "requestTypeLeave": "Verlof",
+    "requestTypeAbsence": "Afwezigheid",
+    "submittedOn": "Ingediend op {date}",
+    "reviewedBy": "Beoordeeld door {name}",
+    "noRateSetTitle": "Geen tarief ingesteld",
+    "noRateSetDescription": "Er is nog geen uurtarief voor u vastgelegd.",
+    "currentRate": "Huidig tarief",
+    "perHour": "/ uur",
+    "effectiveFrom": "Geldig vanaf {date}",
+    "previousRates": "Eerdere tarieven"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Locatie bewerken",
     "viewOnMap": "Op kaart bekijken",
     "directions": "Routebeschrijving",
-    "locationNotSet": "Locatie niet ingesteld"
+    "locationNotSet": "Locatie niet ingesteld",
+    "selectOnMap": "Selecteren op kaart",
+    "advancedCoordinates": "Geavanceerd / coördinaten",
+    "mapPickerHint": "Klik of tik op de kaart om de markering te plaatsen, of sleep deze om aan te passen.",
+    "confirmLocation": "Locatie bevestigen",
+    "cancel": "Annuleren"
   },
   "InspectionDashboard": {
     "title": "Inspectiedashboard",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspecteur vergrendeld op jou",
     "inspectorSearchPlaceholder": "Zoek op naam of personeelsnummer…",
     "noEligibleInspectors": "Geen geschikte inspecteur of voorman gevonden voor dit project."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informatie",
+      "crew": "Montageploeg",
+      "inspectionLocation": "Inspectie & locatie",
+      "review": "Notities & controle"
+    },
+    "project": "Project",
+    "client": "Klant",
+    "tagNumber": "Steiger-tag / ID-nummer",
+    "workArea": "Werkgebied / locatie",
+    "structureReference": "Constructie-, apparatuur- of eenheidsreferentie (optioneel)",
+    "scaffoldType": "Type steiger",
+    "intendedUse": "Beoogd gebruik (optioneel)",
+    "dimensionsTitle": "Afmetingen en belasting",
+    "heightMetres": "Steigerhoogte, meter (optioneel)",
+    "lengthMetres": "Steigerlengte, meter (optioneel)",
+    "widthMetres": "Steigerbreedte, meter (optioneel)",
+    "maxLoadClass": "Maximaal toegestane belasting / belastingsklasse",
+    "maxLoadClassPlaceholder": "bijv. Lichte belasting (2,0 kN/m2)",
+    "responsibleForemanTitle": "Verantwoordelijke voorman",
+    "selfLockedForeman": "{name} (uzelf)",
+    "selfLockedForemanNote": "Als voorman kunt u alleen een steiger registreren met uzelf als verantwoordelijke voorman.",
+    "noForemenAvailable": "Er zijn geen actieve voormannen aan dit project toegewezen.",
+    "searchForemanPlaceholder": "Zoek voorman op naam of personeelsnummer…",
+    "you": "U",
+    "datesTitle": "Data",
+    "erectionDate": "Montagedatum",
+    "erectedBy": "Opgebouwd door (onderaannemersploeg, indien van toepassing — optioneel)",
+    "notesTitle": "Notities",
+    "notesLabel": "Notities (optioneel)",
+    "photosAfterCreateNote": "Opleverings-/montagefoto's kunnen worden toegevoegd zodra de steiger is geregistreerd.",
+    "photosAfterSaveNote": "Beheer opleverings-/montagefoto's vanaf de steigerdetailpagina.",
+    "reviewTitle": "Controle",
+    "crewCount": "{count} personen",
+    "customDays": "Elke {days} dagen",
+    "locationSet": "Ingesteld",
+    "back": "Terug",
+    "next": "Volgende",
+    "cancel": "Annuleren",
+    "saving": "Opslaan…",
+    "registerScaffold": "Steiger registreren",
+    "saveChanges": "Wijzigingen opslaan",
+    "chooseForemanError": "Kies de verantwoordelijke voorman.",
+    "emptyCrewError": "Voeg minstens één persoon toe aan de montageploeg."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Uw laatste inspecties",
+    "noInspectionsTitle": "Nog geen inspecties",
+    "noInspectionsDescription": "Inspecties die u afrondt, verschijnen hier.",
+    "inspectionOverviewTitle": "Inspectieoverzicht",
+    "openFullDashboard": "Inspectiedashboard openen",
+    "quickActionsTitle": "Snelle acties",
+    "scaffoldMap": "Steigerkaart",
+    "myHours": "Mijn uren",
+    "myEquipment": "Mijn uitrusting"
   }
 }

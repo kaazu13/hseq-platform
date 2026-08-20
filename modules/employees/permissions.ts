@@ -89,3 +89,11 @@ export function assignableRoleNamesFor(actorRoleNames: RoleName[], allRoleNames:
     return !OPERATIONS_MANAGER_FORBIDDEN_ASSIGNMENTS.includes(role);
   });
 }
+
+/** Part 9 of the operational UX package — a management-only account (holding ONLY these company roles) must never be assignable as an ordinary worker (Today's Team member, scaffold erection crew) by someone ELSE. The real enforcement is server-side (is_employee_assignable_as_worker(), 20260902150000_management_self_participation_rule.sql) — this mirror only decides what to render/offer in a picker, and only applies when the account holds NO role outside this set (a multi-role account, e.g. project_manager + foreman, is unaffected). */
+export const MANAGEMENT_ONLY_ROLES: RoleName[] = ["platform_super_admin", "company_admin", "project_manager", "planner"];
+
+export function isAssignableAsOrdinaryWorker(roleNames: RoleName[]): boolean {
+  if (roleNames.length === 0) return true;
+  return roleNames.some((role) => !MANAGEMENT_ONLY_ROLES.includes(role));
+}

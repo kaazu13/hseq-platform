@@ -22,6 +22,8 @@ import { dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
 import type { Project } from "@/modules/projects/types";
 import type { RoleName } from "@/modules/companies/types";
 import type { EmployeeOption } from "@/modules/employees/employee-options";
+import { getEmployeeRoleInfoBulk } from "@/modules/employees/queries";
+import { isAssignableAsOrdinaryWorker } from "@/modules/employees/permissions";
 
 /**
  * Server-only data access for the Scaffolds/Scaffold Inspections domain —
@@ -35,6 +37,7 @@ import type { EmployeeOption } from "@/modules/employees/employee-options";
 export type ScaffoldListFilters = {
   projectId?: string;
   workAreaSearch?: string;
+  clientSearch?: string;
   scaffoldType?: string;
   status?: string;
 };
@@ -108,6 +111,7 @@ export async function listScaffolds(companyId: string, filters: ScaffoldListFilt
 
   if (filters.projectId) query = query.eq("project_id", filters.projectId);
   if (filters.workAreaSearch) query = query.ilike("work_area", `%${filters.workAreaSearch}%`);
+  if (filters.clientSearch) query = query.ilike("client_name", `%${filters.clientSearch}%`);
   if (filters.scaffoldType) query = query.eq("scaffold_type", filters.scaffoldType as Scaffold["scaffold_type"]);
   if (filters.status) query = query.eq("status", filters.status as Scaffold["status"]);
 
@@ -600,16 +604,11 @@ export async function listInspectorsToday(projectId: string, workDate: string): 
 }
 
 /** Part L — latest N finalized inspections project-wide, newest first. Bounded (default 10) — never an unbounded history load. */
-export async function listRecentInspections(companyId: string, projectId: string, limit = 10): Promise<RecentInspectionRow[]> {
+export async function listRecentInspections(companyId: string, projectId: string, limit = 10, filterByInspectorId?: string): Promise<RecentInspectionRow[]> {
   const supabase = await createClient();
-  const { data: inspections, error } = await supabase
-    .from("scaffold_inspections")
-    .select("*")
-    .eq("company_id", companyId)
-    .eq("project_id", projectId)
-    .eq("status", "finalized")
-    .order("finalized_at", { ascending: false })
-    .limit(limit);
+  let query = supabase.from("scaffold_inspections").select("*").eq("company_id", companyId).eq("project_id", projectId).eq("status", "finalized");
+  if (filterByInspectorId) query = query.eq("inspector_id", filterByInspectorId);
+  const { data: inspections, error } = await query.order("finalized_at", { ascending: false }).limit(limit);
   if (error) throw error;
   if (!inspections || inspections.length === 0) return [];
 
@@ -667,8 +666,19 @@ export async function listEligibleScaffoldInspectors(companyId: string, projectI
  */
 export async function listAvailableScaffoldWorkers(companyId: string, projectId: string, workDate: string): Promise<EmployeeOption[]> {
   const workforce = await listWorkforceForDate(companyId, projectId, workDate);
-  return workforce
-    .filter((state) => dailyAttendancePermitsWork(state.attendanceStatus))
+  const atWork = workforce.filter((state) => dailyAttendancePermitsWork(state.attendanceStatus));
+  // Part 9 — a batched (3-query-total, not N+1) role lookup so a
+  // management-only account (platform_super_admin/company_admin/
+  // project_manager/planner, and NOTHING else) never appears as a
+  // selectable erection worker for someone else to add. The real
+  // enforcement is server-side (is_employee_assignable_as_worker()); this
+  // is only what gets offered in the picker.
+  const roleInfoByEmployeeId = await getEmployeeRoleInfoBulk(
+    companyId,
+    atWork.map((state) => state.employee),
+  );
+  return atWork
+    .filter((state) => isAssignableAsOrdinaryWorker((roleInfoByEmployeeId.get(state.employee.id)?.roles ?? []).map((r) => r.name)))
     .map((state) => ({
       value: state.employee.id,
       label: `${state.employee.first_name} ${state.employee.last_name}`,

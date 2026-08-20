@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const FILTER_KEYS = ["workArea", "scaffoldType", "status"] as const;
+const FILTER_KEYS = ["workArea", "client", "scaffoldType", "status"] as const;
 
 /**
  * URL-search-param-driven filters for the Scaffold register — same pattern
@@ -27,10 +27,17 @@ export function ScaffoldFilters({ basePath }: { basePath: string }) {
   const urlWorkArea = searchParams.get("workArea") ?? "";
   const [lastUrlWorkArea, setLastUrlWorkArea] = useState(urlWorkArea);
   const [workAreaValue, setWorkAreaValue] = useState(urlWorkArea);
+  const urlClient = searchParams.get("client") ?? "";
+  const [lastUrlClient, setLastUrlClient] = useState(urlClient);
+  const [clientValue, setClientValue] = useState(urlClient);
 
   if (urlWorkArea !== lastUrlWorkArea) {
     setLastUrlWorkArea(urlWorkArea);
     setWorkAreaValue(urlWorkArea);
+  }
+  if (urlClient !== lastUrlClient) {
+    setLastUrlClient(urlClient);
+    setClientValue(urlClient);
   }
 
   function setParam(key: string, value: string | null) {
@@ -51,11 +58,18 @@ export function ScaffoldFilters({ basePath }: { basePath: string }) {
     searchDebounceRef.current = setTimeout(() => setParam("workArea", value), 300);
   }
 
+  function onClientChange(value: string) {
+    setClientValue(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => setParam("client", value), 300);
+  }
+
   const hasActiveFilters = FILTER_KEYS.some((key) => Boolean(searchParams.get(key)));
 
   function clearFilters() {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setWorkAreaValue("");
+    setClientValue("");
     const params = new URLSearchParams(searchParams.toString());
     for (const key of FILTER_KEYS) params.delete(key);
     startTransition(() => {
@@ -68,6 +82,11 @@ export function ScaffoldFilters({ basePath }: { basePath: string }) {
       <div className="relative w-full sm:max-w-xs">
         <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search work area…" value={workAreaValue} className="pl-8" onChange={(event) => onWorkAreaChange(event.target.value)} aria-label="Search work area" />
+      </div>
+
+      <div className="relative w-full sm:max-w-xs">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input placeholder="Search client…" value={clientValue} className="pl-8" onChange={(event) => onClientChange(event.target.value)} aria-label="Search client" />
       </div>
 
       <Select value={searchParams.get("scaffoldType") ?? "all"} onValueChange={(value) => setParam("scaffoldType", value)}>

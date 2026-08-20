@@ -129,6 +129,33 @@ export async function listWorkedHoursCorrectionCountsByWorkedHoursId(companyId: 
   return map;
 }
 
+/**
+ * Part 45 — the batched (one query total, not N+1) counterpart to
+ * listWorkedHoursCorrections() for an entire period at once. My Hours'
+ * month view previously called listWorkedHoursCorrections() once PER
+ * worked_hours row in the period (up to ~30 separate round-trips for a
+ * month) — this replaces that loop with a single `.in()` query, keyed by
+ * worked_hours_id, same convention as listWorkedHoursCorrectionCountsByWorkedHoursId above.
+ */
+export async function listWorkedHoursCorrectionsByWorkedHoursIds(companyId: string, workedHoursIds: string[]): Promise<Map<string, WorkedHoursCorrection[]>> {
+  const map = new Map<string, WorkedHoursCorrection[]>();
+  if (workedHoursIds.length === 0) return map;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("worked_hours_corrections")
+    .select("*")
+    .eq("company_id", companyId)
+    .in("worked_hours_id", workedHoursIds)
+    .order("changed_at", { ascending: true });
+  if (error) throw error;
+  for (const row of data ?? []) {
+    const list = map.get(row.worked_hours_id) ?? [];
+    list.push(row);
+    map.set(row.worked_hours_id, list);
+  }
+  return map;
+}
+
 /** Every employee currently rostered onto `projectId` (an active project_assignments row) — the bulk-apply picker's candidate list, same roster query shape as modules/daily-workforce/queries.ts's listWorkforceForDate but without the attendance/team join (Worked Hours doesn't gate on attendance status). */
 export async function listProjectRosterEmployees(companyId: string, projectId: string): Promise<BasicEmployee[]> {
   const supabase = await createClient();

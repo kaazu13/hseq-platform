@@ -9,10 +9,33 @@ import type {
   PublicDocumentReport,
 } from "@/modules/reports/types";
 import { REPORT_RECORD_TYPE_LABELS, isDocumentPassthroughRecordType } from "@/modules/reports/types";
-import { formatLmraReference, LMRA_SHIFT_LABELS, type LmraShift } from "@/modules/lmra/types";
-import { formatInspectionReference } from "@/modules/scaffolds/types";
-import { formatObservationReference } from "@/modules/observations/types";
-import { formatCorrectiveActionReference } from "@/modules/corrective-actions/types";
+import { formatLmraReference, LMRA_SHIFT_LABELS, LMRA_STATUS_LABELS, LMRA_HAZARD_TYPE_LABELS, type LmraShift, type LmraStatus, type LmraHazardType } from "@/modules/lmra/types";
+import {
+  formatInspectionReference,
+  SCAFFOLD_TYPE_LABELS,
+  SCAFFOLD_INSPECTION_STATUS_LABELS,
+  SCAFFOLD_INSPECTION_OUTCOME_LABELS,
+  SCAFFOLD_INSPECTION_ITEM_TYPE_LABELS,
+  SCAFFOLD_INSPECTION_ITEM_RESULT_LABELS,
+  type ScaffoldType,
+  type ScaffoldInspectionStatus,
+  type ScaffoldInspectionOutcome,
+  type ScaffoldInspectionItemType,
+  type ScaffoldInspectionItemResult,
+} from "@/modules/scaffolds/types";
+import { SCAFFOLD_DEFECT_SEVERITY_LABELS, SCAFFOLD_DEFECT_STATUS_LABELS, type ScaffoldDefectSeverity, type ScaffoldDefectStatus } from "@/modules/scaffold-defects/types";
+import {
+  formatObservationReference,
+  OBSERVATION_STATUS_LABELS,
+  OBSERVATION_TYPE_LABELS,
+  OBSERVATION_RISK_LEVEL_LABELS,
+  OBSERVATION_CATEGORY_LABELS,
+  type ObservationStatus,
+  type ObservationType,
+  type ObservationRiskLevel,
+  type ObservationCategory,
+} from "@/modules/observations/types";
+import { formatCorrectiveActionReference, CORRECTIVE_ACTION_STATUS_LABELS, CORRECTIVE_ACTION_PRIORITY_LABELS, type CorrectiveActionStatus, type CorrectiveActionPriority } from "@/modules/corrective-actions/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,7 +150,7 @@ function LmraPublicView({ record }: { record: PublicLmraReport }) {
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
           <div className="flex gap-2 sm:col-span-2">
-            <Badge>{titleCase(record.status)}</Badge>
+            <Badge>{LMRA_STATUS_LABELS[record.status as LmraStatus] ?? titleCase(record.status)}</Badge>
             {record.status !== "draft" && <Badge variant={record.result === "go" ? "default" : "destructive"}>{record.result === "go" ? "Go" : "No-Go"}</Badge>}
           </div>
           <Field label="Work area" value={record.work_area} />
@@ -164,7 +187,7 @@ function LmraPublicView({ record }: { record: PublicLmraReport }) {
               <Card key={i}>
                 <CardContent className="flex flex-col gap-1.5 pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{titleCase(hazard.hazard_type)}</span>
+                    <span className="text-sm font-medium">{LMRA_HAZARD_TYPE_LABELS[hazard.hazard_type as LmraHazardType] ?? titleCase(hazard.hazard_type)}</span>
                     <Badge variant={hazard.controls_confirmed ? "default" : "secondary"}>{hazard.controls_confirmed ? "Controls verified" : "Not verified"}</Badge>
                   </div>
                   {hazard.selected_controls.length > 0 && (
@@ -202,13 +225,14 @@ function ScaffoldInspectionPublicView({ record }: { record: PublicScaffoldInspec
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
           <div className="flex gap-2 sm:col-span-2">
-            <Badge variant={isVoided ? "destructive" : "default"}>{isVoided ? "Voided" : titleCase(record.status)}</Badge>
-            {!isVoided && record.outcome && <Badge variant="secondary">{titleCase(record.outcome)}</Badge>}
+            <Badge variant={isVoided ? "destructive" : "default"}>{isVoided ? "Voided" : (SCAFFOLD_INSPECTION_STATUS_LABELS[record.status as ScaffoldInspectionStatus] ?? titleCase(record.status))}</Badge>
+            {!isVoided && record.outcome && <Badge variant="secondary">{SCAFFOLD_INSPECTION_OUTCOME_LABELS[record.outcome as ScaffoldInspectionOutcome] ?? titleCase(record.outcome)}</Badge>}
           </div>
           <Field label="Scaffold number" value={record.scaffold_number} />
           <Field label="Tag number" value={record.tag_number} />
+          <Field label="Client" value={record.client_name ?? "Not set"} />
           <Field label="Work area" value={record.work_area} />
-          <Field label="Scaffold type" value={titleCase(record.scaffold_type)} />
+          <Field label="Scaffold type" value={SCAFFOLD_TYPE_LABELS[record.scaffold_type as ScaffoldType] ?? titleCase(record.scaffold_type)} />
           <Field label="Inspected at" value={formatDate(record.inspected_at)} />
           <Field label="Inspector" value={personName(record.inspector)} />
           {!isVoided && <Field label="Valid until" value={formatDate(record.expires_at)} />}
@@ -226,8 +250,8 @@ function ScaffoldInspectionPublicView({ record }: { record: PublicScaffoldInspec
           <div className="flex flex-col divide-y rounded-lg border">
             {flagged.map((item, i) => (
               <div key={i} className="flex flex-col gap-0.5 p-3 text-sm">
-                <span className="font-medium">{titleCase(item.item_type)}</span>
-                <span className="text-muted-foreground">{titleCase(item.result)}{item.comment ? ` — ${item.comment}` : ""}</span>
+                <span className="font-medium">{SCAFFOLD_INSPECTION_ITEM_TYPE_LABELS[item.item_type as ScaffoldInspectionItemType] ?? titleCase(item.item_type)}</span>
+                <span className="text-muted-foreground">{SCAFFOLD_INSPECTION_ITEM_RESULT_LABELS[item.result as ScaffoldInspectionItemResult] ?? titleCase(item.result)}{item.comment ? ` — ${item.comment}` : ""}</span>
               </div>
             ))}
           </div>
@@ -244,9 +268,9 @@ function ScaffoldInspectionPublicView({ record }: { record: PublicScaffoldInspec
               <Card key={i}>
                 <CardContent className="flex flex-col gap-1 pt-4">
                   <div className="flex items-center justify-between">
-                    <Badge variant={defect.severity === "critical" || defect.severity === "high" ? "destructive" : "secondary"}>{titleCase(defect.severity)}</Badge>
+                    <Badge variant={defect.severity === "critical" || defect.severity === "high" ? "destructive" : "secondary"}>{SCAFFOLD_DEFECT_SEVERITY_LABELS[defect.severity as ScaffoldDefectSeverity] ?? titleCase(defect.severity)}</Badge>
                     <span className="text-xs text-muted-foreground">
-                      Due {formatDate(defect.due_date)} · {titleCase(defect.status)}
+                      Due {formatDate(defect.due_date)} · {SCAFFOLD_DEFECT_STATUS_LABELS[defect.status as ScaffoldDefectStatus] ?? titleCase(defect.status)}
                     </span>
                   </div>
                   <p className="text-sm">{defect.description}</p>
@@ -266,14 +290,14 @@ function ObservationPublicView({ record }: { record: PublicSafetyObservationRepo
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
           <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <Badge>{titleCase(record.status)}</Badge>
-            <Badge variant="secondary">{titleCase(record.observation_type)}</Badge>
-            <Badge variant={record.risk_level === "critical" || record.risk_level === "high" ? "destructive" : "secondary"}>{titleCase(record.risk_level)}</Badge>
+            <Badge>{OBSERVATION_STATUS_LABELS[record.status as ObservationStatus] ?? titleCase(record.status)}</Badge>
+            <Badge variant="secondary">{OBSERVATION_TYPE_LABELS[record.observation_type as ObservationType] ?? titleCase(record.observation_type)}</Badge>
+            <Badge variant={record.risk_level === "critical" || record.risk_level === "high" ? "destructive" : "secondary"}>{OBSERVATION_RISK_LEVEL_LABELS[record.risk_level as ObservationRiskLevel] ?? titleCase(record.risk_level)}</Badge>
             {record.is_stop_work && <Badge variant="destructive">Stop work</Badge>}
           </div>
           <Field label="Work area" value={record.work_area} />
           <Field label="Observed at" value={formatDateTime(record.observed_at)} />
-          <Field label="Category" value={titleCase(record.category)} />
+          <Field label="Category" value={OBSERVATION_CATEGORY_LABELS[record.category as ObservationCategory] ?? titleCase(record.category)} />
           <Field label="Observer" value={personName(record.observer)} />
           <Field label="Description" value={record.description} />
           {record.immediate_action_taken && <Field label="Immediate action taken" value={record.immediate_action_taken} />}
@@ -290,9 +314,9 @@ function ObservationPublicView({ record }: { record: PublicSafetyObservationRepo
               <Card key={i}>
                 <CardContent className="flex flex-col gap-1 pt-4">
                   <div className="flex items-center justify-between">
-                    <Badge variant="secondary">{titleCase(action.priority)}</Badge>
+                    <Badge variant="secondary">{CORRECTIVE_ACTION_PRIORITY_LABELS[action.priority as CorrectiveActionPriority] ?? titleCase(action.priority)}</Badge>
                     <span className="text-xs text-muted-foreground">
-                      Due {formatDate(action.due_date)} · {titleCase(action.status)}
+                      Due {formatDate(action.due_date)} · {CORRECTIVE_ACTION_STATUS_LABELS[action.status as CorrectiveActionStatus] ?? titleCase(action.status)}
                     </span>
                   </div>
                   <p className="text-sm">{action.description}</p>
@@ -311,9 +335,9 @@ function CorrectiveActionPublicView({ record }: { record: PublicCorrectiveAction
     <Card>
       <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <Badge>{titleCase(record.status)}</Badge>
+          <Badge>{CORRECTIVE_ACTION_STATUS_LABELS[record.status as CorrectiveActionStatus] ?? titleCase(record.status)}</Badge>
         </div>
-        <Field label="Priority" value={titleCase(record.priority)} />
+        <Field label="Priority" value={CORRECTIVE_ACTION_PRIORITY_LABELS[record.priority as CorrectiveActionPriority] ?? titleCase(record.priority)} />
         <Field label="Due date" value={formatDate(record.due_date)} />
         <Field label="Responsible person" value={personName(record.responsible_person)} />
         <Field label="Description" value={record.description} />

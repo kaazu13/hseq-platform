@@ -189,7 +189,32 @@
     "absencesTab": "Fravær",
     "noAbsencesTitle": "Ingen fravær registrert",
     "noAbsencesDescription": "Ingenting er registrert for denne perioden.",
-    "daysRecorded": "{count, plural, one {# dag registrert} other {# dager registrert}}"
+    "daysRecorded": "{count, plural, one {# dag registrert} other {# dager registrert}}",
+    "weekday": {
+      "mon": "Man",
+      "tue": "Tir",
+      "wed": "Ons",
+      "thu": "Tor",
+      "fri": "Fre",
+      "sat": "Lør",
+      "sun": "Søn"
+    },
+    "conflictBadge": "Motstridende registreringer",
+    "pendingBadge": "Venter",
+    "legend": {
+      "worked": "Arbeidet",
+      "approvedLeave": "Godkjent ferie",
+      "confirmedAbsent": "Bekreftet fravær",
+      "pending": "Ventende søknad",
+      "sunday": "Søndag"
+    },
+    "total": "Totalt",
+    "noHoursThisDay": "Ingen timer registrert denne dagen.",
+    "attendance": "Oppmøte",
+    "discrepancy": "Avvik",
+    "correctionCount": "{count} korrigering(er) registrert.",
+    "calendarView": "Kalender",
+    "listView": "Liste"
   },
   "WorkedHours": {
     "title": "Arbeidede timer",
@@ -295,7 +320,10 @@
     "myRequests": "Mine forespørsler",
     "noRequestsTitle": "Ingen forespørsler ennå",
     "noRequestsDescription": "Utstyrsforespørsler du sender inn vises her.",
-    "qtyAndDate": "Antall {count} · {date}"
+    "qtyAndDate": "Antall {count} · {date}",
+    "price": "Pris {price}",
+    "priceEach": "Pris {price} per stk",
+    "totalAssignedValue": "Total verdi av tildelt utstyr"
   },
   "ScaffoldRegister": {
     "createdMessage": "Stillas {param:tag} registrert.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Kontrollhistorikk",
     "newInspection": "Ny kontroll",
     "noInspectionsTitle": "Ingen kontroller ennå",
-    "noInspectionsDescription": "Dette stillaset er ikke kontrollert ennå."
+    "noInspectionsDescription": "Dette stillaset er ikke kontrollert ennå.",
+    "fieldClient": "Kunde",
+    "clientNotSet": "Ikke angitt"
   },
   "ScaffoldInspections": {
     "title": "Stillaskontroller",
@@ -541,7 +571,25 @@
     "language": "Språk",
     "theme": "Tema",
     "accentColor": "Aksentfarge",
-    "openSettings": "Åpne innstillinger"
+    "openSettings": "Åpne innstillinger",
+    "tabProfile": "Profil",
+    "tabRequests": "Forespørsler",
+    "tabRates": "Satser",
+    "tabSecurity": "Sikkerhet",
+    "requestsDescription": "Dine egne ferie-/fraværssøknader.",
+    "ratesDescription": "Din egen timesats og lønnshistorikk.",
+    "noRequestsTitle": "Ingen forespørsler ennå",
+    "noRequestsDescription": "Forespørsler du sender inn vises her.",
+    "requestTypeLeave": "Ferie",
+    "requestTypeAbsence": "Fravær",
+    "submittedOn": "Sendt inn {date}",
+    "reviewedBy": "Vurdert av {name}",
+    "noRateSetTitle": "Ingen sats angitt",
+    "noRateSetDescription": "Ingen timesats er registrert for deg ennå.",
+    "currentRate": "Gjeldende sats",
+    "perHour": "/ time",
+    "effectiveFrom": "Gjelder fra {date}",
+    "previousRates": "Tidligere satser"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Rediger plassering",
     "viewOnMap": "Vis på kart",
     "directions": "Veibeskrivelse",
-    "locationNotSet": "Plassering ikke angitt"
+    "locationNotSet": "Plassering ikke angitt",
+    "selectOnMap": "Velg på kart",
+    "advancedCoordinates": "Avansert / koordinater",
+    "mapPickerHint": "Klikk eller trykk på kartet for å plassere markøren, eller dra den for å justere.",
+    "confirmLocation": "Bekreft plassering",
+    "cancel": "Avbryt"
   },
   "InspectionDashboard": {
     "title": "Inspeksjonspanel",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspektør låst til deg",
     "inspectorSearchPlaceholder": "Søk etter navn eller ansattnummer…",
     "noEligibleInspectors": "Ingen kvalifisert inspektør eller formann funnet for dette prosjektet."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informasjon",
+      "crew": "Monteringsmannskap",
+      "inspectionLocation": "Inspeksjon og plassering",
+      "review": "Notater og gjennomgang"
+    },
+    "project": "Prosjekt",
+    "client": "Kunde",
+    "tagNumber": "Stillas-ID / nummer",
+    "workArea": "Arbeidsområde / plassering",
+    "structureReference": "Struktur-, utstyrs- eller enhetsreferanse (valgfritt)",
+    "scaffoldType": "Stillastype",
+    "intendedUse": "Tiltenkt bruk (valgfritt)",
+    "dimensionsTitle": "Dimensjoner og last",
+    "heightMetres": "Stillashøyde, meter (valgfritt)",
+    "lengthMetres": "Stillaslengde, meter (valgfritt)",
+    "widthMetres": "Stillasbredde, meter (valgfritt)",
+    "maxLoadClass": "Maksimalt tillatt last / lastklasse",
+    "maxLoadClassPlaceholder": "f.eks. Lett last (2,0 kN/m2)",
+    "responsibleForemanTitle": "Ansvarlig formann",
+    "selfLockedForeman": "{name} (deg selv)",
+    "selfLockedForemanNote": "Som formann kan du bare registrere et stillas med deg selv som ansvarlig formann.",
+    "noForemenAvailable": "Ingen aktive formenn er tildelt dette prosjektet.",
+    "searchForemanPlaceholder": "Søk etter formann etter navn eller ansattnummer…",
+    "you": "Deg",
+    "datesTitle": "Datoer",
+    "erectionDate": "Monteringsdato",
+    "erectedBy": "Montert av (underleverandørteam, hvis aktuelt — valgfritt)",
+    "notesTitle": "Notater",
+    "notesLabel": "Notater (valgfritt)",
+    "photosAfterCreateNote": "Ferdigstillelses-/monteringsbilder kan legges til når stillaset er registrert.",
+    "photosAfterSaveNote": "Administrer ferdigstillelses-/monteringsbilder fra stillasets detaljside.",
+    "reviewTitle": "Gjennomgang",
+    "crewCount": "{count} personer",
+    "customDays": "Hver {days}. dag",
+    "locationSet": "Angitt",
+    "back": "Tilbake",
+    "next": "Neste",
+    "cancel": "Avbryt",
+    "saving": "Lagrer…",
+    "registerScaffold": "Registrer stillas",
+    "saveChanges": "Lagre endringer",
+    "chooseForemanError": "Velg ansvarlig formann.",
+    "emptyCrewError": "Legg til minst én person i monteringsmannskapet."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Dine siste inspeksjoner",
+    "noInspectionsTitle": "Ingen inspeksjoner ennå",
+    "noInspectionsDescription": "Inspeksjoner du fullfører vises her.",
+    "inspectionOverviewTitle": "Inspeksjonsoversikt",
+    "openFullDashboard": "Åpne inspeksjonsoversikt",
+    "quickActionsTitle": "Hurtighandlinger",
+    "scaffoldMap": "Stilaskart",
+    "myHours": "Mine timer",
+    "myEquipment": "Mitt utstyr"
   }
 }

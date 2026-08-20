@@ -189,7 +189,32 @@
     "absencesTab": "Absences",
     "noAbsencesTitle": "Aucune absence enregistrée",
     "noAbsencesDescription": "Rien n'a été enregistré pour cette période.",
-    "daysRecorded": "{count, plural, one {# jour enregistré} other {# jours enregistrés}}"
+    "daysRecorded": "{count, plural, one {# jour enregistré} other {# jours enregistrés}}",
+    "weekday": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mer",
+      "thu": "Jeu",
+      "fri": "Ven",
+      "sat": "Sam",
+      "sun": "Dim"
+    },
+    "conflictBadge": "Enregistrements contradictoires",
+    "pendingBadge": "En attente",
+    "legend": {
+      "worked": "Travaillé",
+      "approvedLeave": "Congé approuvé",
+      "confirmedAbsent": "Absence confirmée",
+      "pending": "Demande en attente",
+      "sunday": "Dimanche"
+    },
+    "total": "Total",
+    "noHoursThisDay": "Aucune heure enregistrée ce jour.",
+    "attendance": "Présence",
+    "discrepancy": "Écart",
+    "correctionCount": "{count} correction(s) enregistrée(s).",
+    "calendarView": "Calendrier",
+    "listView": "Liste"
   },
   "WorkedHours": {
     "title": "Heures travaillées",
@@ -295,7 +320,10 @@
     "myRequests": "Mes demandes",
     "noRequestsTitle": "Aucune demande pour l'instant",
     "noRequestsDescription": "Les demandes d'équipement que vous soumettez apparaîtront ici.",
-    "qtyAndDate": "Qté {count} · {date}"
+    "qtyAndDate": "Qté {count} · {date}",
+    "price": "Prix {price}",
+    "priceEach": "Prix {price} chacun",
+    "totalAssignedValue": "Valeur totale de l'équipement assigné"
   },
   "ScaffoldRegister": {
     "createdMessage": "Échafaudage {param:tag} enregistré avec succès.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Historique des inspections",
     "newInspection": "Nouvelle inspection",
     "noInspectionsTitle": "Aucune inspection pour l'instant",
-    "noInspectionsDescription": "Cet échafaudage n'a pas encore été inspecté."
+    "noInspectionsDescription": "Cet échafaudage n'a pas encore été inspecté.",
+    "fieldClient": "Client",
+    "clientNotSet": "Non défini"
   },
   "ScaffoldInspections": {
     "title": "Inspections d'échafaudages",
@@ -541,7 +571,25 @@
     "language": "Langue",
     "theme": "Thème",
     "accentColor": "Couleur d'accent",
-    "openSettings": "Ouvrir les paramètres"
+    "openSettings": "Ouvrir les paramètres",
+    "tabProfile": "Profil",
+    "tabRequests": "Demandes",
+    "tabRates": "Taux",
+    "tabSecurity": "Sécurité",
+    "requestsDescription": "Vos propres demandes de congés et d'absence.",
+    "ratesDescription": "Votre propre taux horaire et historique de paie.",
+    "noRequestsTitle": "Aucune demande pour l'instant",
+    "noRequestsDescription": "Les demandes que vous soumettez apparaîtront ici.",
+    "requestTypeLeave": "Congé",
+    "requestTypeAbsence": "Absence",
+    "submittedOn": "Soumis le {date}",
+    "reviewedBy": "Examiné par {name}",
+    "noRateSetTitle": "Aucun taux défini",
+    "noRateSetDescription": "Aucun taux horaire n'a encore été enregistré pour vous.",
+    "currentRate": "Taux actuel",
+    "perHour": "/ heure",
+    "effectiveFrom": "En vigueur à partir du {date}",
+    "previousRates": "Taux antérieurs"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Modifier l'emplacement",
     "viewOnMap": "Voir sur la carte",
     "directions": "Itinéraire",
-    "locationNotSet": "Emplacement non défini"
+    "locationNotSet": "Emplacement non défini",
+    "selectOnMap": "Sélectionner sur la carte",
+    "advancedCoordinates": "Avancé / coordonnées",
+    "mapPickerHint": "Cliquez ou touchez la carte pour placer le repère, ou faites-le glisser pour l'ajuster.",
+    "confirmLocation": "Confirmer l'emplacement",
+    "cancel": "Annuler"
   },
   "InspectionDashboard": {
     "title": "Tableau de bord des inspections",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspecteur verrouillé sur vous",
     "inspectorSearchPlaceholder": "Rechercher par nom ou numéro d'employé…",
     "noEligibleInspectors": "Aucun Inspecteur ou Chef d'équipe éligible trouvé pour ce projet."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informations",
+      "crew": "Équipe de montage",
+      "inspectionLocation": "Inspection et emplacement",
+      "review": "Notes et vérification"
+    },
+    "project": "Projet",
+    "client": "Client",
+    "tagNumber": "Étiquette / numéro d'identification de l'échafaudage",
+    "workArea": "Zone de travail / emplacement",
+    "structureReference": "Référence de structure, d'équipement ou d'unité (facultatif)",
+    "scaffoldType": "Type d'échafaudage",
+    "intendedUse": "Usage prévu (facultatif)",
+    "dimensionsTitle": "Dimensions et charge",
+    "heightMetres": "Hauteur de l'échafaudage, mètres (facultatif)",
+    "lengthMetres": "Longueur de l'échafaudage, mètres (facultatif)",
+    "widthMetres": "Largeur de l'échafaudage, mètres (facultatif)",
+    "maxLoadClass": "Charge maximale admissible / classe de charge",
+    "maxLoadClassPlaceholder": "ex. Service léger (2,0 kN/m2)",
+    "responsibleForemanTitle": "Chef d'équipe responsable",
+    "selfLockedForeman": "{name} (vous-même)",
+    "selfLockedForemanNote": "En tant que chef d'équipe, vous ne pouvez enregistrer un échafaudage qu'en vous désignant vous-même comme responsable.",
+    "noForemenAvailable": "Aucun chef d'équipe actif n'est affecté à ce projet.",
+    "searchForemanPlaceholder": "Rechercher un chef d'équipe par nom ou numéro d'employé…",
+    "you": "Vous",
+    "datesTitle": "Dates",
+    "erectionDate": "Date de montage",
+    "erectedBy": "Monté par (équipe sous-traitante, le cas échéant — facultatif)",
+    "notesTitle": "Notes",
+    "notesLabel": "Notes (facultatif)",
+    "photosAfterCreateNote": "Les photos d'achèvement/montage peuvent être ajoutées une fois l'échafaudage enregistré.",
+    "photosAfterSaveNote": "Gérez les photos d'achèvement/montage depuis la page de détail de l'échafaudage.",
+    "reviewTitle": "Vérification",
+    "crewCount": "{count} personnes",
+    "customDays": "Tous les {days} jours",
+    "locationSet": "Définie",
+    "back": "Précédent",
+    "next": "Suivant",
+    "cancel": "Annuler",
+    "saving": "Enregistrement…",
+    "registerScaffold": "Enregistrer l'échafaudage",
+    "saveChanges": "Enregistrer les modifications",
+    "chooseForemanError": "Choisissez le chef d'équipe responsable.",
+    "emptyCrewError": "Ajoutez au moins une personne à l'équipe de montage."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Vos dernières inspections",
+    "noInspectionsTitle": "Aucune inspection pour l'instant",
+    "noInspectionsDescription": "Les inspections que vous finalisez apparaîtront ici.",
+    "inspectionOverviewTitle": "Aperçu des inspections",
+    "openFullDashboard": "Ouvrir le tableau de bord des inspections",
+    "quickActionsTitle": "Actions rapides",
+    "scaffoldMap": "Carte des échafaudages",
+    "myHours": "Mes heures",
+    "myEquipment": "Mon équipement"
   }
 }

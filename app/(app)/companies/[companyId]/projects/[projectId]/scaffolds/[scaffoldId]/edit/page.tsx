@@ -43,7 +43,18 @@ export default async function EditScaffoldPage({ params }: EditScaffoldPageProps
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title="Edit scaffold" description={`${project.name} · ${scaffold.tag_number}`} />
       <div className="max-w-3xl">
-        <ScaffoldForm mode="edit" companyId={companyId} projectId={scaffold.project_id} projectName={project.name} foremanOptions={foremanOptions} today={today} scaffold={scaffold} />
+        <ScaffoldForm
+          mode="edit"
+          companyId={companyId}
+          projectId={scaffold.project_id}
+          projectName={project.name}
+          projectClientName={project.client_name}
+          siteLatitude={project.site_latitude}
+          siteLongitude={project.site_longitude}
+          foremanOptions={foremanOptions}
+          today={today}
+          scaffold={scaffold}
+        />
       </div>
     </div>
   );

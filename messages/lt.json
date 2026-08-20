@@ -189,7 +189,32 @@
     "absencesTab": "Nebuvimai",
     "noAbsencesTitle": "Nebuvimų neužregistruota",
     "noAbsencesDescription": "Šiam laikotarpiui nieko neužregistruota.",
-    "daysRecorded": "{count, plural, one {# diena užregistruota} few {# dienos užregistruotos} many {# dienos užregistruota} other {# dienų užregistruota}}"
+    "daysRecorded": "{count, plural, one {# diena užregistruota} few {# dienos užregistruotos} many {# dienos užregistruota} other {# dienų užregistruota}}",
+    "weekday": {
+      "mon": "Pr",
+      "tue": "An",
+      "wed": "Tr",
+      "thu": "Kt",
+      "fri": "Pn",
+      "sat": "Št",
+      "sun": "Sk"
+    },
+    "conflictBadge": "Prieštaringi įrašai",
+    "pendingBadge": "Laukiama",
+    "legend": {
+      "worked": "Dirbta",
+      "approvedLeave": "Patvirtintos atostogos",
+      "confirmedAbsent": "Patvirtintas nedarbas",
+      "pending": "Laukiantis prašymas",
+      "sunday": "Sekmadienis"
+    },
+    "total": "Iš viso",
+    "noHoursThisDay": "Šią dieną valandų neužregistruota.",
+    "attendance": "Lankomumas",
+    "discrepancy": "Neatitikimas",
+    "correctionCount": "Užregistruota pataisymų: {count}.",
+    "calendarView": "Kalendorius",
+    "listView": "Sąrašas"
   },
   "WorkedHours": {
     "title": "Dirbtos valandos",
@@ -295,7 +320,10 @@
     "myRequests": "Mano prašymai",
     "noRequestsTitle": "Kol kas nėra prašymų",
     "noRequestsDescription": "Jūsų pateikti įrangos prašymai bus rodomi čia.",
-    "qtyAndDate": "Kiekis {count} · {date}"
+    "qtyAndDate": "Kiekis {count} · {date}",
+    "price": "Kaina {price}",
+    "priceEach": "Kaina {price} už vnt.",
+    "totalAssignedValue": "Bendra priskirtos įrangos vertė"
   },
   "ScaffoldRegister": {
     "createdMessage": "Pastoliai {param:tag} sėkmingai užregistruoti.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Patikrų istorija",
     "newInspection": "Nauja patikra",
     "noInspectionsTitle": "Patikrų dar nėra",
-    "noInspectionsDescription": "Šie pastoliai dar nebuvo patikrinti."
+    "noInspectionsDescription": "Šie pastoliai dar nebuvo patikrinti.",
+    "fieldClient": "Klientas",
+    "clientNotSet": "Nenustatyta"
   },
   "ScaffoldInspections": {
     "title": "Pastolių patikros",
@@ -541,7 +571,25 @@
     "language": "Kalba",
     "theme": "Tema",
     "accentColor": "Akcentinė spalva",
-    "openSettings": "Atidaryti nustatymus"
+    "openSettings": "Atidaryti nustatymus",
+    "tabProfile": "Profilis",
+    "tabRequests": "Prašymai",
+    "tabRates": "Įkainiai",
+    "tabSecurity": "Sauga",
+    "requestsDescription": "Jūsų asmeniniai atostogų / nedarbo prašymai.",
+    "ratesDescription": "Jūsų valandinis įkainis ir atlygio istorija.",
+    "noRequestsTitle": "Kol kas nėra prašymų",
+    "noRequestsDescription": "Jūsų pateikti prašymai bus rodomi čia.",
+    "requestTypeLeave": "Atostogos",
+    "requestTypeAbsence": "Nedarbas",
+    "submittedOn": "Pateikta {date}",
+    "reviewedBy": "Peržiūrėjo {name}",
+    "noRateSetTitle": "Įkainis nenustatytas",
+    "noRateSetDescription": "Jums dar nenustatytas joks valandinis įkainis.",
+    "currentRate": "Dabartinis įkainis",
+    "perHour": "/ val.",
+    "effectiveFrom": "Galioja nuo {date}",
+    "previousRates": "Ankstesni įkainiai"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Redaguoti vietą",
     "viewOnMap": "Žiūrėti žemėlapyje",
     "directions": "Kryptys",
-    "locationNotSet": "Vieta nenustatyta"
+    "locationNotSet": "Vieta nenustatyta",
+    "selectOnMap": "Pasirinkti žemėlapyje",
+    "advancedCoordinates": "Išplėstinės / koordinatės",
+    "mapPickerHint": "Spustelėkite arba bakstelėkite žemėlapį, kad pažymėtumėte tašką, arba vilkite jį, kad pakoreguotumėte.",
+    "confirmLocation": "Patvirtinti vietą",
+    "cancel": "Atšaukti"
   },
   "InspectionDashboard": {
     "title": "Patikrų suvestinė",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspektorius užfiksuotas kaip jūs",
     "inspectorSearchPlaceholder": "Ieškoti pagal vardą ar darbuotojo numerį…",
     "noEligibleInspectors": "Šiam projektui tinkamo inspektoriaus ar brigadininko nerasta."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Informacija",
+      "crew": "Statymo brigada",
+      "inspectionLocation": "Patikra ir vieta",
+      "review": "Pastabos ir peržiūra"
+    },
+    "project": "Projektas",
+    "client": "Klientas",
+    "tagNumber": "Pastolių žyma / ID numeris",
+    "workArea": "Darbo vieta / lokacija",
+    "structureReference": "Konstrukcijos, įrangos ar padalinio nuoroda (neprivaloma)",
+    "scaffoldType": "Pastolių tipas",
+    "intendedUse": "Numatoma paskirtis (neprivaloma)",
+    "dimensionsTitle": "Matmenys ir apkrova",
+    "heightMetres": "Pastolių aukštis, metrai (neprivaloma)",
+    "lengthMetres": "Pastolių ilgis, metrai (neprivaloma)",
+    "widthMetres": "Pastolių plotis, metrai (neprivaloma)",
+    "maxLoadClass": "Didžiausia leidžiama apkrova / apkrovos klasė",
+    "maxLoadClassPlaceholder": "pvz. Lengva apkrova (2,0 kN/m2)",
+    "responsibleForemanTitle": "Atsakingas brigadininkas",
+    "selfLockedForeman": "{name} (jūs patys)",
+    "selfLockedForemanNote": "Kaip brigadininkas, pastolius galite registruoti tik nurodydami save kaip atsakingą brigadininką.",
+    "noForemenAvailable": "Šiam projektui nepriskirta aktyvių brigadininkų.",
+    "searchForemanPlaceholder": "Ieškoti brigadininko pagal vardą ar darbuotojo numerį…",
+    "you": "Jūs",
+    "datesTitle": "Datos",
+    "erectionDate": "Statymo data",
+    "erectedBy": "Pastatė (subrangovo komanda, jei taikoma — neprivaloma)",
+    "notesTitle": "Pastabos",
+    "notesLabel": "Pastabos (neprivaloma)",
+    "photosAfterCreateNote": "Užbaigimo / statymo nuotraukas galima pridėti užregistravus pastolius.",
+    "photosAfterSaveNote": "Tvarkykite užbaigimo / statymo nuotraukas pastolių informacijos puslapyje.",
+    "reviewTitle": "Peržiūra",
+    "crewCount": "{count} žmonės",
+    "customDays": "Kas {days} d.",
+    "locationSet": "Nustatyta",
+    "back": "Atgal",
+    "next": "Toliau",
+    "cancel": "Atšaukti",
+    "saving": "Saugoma…",
+    "registerScaffold": "Registruoti pastolius",
+    "saveChanges": "Išsaugoti pakeitimus",
+    "chooseForemanError": "Pasirinkite atsakingą brigadininką.",
+    "emptyCrewError": "Pridėkite bent vieną žmogų į statymo brigadą."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Jūsų naujausios patikros",
+    "noInspectionsTitle": "Kol kas nėra patikrų",
+    "noInspectionsDescription": "Jūsų užbaigtos patikros bus rodomos čia.",
+    "inspectionOverviewTitle": "Patikrų apžvalga",
+    "openFullDashboard": "Atidaryti patikrų suvestinę",
+    "quickActionsTitle": "Greiti veiksmai",
+    "scaffoldMap": "Pastolių žemėlapis",
+    "myHours": "Mano valandos",
+    "myEquipment": "Mano įranga"
   }
 }

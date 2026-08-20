@@ -1313,6 +1313,67 @@ export type Database = {
           },
         ]
       }
+      employee_hourly_rates: {
+        Row: {
+          changed_by: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          hourly_rate: number
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          effective_from: string
+          effective_to?: string | null
+          employee_id: string
+          hourly_rate: number
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          hourly_rate?: number
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_hourly_rates_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_hourly_rates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_hourly_rates_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           account_status: Database["public"]["Enums"]["employee_account_status"]
@@ -1596,6 +1657,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -1610,6 +1672,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -1621,6 +1684,7 @@ export type Database = {
           condition?: Database["public"]["Enums"]["equipment_condition"]
           created_at?: string
           created_by?: string | null
+          currency?: string
           default_validity_days?: number | null
           description?: string | null
           id?: string
@@ -1635,6 +1699,7 @@ export type Database = {
           specification?: string | null
           status?: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1646,6 +1711,7 @@ export type Database = {
           condition?: Database["public"]["Enums"]["equipment_condition"]
           created_at?: string
           created_by?: string | null
+          currency?: string
           default_validity_days?: number | null
           description?: string | null
           id?: string
@@ -1660,6 +1726,7 @@ export type Database = {
           specification?: string | null
           status?: Database["public"]["Enums"]["equipment_status"]
           tracking_mode?: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -4058,6 +4125,7 @@ export type Database = {
       }
       scaffolds: {
         Row: {
+          client_name: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -4069,7 +4137,7 @@ export type Database = {
           inspection_interval_type:
             | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
             | null
-          intended_use: string
+          intended_use: string | null
           latitude: number | null
           length_metres: number | null
           longitude: number | null
@@ -4088,6 +4156,7 @@ export type Database = {
           work_area: string
         }
         Insert: {
+          client_name?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -4099,7 +4168,7 @@ export type Database = {
           inspection_interval_type?:
             | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
             | null
-          intended_use: string
+          intended_use?: string | null
           latitude?: number | null
           length_metres?: number | null
           longitude?: number | null
@@ -4118,6 +4187,7 @@ export type Database = {
           work_area: string
         }
         Update: {
+          client_name?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -4129,7 +4199,7 @@ export type Database = {
           inspection_interval_type?:
             | Database["public"]["Enums"]["scaffold_inspection_interval_type"]
             | null
-          intended_use?: string
+          intended_use?: string | null
           latitude?: number | null
           length_metres?: number | null
           longitude?: number | null
@@ -5758,6 +5828,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -5772,6 +5843,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -6188,6 +6260,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_equipment_catalog_manage_tier: {
+        Args: { target_company_id: string; target_project_id: string }
+        Returns: boolean
+      }
       is_equipment_manage_tier: {
         Args: { target_company_id: string; target_project_id: string }
         Returns: boolean
@@ -6401,6 +6477,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -6415,6 +6492,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -6439,6 +6517,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -6453,6 +6532,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -6797,6 +6877,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -6811,6 +6892,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -7267,6 +7349,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -7281,6 +7364,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -7581,6 +7665,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -7595,6 +7680,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -7817,6 +7903,7 @@ export type Database = {
           condition: Database["public"]["Enums"]["equipment_condition"]
           created_at: string
           created_by: string | null
+          currency: string
           default_validity_days: number | null
           description: string | null
           id: string
@@ -7831,6 +7918,7 @@ export type Database = {
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -8236,6 +8324,7 @@ export type Database = {
         | "out_of_service"
         | "retired"
         | "expiry_updated"
+        | "stock_adjusted"
       equipment_request_status:
         | "pending"
         | "approved"
@@ -8686,6 +8775,7 @@ export const Constants = {
         "out_of_service",
         "retired",
         "expiry_updated",
+        "stock_adjusted",
       ],
       equipment_request_status: [
         "pending",

@@ -123,10 +123,15 @@ export const scaffoldFormSchema = z
   .object({
     projectId: z.string().uuid("Choose a project"),
     tagNumber: z.string().trim().min(1, "Tag number is required").max(50, "Keep it under 50 characters"),
+    // Part 4/36 — mandatory for new/edited scaffolds going forward; the DB
+    // column stays nullable so pre-existing rows are unaffected (Part 44).
+    clientName: z.string().trim().min(1, "Client is required").max(150, "Keep it under 150 characters"),
     workArea: z.string().trim().min(1, "Work area is required").max(100, "Keep it under 100 characters"),
     structureReference: optionalText,
     scaffoldType: z.enum(SCAFFOLD_TYPE_VALUES),
-    intendedUse: z.string().trim().min(1, "Intended use is required").max(200, "Keep it under 200 characters"),
+    // Part 4 — no longer required (was min(1)); historical records with a
+    // value keep it, new/edited ones may leave it blank.
+    intendedUse: optionalText,
     maxLoadClass: z.string().trim().min(1, "Maximum permitted load or load class is required").max(100, "Keep it under 100 characters"),
     heightMetres: optionalPositiveDecimal("height"),
     lengthMetres: optionalPositiveDecimal("length"),

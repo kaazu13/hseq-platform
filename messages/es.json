@@ -189,7 +189,32 @@
     "absencesTab": "Ausencias",
     "noAbsencesTitle": "No hay ausencias registradas",
     "noAbsencesDescription": "No se ha registrado nada para este periodo.",
-    "daysRecorded": "{count, plural, one {# día registrado} other {# días registrados}}"
+    "daysRecorded": "{count, plural, one {# día registrado} other {# días registrados}}",
+    "weekday": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mié",
+      "thu": "Jue",
+      "fri": "Vie",
+      "sat": "Sáb",
+      "sun": "Dom"
+    },
+    "conflictBadge": "Registros contradictorios",
+    "pendingBadge": "Pendiente",
+    "legend": {
+      "worked": "Trabajado",
+      "approvedLeave": "Permiso aprobado",
+      "confirmedAbsent": "Ausencia confirmada",
+      "pending": "Solicitud pendiente",
+      "sunday": "Domingo"
+    },
+    "total": "Total",
+    "noHoursThisDay": "No se registraron horas este día.",
+    "attendance": "Asistencia",
+    "discrepancy": "Discrepancia",
+    "correctionCount": "{count} corrección(es) registradas.",
+    "calendarView": "Calendario",
+    "listView": "Lista"
   },
   "WorkedHours": {
     "title": "Horas trabajadas",
@@ -295,7 +320,10 @@
     "myRequests": "Mis solicitudes",
     "noRequestsTitle": "Aún no hay solicitudes",
     "noRequestsDescription": "Las solicitudes de equipo que envíes aparecerán aquí.",
-    "qtyAndDate": "Cant. {count} · {date}"
+    "qtyAndDate": "Cant. {count} · {date}",
+    "price": "Precio {price}",
+    "priceEach": "Precio {price} cada uno",
+    "totalAssignedValue": "Valor total del equipo asignado"
   },
   "ScaffoldRegister": {
     "createdMessage": "Andamio {param:tag} registrado correctamente.",
@@ -329,7 +357,9 @@
     "inspectionHistoryTitle": "Historial de inspecciones",
     "newInspection": "Nueva inspección",
     "noInspectionsTitle": "Aún no hay inspecciones",
-    "noInspectionsDescription": "Este andamio aún no ha sido inspeccionado."
+    "noInspectionsDescription": "Este andamio aún no ha sido inspeccionado.",
+    "fieldClient": "Cliente",
+    "clientNotSet": "No establecido"
   },
   "ScaffoldInspections": {
     "title": "Inspecciones de andamios",
@@ -541,7 +571,25 @@
     "language": "Idioma",
     "theme": "Tema",
     "accentColor": "Color de acento",
-    "openSettings": "Abrir Configuración"
+    "openSettings": "Abrir Configuración",
+    "tabProfile": "Perfil",
+    "tabRequests": "Solicitudes",
+    "tabRates": "Tarifas",
+    "tabSecurity": "Seguridad",
+    "requestsDescription": "Sus propias solicitudes de vacaciones/permiso y ausencia.",
+    "ratesDescription": "Su propia tarifa por hora e historial de pago.",
+    "noRequestsTitle": "Aún no hay solicitudes",
+    "noRequestsDescription": "Las solicitudes que envíe aparecerán aquí.",
+    "requestTypeLeave": "Vacaciones / Permiso",
+    "requestTypeAbsence": "Ausencia",
+    "submittedOn": "Enviado el {date}",
+    "reviewedBy": "Revisado por {name}",
+    "noRateSetTitle": "Sin tarifa establecida",
+    "noRateSetDescription": "Aún no se ha registrado ninguna tarifa por hora para usted.",
+    "currentRate": "Tarifa actual",
+    "perHour": "/ hora",
+    "effectiveFrom": "Vigente desde {date}",
+    "previousRates": "Tarifas anteriores"
   },
   "AccountLabels": {
     "roles": {
@@ -621,7 +669,12 @@
     "editLocation": "Editar ubicación",
     "viewOnMap": "Ver en el mapa",
     "directions": "Cómo llegar",
-    "locationNotSet": "Ubicación no establecida"
+    "locationNotSet": "Ubicación no establecida",
+    "selectOnMap": "Seleccionar en el mapa",
+    "advancedCoordinates": "Avanzado / coordenadas",
+    "mapPickerHint": "Haga clic o toque el mapa para colocar el marcador, o arrástrelo para ajustarlo.",
+    "confirmLocation": "Confirmar ubicación",
+    "cancel": "Cancelar"
   },
   "InspectionDashboard": {
     "title": "Panel de inspecciones",
@@ -710,5 +763,62 @@
     "inspectorLockedToYou": "Inspector fijado en ti",
     "inspectorSearchPlaceholder": "Buscar por nombre o número de empleado…",
     "noEligibleInspectors": "No se encontró ningún Inspector o Encargado elegible para este proyecto."
+  },
+  "ScaffoldWizard": {
+    "step": {
+      "information": "Información",
+      "crew": "Cuadrilla de montaje",
+      "inspectionLocation": "Inspección y ubicación",
+      "review": "Notas y revisión"
+    },
+    "project": "Proyecto",
+    "client": "Cliente",
+    "tagNumber": "Etiqueta / número de identificación del andamio",
+    "workArea": "Área de trabajo / ubicación",
+    "structureReference": "Referencia de estructura, equipo o unidad (opcional)",
+    "scaffoldType": "Tipo de andamio",
+    "intendedUse": "Uso previsto (opcional)",
+    "dimensionsTitle": "Dimensiones y carga",
+    "heightMetres": "Altura del andamio, metros (opcional)",
+    "lengthMetres": "Longitud del andamio, metros (opcional)",
+    "widthMetres": "Anchura del andamio, metros (opcional)",
+    "maxLoadClass": "Carga máxima permitida / clase de carga",
+    "maxLoadClassPlaceholder": "p. ej. Servicio ligero (2,0 kN/m2)",
+    "responsibleForemanTitle": "Capataz responsable",
+    "selfLockedForeman": "{name} (usted mismo)",
+    "selfLockedForemanNote": "Como capataz, solo puede registrar un andamio con usted mismo como capataz responsable.",
+    "noForemenAvailable": "No hay capataces activos asignados a este proyecto.",
+    "searchForemanPlaceholder": "Buscar capataz por nombre o número de empleado…",
+    "you": "Usted",
+    "datesTitle": "Fechas",
+    "erectionDate": "Fecha de montaje",
+    "erectedBy": "Montado por (equipo subcontratado, si aplica — opcional)",
+    "notesTitle": "Notas",
+    "notesLabel": "Notas (opcional)",
+    "photosAfterCreateNote": "Las fotos de finalización/montaje se pueden añadir una vez registrado el andamio.",
+    "photosAfterSaveNote": "Gestione las fotos de finalización/montaje desde la página de detalles del andamio.",
+    "reviewTitle": "Revisión",
+    "crewCount": "{count} personas",
+    "customDays": "Cada {days} días",
+    "locationSet": "Establecida",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "cancel": "Cancelar",
+    "saving": "Guardando…",
+    "registerScaffold": "Registrar andamio",
+    "saveChanges": "Guardar cambios",
+    "chooseForemanError": "Elija el capataz responsable.",
+    "emptyCrewError": "Añada al menos una persona a la cuadrilla de montaje."
+  },
+  "InspectorDashboard": {
+    "latestInspectionsTitle": "Sus últimas inspecciones",
+    "noInspectionsTitle": "Aún no hay inspecciones",
+    "noInspectionsDescription": "Las inspecciones que finalice aparecerán aquí.",
+    "inspectionOverviewTitle": "Resumen de inspecciones",
+    "openFullDashboard": "Abrir panel de inspecciones",
+    "quickActionsTitle": "Acciones rápidas",
+    "scaffoldMap": "Mapa de andamios",
+    "myHours": "Mis horas",
+    "myEquipment": "Mi equipo"
   }
 }

@@ -11,11 +11,10 @@ import { PersonalInformationCard } from "@/modules/account/components/personal-i
 import { AccountHeaderCard } from "@/modules/account/components/account-header-card";
 import { WorkInformationCard } from "@/modules/account/components/work-information-card";
 import { PreferencesSummaryCard } from "@/modules/account/components/preferences-summary-card";
-import { ChangePasswordDialog } from "@/modules/account-security/components/change-password-dialog";
+import { AccountSubnav } from "@/modules/account/components/account-subnav";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionHeader } from "@/components/shared/section-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_LOCALE, isSupportedLocale, LOCALE_NATIVE_NAMES } from "@/i18n/locale";
 
@@ -80,9 +79,12 @@ export default async function AccountPage() {
   const currentProject = currentProjectId ? projects.find((project) => project.id === currentProjectId) : undefined;
   const currentProjectLine = currentProject ? t("currentProject", { project: currentProject.name }) : null;
 
+  const showRates = Boolean(overview.employee);
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-4 sm:p-6">
       <PageHeader title={t("title")} description={t("description")} />
+      <AccountSubnav active="profile" showRates={showRates} />
 
       <AccountHeaderCard
         initials={initials}
@@ -138,28 +140,6 @@ export default async function AccountPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("accountSecurity")}</CardTitle>
-              <CardDescription>{t("accountSecurityDescription")}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("email")}</p>
-                  <p className="text-sm font-medium">{user.email}</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("password")}</p>
-                  <p className="text-sm font-medium tracking-widest">••••••••</p>
-                </div>
-                <ChangePasswordDialog />
-              </div>
-            </CardContent>
-          </Card>
-
           <PreferencesSummaryCard languageName={LOCALE_NATIVE_NAMES[currentLocale]} />
 
           {canAdminister && (

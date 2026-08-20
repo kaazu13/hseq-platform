@@ -19,7 +19,7 @@ import { RequestLeaveDialog } from "@/modules/leave-requests/components/request-
 import { TeamRoster } from "@/modules/daily-workforce/components/team-roster";
 import { RequestEquipmentDialog } from "@/modules/equipment/components/request-equipment-dialog";
 import { DirectionsButton } from "@/components/shared/directions-button";
-import type { EquipmentItem } from "@/modules/equipment/types";
+import type { RequestableEquipmentItem } from "@/modules/equipment/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +43,7 @@ type EmployeeDashboardSectionProps = {
   todaysToolboxMeetings: ToolboxMeeting[];
   activeSafetyFlashes: SafetyFlash[];
   myCorrectiveActions: CorrectiveActionDetail[];
-  equipmentCandidateItems: EquipmentItem[];
+  equipmentCandidateItems: RequestableEquipmentItem[];
 };
 
 function formatObservedAt(value: string): string {

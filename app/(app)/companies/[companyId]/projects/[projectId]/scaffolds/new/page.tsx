@@ -57,6 +57,9 @@ export default async function NewScaffoldPage({ params }: NewScaffoldPageProps) 
           companyId={companyId}
           projectId={project.id}
           projectName={project.name}
+          projectClientName={project.client_name}
+          siteLatitude={project.site_latitude}
+          siteLongitude={project.site_longitude}
           foremanOptions={foremanOptions}
           selfLockedForemanId={selfLockedForemanId}
           today={today}

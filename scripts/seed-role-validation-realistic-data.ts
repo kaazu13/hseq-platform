@@ -448,13 +448,30 @@ async function ensureDailyTeamsForDate(
     dailyTeamIdBySpecKey[spec.key] = dailyTeamId;
     log("daily-team", `${spec.name} (${workDate})`, "created", dailyTeamId);
 
+    let assignedCount = 0;
     for (const workerKey of spec.workerKeys) {
       const employeeId = employeeIdByKey[workerKey];
       if (!employeeId) throw new Error(`Unknown worker key "${workerKey}" for team ${spec.name}`);
       const { error: moveErr } = await adminSession.rpc("move_daily_team_member", { target_project_id: projectId, target_work_date: workDate, target_daily_team_id: dailyTeamId, target_employee_id: employeeId, target_role: "member" });
-      if (moveErr) throw new Error(`move_daily_team_member(${workerKey} -> ${spec.name}, ${workDate}): ${moveErr.message}`);
+      if (moveErr) {
+        // Part 11's provisional-unavailability guard (20260902160000) is
+        // expected to legitimately reject a team assignment for someone
+        // with a pending leave/absence request covering this date — the
+        // "employee-pending-leave" fixture's dates are real calendar dates
+        // fixed at insert time, so as real time passes this can genuinely
+        // collide with "today"/"tomorrow" team continuation. Skip that one
+        // worker (matching real product behavior — a team copy simply
+        // can't include someone who's provisionally unavailable) rather
+        // than failing the whole seed run; any OTHER error still throws.
+        if (moveErr.message.includes("pending leave/absence request")) {
+          log("daily-team-members", `${spec.name} (${workDate})`, "skipped", `${workerKey} provisionally unavailable`);
+          continue;
+        }
+        throw new Error(`move_daily_team_member(${workerKey} -> ${spec.name}, ${workDate}): ${moveErr.message}`);
+      }
+      assignedCount++;
     }
-    log("daily-team-members", `${spec.name} (${workDate})`, "created", `${spec.workerKeys.length} workers`);
+    log("daily-team-members", `${spec.name} (${workDate})`, "created", `${assignedCount} workers`);
   }
 
   return dailyTeamIdBySpecKey;
@@ -664,6 +681,8 @@ type ScaffoldSpec = {
   /** Scaffold Map coordinates (Part U) — omitted entirely means "Location not set", matching a real never-configured scaffold. */
   latitude?: number;
   longitude?: number;
+  /** Part 4/36/46 — omitted means "Not set" (a historical-shaped record), matching a real pre-Client-field scaffold. */
+  clientName?: string;
 };
 
 async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
@@ -690,6 +709,7 @@ async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
         inspection_interval_days: spec.intervalDays ?? null,
         latitude: spec.latitude ?? null,
         longitude: spec.longitude ?? null,
+        client_name: spec.clientName ?? null,
       })
       .eq("id", existing.id);
     if (fixErr2) throw new Error(`scaffolds interval/location self-heal (${spec.tagNumber}): ${fixErr2.message}`);
@@ -700,6 +720,7 @@ async function ensureScaffold(spec: ScaffoldSpec): Promise<string> {
         company_id: spec.companyId,
         project_id: spec.projectId,
         tag_number: spec.tagNumber,
+        client_name: spec.clientName ?? null,
         work_area: spec.workArea,
         structure_reference: `TEST-REF-${spec.tagNumber}`,
         scaffold_type: spec.scaffoldType,
@@ -1657,6 +1678,7 @@ async function main() {
     session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-007", workArea: "North Platform", scaffoldType: "independent",
     responsibleForemanId: employeeIdByKey.foreman, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
     intervalType: "seven_days", intervalDays: 7, latitude: 59.3346, longitude: 18.0632,
+    clientName: "Nordic Steelworks AB",
   });
   await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold7, scaffoldTag: "TEST-SC-007", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 7, reason: "routine_inspection", outcome: "safe_for_use" });
   // 7 days ago + 7-day interval = due TODAY.
@@ -1681,6 +1703,7 @@ async function main() {
     session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-008", workArea: "South Platform", scaffoldType: "birdcage",
     responsibleForemanId: employeeIdByKey.foreman2, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
     intervalType: "seven_days", intervalDays: 7, latitude: 59.336, longitude: 18.059,
+    clientName: "Baltic Refinery Partners",
   });
   await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold8, scaffoldTag: "TEST-SC-008", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 6, reason: "routine_inspection", outcome: "safe_for_use" });
   // 6 days ago + 7-day interval = due TOMORROW.
@@ -1794,6 +1817,20 @@ async function main() {
   // ==========================================================================
   const helmetId = await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "quantity", category: "PPE", name: "Safety Helmet", quantity: 30, defaultValidityDays: 1825 });
   const harnessId = await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "serialized", category: "Fall Protection", name: "Safety Harness" });
+
+  // Part 29/46 — pricing fixture coverage (unit_price/currency are new
+  // columns with no create_equipment_item() RPC parameter yet — a direct,
+  // idempotent follow-up UPDATE is the simplest correct path, matching
+  // "Equipment pricing: nullable initially" — every other catalog item
+  // stays null-priced, exactly like a real not-yet-priced item).
+  for (const [itemId, price] of [
+    [helmetId, 24.0],
+    [harnessId, 180.0],
+  ] as const) {
+    const { error: priceErr } = await companyAdminSession.from("equipment_items").update({ unit_price: price, currency: "EUR" }).eq("id", itemId);
+    if (priceErr) throw new Error(`equipment_items unit_price set: ${priceErr.message}`);
+  }
+  log("equipment-item-pricing", "Safety Helmet + Safety Harness", "updated", "unit_price set (EUR)");
   const hiVisId = await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "quantity", category: "PPE", name: "Hi-Vis Vest", quantity: 40 });
   await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "quantity", category: "PPE", name: "Gloves", quantity: 60 });
   await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "quantity", category: "PPE", name: "Safety Glasses", quantity: 40 });
@@ -1877,6 +1914,37 @@ async function main() {
     if (readErr) throw new Error(`notifications mark-read: ${readErr.message}`);
   }
   log("notifications", "Test Employee — mark oldest as read", oldestUnread && oldestUnread.length > 0 ? "updated" : "skipped", `${oldestUnread?.length ?? 0} marked`);
+
+  // ==========================================================================
+  // Phase N — Employee Hourly Rates (Part 17/46) — current + 2 historical
+  // periods for Test Employee, via companyAdminSession (company_admin
+  // passes employee_hourly_rates_insert's RLS check). Idempotent: if a
+  // rate history already exists for this employee (any row at all), the
+  // whole block is skipped rather than trying to re-derive whether the
+  // exact 3-period shape already matches — this fixture's rate history is
+  // set once and never needs correcting on re-run.
+  // ==========================================================================
+  const { data: existingRateRows } = await companyAdminSession.from("employee_hourly_rates").select("id").eq("company_id", companyId).eq("employee_id", employeeEmployeeId).limit(1);
+  if (existingRateRows && existingRateRows.length > 0) {
+    log("employee-hourly-rates", "Test Employee", "reused", "history already exists");
+  } else {
+    const { error: rate1Err } = await companyAdminSession.from("employee_hourly_rates").insert({
+      company_id: companyId, employee_id: employeeEmployeeId, hourly_rate: 15.5, currency: "EUR",
+      effective_from: "2025-06-10", effective_to: "2025-12-31", reason: "TEST fixture: initial rate", changed_by: null,
+    });
+    if (rate1Err) throw new Error(`employee_hourly_rates insert (rate 1): ${rate1Err.message}`);
+    const { error: rate2Err } = await companyAdminSession.from("employee_hourly_rates").insert({
+      company_id: companyId, employee_id: employeeEmployeeId, hourly_rate: 17.0, currency: "EUR",
+      effective_from: "2026-01-01", effective_to: "2026-05-31", reason: "TEST fixture: annual increase", changed_by: null,
+    });
+    if (rate2Err) throw new Error(`employee_hourly_rates insert (rate 2): ${rate2Err.message}`);
+    const { error: rate3Err } = await companyAdminSession.from("employee_hourly_rates").insert({
+      company_id: companyId, employee_id: employeeEmployeeId, hourly_rate: 18.5, currency: "EUR",
+      effective_from: "2026-06-01", effective_to: null, reason: "TEST fixture: current rate", changed_by: null,
+    });
+    if (rate3Err) throw new Error(`employee_hourly_rates insert (rate 3): ${rate3Err.message}`);
+    log("employee-hourly-rates", "Test Employee", "created", "3 periods (2 historical + 1 current)");
+  }
 
   console.log("\n=== PHASE A-M SUMMARY (FINAL) ===");
   const counts = report.reduce<Record<Action, number>>((acc, r) => ({ ...acc, [r.action]: (acc[r.action] ?? 0) + 1 }), { created: 0, reused: 0, skipped: 0, updated: 0 });

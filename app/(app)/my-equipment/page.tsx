@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
-import { listMyEquipmentAssignments, listMyEquipmentRequests, listEquipmentCandidateItems } from "@/modules/equipment/queries";
+import { listMyEquipmentAssignments, listMyEquipmentRequests, listRequestableEquipmentItems } from "@/modules/equipment/queries";
 import { EQUIPMENT_ASSIGNMENT_STATUS_LABELS, EQUIPMENT_REQUEST_STATUS_LABELS, EQUIPMENT_CONDITION_LABELS, equipmentRequestStatusTone, describeEquipmentExpiry } from "@/modules/equipment/types";
 import { RequestEquipmentDialog } from "@/modules/equipment/components/request-equipment-dialog";
 import { PageHeader } from "@/components/shared/page-header";
@@ -63,8 +63,18 @@ export default async function MyEquipmentPage() {
   const [assignments, requests, candidateItems] = await Promise.all([
     listMyEquipmentAssignments(currentCompanyId, myEmployeeId),
     listMyEquipmentRequests(currentCompanyId, myEmployeeId),
-    listEquipmentCandidateItems(currentCompanyId, currentProjectId),
+    listRequestableEquipmentItems(currentCompanyId, currentProjectId),
   ]);
+
+  // Part 30 — the value of currently-issued equipment ONLY (never company
+  // stock or other employees' equipment). A null unit_price is simply
+  // excluded from the total (Part 44: pricing is nullable, never treated
+  // as €0). Assumes a single currency across an employee's issued items —
+  // this company-wide fixture/deployment doesn't mix currencies; a truly
+  // mixed-currency total would need per-currency subtotals, out of scope here.
+  const pricedAssignments = assignments.filter((a) => a.status === "active" && a.item.unit_price != null);
+  const totalValue = pricedAssignments.reduce((sum, a) => sum + Number(a.item.unit_price) * (a.item.tracking_mode === "quantity" ? a.quantity : 1), 0);
+  const totalValueCurrency = pricedAssignments[0]?.item.currency ?? "EUR";
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -72,6 +82,14 @@ export default async function MyEquipmentPage() {
 
       <div className="flex flex-col gap-3">
         <SectionHeader title={t("currentlyIssued")} />
+        {pricedAssignments.length > 0 && (
+          <Card>
+            <CardContent className="flex items-baseline justify-between py-3">
+              <span className="text-sm text-muted-foreground">{t("totalAssignedValue")}</span>
+              <span className="text-lg font-semibold tabular-nums">{format.number(totalValue, { style: "currency", currency: totalValueCurrency })}</span>
+            </CardContent>
+          </Card>
+        )}
         {assignments.length === 0 ? (
           <EmptyState icon={Wrench} title={t("nothingIssuedTitle")} description={t("nothingIssuedDescription")} />
         ) : (
@@ -95,6 +113,13 @@ export default async function MyEquipmentPage() {
                       <span className="text-muted-foreground">{assignment.expires_at ? t("validityExpires", { date: formatDate(assignment.expires_at, format) }) : t("validityNoExpiry")}</span>
                       {assignment.expires_at && <span className={SEMANTIC_TONE_TEXT_CLASSES[expiry.tone]}>{expiry.label}</span>}
                     </div>
+                    {assignment.item.unit_price != null && (
+                      <div className="text-xs text-muted-foreground">
+                        {assignment.item.tracking_mode === "quantity"
+                          ? t("priceEach", { price: format.number(Number(assignment.item.unit_price), { style: "currency", currency: assignment.item.currency }) })
+                          : t("price", { price: format.number(Number(assignment.item.unit_price), { style: "currency", currency: assignment.item.currency }) })}
+                      </div>
+                    )}
                   </div>
                   <StatusBadge tone="info" className="w-fit shrink-0">
                     {EQUIPMENT_ASSIGNMENT_STATUS_LABELS[assignment.status]}

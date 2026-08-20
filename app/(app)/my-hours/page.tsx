@@ -6,19 +6,22 @@ import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { resolveCurrentProject } from "@/modules/projects/queries";
 import { getMyEmployeeId, listMyAttendanceForPeriod } from "@/modules/daily-workforce/queries";
 import { dailyAttendancePermitsWork, DAILY_ATTENDANCE_STATUS_LABELS } from "@/modules/daily-workforce/types";
-import { listWorkedHoursHistoryForEmployee, listMyWorkedHoursDiscrepancies, listWorkedHoursCorrections } from "@/modules/worked-hours/queries";
+import { listWorkedHoursHistoryForEmployee, listMyWorkedHoursDiscrepancies, listWorkedHoursCorrectionsByWorkedHoursIds } from "@/modules/worked-hours/queries";
 import { listMyAbsenceReports } from "@/modules/absences/queries";
 import { ABSENCE_REPORT_STATUS_LABELS } from "@/modules/absences/types";
+import { listMyLeaveRequests } from "@/modules/leave-requests/queries";
 import { listMyAttendanceReviewRequests } from "@/modules/attendance-review/queries";
 import { ATTENDANCE_REVIEW_STATUS_LABELS } from "@/modules/attendance-review/types";
 import { RequestReviewButton } from "@/modules/attendance-review/components/request-review-button";
 import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, countDaysWorked, type WorkedHoursPeriodMode } from "@/modules/worked-hours/period";
 import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, toWorkedHoursCategoryBreakdown, sumWorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { MyHoursRow } from "@/modules/worked-hours/components/my-hours-row";
+import { MyHoursMonthCalendar, type MonthDayCell } from "@/modules/worked-hours/components/my-hours-month-calendar";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type MyHoursPageProps = {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -82,7 +85,9 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   }
 
   const activeTab: "hours" | "absences" = params.tab === "absences" ? "absences" : "hours";
-  const mode: WorkedHoursPeriodMode = params.view === "week" ? "week" : params.view === "month" ? "month" : "day";
+  // Part 19 — MONTH is now the default landing view (previously "day").
+  const mode: WorkedHoursPeriodMode = params.view === "week" ? "week" : params.view === "day" ? "day" : "month";
+  const layout: "calendar" | "list" = params.layout === "list" ? "list" : "calendar";
   const anchorDate = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : todayIsoDate();
   const period = resolveWorkedHoursPeriod(mode, anchorDate);
 
@@ -99,19 +104,26 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
     );
   }
 
-  const [rows, discrepancies] = await Promise.all([
+  const isCalendarView = mode === "month" && layout === "calendar";
+
+  const [rows, discrepancies, attendanceRows, leaveRequests, absenceReports] = await Promise.all([
     listWorkedHoursHistoryForEmployee(currentCompanyId, currentProjectId, myEmployeeId, period.fromDate, period.toDate),
     listMyWorkedHoursDiscrepancies(currentCompanyId, myEmployeeId),
+    isCalendarView ? listMyAttendanceForPeriod(currentCompanyId, myEmployeeId, period.fromDate, period.toDate) : Promise.resolve([]),
+    isCalendarView ? listMyLeaveRequests(currentCompanyId, myEmployeeId) : Promise.resolve([]),
+    isCalendarView ? listMyAbsenceReports(currentCompanyId, myEmployeeId) : Promise.resolve([]),
   ]);
 
-  const correctionsByWorkedHoursId = new Map(
-    await Promise.all(rows.map(async (row) => [row.id, await listWorkedHoursCorrections(currentCompanyId, row.id)] as const)),
+  const correctionsByWorkedHoursId = await listWorkedHoursCorrectionsByWorkedHoursIds(
+    currentCompanyId,
+    rows.map((row) => row.id),
   );
   const discrepancyByWorkedHoursId = new Map(discrepancies.map((discrepancy) => [discrepancy.worked_hours_id, discrepancy]));
 
   const totalHours = rows.reduce((sum, row) => sum + Number(row.hours), 0);
   const periodCategoryTotals = toWorkedHoursCategoryBreakdown([]);
   const hoursByDate: Record<string, number> = {};
+  const rowByDate = new Map(rows.map((row) => [row.work_date, row]));
   for (const row of rows) {
     for (const category of WORKED_HOURS_CATEGORIES) periodCategoryTotals[category] += row.breakdown[category];
     hoursByDate[row.work_date] = (hoursByDate[row.work_date] ?? 0) + Number(row.hours);
@@ -120,6 +132,50 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
   const basePath = "/my-hours";
   const prevDate = shiftDate(anchorDate, mode, -1);
   const nextDate = shiftDate(anchorDate, mode, 1);
+  const viewSuffix = layout === "list" ? "&layout=list" : "";
+
+  const calendarCells: MonthDayCell[] = [];
+  if (isCalendarView) {
+    const attendanceByDate = new Map(attendanceRows.map((row) => [row.work_date, row.status]));
+    const approvedLeaveDates = new Set<string>();
+    const pendingDates = new Set<string>();
+    for (const request of leaveRequests) {
+      const from = request.start_date < period.fromDate ? period.fromDate : request.start_date;
+      const to = request.end_date > period.toDate ? period.toDate : request.end_date;
+      for (let d = from; d <= to; d = addDays(d, 1)) {
+        if (request.status === "approved") approvedLeaveDates.add(d);
+        if (request.status === "pending") pendingDates.add(d);
+      }
+    }
+    for (const report of absenceReports) {
+      if (report.status === "pending") pendingDates.add(report.work_date);
+    }
+
+    const firstOfMonth = new Date(`${period.fromDate}T00:00:00Z`);
+    // Monday-first grid: ISO day 1=Mon..7=Sun -> padding count before the 1st.
+    const isoWeekday = firstOfMonth.getUTCDay() === 0 ? 7 : firstOfMonth.getUTCDay();
+    const gridStart = addDays(period.fromDate, -(isoWeekday - 1));
+    const totalCells = 42; // 6 full weeks — always enough for any month's Monday-first grid
+    for (let i = 0; i < totalCells; i++) {
+      const date = addDays(gridStart, i);
+      const row = rowByDate.get(date);
+      const isSunday = new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
+      const attendanceStatus = attendanceByDate.get(date) ?? "not_set";
+      calendarCells.push({
+        date,
+        isCurrentMonth: date >= period.fromDate && date <= period.toDate,
+        isSunday,
+        hoursTotal: hoursByDate[date] ?? 0,
+        breakdown: row?.breakdown ?? null,
+        attendanceStatus,
+        hasPendingRequest: pendingDates.has(date),
+        hasApprovedLeave: approvedLeaveDates.has(date) || attendanceStatus === "leave",
+        hasConfirmedAbsence: attendanceStatus === "absent" || attendanceStatus === "sick",
+        discrepancyStatus: row ? (discrepancyByWorkedHoursId.get(row.id)?.status ?? null) : null,
+        correctionCount: row ? (correctionsByWorkedHoursId.get(row.id)?.length ?? 0) : 0,
+      });
+    }
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -127,33 +183,47 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
 
       <MyHoursTabSwitcher active="hours" mode={mode} anchorDate={anchorDate} t={t} />
 
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={`${basePath}?view=day`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          {t("day")}
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link href={`${basePath}?view=week`} className={mode === "week" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          {t("week")}
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <Link href={`${basePath}?view=month`} className={mode === "month" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
-          {t("month")}
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Link href={`${basePath}?view=day${viewSuffix}`} className={mode === "day" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+            {t("day")}
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href={`${basePath}?view=week${viewSuffix}`} className={mode === "week" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+            {t("week")}
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <Link href={`${basePath}?view=month${viewSuffix}`} className={mode === "month" ? "font-medium" : "text-muted-foreground transition-colors hover:text-foreground"}>
+            {t("month")}
+          </Link>
+        </div>
+        {mode === "month" && (
+          <div className="flex items-center gap-1 rounded-md border p-0.5 text-xs">
+            <Link href={`${basePath}?view=month`} className={cn("rounded px-2 py-1 font-medium", layout === "calendar" ? "bg-muted" : "text-muted-foreground")}>
+              {t("calendarView")}
+            </Link>
+            <Link href={`${basePath}?view=month&layout=list`} className={cn("rounded px-2 py-1 font-medium", layout === "list" ? "bg-muted" : "text-muted-foreground")}>
+              {t("listView")}
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 text-sm">
-        <Link href={`${basePath}?view=${mode}&date=${prevDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
+        <Link href={`${basePath}?view=${mode}&date=${prevDate}${viewSuffix}`} className="text-muted-foreground transition-colors hover:text-foreground">
           ← {t("previous")}
         </Link>
-        <Link href={basePath} className="text-muted-foreground transition-colors hover:text-foreground">
+        <Link href={`${basePath}${mode === "month" ? "" : `?view=${mode}`}${viewSuffix}`} className="text-muted-foreground transition-colors hover:text-foreground">
           {t("today")}
         </Link>
-        <Link href={`${basePath}?view=${mode}&date=${nextDate}`} className="text-muted-foreground transition-colors hover:text-foreground">
+        <Link href={`${basePath}?view=${mode}&date=${nextDate}${viewSuffix}`} className="text-muted-foreground transition-colors hover:text-foreground">
           {t("next")} →
         </Link>
       </div>
 
-      {rows.length === 0 ? (
+      {isCalendarView ? (
+        <MyHoursMonthCalendar cells={calendarCells} />
+      ) : rows.length === 0 ? (
         <EmptyState icon={Clock} title={t("noHoursTitle")} description={t("noHoursDescription")} className="flex-1" />
       ) : (
         <div className="flex flex-col gap-4">
