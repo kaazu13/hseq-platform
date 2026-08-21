@@ -6,7 +6,8 @@ import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPla
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listDailyTeamsForDate, listWorkforceForDate, listDailyTeamsArchiveDays, listDailyTeamForemanRoster, getEmployeeTodayCard, getMyEmployeeId, getDailyTeamPhoneNumbers } from "@/modules/daily-workforce/queries";
 import { listLmraCountsByDailyTeamId } from "@/modules/lmra/queries";
-import { canManageDailyWorkforce, canViewDailyWorkforceBroadly } from "@/modules/daily-workforce/permissions";
+import { canManageDailyWorkforce, canViewDailyWorkforceBroadly, canViewAvailableUnassignedPanel } from "@/modules/daily-workforce/permissions";
+import { AvailableUnassignedPanel } from "@/modules/daily-workforce/components/available-unassigned-panel";
 import { groupTeamsByForemanRoster, DAILY_TEAM_STATUS_LABELS } from "@/modules/daily-workforce/types";
 import { DailyTeamsHeader } from "@/modules/daily-workforce/components/daily-teams-header";
 import { DailyWorkforceSubnav } from "@/modules/daily-workforce/components/daily-workforce-subnav";
@@ -62,6 +63,7 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
   const [roleNames, myProjectRoles, isSuperAdmin] = await Promise.all([getUserRoleNames(companyId), getMyProjectAssignmentRoles(companyId, projectId, user.id), isPlatformSuperAdmin()]);
   const canManage = isSuperAdmin || canManageDailyWorkforce(roleNames, myProjectRoles);
   const canViewBroadly = isSuperAdmin || canViewDailyWorkforceBroadly(roleNames, true);
+  const canViewAvailableUnassigned = isSuperAdmin || canViewAvailableUnassignedPanel(roleNames, myProjectRoles, true);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/teams`;
   // Task 3 Part 15 — "today" for Today's Teams is the PROJECT's own local
@@ -210,6 +212,16 @@ export default async function TeamsPage({ params, searchParams }: TeamsPageProps
         hasLockedTeams={hasLockedTeams}
         canManage={canManage}
       />
+
+      {canViewAvailableUnassigned && (
+        <AvailableUnassignedPanel
+          companyId={companyId}
+          projectId={projectId}
+          workDate={workDate}
+          workforce={workforce}
+          teams={teams.map((team) => ({ id: team.id, name: team.name }))}
+        />
+      )}
 
       {foremanGroups.length === 0 ? (
         <EmptyState

@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Siren,
   Users,
+  Wallet,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -470,6 +471,24 @@ export const NAV_GROUPS: NavGroup[] = [
         status: "available",
         description: "Onboarding checklist — logo, first project, employees, and invitations for a newly created company.",
         roles: COMPANY_ADMIN_ROLES,
+      },
+      {
+        id: "rateRequests",
+        label: "Rate Requests",
+        href: "/rate-requests",
+        icon: Wallet,
+        status: "available",
+        description: "Employee rate/salary review requests — approve or reject (company_admin/planner), read-only for the project's own Project Manager.",
+        roles: ["company_admin", "planner", "project_manager"],
+      },
+      {
+        id: "payRules",
+        label: "Rates & Pay Rules",
+        href: "/pay-rules",
+        icon: Wallet,
+        status: "available",
+        description: "Company-wide employee rate administration and hourly-rate premium rules (overtime, night, Sunday, and more).",
+        roles: ["company_admin", "planner"],
       },
       {
         id: "companyGreetings",

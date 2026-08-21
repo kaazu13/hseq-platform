@@ -14,6 +14,7 @@ function baseCell(overrides: Partial<MonthDayCell> = {}): MonthDayCell {
     hasConfirmedAbsence: false,
     discrepancyStatus: null,
     correctionCount: 0,
+    dayEarnings: null,
     ...overrides,
   };
 }

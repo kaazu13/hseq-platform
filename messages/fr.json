@@ -137,6 +137,8 @@
       "certificates": "Certificats",
       "members": "Membres",
       "companySetup": "Configuration de l'entreprise",
+      "rateRequests": "Demandes de taux",
+      "payRules": "Taux et règles de paie",
       "companyGreetings": "Messages de l'entreprise",
       "platformOverview": "Aperçu",
       "platformCompanies": "Entreprises",
@@ -285,9 +287,12 @@
     "export": "Exporter",
     "itemsLabel": "articles",
     "tabs": {
+      "overview": "Aperçu",
+      "catalog": "Catalogue",
       "inventory": "Inventaire",
       "issued": "Remis",
       "requests": "Demandes",
+      "expiring": "Expire bientôt",
       "history": "Historique"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Expiré"
     },
     "noAccessToRequests": "Vous n'avez pas accès pour examiner les demandes d'équipement de ce projet.",
+    "noAccessToOverview": "Vous n'avez pas accès à l'aperçu de l'équipement pour ce projet.",
+    "noAccessToCatalog": "Vous n'avez pas accès pour gérer le catalogue d'équipement de ce projet.",
+    "noAccessToInventory": "Vous n'avez pas d'accès de gestion d'équipement pour ce projet. Consultez Mon Équipement pour vos propres articles.",
+    "noAccessToHistory": "Vous n'avez pas accès à l'historique de l'équipement pour ce projet.",
     "noEmployeeRecord": "Aucun dossier employé n'est lié à votre compte pour cette entreprise —",
     "contactAdministrator": "contactez votre administrateur."
   },

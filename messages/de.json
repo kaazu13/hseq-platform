@@ -137,6 +137,8 @@
       "certificates": "Zertifikate",
       "members": "Mitglieder",
       "companySetup": "Unternehmenseinrichtung",
+      "rateRequests": "Tarifanfragen",
+      "payRules": "Tarife & Lohnregeln",
       "companyGreetings": "Unternehmensgrüße",
       "platformOverview": "Übersicht",
       "platformCompanies": "Unternehmen",
@@ -285,9 +287,12 @@
     "export": "Exportieren",
     "itemsLabel": "Artikel",
     "tabs": {
+      "overview": "Übersicht",
+      "catalog": "Katalog",
       "inventory": "Inventar",
       "issued": "Ausgegeben",
       "requests": "Anfragen",
+      "expiring": "Läuft bald ab",
       "history": "Verlauf"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Abgelaufen"
     },
     "noAccessToRequests": "Du hast keinen Zugriff, um Ausrüstungsanfragen für dieses Projekt zu prüfen.",
+    "noAccessToOverview": "Du hast keinen Zugriff auf die Ausrüstungsübersicht für dieses Projekt.",
+    "noAccessToCatalog": "Du hast keinen Zugriff, um den Ausrüstungskatalog für dieses Projekt zu verwalten.",
+    "noAccessToInventory": "Du hast keine Ausrüstungsverwaltungsberechtigung für dieses Projekt. Besuche Meine Ausrüstung für deine eigenen Gegenstände.",
+    "noAccessToHistory": "Du hast keinen Zugriff auf den Ausrüstungsverlauf für dieses Projekt.",
     "noEmployeeRecord": "Für dieses Unternehmen ist kein Mitarbeiterdatensatz mit deinem Konto verknüpft —",
     "contactAdministrator": "wende dich an deinen Administrator."
   },

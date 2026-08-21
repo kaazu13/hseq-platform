@@ -10,6 +10,7 @@ import { listLeaveRequestsForProject } from "@/modules/leave-requests/queries";
 import { LEAVE_TYPE_LABELS, LEAVE_REQUEST_STATUS_LABELS, countLeaveCalendarDays, type LeaveRequestStatus } from "@/modules/leave-requests/types";
 import { LeaveRequestDecisionControls } from "@/modules/leave-requests/components/leave-request-decision-controls";
 import { LeaveExportDialog } from "@/modules/leave-requests/components/leave-export-dialog";
+import { LeaveRequestFilters } from "@/modules/leave-requests/components/leave-request-filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,20 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
   if (!canManage && !canViewBroadly) notFound();
 
   const activeTab = STATUS_TAB_KEYS.includes((urlParams.status ?? "") as (typeof STATUS_TAB_KEYS)[number]) ? (urlParams.status as (typeof STATUS_TAB_KEYS)[number]) : "pending";
-  const requests = await listLeaveRequestsForProject(companyId, projectId, activeTab === "all" ? undefined : { statuses: [activeTab as LeaveRequestStatus] });
+  const allRequests = await listLeaveRequestsForProject(companyId, projectId, {
+    statuses: activeTab === "all" ? undefined : [activeTab as LeaveRequestStatus],
+    fromDate: urlParams.from || undefined,
+    toDate: urlParams.to || undefined,
+  });
+
+  // Part 30 — employee search + type, filtered in JS over the already
+  // status/date-scoped result set (a small, bounded per-project list —
+  // never a second query, matching the query layer's existing shape).
+  const employeeSearch = urlParams.employee?.trim().toLowerCase();
+  const typeFilter = urlParams.type;
+  const requests = allRequests
+    .filter((request) => !employeeSearch || `${request.employee.first_name} ${request.employee.last_name}`.toLowerCase().includes(employeeSearch))
+    .filter((request) => !typeFilter || typeFilter === "all" || request.leave_type === typeFilter);
 
   const basePath = `/companies/${companyId}/projects/${projectId}/leave`;
   const t = await getTranslations("LeaveManagement");
@@ -85,6 +99,8 @@ export default async function LeavePage({ params, searchParams }: LeavePageProps
           </Link>
         ))}
       </div>
+
+      <LeaveRequestFilters />
 
       {requests.length === 0 ? (
         <EmptyState icon={CalendarOff} title={t("noRequestsTitle")} />

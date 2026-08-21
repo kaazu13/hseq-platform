@@ -137,6 +137,8 @@
       "certificates": "Certificados",
       "members": "Miembros",
       "companySetup": "Configuración de la empresa",
+      "rateRequests": "Solicitudes de tarifa",
+      "payRules": "Tarifas y reglas de pago",
       "companyGreetings": "Saludos de la empresa",
       "platformOverview": "Resumen",
       "platformCompanies": "Empresas",
@@ -285,9 +287,12 @@
     "export": "Exportar",
     "itemsLabel": "artículos",
     "tabs": {
+      "overview": "Resumen",
+      "catalog": "Catálogo",
       "inventory": "Inventario",
       "issued": "Entregado",
       "requests": "Solicitudes",
+      "expiring": "Por caducar",
       "history": "Historial"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Caducado"
     },
     "noAccessToRequests": "No tienes acceso para revisar las solicitudes de equipo de este proyecto.",
+    "noAccessToOverview": "No tienes acceso al resumen de equipo de este proyecto.",
+    "noAccessToCatalog": "No tienes acceso para gestionar el catálogo de equipo de este proyecto.",
+    "noAccessToInventory": "No tienes acceso de gestión de equipo para este proyecto. Visita Mi Equipo para tus propios artículos.",
+    "noAccessToHistory": "No tienes acceso al historial de equipo de este proyecto.",
     "noEmployeeRecord": "No hay ningún registro de empleado vinculado a tu cuenta en esta empresa —",
     "contactAdministrator": "contacta con tu administrador."
   },

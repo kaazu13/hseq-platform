@@ -7,9 +7,13 @@ import type {
   EquipmentAssignmentWithDetail,
   EquipmentRequestWithDetail,
   EquipmentHistoryEntryWithDetail,
+  EquipmentHistoryEntry,
+  EquipmentHistoryEntryWithItem,
+  EquipmentHistoryEvent,
   EquipmentStatus,
   EquipmentCondition,
   EquipmentRequestStatus,
+  EquipmentOverviewMetrics,
   BasicEmployee,
 } from "./types";
 import { describeEquipmentExpiry } from "./types";
@@ -36,27 +40,35 @@ export type EquipmentItemListFilters = {
   includeArchived?: boolean;
 };
 
+/**
+ * Part 28 — full-row equipment_items reads (quantity/available_quantity/
+ * unit_price included) are ONLY reachable through this management-tier
+ * RPC now; the base table's column grant to `authenticated` no longer
+ * includes those columns (see 20260904090000's header comment). Every
+ * management query below routes through it or count_equipment_items_management
+ * instead of a raw `.select("*")`.
+ */
+function ownershipParam(ownership: EquipmentOwnershipFilter): string {
+  return ownership;
+}
+
 /** A single page of equipment items visible in `projectId`'s context (company-wide items plus this project's own, or filtered to just one via `filters.ownership`) — item 3's "design for hundreds/thousands" requirement, paginated via lib/pagination.ts. */
 export async function listEquipmentItems(companyId: string, projectId: string, filters: EquipmentItemListFilters, page: number, pageSize: PageSize): Promise<EquipmentItem[]> {
   const supabase = await createClient();
   const offset = offsetFor(page, pageSize);
 
-  let query = supabase.from("equipment_items").select("*").eq("company_id", companyId);
-  const ownership = filters.ownership ?? "all";
-  if (ownership === "company") query = query.is("project_id", null);
-  else if (ownership === "project") query = query.eq("project_id", projectId);
-  else query = query.or(`project_id.eq.${projectId},project_id.is.null`);
-
-  if (!filters.includeArchived) query = query.is("archived_at", null);
-  if (filters.category) query = query.eq("category", filters.category);
-  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
-  if (filters.condition && filters.condition !== "all") query = query.eq("condition", filters.condition);
-  if (filters.search?.trim()) {
-    const term = filters.search.trim();
-    query = query.or(`name.ilike.%${term}%,category.ilike.%${term}%,reference_number.ilike.%${term}%,description.ilike.%${term}%`);
-  }
-
-  const { data, error } = await query.order("name", { ascending: true }).range(offset, offset + pageSize - 1);
+  const { data, error } = await supabase.rpc("list_equipment_items_management", {
+    target_company_id: companyId,
+    target_project_id: projectId,
+    target_search: filters.search?.trim() || undefined,
+    target_category: filters.category || undefined,
+    target_statuses: filters.status && filters.status !== "all" ? [filters.status] : undefined,
+    target_condition: filters.condition && filters.condition !== "all" ? filters.condition : undefined,
+    target_ownership: ownershipParam(filters.ownership ?? "all"),
+    target_include_archived: filters.includeArchived ?? false,
+    target_limit: pageSize,
+    target_offset: offset,
+  });
   if (error) throw error;
   return data ?? [];
 }
@@ -64,24 +76,18 @@ export async function listEquipmentItems(companyId: string, projectId: string, f
 export async function countEquipmentItems(companyId: string, projectId: string, filters: EquipmentItemListFilters): Promise<number> {
   const supabase = await createClient();
 
-  let query = supabase.from("equipment_items").select("id", { count: "exact", head: true }).eq("company_id", companyId);
-  const ownership = filters.ownership ?? "all";
-  if (ownership === "company") query = query.is("project_id", null);
-  else if (ownership === "project") query = query.eq("project_id", projectId);
-  else query = query.or(`project_id.eq.${projectId},project_id.is.null`);
-
-  if (!filters.includeArchived) query = query.is("archived_at", null);
-  if (filters.category) query = query.eq("category", filters.category);
-  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
-  if (filters.condition && filters.condition !== "all") query = query.eq("condition", filters.condition);
-  if (filters.search?.trim()) {
-    const term = filters.search.trim();
-    query = query.or(`name.ilike.%${term}%,category.ilike.%${term}%,reference_number.ilike.%${term}%,description.ilike.%${term}%`);
-  }
-
-  const { count, error } = await query;
+  const { data, error } = await supabase.rpc("count_equipment_items_management", {
+    target_company_id: companyId,
+    target_project_id: projectId,
+    target_search: filters.search?.trim() || undefined,
+    target_category: filters.category || undefined,
+    target_statuses: filters.status && filters.status !== "all" ? [filters.status] : undefined,
+    target_condition: filters.condition && filters.condition !== "all" ? filters.condition : undefined,
+    target_ownership: ownershipParam(filters.ownership ?? "all"),
+    target_include_archived: filters.includeArchived ?? false,
+  });
   if (error) throw error;
-  return count ?? 0;
+  return Number(data ?? 0);
 }
 
 /** Every distinct category currently in use for `companyId` — powers the filter dropdown without a separate lookup table. */
@@ -92,11 +98,17 @@ export async function listEquipmentCategories(companyId: string): Promise<string
   return [...new Set((data ?? []).map((row) => row.category))].sort((a, b) => a.localeCompare(b));
 }
 
-export async function getEquipmentItem(companyId: string, itemId: string): Promise<EquipmentItem | null> {
+/** A single item's full row for management contexts (Edit dialog prefill, History tab header, etc.). Management-tier gated (see list_equipment_items_management's comment) — a non-manager reaching this legitimately gets a clear "not authorized" error, not a silent empty read. */
+export async function getEquipmentItem(companyId: string, projectId: string, itemId: string): Promise<EquipmentItem | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("equipment_items").select("*").eq("company_id", companyId).eq("id", itemId).maybeSingle();
+  const { data, error } = await supabase.rpc("list_equipment_items_management", {
+    target_company_id: companyId,
+    target_project_id: projectId,
+    target_item_ids: [itemId],
+    target_include_archived: true,
+  });
   if (error) throw error;
-  return data;
+  return data?.[0] ?? null;
 }
 
 const EXPORT_ROW_LIMIT = 10000;
@@ -104,28 +116,26 @@ const EXPORT_ROW_LIMIT = 10000;
 /** Every item visible in `projectId`'s context, unpaginated (capped at EXPORT_ROW_LIMIT) — for the Excel export only, which needs the full set rather than one page. */
 export async function listAllEquipmentItemsForExport(companyId: string, projectId: string): Promise<EquipmentItem[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("equipment_items")
-    .select("*")
-    .eq("company_id", companyId)
-    .or(`project_id.eq.${projectId},project_id.is.null`)
-    .order("name", { ascending: true })
-    .limit(EXPORT_ROW_LIMIT);
+  const { data, error } = await supabase.rpc("list_equipment_items_management", {
+    target_company_id: companyId,
+    target_project_id: projectId,
+    target_ownership: "all",
+    target_include_archived: true,
+    target_limit: EXPORT_ROW_LIMIT,
+  });
   if (error) throw error;
   return data ?? [];
 }
 
-/** Candidate items a request/issue picker can select from — available (not retired/lost/out_of_service), visible in this project's context. Never a raw unfiltered list of every historical item. */
+/** Candidate items a request/issue picker can select from — available (not retired/lost/out_of_service), visible in this project's context. Never a raw unfiltered list of every historical item. Management-tier gated — this is the MANAGEMENT picker (Issue Equipment, request review); the self-service picker is listRequestableEquipmentItems below. */
 export async function listEquipmentCandidateItems(companyId: string, projectId: string): Promise<EquipmentItem[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("equipment_items")
-    .select("*")
-    .eq("company_id", companyId)
-    .or(`project_id.eq.${projectId},project_id.is.null`)
-    .is("archived_at", null)
-    .in("status", ["available", "issued"])
-    .order("name", { ascending: true });
+  const { data, error } = await supabase.rpc("list_equipment_items_management", {
+    target_company_id: companyId,
+    target_project_id: projectId,
+    target_statuses: ["available", "issued"],
+    target_ownership: "all",
+  });
   if (error) throw error;
   return data ?? [];
 }
@@ -251,7 +261,12 @@ export async function listMyEquipmentAssignments(companyId: string, employeeId: 
   if (!assignmentRows || assignmentRows.length === 0) return [];
 
   const itemIds = [...new Set(assignmentRows.map((row) => row.equipment_item_id))];
-  const { data: itemRows, error: itemsError } = await supabase.from("equipment_items").select("id, name, reference_number, category, tracking_mode, unit_price, currency").in("id", itemIds);
+  // Part 28: unit_price/currency are no longer directly selectable columns —
+  // this narrow, non-manage-tier-gated RPC only ever returns a row for an
+  // item the caller has an actual assignment for (verified by its own
+  // EXISTS clause against equipment_assignments), which is exactly this
+  // employee's own case.
+  const { data: itemRows, error: itemsError } = await supabase.rpc("get_my_equipment_item_display_info", { target_company_id: companyId, target_item_ids: itemIds });
   if (itemsError) throw itemsError;
   const itemById = new Map((itemRows ?? []).map((item) => [item.id, item]));
 
@@ -265,7 +280,19 @@ export async function listMyEquipmentAssignments(companyId: string, employeeId: 
     .map((row) => {
       const item = itemById.get(row.equipment_item_id);
       if (!item) return null;
-      return { ...row, employee, item, issuedByName: row.issued_by ? (issuedByNameById.get(row.issued_by) ?? null) : null };
+      // The RPC's generated return type doesn't carry the table's actual
+      // nullability for reference_number/unit_price — rebuild explicitly
+      // to match EquipmentAssignmentWithDetail's Pick<EquipmentItem, ...>.
+      const safeItem: EquipmentAssignmentWithDetail["item"] = {
+        id: item.id,
+        name: item.name,
+        reference_number: item.reference_number as string | null,
+        category: item.category,
+        tracking_mode: item.tracking_mode,
+        unit_price: item.unit_price as number | null,
+        currency: item.currency,
+      };
+      return { ...row, employee, item: safeItem, issuedByName: row.issued_by ? (issuedByNameById.get(row.issued_by) ?? null) : null };
     })
     .filter((row): row is EquipmentAssignmentWithDetail => row !== null);
 }
@@ -312,36 +339,66 @@ export async function listEquipmentHistory(companyId: string, itemId: string): P
   return rows.map((row) => ({ ...row, employee: row.employee_id ? (employeeById.get(row.employee_id) ?? null) : null }));
 }
 
-export type EquipmentOverviewCounts = {
-  pendingRequests: number;
-  activeAssignments: number;
-  itemsRequiringAttention: number;
+/**
+ * Part 23/34 — the Overview tab's aggregate metrics, in one round trip via
+ * get_equipment_overview_counts() (manage-tier gated — this necessarily
+ * touches the now-restricted stock columns, so it can never be called for
+ * a self-service viewer; the page only renders the Overview tab when
+ * canManage is true).
+ */
+export async function getEquipmentOverviewMetrics(companyId: string, projectId: string): Promise<EquipmentOverviewMetrics> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_equipment_overview_counts", { target_company_id: companyId, target_project_id: projectId }).single();
+  if (error) throw error;
+  return {
+    catalogItems: Number(data.catalog_items ?? 0),
+    availableStock: Number(data.available_stock ?? 0),
+    serializedAvailable: Number(data.serialized_available ?? 0),
+    currentlyIssued: Number(data.currently_issued ?? 0),
+    pendingRequests: Number(data.pending_requests ?? 0),
+    expiringSoon: Number(data.expiring_soon ?? 0),
+    expired: Number(data.expired ?? 0),
+  };
+}
+
+export type EquipmentHistoryListFilters = {
+  itemId?: string;
+  employeeId?: string;
+  event?: EquipmentHistoryEvent;
+  fromDate?: string;
+  toDate?: string;
 };
 
-/** Compact counts for the Equipment page header/badges — every number here is a real, scoped query result, never a fabricated metric. */
-export async function getEquipmentOverviewCounts(companyId: string, projectId: string): Promise<EquipmentOverviewCounts> {
+/** Part 27 — the project-wide History tab: every item-level lifecycle event across the whole project's items, filterable, bounded. Management-tier gated (same authority as every other management equipment read). */
+export async function listEquipmentHistoryForProject(companyId: string, projectId: string, filters: EquipmentHistoryListFilters = {}): Promise<EquipmentHistoryEntryWithItem[]> {
   const supabase = await createClient();
+  const { data: rows, error } = await supabase.rpc("list_equipment_history_for_project", {
+    target_company_id: companyId,
+    target_project_id: projectId,
+    target_item_id: filters.itemId || undefined,
+    target_employee_id: filters.employeeId || undefined,
+    target_event: filters.event || undefined,
+    target_from_date: filters.fromDate || undefined,
+    target_to_date: filters.toDate || undefined,
+  });
+  if (error) throw error;
+  const historyRows: EquipmentHistoryEntry[] = rows ?? [];
+  if (historyRows.length === 0) return [];
 
-  const [pendingRequests, itemsAttention] = await Promise.all([
-    supabase.from("equipment_requests").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("project_id", projectId).eq("status", "pending"),
-    supabase.from("equipment_items").select("id", { count: "exact", head: true }).eq("company_id", companyId).or(`project_id.eq.${projectId},project_id.is.null`).in("status", ["out_of_service", "lost"]).is("archived_at", null),
+  const employeeIds = historyRows.map((row) => row.employee_id).filter((id): id is string => Boolean(id));
+  const itemIds = [...new Set(historyRows.map((row) => row.equipment_item_id))];
+  const [employeeById, itemRows] = await Promise.all([
+    resolveEmployeesById(companyId, employeeIds),
+    // name/reference_number are safe (non-restricted) columns — a plain
+    // table select is fine here, no need for the management RPC.
+    supabase.from("equipment_items").select("id, name, reference_number").eq("company_id", companyId).in("id", itemIds),
   ]);
-  if (pendingRequests.error) throw pendingRequests.error;
-  if (itemsAttention.error) throw itemsAttention.error;
+  if (itemRows.error) throw itemRows.error;
+  const itemById = new Map((itemRows.data ?? []).map((row) => [row.id, row]));
 
-  const { data: itemRows, error: itemsError } = await supabase.from("equipment_items").select("id").eq("company_id", companyId).or(`project_id.eq.${projectId},project_id.is.null`);
-  if (itemsError) throw itemsError;
-  const itemIds = (itemRows ?? []).map((row) => row.id);
-  let activeAssignments = 0;
-  if (itemIds.length > 0) {
-    const { count, error } = await supabase.from("equipment_assignments").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "active").in("equipment_item_id", itemIds);
-    if (error) throw error;
-    activeAssignments = count ?? 0;
-  }
-
-  return {
-    pendingRequests: pendingRequests.count ?? 0,
-    activeAssignments,
-    itemsRequiringAttention: itemsAttention.count ?? 0,
-  };
+  return historyRows.map((row) => ({
+    ...row,
+    employee: row.employee_id ? (employeeById.get(row.employee_id) ?? null) : null,
+    item: itemById.get(row.equipment_item_id) ?? null,
+  }));
 }

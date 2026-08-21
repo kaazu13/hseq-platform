@@ -137,6 +137,8 @@
       "certificates": "Certifikat",
       "members": "Medlemmar",
       "companySetup": "Företagsinställning",
+      "rateRequests": "Löneförfrågningar",
+      "payRules": "Löner och lönesregler",
       "companyGreetings": "Företagshälsningar",
       "platformOverview": "Översikt",
       "platformCompanies": "Företag",
@@ -285,9 +287,12 @@
     "export": "Exportera",
     "itemsLabel": "artiklar",
     "tabs": {
+      "overview": "Översikt",
+      "catalog": "Katalog",
       "inventory": "Inventering",
       "issued": "Utlämnad",
       "requests": "Förfrågningar",
+      "expiring": "Går ut snart",
       "history": "Historik"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Utgången"
     },
     "noAccessToRequests": "Du har inte åtkomst att granska utrustningsförfrågningar för detta projekt.",
+    "noAccessToOverview": "Du har inte åtkomst till utrustningsöversikten för detta projekt.",
+    "noAccessToCatalog": "Du har inte åtkomst att hantera utrustningskatalogen för detta projekt.",
+    "noAccessToInventory": "Du har inte utrustningshanteringsåtkomst för detta projekt. Besök Min utrustning för dina egna föremål.",
+    "noAccessToHistory": "Du har inte åtkomst till utrustningshistoriken för detta projekt.",
     "noEmployeeRecord": "Ingen anställdpost är kopplad till ditt konto för detta företag —",
     "contactAdministrator": "kontakta din administratör."
   },

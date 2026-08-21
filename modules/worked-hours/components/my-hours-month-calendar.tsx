@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import { AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,8 @@ export type MonthDayCell = {
   hasConfirmedAbsence: boolean;
   discrepancyStatus: string | null;
   correctionCount: number;
+  /** Part 15 — the day's estimated pay breakdown, when a rate was effective that date. Null means "no rate known for this day" (never shown as €0). */
+  dayEarnings: { hourlyRate: number; currency: string; basePayTotal: number; categoryPremiumTotal: number; sundayPremiumTotal: number; total: number } | null;
 };
 
 type DayState = "worked" | "approvedLeave" | "confirmedAbsent" | "pending" | "sunday" | "normal";
@@ -49,6 +51,7 @@ const STATE_CLASSES: Record<DayState, string> = {
 
 export function MyHoursMonthCalendar({ cells }: { cells: MonthDayCell[] }) {
   const t = useTranslations("MyHours");
+  const format = useFormatter();
   const [selected, setSelected] = useState<MonthDayCell | null>(null);
 
   const weekdayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -129,6 +132,34 @@ export function MyHoursMonthCalendar({ cells }: { cells: MonthDayCell[] }) {
                   </div>
                 )}
                 {selected.correctionCount > 0 && <p className="text-xs text-muted-foreground">{t("correctionCount", { count: selected.correctionCount })}</p>}
+                {selected.dayEarnings && (
+                  <div className="flex flex-col gap-1 border-t pt-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{t("rate")}</span>
+                      <span>{format.number(selected.dayEarnings.hourlyRate, { style: "currency", currency: selected.dayEarnings.currency })}/h</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">{t("basePay")}</span>
+                      <span className="tabular-nums">{format.number(selected.dayEarnings.basePayTotal, { style: "currency", currency: selected.dayEarnings.currency })}</span>
+                    </div>
+                    {selected.dayEarnings.categoryPremiumTotal > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{t("premiums")}</span>
+                        <span className="tabular-nums">{format.number(selected.dayEarnings.categoryPremiumTotal, { style: "currency", currency: selected.dayEarnings.currency })}</span>
+                      </div>
+                    )}
+                    {selected.dayEarnings.sundayPremiumTotal > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{t("sundayPremium")}</span>
+                        <span className="tabular-nums">{format.number(selected.dayEarnings.sundayPremiumTotal, { style: "currency", currency: selected.dayEarnings.currency })}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between font-semibold">
+                      <span>{t("estimatedDayTotal")}</span>
+                      <span className="tabular-nums">{format.number(selected.dayEarnings.total, { style: "currency", currency: selected.dayEarnings.currency })}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

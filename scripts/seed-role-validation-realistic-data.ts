@@ -1508,6 +1508,38 @@ async function main() {
   const foreman2EmployeeId = supportingEmployeeIdByRole["test.foreman2@example.test"];
   const foreman3EmployeeId = supportingEmployeeIdByRole["test.foreman3@example.test"];
 
+  // "today's" Team Alpha is frequently a REUSED row carried forward from a
+  // previous run's "create tomorrow's Alpha" step (ensureDailyTeamsForDate's
+  // "reused" branch deliberately skips re-running its worker-assignment
+  // loop — see that function's own comment) — so its roster can legitimately
+  // be empty by the time "today" arrives. create_lmra_assessment's
+  // daily_team_id existence check runs under the CALLING employee's own
+  // daily_teams_select RLS (SECURITY INVOKER), which only grants a plain
+  // employee visibility into a team they're an actual daily_team_members
+  // row on — an empty-roster team is therefore invisible to her even
+  // though it genuinely exists, producing a misleading "team does not
+  // belong to this project/date" error. Top up membership here
+  // (idempotent — move_daily_team_member no-ops if already the same
+  // team/role) rather than reworking the continuation pipeline itself.
+  let alphaLinkable = true;
+  for (const memberId of [employeeEmployeeId, plainEmployeeIdByKey.worker01, plainEmployeeIdByKey.worker02]) {
+    const { error: topUpErr } = await companyAdminSession.rpc("move_daily_team_member", {
+      target_project_id: projectId,
+      target_work_date: TODAY,
+      target_daily_team_id: todayTeamIds.alpha,
+      target_employee_id: memberId,
+      target_role: "member",
+    });
+    if (topUpErr) {
+      if (topUpErr.message.includes("pending leave/absence request")) {
+        alphaLinkable = false;
+        continue;
+      }
+      throw new Error(`move_daily_team_member (top-up, Alpha, ${memberId}): ${topUpErr.message}`);
+    }
+  }
+  log("daily-team-members", "TEST Team Alpha (today, top-up)", "updated", alphaLinkable ? "membership ensured" : "one member provisionally unavailable");
+
   const lmraAlphaToday = await ensureLmra({
     key: "employee-own-team-today",
     session: employeeSession,
@@ -1520,7 +1552,7 @@ async function main() {
     completedByEmployeeId: employeeEmployeeId,
     responsiblePersonId: employeeEmployeeId,
     participantEmployeeIds: [employeeEmployeeId, plainEmployeeIdByKey.worker01, plainEmployeeIdByKey.worker02],
-    dailyTeamId: todayTeamIds.alpha,
+    dailyTeamId: alphaLinkable ? todayTeamIds.alpha : null,
     result: "go",
   });
   const { error: approveErr } = await hseqManagerSession
@@ -1598,6 +1630,33 @@ async function main() {
   });
 
   const { data: historicalAlphaTeam } = await companyAdminSession.from("daily_teams").select("id").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", isoDate(9)).eq("name", "TEST Team Alpha").maybeSingle();
+  // Same RLS-invisibility class as today's Alpha top-up above — a
+  // historical team pulled forward via copy_daily_teams_to_date may not
+  // carry Test Employee's membership row, making it invisible to her own
+  // daily_teams_select RLS even though it exists.
+  let historicalAlphaLinkable = Boolean(historicalAlphaTeam);
+  if (historicalAlphaTeam) {
+    for (const memberId of [employeeEmployeeId, plainEmployeeIdByKey.worker01]) {
+      const { error: topUpErr } = await companyAdminSession.rpc("move_daily_team_member", {
+        target_project_id: projectId,
+        target_work_date: isoDate(9),
+        target_daily_team_id: historicalAlphaTeam.id,
+        target_employee_id: memberId,
+        target_role: "member",
+      });
+      if (topUpErr) {
+        if (topUpErr.message.includes("pending leave/absence request") || topUpErr.message.includes("locked")) {
+          // A locked historical team (real, correct product behavior —
+          // locked-as-evidence teams are immutable) can't be topped up
+          // retroactively; the fixture simply links no team for this
+          // historical LMRA instead of failing the whole seed run.
+          historicalAlphaLinkable = false;
+          continue;
+        }
+        throw new Error(`move_daily_team_member (top-up, historical Alpha, ${memberId}): ${topUpErr.message}`);
+      }
+    }
+  }
   await ensureLmra({
     key: "employee-historical-previous-week",
     session: employeeSession,
@@ -1610,7 +1669,7 @@ async function main() {
     completedByEmployeeId: employeeEmployeeId,
     responsiblePersonId: employeeEmployeeId,
     participantEmployeeIds: [employeeEmployeeId, plainEmployeeIdByKey.worker01],
-    dailyTeamId: historicalAlphaTeam?.id ?? null,
+    dailyTeamId: historicalAlphaLinkable ? (historicalAlphaTeam?.id ?? null) : null,
     result: "go",
   });
 
@@ -1946,7 +2005,139 @@ async function main() {
     log("employee-hourly-rates", "Test Employee", "created", "3 periods (2 historical + 1 current)");
   }
 
-  console.log("\n=== PHASE A-M SUMMARY (FINAL) ===");
+  // ==========================================================================
+  // Phase O — Pay Rules (Part 10-12) + Rate/Salary Review Requests (Part
+  // 5-9). Pay rules match the task's own worked example exactly (Regular
+  // base_only / Overtime +20% / Night +€2/h / Sunday +€3/h, all
+  // stackable) — company-wide, via companyAdminSession (RLS: company_
+  // admin/planner/platform_super_admin only). A worked-hours day on the
+  // most recent past Sunday exercises overtime+night+Sunday stacking
+  // together for the Estimated Earnings engine. Rate requests go through
+  // the real self-service submit path (employeeSession, own employee
+  // record only — mirrors submitRateRequest() exactly) then real
+  // approve/reject RPC decisions, never a synthetic pre-decided insert.
+  // ==========================================================================
+  const { data: existingPayRules } = await companyAdminSession.from("pay_rules").select("id").eq("company_id", companyId).limit(1);
+  if (existingPayRules && existingPayRules.length > 0) {
+    log("pay-rules", "company pay rules", "reused", "already exist");
+  } else {
+    const payRuleRows = [
+      { category: "regular", calculation_type: "base_only", value: 0 },
+      { category: "overtime", calculation_type: "percentage_extra", value: 20 },
+      { category: "night", calculation_type: "fixed_extra_per_hour", value: 2 },
+      { category: "sunday", calculation_type: "fixed_extra_per_hour", value: 3 },
+    ] as const;
+    for (const rule of payRuleRows) {
+      const { error } = await companyAdminSession.from("pay_rules").insert({
+        company_id: companyId,
+        category: rule.category,
+        calculation_type: rule.calculation_type,
+        value: rule.value,
+        currency: "EUR",
+        stackable: true,
+        effective_from: "2026-01-01",
+        created_by: null,
+      });
+      if (error) throw new Error(`pay_rules insert (${rule.category}): ${error.message}`);
+    }
+    log("pay-rules", "company pay rules", "created", "regular / overtime +20% / night +€2/h / sunday +€3/h");
+  }
+
+  function mostRecentPastSunday(minDaysAgo: number): string {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - minDaysAgo);
+    while (d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+  await ensureWorkedHours(
+    companyAdminSession,
+    companyId,
+    projectId,
+    employeeEmployeeId,
+    mostRecentPastSunday(3),
+    { regular: 8, overtime: 2, night: 4 },
+    "Test Employee (Sunday premium stacking demo)",
+  );
+
+  async function ensureRateRequest(requestedRate: number | null, reason: string, finalStatus: "pending" | "approved" | "rejected"): Promise<void> {
+    const { data: existing } = await companyAdminSession
+      .from("employee_rate_requests")
+      .select("id, status")
+      .eq("company_id", companyId)
+      .eq("employee_id", employeeEmployeeId)
+      .eq("reason", reason)
+      .maybeSingle();
+    // A request already at its target final status (or genuinely meant to
+    // stay pending) is fully reused. One that exists but is STILL pending
+    // when it's supposed to have been decided (e.g. a prior run's
+    // decision RPC call failed after the insert already committed) falls
+    // through to the decision step below instead of being silently
+    // skipped forever — true idempotency, not just "insert once."
+    if (existing && (existing.status === finalStatus || finalStatus === "pending")) {
+      log("rate-requests", reason, "reused", existing.status);
+      return;
+    }
+
+    let id: string;
+    if (existing) {
+      id = existing.id;
+    } else {
+      const { data: currentRate } = await employeeSession.from("employee_hourly_rates").select("hourly_rate, currency").eq("company_id", companyId).eq("employee_id", employeeEmployeeId).is("effective_to", null).maybeSingle();
+      const { data: inserted, error: insertErr } = await employeeSession
+        .from("employee_rate_requests")
+        .insert({
+          company_id: companyId,
+          employee_id: employeeEmployeeId,
+          current_rate_at_request: currentRate?.hourly_rate ?? null,
+          requested_rate: requestedRate,
+          currency: currentRate?.currency ?? "EUR",
+          reason,
+        })
+        .select("id")
+        .single();
+      if (insertErr) throw new Error(`employee_rate_requests insert (${reason}): ${insertErr.message}`);
+      id = inserted.id as string;
+    }
+
+    if (finalStatus === "approved") {
+      const { error } = await companyAdminSession.rpc("approve_employee_rate_request", {
+        target_request_id: id,
+        target_approved_rate: requestedRate ?? 19,
+        target_effective_from: TOMORROW,
+        target_decision_reason: "Approved — TEST fixture",
+      });
+      if (error) throw new Error(`approve_employee_rate_request (${reason}): ${error.message}`);
+    } else if (finalStatus === "rejected") {
+      const { error } = await companyAdminSession.rpc("reject_employee_rate_request", { target_request_id: id, target_decision_reason: "Rejected — TEST fixture, budget constraints this cycle" });
+      if (error) throw new Error(`reject_employee_rate_request (${reason}): ${error.message}`);
+    }
+    log("rate-requests", reason, "created", finalStatus);
+  }
+  await ensureRateRequest(20, "TEST fixture: requesting a raise given added scaffold-inspection responsibilities", "pending");
+  await ensureRateRequest(19, "TEST fixture: annual review — approved", "approved");
+  await ensureRateRequest(null, "TEST fixture: review only, no specific amount requested — rejected", "rejected");
+
+  // ==========================================================================
+  // Phase P — Equipment stock adjustment (Part 26) — a real
+  // adjust_equipment_stock() call against one of the existing quantity-
+  // tracked catalog items, so the History tab has a genuine
+  // 'stock_adjusted' entry to show (not just added/issued/returned).
+  // ==========================================================================
+  const { data: stockAdjustHistory } = await companyAdminSession.from("equipment_history").select("id").eq("company_id", companyId).eq("event", "stock_adjusted").limit(1);
+  if (stockAdjustHistory && stockAdjustHistory.length > 0) {
+    log("equipment-stock-adjustment", "quantity item", "reused", "already exists");
+  } else {
+    const { data: quantityItem } = await companyAdminSession.from("equipment_items").select("id").eq("company_id", companyId).eq("tracking_mode", "quantity").is("archived_at", null).limit(1).maybeSingle();
+    if (quantityItem) {
+      const { error } = await companyAdminSession.rpc("adjust_equipment_stock", { target_item_id: quantityItem.id, target_delta: 10, target_reason: "TEST fixture: new delivery" });
+      if (error) throw new Error(`adjust_equipment_stock: ${error.message}`);
+      log("equipment-stock-adjustment", "quantity item", "created", "+10 — new delivery");
+    } else {
+      log("equipment-stock-adjustment", "quantity item", "skipped", "no quantity-tracked catalog item found");
+    }
+  }
+
+  console.log("\n=== PHASE A-P SUMMARY (FINAL) ===");
   const counts = report.reduce<Record<Action, number>>((acc, r) => ({ ...acc, [r.action]: (acc[r.action] ?? 0) + 1 }), { created: 0, reused: 0, skipped: 0, updated: 0 });
   console.log(counts);
   console.log("\nSecondary project id:", secondaryProjectId);

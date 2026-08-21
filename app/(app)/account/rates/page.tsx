@@ -4,10 +4,14 @@ import { requireUser } from "@/lib/auth/session";
 import { resolveCurrentCompany } from "@/modules/companies/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
 import { listEmployeeRateHistory } from "@/modules/rates/queries";
+import { listMyRateRequests } from "@/modules/rate-requests/queries";
+import { EMPLOYEE_RATE_REQUEST_STATUS_LABELS } from "@/modules/rate-requests/types";
+import { RequestRateReviewDialog } from "@/modules/rate-requests/components/request-rate-review-dialog";
 import { AccountSubnav } from "@/modules/account/components/account-subnav";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 /**
  * Part 17/18 — Account > Rates. Own rate/history ONLY (RLS on
@@ -41,7 +45,7 @@ export default async function AccountRatesPage() {
     );
   }
 
-  const history = await listEmployeeRateHistory(currentCompanyId, myEmployeeId);
+  const [history, myRequests] = await Promise.all([listEmployeeRateHistory(currentCompanyId, myEmployeeId), listMyRateRequests(currentCompanyId, myEmployeeId)]);
   const current = history.find((entry) => entry.effectiveTo === null);
   const previous = history.filter((entry) => entry.effectiveTo !== null);
 
@@ -55,7 +59,7 @@ export default async function AccountRatesPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-4 sm:p-6">
-      <PageHeader title={t("tabRates")} description={t("ratesDescription")} />
+      <PageHeader title={t("tabRates")} description={t("ratesDescription")} actions={<RequestRateReviewDialog companyId={currentCompanyId} />} />
       <AccountSubnav active="rates" showRates={true} />
 
       {!current && previous.length === 0 ? (
@@ -97,6 +101,31 @@ export default async function AccountRatesPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {myRequests.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">{t("myRateRequests")}</h2>
+          <div className="flex flex-col gap-1.5">
+            {myRequests.map((request) => (
+              <Card key={request.id}>
+                <CardContent className="flex flex-col gap-1 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      {request.requested_rate != null ? t("requestedRate", { rate: formatRate(request.requested_rate, request.currency) }) : t("reviewOnlyRequest")}
+                    </span>
+                    <Badge variant={request.status === "approved" ? "default" : request.status === "rejected" ? "destructive" : "secondary"}>{EMPLOYEE_RATE_REQUEST_STATUS_LABELS[request.status]}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t("submittedOn", { date: formatDate(request.submitted_at.slice(0, 10)) })}</p>
+                  {request.status === "approved" && request.approved_rate != null && (
+                    <p className="text-xs text-muted-foreground">{t("approvedAt", { rate: formatRate(request.approved_rate, request.currency), date: request.effective_from ? formatDate(request.effective_from) : "" })}</p>
+                  )}
+                  {request.status === "rejected" && request.decision_reason && <p className="text-xs text-muted-foreground">{t("rejectionReason", { reason: request.decision_reason })}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

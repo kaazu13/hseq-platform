@@ -137,6 +137,8 @@
       "certificates": "Sertifikatai",
       "members": "Nariai",
       "companySetup": "Įmonės nustatymas",
+      "rateRequests": "Tarifo prašymai",
+      "payRules": "Tarifai ir apmokėjimo taisyklės",
       "companyGreetings": "Įmonės sveikinimai",
       "platformOverview": "Apžvalga",
       "platformCompanies": "Įmonės",
@@ -285,9 +287,12 @@
     "export": "Eksportuoti",
     "itemsLabel": "vienetai",
     "tabs": {
+      "overview": "Apžvalga",
+      "catalog": "Katalogas",
       "inventory": "Inventorius",
       "issued": "Išduota",
       "requests": "Prašymai",
+      "expiring": "Netrukus nebegalios",
       "history": "Istorija"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Nebegalioja"
     },
     "noAccessToRequests": "Neturite prieigos peržiūrėti šio projekto įrangos prašymų.",
+    "noAccessToOverview": "Neturite prieigos prie šio projekto įrangos apžvalgos.",
+    "noAccessToCatalog": "Neturite prieigos valdyti šio projekto įrangos katalogą.",
+    "noAccessToInventory": "Neturite įrangos valdymo prieigos šiam projektui. Apsilankykite Mano įranga savo daiktams peržiūrėti.",
+    "noAccessToHistory": "Neturite prieigos prie šio projekto įrangos istorijos.",
     "noEmployeeRecord": "Su jūsų paskyra šioje įmonėje nesusietas joks darbuotojo įrašas —",
     "contactAdministrator": "susisiekite su administratoriumi."
   },

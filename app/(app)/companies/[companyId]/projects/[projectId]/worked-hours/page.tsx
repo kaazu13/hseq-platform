@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations, getFormatter } from "next-intl/server";
-import { requireCompanyMembership, requireProjectAccess, getUserRoleNames } from "@/lib/auth/session";
+import { requireCompanyMembership, requireProjectAccess, getUserRoleNames, isPlatformSuperAdmin } from "@/lib/auth/session";
 import { getProject, getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { listWorkforceForDate } from "@/modules/daily-workforce/queries";
 import { dailyAttendancePermitsWork } from "@/modules/daily-workforce/types";
@@ -14,6 +14,10 @@ import {
   listWorkedHoursCorrectionCountsByWorkedHoursId,
 } from "@/modules/worked-hours/queries";
 import { canManageWorkedHours } from "@/modules/worked-hours/permissions";
+import { canViewAnyLaborCost, canViewProjectLaborCostOnly } from "@/modules/pay-rules/permissions";
+import { listEffectiveRatesForEmployeesOnDate } from "@/modules/rates/queries";
+import { getEffectivePayRulesForDateRange, resolveEffectivePayRules } from "@/modules/pay-rules/queries";
+import { calculateEstimatedEarnings, isSundayDate } from "@/modules/pay-rules/earnings";
 import { BulkApplyHoursBar } from "@/modules/worked-hours/components/bulk-apply-hours-bar";
 import { WorkedHoursTodayView, type WorkedHoursTodayRow } from "@/modules/worked-hours/components/worked-hours-today-view";
 import { SubmitWorkedHoursButton } from "@/modules/worked-hours/components/submit-worked-hours-button";
@@ -190,6 +194,31 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
 
   const draftCount = existingHours.filter((row) => row.status === "draft").length;
 
+  // Part 16 — a PROJECT-TOTAL-ONLY estimated labor cost figure, never a
+  // per-employee breakdown (deliberately conservative privacy design:
+  // even company_admin/planner see only the aggregate here, not
+  // individual rates — Account > Rates / Rate Requests remain the only
+  // places an individual rate is ever shown). Batched: one rates query +
+  // one pay-rules query for the WHOLE day's roster, never per-employee.
+  const isSuperAdminForCost = await isPlatformSuperAdmin();
+  const canSeeLaborCost = canViewAnyLaborCost(roleNames, isSuperAdminForCost, myProjectRoles);
+  let estimatedLaborCostToday: { total: number; currency: string } | null = null;
+  if (canSeeLaborCost && existingHours.length > 0) {
+    const employeeIds = existingHours.map((row) => row.employee_id);
+    const [ratesByEmployeeId, payRules] = await Promise.all([listEffectiveRatesForEmployeesOnDate(companyId, employeeIds, workDate), getEffectivePayRulesForDateRange(companyId, workDate, workDate)]);
+    const rulesForDay = resolveEffectivePayRules(payRules, workDate);
+    let total = 0;
+    let currency = "EUR";
+    for (const row of existingHours) {
+      const rate = ratesByEmployeeId.get(row.employee_id);
+      if (!rate) continue;
+      const estimate = calculateEstimatedEarnings({ hourlyRate: Number(rate.hourly_rate), currency: rate.currency, breakdown: row.breakdown, isSunday: isSundayDate(workDate), rulesByCategory: rulesForDay });
+      total += estimate.total;
+      currency = rate.currency;
+    }
+    estimatedLaborCostToday = { total, currency };
+  }
+
   const tableRows: WorkedHoursTodayRow[] = relevantEmployees.map((state) => {
     const workedHours = hoursByEmployeeId.get(state.employee.id) ?? null;
     return {
@@ -197,6 +226,7 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
       workedHours,
       attendanceStatus: state.attendanceStatus,
       correctionCount: workedHours ? correctionCountsById.get(workedHours.id) : undefined,
+      roleNames: state.roleNames,
     };
   });
 
@@ -225,6 +255,17 @@ export default async function WorkedHoursPage({ params, searchParams }: WorkedHo
             ))}
           </div>
         </div>
+      )}
+
+      {estimatedLaborCostToday && (
+        <Card>
+          <CardContent className="flex items-center justify-between py-3 text-sm">
+            <span className="text-muted-foreground">
+              {canViewProjectLaborCostOnly(roleNames, isSuperAdminForCost, myProjectRoles) ? "Estimated project labor cost today" : "Estimated labor cost today"}
+            </span>
+            <span className="font-semibold tabular-nums">{format.number(estimatedLaborCostToday.total, { style: "currency", currency: estimatedLaborCostToday.currency })}</span>
+          </CardContent>
+        </Card>
       )}
 
       <BulkApplyHoursBar companyId={companyId} projectId={projectId} workDate={workDate} employeeIds={eligibleForBulkApply.map((state) => state.employee.id)} />

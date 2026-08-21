@@ -1,5 +1,6 @@
 import type { Database, Enums } from "@/types/database";
 import { LMRA_SHIFTS, LMRA_SHIFT_LABELS, type LmraShift } from "@/modules/lmra/types";
+import type { RoleName } from "@/modules/companies/types";
 
 /**
  * Daily Workforce / Attendance + Today's Teams — see
@@ -105,6 +106,10 @@ export type EmployeeDailyState = {
   assignedTeam: { id: string; name: string; shift: DailyTeamShift | null } | null;
   /** Holds the project's real, existing Foreman role (is_eligible_scaffold_foreman()) — items 7/8's "foreman picker only shows foremen / worker picker excludes foremen" filtering key. Never invented from a UI label. */
   isEligibleForeman: boolean;
+  /** This employee's current company roles (RoleName[]) — Part 3's client-side pre-filter needs this to hide a management-only account (platform_super_admin/company_admin/project_manager/planner with no OTHER role) from ordinary-worker pickers; the real enforcement is still the DB trigger. */
+  roleNames: RoleName[];
+  /** True while a PENDING (not yet decided) leave request or absence report covers this work date — Part 3/29's client-side pre-filter mirror of is_employee_provisionally_unavailable(). */
+  hasPendingRequest: boolean;
 };
 
 type ResolvedTeamRef = { id: string; name: string; shift: DailyTeamShift | null };
@@ -128,6 +133,26 @@ type ResolvedTeamRef = { id: string; name: string; shift: DailyTeamShift | null 
 export function resolveAssignedTeam(membership: ResolvedTeamRef | null, foremanTeam: ResolvedTeamRef | null): ResolvedTeamRef | null {
   return membership ?? foremanTeam ?? null;
 }
+
+/**
+ * Part 1's exact "Available Today" definition, client-side mirror of the
+ * DB's real enforcement (is_employee_provisionally_unavailable() +
+ * is_employee_assignable_as_worker(), both server-side triggers — this is
+ * ONLY what the picker/panel offers, never the actual gate): active
+ * attendance state permits work, no pending leave/absence request covers
+ * this date, and the employee is not management-only (an account whose
+ * ONLY roles are platform_super_admin/company_admin/project_manager/
+ * planner — a genuine multi-role account, e.g. project_manager + foreman,
+ * is unaffected).
+ */
+export function employeeIsAssignableToday(state: Pick<EmployeeDailyState, "attendanceStatus" | "hasPendingRequest" | "roleNames">): boolean {
+  if (!dailyAttendancePermitsWork(state.attendanceStatus)) return false;
+  if (state.hasPendingRequest) return false;
+  if (state.roleNames.length > 0 && state.roleNames.every((role) => MANAGEMENT_ONLY_ROLES.includes(role))) return false;
+  return true;
+}
+
+const MANAGEMENT_ONLY_ROLES: RoleName[] = ["platform_super_admin", "company_admin", "project_manager", "planner"];
 
 /** True when an employee's current daily state permits assigning them to a team — mirrors dailyAttendancePermitsWork(), applied to the resolved state rather than a raw status. */
 export function employeeIsAvailableForAssignment(state: Pick<EmployeeDailyState, "attendanceStatus">): boolean {

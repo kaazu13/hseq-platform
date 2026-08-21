@@ -137,6 +137,8 @@
       "certificates": "Certificati",
       "members": "Membri",
       "companySetup": "Configurazione azienda",
+      "rateRequests": "Richieste di tariffa",
+      "payRules": "Tariffe e regole di paga",
       "companyGreetings": "Auguri aziendali",
       "platformOverview": "Panoramica",
       "platformCompanies": "Aziende",
@@ -285,9 +287,12 @@
     "export": "Esporta",
     "itemsLabel": "articoli",
     "tabs": {
+      "overview": "Panoramica",
+      "catalog": "Catalogo",
       "inventory": "Inventario",
       "issued": "Consegnato",
       "requests": "Richieste",
+      "expiring": "In scadenza",
       "history": "Cronologia"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Scaduto"
     },
     "noAccessToRequests": "Non hai accesso per rivedere le richieste di attrezzatura per questo progetto.",
+    "noAccessToOverview": "Non hai accesso alla panoramica dell'attrezzatura per questo progetto.",
+    "noAccessToCatalog": "Non hai accesso per gestire il catalogo dell'attrezzatura per questo progetto.",
+    "noAccessToInventory": "Non hai accesso alla gestione dell'attrezzatura per questo progetto. Visita La Mia Attrezzatura per i tuoi articoli.",
+    "noAccessToHistory": "Non hai accesso alla cronologia dell'attrezzatura per questo progetto.",
     "noEmployeeRecord": "Nessun record dipendente è collegato al tuo account per questa azienda —",
     "contactAdministrator": "contatta il tuo amministratore."
   },

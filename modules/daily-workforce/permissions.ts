@@ -40,6 +40,23 @@ export function canManageOwnDailyTeam(roleNames: RoleName[], myProjectAssignment
   return canManageDailyWorkforce(roleNames, myProjectAssignmentRoles) || (roleNames.includes("foreman") && isTeamForeman);
 }
 
+/**
+ * Part 1 of the workforce-completion package — who may see the
+ * "Available Today / Unassigned Today" panel. Deliberately a NARROWER,
+ * different set than canViewDailyWorkforceBroadly() below: hseq_manager
+ * and hse_officer are explicitly named as NOT authorized for this
+ * specific panel (they can still see the whole day's workforce via the
+ * broader viewer grant, just not this workforce-ORGANIZING tool), while
+ * planner IS authorized here (workforce planning is squarely their job)
+ * even though planner has no seat in canManageDailyWorkforce/
+ * canViewDailyWorkforceBroadly at all today.
+ */
+const AVAILABLE_UNASSIGNED_PROJECT_SCOPED_ROLES: RoleName[] = ["planner", "foreman"];
+
+export function canViewAvailableUnassignedPanel(roleNames: RoleName[], myProjectAssignmentRoles: string[], hasProjectAccess: boolean): boolean {
+  return canManageDailyWorkforce(roleNames, myProjectAssignmentRoles) || (hasProjectAccess && roleNames.some((role) => AVAILABLE_UNASSIGNED_PROJECT_SCOPED_ROLES.includes(role)));
+}
+
 const DAILY_WORKFORCE_BROAD_VIEWER_ROLES: RoleName[] = ["project_manager", "hseq_manager", "hse_officer", "foreman"];
 
 /**

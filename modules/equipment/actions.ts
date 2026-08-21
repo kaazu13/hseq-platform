@@ -8,10 +8,11 @@ import type { ActionResult } from "@/lib/action-result";
 import { flattenFieldErrors, isRlsViolation, isRaisedException } from "@/lib/supabase/errors";
 import { getMyProjectAssignmentRoles } from "@/modules/projects/queries";
 import { getMyEmployeeId } from "@/modules/daily-workforce/queries";
-import { canManageEquipment } from "./permissions";
+import { canManageEquipment, canManageEquipmentCatalog } from "./permissions";
 import {
   createEquipmentItemSchema,
   updateEquipmentItemSchema,
+  adjustEquipmentStockSchema,
   issueEquipmentSchema,
   returnEquipmentSchema,
   markEquipmentDamagedSchema,
@@ -24,6 +25,7 @@ import {
   updateEquipmentAssignmentExpirySchema,
   type CreateEquipmentItemInput,
   type UpdateEquipmentItemInput,
+  type AdjustEquipmentStockInput,
   type IssueEquipmentInput,
   type ReturnEquipmentInput,
   type MarkEquipmentDamagedInput,
@@ -56,6 +58,18 @@ async function requireEquipmentManageAccess(companyId: string, projectId: string
   return { user, roleNames, myProjectAssignmentRoles };
 }
 
+/** Part 24/33 — the catalog/pricing/stock-adjustment gate (includes planner), distinct from requireEquipmentManageAccess above (issuing/returning/request-decision authority, planner excluded) — see canManageEquipmentCatalog's comment. */
+async function requireEquipmentCatalogManageAccess(companyId: string, projectId: string) {
+  const { user } = await requireCompanyMembership(companyId);
+  const [roleNames, myProjectAssignmentRoles, isSuperAdmin] = await Promise.all([
+    getUserRoleNames(companyId),
+    getMyProjectAssignmentRoles(companyId, projectId, user.id),
+    isPlatformSuperAdmin(),
+  ]);
+  if (!isSuperAdmin && !canManageEquipmentCatalog(roleNames, projectId, myProjectAssignmentRoles)) forbidden();
+  return { user, roleNames, myProjectAssignmentRoles };
+}
+
 function revalidateEquipmentPaths(companyId: string, projectId: string) {
   revalidatePath(`/companies/${companyId}/projects/${projectId}/equipment`);
   revalidatePath("/dashboard");
@@ -68,7 +82,7 @@ export async function createEquipmentItem(companyId: string, projectId: string, 
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  await requireEquipmentManageAccess(companyId, projectId);
+  await requireEquipmentCatalogManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -93,6 +107,10 @@ export async function createEquipmentItem(companyId: string, projectId: string, 
       target_location: parsed.data.location ?? undefined,
       target_notes: parsed.data.notes ?? undefined,
       target_default_validity_days: parsed.data.defaultValidityDays ?? undefined,
+      target_unit_price: parsed.data.unitPrice ?? undefined,
+      target_currency: parsed.data.currency ?? undefined,
+      target_requestable: parsed.data.requestable ?? true,
+      target_purchase_date: parsed.data.purchaseDate || undefined,
     })
     .single();
 
@@ -112,7 +130,7 @@ export async function updateEquipmentItem(companyId: string, projectId: string, 
     return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
   }
 
-  await requireEquipmentManageAccess(companyId, projectId);
+  await requireEquipmentCatalogManageAccess(companyId, projectId);
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -129,6 +147,10 @@ export async function updateEquipmentItem(companyId: string, projectId: string, 
       target_location: parsed.data.location ?? undefined,
       target_notes: parsed.data.notes ?? undefined,
       target_default_validity_days: parsed.data.defaultValidityDays ?? undefined,
+      target_unit_price: parsed.data.unitPrice ?? undefined,
+      target_currency: parsed.data.currency ?? undefined,
+      target_requestable: parsed.data.requestable ?? true,
+      target_purchase_date: parsed.data.purchaseDate || undefined,
     })
     .single();
 
@@ -136,6 +158,27 @@ export async function updateEquipmentItem(companyId: string, projectId: string, 
     if (isRlsViolation(error)) forbidden();
     if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
     return { ok: false, error: { code: "server_error", message: "Couldn't update this item. Try again." } };
+  }
+
+  revalidateEquipmentPaths(companyId, projectId);
+  return { ok: true, data: data as EquipmentItem };
+}
+
+/** Part 26 — the missing manual stock-adjustment path. Management-tier only; adjust_equipment_stock() itself refuses a resulting negative stock and requires a non-blank reason. */
+export async function adjustEquipmentStock(companyId: string, projectId: string, itemId: string, input: AdjustEquipmentStockInput): Promise<ActionResult<EquipmentItem>> {
+  const parsed = adjustEquipmentStockSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: { code: "validation_error", message: "Check the highlighted fields.", fieldErrors: flattenFieldErrors(parsed.error) } };
+  }
+
+  await requireEquipmentCatalogManageAccess(companyId, projectId);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("adjust_equipment_stock", { target_item_id: itemId, target_delta: parsed.data.delta, target_reason: parsed.data.reason }).single();
+
+  if (error) {
+    if (isRlsViolation(error)) forbidden();
+    if (isRaisedException(error)) return { ok: false, error: { code: "validation_error", message: error.message } };
+    return { ok: false, error: { code: "server_error", message: "Couldn't adjust stock. Try again." } };
   }
 
   revalidateEquipmentPaths(companyId, projectId);

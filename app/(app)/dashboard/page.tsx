@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { requireUser, getUserRoleNames, isEmployeeOnlyAccount, isEmployeeOrInspectorOnlyAccount } from "@/lib/auth/session";
 import { InspectorDashboardSection } from "@/modules/scaffolds/components/inspector-dashboard-section";
+import { getMyRateCardData } from "@/modules/rates/dashboard-card";
+import { MyRateCard } from "@/modules/rates/components/my-rate-card";
 import {
   countActiveMembers,
   getCurrentUserProfile,
@@ -166,8 +168,20 @@ export default async function DashboardPage() {
   // exposing another employee's records.
   let employeeSection: ReactNode = null;
   let inspectorSection: ReactNode = null;
+  let rateCardSection: ReactNode = null;
   if (effectiveProjectId) {
     const myEmployeeId = await getMyEmployeeId(current.id, user.id);
+    if (myEmployeeId) {
+      // Part 4 — one bounded rate-card computation per dashboard load, for
+      // any operational employee-linked account (employee/inspector/
+      // foreman/hse_officer/hseq_manager where they hold an employee
+      // record) — the same `myEmployeeId` gate every other personal
+      // section here already uses, so a pure Platform Super Admin/
+      // company_admin account with no employee record never sees this.
+      const monthPeriodForRate = resolveWorkedHoursPeriod("month", getProjectLocalDate(currentProject?.timezone));
+      const rateCardData = await getMyRateCardData(current.id, myEmployeeId, monthPeriodForRate.fromDate, monthPeriodForRate.toDate);
+      rateCardSection = <MyRateCard companyId={current.id} data={rateCardData} />;
+    }
     if (myEmployeeId && isInspectorOnly) {
       inspectorSection = (
         <InspectorDashboardSection companyId={current.id} projectId={effectiveProjectId} projectTimezone={currentProject?.timezone ?? null} inspectorEmployeeId={myEmployeeId} basePath={`/companies/${current.id}/projects/${effectiveProjectId}`} />
@@ -251,6 +265,8 @@ export default async function DashboardPage() {
       {showOnboardingBanner && onboardingChecklist && <OnboardingBanner checklist={onboardingChecklist} />}
 
       {employeeSection}
+
+      {rateCardSection && <div className="max-w-sm">{rateCardSection}</div>}
 
       {inspectorSection}
 

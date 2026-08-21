@@ -1374,6 +1374,99 @@ export type Database = {
           },
         ]
       }
+      employee_rate_requests: {
+        Row: {
+          approved_rate: number | null
+          company_id: string
+          currency: string
+          current_rate_at_request: number | null
+          decision_reason: string | null
+          effective_from: string | null
+          employee_id: string
+          id: string
+          reason: string | null
+          requested_rate: number | null
+          resulting_rate_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["employee_rate_request_status"]
+          submitted_at: string
+          submitted_by: string | null
+        }
+        Insert: {
+          approved_rate?: number | null
+          company_id: string
+          currency?: string
+          current_rate_at_request?: number | null
+          decision_reason?: string | null
+          effective_from?: string | null
+          employee_id: string
+          id?: string
+          reason?: string | null
+          requested_rate?: number | null
+          resulting_rate_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["employee_rate_request_status"]
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Update: {
+          approved_rate?: number | null
+          company_id?: string
+          currency?: string
+          current_rate_at_request?: number | null
+          decision_reason?: string | null
+          effective_from?: string | null
+          employee_id?: string
+          id?: string
+          reason?: string | null
+          requested_rate?: number | null
+          resulting_rate_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["employee_rate_request_status"]
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_rate_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_rate_requests_employee_fk"
+            columns: ["employee_id", "company_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id", "company_id"]
+          },
+          {
+            foreignKeyName: "employee_rate_requests_resulting_rate_id_fkey"
+            columns: ["resulting_rate_id"]
+            isOneToOne: false
+            referencedRelation: "employee_hourly_rates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_rate_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_rate_requests_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           account_status: Database["public"]["Enums"]["employee_account_status"]
@@ -1667,8 +1760,10 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string | null
+          purchase_date: string | null
           quantity: number
           reference_number: string | null
+          requestable: boolean
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -1694,8 +1789,10 @@ export type Database = {
           name: string
           notes?: string | null
           project_id?: string | null
+          purchase_date?: string | null
           quantity?: number
           reference_number?: string | null
+          requestable?: boolean
           specification?: string | null
           status?: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -1721,8 +1818,10 @@ export type Database = {
           name?: string
           notes?: string | null
           project_id?: string | null
+          purchase_date?: string | null
           quantity?: number
           reference_number?: string | null
+          requestable?: boolean
           specification?: string | null
           status?: Database["public"]["Enums"]["equipment_status"]
           tracking_mode?: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -2397,6 +2496,63 @@ export type Database = {
           {
             foreignKeyName: "notifications_recipient_user_id_fkey"
             columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pay_rules: {
+        Row: {
+          calculation_type: Database["public"]["Enums"]["pay_rule_calculation_type"]
+          category: Database["public"]["Enums"]["pay_rule_category"]
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          stackable: boolean
+          value: number
+        }
+        Insert: {
+          calculation_type: Database["public"]["Enums"]["pay_rule_calculation_type"]
+          category: Database["public"]["Enums"]["pay_rule_category"]
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          stackable?: boolean
+          value?: number
+        }
+        Update: {
+          calculation_type?: Database["public"]["Enums"]["pay_rule_calculation_type"]
+          category?: Database["public"]["Enums"]["pay_rule_category"]
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          stackable?: boolean
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pay_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pay_rules_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5314,6 +5470,48 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      adjust_equipment_stock: {
+        Args: {
+          target_delta: number
+          target_item_id: string
+          target_reason: string
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          currency: string
+          default_validity_days: number | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          purchase_date: string | null
+          quantity: number
+          reference_number: string | null
+          requestable: boolean
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_update_profile_name: {
         Args: { target_full_name: string; target_user_id: string }
         Returns: {
@@ -5358,6 +5556,38 @@ export type Database = {
           target_status: Database["public"]["Enums"]["daily_attendance_status"]
         }
         Returns: undefined
+      }
+      approve_employee_rate_request: {
+        Args: {
+          target_approved_rate: number
+          target_decision_reason?: string
+          target_effective_from: string
+          target_request_id: string
+        }
+        Returns: {
+          approved_rate: number | null
+          company_id: string
+          currency: string
+          current_rate_at_request: number | null
+          decision_reason: string | null
+          effective_from: string | null
+          employee_id: string
+          id: string
+          reason: string | null
+          requested_rate: number | null
+          resulting_rate_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["employee_rate_request_status"]
+          submitted_at: string
+          submitted_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_rate_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       approve_equipment_request: {
         Args: { target_comment?: string; target_request_id: string }
@@ -5712,6 +5942,19 @@ export type Database = {
         }
         Returns: number
       }
+      count_equipment_items_management: {
+        Args: {
+          target_category?: string
+          target_company_id: string
+          target_condition?: Database["public"]["Enums"]["equipment_condition"]
+          target_include_archived?: boolean
+          target_ownership?: string
+          target_project_id: string
+          target_search?: string
+          target_statuses?: Database["public"]["Enums"]["equipment_status"][]
+        }
+        Returns: number
+      }
       create_company: {
         Args: {
           target_employee_number_prefix?: string
@@ -5802,58 +6045,119 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_equipment_item: {
-        Args: {
-          target_category: string
-          target_company_id: string
-          target_condition?: Database["public"]["Enums"]["equipment_condition"]
-          target_default_validity_days?: number
-          target_description?: string
-          target_location?: string
-          target_manufacturer?: string
-          target_model?: string
-          target_name: string
-          target_notes?: string
-          target_project_id: string
-          target_quantity?: number
-          target_reference_number?: string
-          target_specification?: string
-          target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-        }
-        Returns: {
-          archived_at: string | null
-          available_quantity: number
-          category: string
-          company_id: string
-          condition: Database["public"]["Enums"]["equipment_condition"]
-          created_at: string
-          created_by: string | null
-          currency: string
-          default_validity_days: number | null
-          description: string | null
-          id: string
-          location: string | null
-          manufacturer: string | null
-          model: string | null
-          name: string
-          notes: string | null
-          project_id: string | null
-          quantity: number
-          reference_number: string | null
-          specification: string | null
-          status: Database["public"]["Enums"]["equipment_status"]
-          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-          unit_price: number | null
-          updated_at: string
-          updated_by: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "equipment_items"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      create_equipment_item:
+        | {
+            Args: {
+              target_category: string
+              target_company_id: string
+              target_condition?: Database["public"]["Enums"]["equipment_condition"]
+              target_default_validity_days?: number
+              target_description?: string
+              target_location?: string
+              target_manufacturer?: string
+              target_model?: string
+              target_name: string
+              target_notes?: string
+              target_project_id: string
+              target_quantity?: number
+              target_reference_number?: string
+              target_specification?: string
+              target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+            }
+            Returns: {
+              archived_at: string | null
+              available_quantity: number
+              category: string
+              company_id: string
+              condition: Database["public"]["Enums"]["equipment_condition"]
+              created_at: string
+              created_by: string | null
+              currency: string
+              default_validity_days: number | null
+              description: string | null
+              id: string
+              location: string | null
+              manufacturer: string | null
+              model: string | null
+              name: string
+              notes: string | null
+              project_id: string | null
+              purchase_date: string | null
+              quantity: number
+              reference_number: string | null
+              requestable: boolean
+              specification: string | null
+              status: Database["public"]["Enums"]["equipment_status"]
+              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "equipment_items"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              target_category: string
+              target_company_id: string
+              target_condition?: Database["public"]["Enums"]["equipment_condition"]
+              target_currency?: string
+              target_default_validity_days?: number
+              target_description?: string
+              target_location?: string
+              target_manufacturer?: string
+              target_model?: string
+              target_name: string
+              target_notes?: string
+              target_project_id: string
+              target_purchase_date?: string
+              target_quantity?: number
+              target_reference_number?: string
+              target_requestable?: boolean
+              target_specification?: string
+              target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+              target_unit_price?: number
+            }
+            Returns: {
+              archived_at: string | null
+              available_quantity: number
+              category: string
+              company_id: string
+              condition: Database["public"]["Enums"]["equipment_condition"]
+              created_at: string
+              created_by: string | null
+              currency: string
+              default_validity_days: number | null
+              description: string | null
+              id: string
+              location: string | null
+              manufacturer: string | null
+              model: string | null
+              name: string
+              notes: string | null
+              project_id: string | null
+              purchase_date: string | null
+              quantity: number
+              reference_number: string | null
+              requestable: boolean
+              specification: string | null
+              status: Database["public"]["Enums"]["equipment_status"]
+              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "equipment_items"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       create_invitation: {
         Args: {
           target_company_id: string
@@ -6105,6 +6409,18 @@ export type Database = {
           phone: string
         }[]
       }
+      get_equipment_overview_counts: {
+        Args: { target_company_id: string; target_project_id: string }
+        Returns: {
+          available_stock: number
+          catalog_items: number
+          currently_issued: number
+          expired: number
+          expiring_soon: number
+          pending_requests: number
+          serialized_available: number
+        }[]
+      }
       get_inspectors_today: {
         Args: { target_project_id: string; target_work_date: string }
         Returns: {
@@ -6151,6 +6467,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_my_equipment_item_display_info: {
+        Args: { target_company_id: string; target_item_ids: string[] }
+        Returns: {
+          category: string
+          currency: string
+          id: string
+          name: string
+          reference_number: string
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number
+        }[]
       }
       get_scaffold_inspection_overview: {
         Args: { target_project_id: string }
@@ -6258,6 +6586,14 @@ export type Database = {
           target_organization_id: string
           target_project_id: string
         }
+        Returns: boolean
+      }
+      is_employee_assignable_as_worker: {
+        Args: { target_company_id: string; target_employee_id: string }
+        Returns: boolean
+      }
+      is_employee_provisionally_unavailable: {
+        Args: { target_employee_id: string; target_work_date: string }
         Returns: boolean
       }
       is_equipment_catalog_manage_tier: {
@@ -6398,6 +6734,88 @@ export type Database = {
           position_title: string
         }[]
       }
+      list_equipment_history_for_project: {
+        Args: {
+          target_company_id: string
+          target_employee_id?: string
+          target_event?: Database["public"]["Enums"]["equipment_history_event"]
+          target_from_date?: string
+          target_item_id?: string
+          target_limit?: number
+          target_offset?: number
+          target_project_id: string
+          target_to_date?: string
+        }
+        Returns: {
+          actor: string | null
+          company_id: string
+          created_at: string
+          employee_id: string | null
+          equipment_item_id: string
+          event: Database["public"]["Enums"]["equipment_history_event"]
+          from_status: string | null
+          id: string
+          note: string | null
+          quantity: number | null
+          to_status: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "equipment_history"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      list_equipment_items_management: {
+        Args: {
+          target_category?: string
+          target_company_id: string
+          target_condition?: Database["public"]["Enums"]["equipment_condition"]
+          target_include_archived?: boolean
+          target_item_ids?: string[]
+          target_limit?: number
+          target_offset?: number
+          target_ownership?: string
+          target_project_id: string
+          target_search?: string
+          target_statuses?: Database["public"]["Enums"]["equipment_status"][]
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          currency: string
+          default_validity_days: number | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          purchase_date: string | null
+          quantity: number
+          reference_number: string | null
+          requestable: boolean
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
+          updated_at: string
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       list_toolbox_authorized_employees: {
         Args: { target_organization_id: string; target_project_id: string }
         Returns: {
@@ -6487,8 +6905,10 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string | null
+          purchase_date: string | null
           quantity: number
           reference_number: string | null
+          requestable: boolean
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -6527,8 +6947,10 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string | null
+          purchase_date: string | null
           quantity: number
           reference_number: string | null
+          requestable: boolean
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -6887,8 +7309,10 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string | null
+          purchase_date: string | null
           quantity: number
           reference_number: string | null
+          requestable: boolean
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -6946,6 +7370,33 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "attendance_review_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reject_employee_rate_request: {
+        Args: { target_decision_reason: string; target_request_id: string }
+        Returns: {
+          approved_rate: number | null
+          company_id: string
+          currency: string
+          current_rate_at_request: number | null
+          decision_reason: string | null
+          effective_from: string | null
+          employee_id: string
+          id: string
+          reason: string | null
+          requested_rate: number | null
+          resulting_rate_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["employee_rate_request_status"]
+          submitted_at: string
+          submitted_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_rate_requests"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -7359,8 +7810,10 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string | null
+          purchase_date: string | null
           quantity: number
           reference_number: string | null
+          requestable: boolean
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -7675,8 +8128,10 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string | null
+          purchase_date: string | null
           quantity: number
           reference_number: string | null
+          requestable: boolean
           specification: string | null
           status: Database["public"]["Enums"]["equipment_status"]
           tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
@@ -7880,55 +8335,113 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      update_equipment_item: {
-        Args: {
-          target_category: string
-          target_default_validity_days?: number
-          target_description?: string
-          target_item_id: string
-          target_location?: string
-          target_manufacturer?: string
-          target_model?: string
-          target_name: string
-          target_notes?: string
-          target_project_id: string
-          target_reference_number?: string
-          target_specification?: string
-        }
-        Returns: {
-          archived_at: string | null
-          available_quantity: number
-          category: string
-          company_id: string
-          condition: Database["public"]["Enums"]["equipment_condition"]
-          created_at: string
-          created_by: string | null
-          currency: string
-          default_validity_days: number | null
-          description: string | null
-          id: string
-          location: string | null
-          manufacturer: string | null
-          model: string | null
-          name: string
-          notes: string | null
-          project_id: string | null
-          quantity: number
-          reference_number: string | null
-          specification: string | null
-          status: Database["public"]["Enums"]["equipment_status"]
-          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-          unit_price: number | null
-          updated_at: string
-          updated_by: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "equipment_items"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      update_equipment_item:
+        | {
+            Args: {
+              target_category: string
+              target_default_validity_days?: number
+              target_description?: string
+              target_item_id: string
+              target_location?: string
+              target_manufacturer?: string
+              target_model?: string
+              target_name: string
+              target_notes?: string
+              target_project_id: string
+              target_reference_number?: string
+              target_specification?: string
+            }
+            Returns: {
+              archived_at: string | null
+              available_quantity: number
+              category: string
+              company_id: string
+              condition: Database["public"]["Enums"]["equipment_condition"]
+              created_at: string
+              created_by: string | null
+              currency: string
+              default_validity_days: number | null
+              description: string | null
+              id: string
+              location: string | null
+              manufacturer: string | null
+              model: string | null
+              name: string
+              notes: string | null
+              project_id: string | null
+              purchase_date: string | null
+              quantity: number
+              reference_number: string | null
+              requestable: boolean
+              specification: string | null
+              status: Database["public"]["Enums"]["equipment_status"]
+              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "equipment_items"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              target_category: string
+              target_currency?: string
+              target_default_validity_days?: number
+              target_description?: string
+              target_item_id: string
+              target_location?: string
+              target_manufacturer?: string
+              target_model?: string
+              target_name: string
+              target_notes?: string
+              target_project_id: string
+              target_purchase_date?: string
+              target_reference_number?: string
+              target_requestable?: boolean
+              target_specification?: string
+              target_unit_price?: number
+            }
+            Returns: {
+              archived_at: string | null
+              available_quantity: number
+              category: string
+              company_id: string
+              condition: Database["public"]["Enums"]["equipment_condition"]
+              created_at: string
+              created_by: string | null
+              currency: string
+              default_validity_days: number | null
+              description: string | null
+              id: string
+              location: string | null
+              manufacturer: string | null
+              model: string | null
+              name: string
+              notes: string | null
+              project_id: string | null
+              purchase_date: string | null
+              quantity: number
+              reference_number: string | null
+              requestable: boolean
+              specification: string | null
+              status: Database["public"]["Enums"]["equipment_status"]
+              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "equipment_items"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       update_lmra_assessment: {
         Args: {
           target_daily_team_id?: string
@@ -8295,6 +8808,11 @@ export type Database = {
         | "active"
         | "suspended"
         | "archived"
+      employee_rate_request_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "withdrawn"
       employment_end_reason:
         | "resigned"
         | "terminated"
@@ -8413,6 +8931,17 @@ export type Database = {
       observation_status: "open" | "closed"
       observation_target_type: "employee" | "daily_team" | "general"
       observation_type: "positive" | "negative" | "general"
+      pay_rule_calculation_type:
+        | "base_only"
+        | "percentage_extra"
+        | "fixed_extra_per_hour"
+      pay_rule_category:
+        | "regular"
+        | "overtime"
+        | "night"
+        | "travel"
+        | "other"
+        | "sunday"
       permission_scope_type: "company_wide" | "project_specific" | "either"
       project_assignment_role:
         | "project_manager"
@@ -8743,6 +9272,12 @@ export const Constants = {
         "suspended",
         "archived",
       ],
+      employee_rate_request_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "withdrawn",
+      ],
       employment_end_reason: [
         "resigned",
         "terminated",
@@ -8873,6 +9408,19 @@ export const Constants = {
       observation_status: ["open", "closed"],
       observation_target_type: ["employee", "daily_team", "general"],
       observation_type: ["positive", "negative", "general"],
+      pay_rule_calculation_type: [
+        "base_only",
+        "percentage_extra",
+        "fixed_extra_per_hour",
+      ],
+      pay_rule_category: [
+        "regular",
+        "overtime",
+        "night",
+        "travel",
+        "other",
+        "sunday",
+      ],
       permission_scope_type: ["company_wide", "project_specific", "either"],
       project_assignment_role: [
         "project_manager",

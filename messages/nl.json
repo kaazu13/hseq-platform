@@ -137,6 +137,8 @@
       "certificates": "Certificaten",
       "members": "Leden",
       "companySetup": "Bedrijfsinstellingen",
+      "rateRequests": "Tariefverzoeken",
+      "payRules": "Tarieven en loonregels",
       "companyGreetings": "Bedrijfsgroeten",
       "platformOverview": "Overzicht",
       "platformCompanies": "Bedrijven",
@@ -285,9 +287,12 @@
     "export": "Exporteren",
     "itemsLabel": "items",
     "tabs": {
+      "overview": "Overzicht",
+      "catalog": "Catalogus",
       "inventory": "Inventaris",
       "issued": "Uitgegeven",
       "requests": "Aanvragen",
+      "expiring": "Verloopt binnenkort",
       "history": "Geschiedenis"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Verlopen"
     },
     "noAccessToRequests": "Je hebt geen toegang om uitrustingsaanvragen voor dit project te beoordelen.",
+    "noAccessToOverview": "Je hebt geen toegang tot het uitrustingsoverzicht voor dit project.",
+    "noAccessToCatalog": "Je hebt geen toegang om de uitrustingscatalogus voor dit project te beheren.",
+    "noAccessToInventory": "Je hebt geen uitrustingsbeheertoegang voor dit project. Bezoek Mijn Uitrusting voor je eigen items.",
+    "noAccessToHistory": "Je hebt geen toegang tot de uitrustingsgeschiedenis voor dit project.",
     "noEmployeeRecord": "Er is geen medewerkersdossier gekoppeld aan je account bij dit bedrijf —",
     "contactAdministrator": "neem contact op met je beheerder."
   },

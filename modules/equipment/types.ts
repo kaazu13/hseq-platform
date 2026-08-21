@@ -196,6 +196,22 @@ export type EquipmentHistoryEntryWithDetail = EquipmentHistoryEntry & {
   employee: BasicEmployee | null;
 };
 
+/** Part 27 — the project-wide History tab's row shape: adds the item's safe display fields (name/reference_number are NOT restricted columns — see 20260904090000's grant split) since a cross-item feed can't rely on a single pre-known item name the way the per-item History tab does. */
+export type EquipmentHistoryEntryWithItem = EquipmentHistoryEntryWithDetail & {
+  item: { id: string; name: string; reference_number: string | null } | null;
+};
+
+/** Part 23 — the Overview tab's aggregate metrics, computed in one SQL round trip by get_equipment_overview_counts() (manage-tier gated — never exposed to self-service roles). */
+export type EquipmentOverviewMetrics = {
+  catalogItems: number;
+  availableStock: number;
+  serializedAvailable: number;
+  currentlyIssued: number;
+  pendingRequests: number;
+  expiringSoon: number;
+  expired: number;
+};
+
 /** A handful of common category suggestions (item 1's examples) — a free-text field, never a hard enum, so this is a UI convenience only, not a DB constraint. */
 export const EQUIPMENT_CATEGORY_SUGGESTIONS = [
   "PPE",

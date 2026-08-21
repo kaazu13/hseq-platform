@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, EyeOff, Eye } from "lucide-react";
 import type { EmployeeDailyState } from "@/modules/daily-workforce/types";
 import { DAILY_ATTENDANCE_STATUS_LABELS, employeeIsAvailableForAssignment } from "@/modules/daily-workforce/types";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -38,17 +38,38 @@ type WorkerPickerDialogProps = {
  * assignment already goes through — never a silent double assignment,
  * never a temporary unassigned gap.
  */
+const MANAGEMENT_ONLY_ROLES = ["platform_super_admin", "company_admin", "project_manager", "planner"];
+
+/** Part 3/20/29 — why a row is hidden by default: checked independently (never derived from the combined employeeIsAssignableToday() alone), so the picker can show the RIGHT reason rather than a generic "unavailable." */
+function blockReason(state: EmployeeDailyState): "management" | "pendingRequest" | "attendance" | null {
+  if (state.roleNames.length > 0 && state.roleNames.every((role) => MANAGEMENT_ONLY_ROLES.includes(role))) return "management";
+  if (state.hasPendingRequest) return "pendingRequest";
+  if (!employeeIsAvailableForAssignment(state)) return "attendance";
+  return null;
+}
+
 export function WorkerPickerDialog({ open, onOpenChange, title, description, workforce, currentTeamId, currentTeamName, onSelect }: WorkerPickerDialogProps) {
   const [search, setSearch] = useState("");
+  const [showUnavailable, setShowUnavailable] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ employeeId: string; name: string; fromTeamName: string } | null>(null);
 
-  const filtered = useMemo(() => {
+  const candidates = useMemo(() => {
     const query = search.trim().toLowerCase();
     return workforce
       .filter((state) => !state.isEligibleForeman)
       .filter((state) => state.assignedTeam?.id !== currentTeamId)
       .filter((state) => !query || `${state.employee.first_name} ${state.employee.last_name}`.toLowerCase().includes(query));
   }, [workforce, search, currentTeamId]);
+
+  // Part 3/20/29 — pre-filter, don't just disable: a management-only
+  // account or a pending-request holder never appears in the default
+  // list at all (the real enforcement is still the DB trigger — this is
+  // only what gets OFFERED). Someone already assigned to a DIFFERENT
+  // team stays visible (that's the legitimate "Move to…" case, not a
+  // block). A "Show unavailable" toggle reveals the hard-blocked rows
+  // with their reason, for management contexts that want to see why.
+  const filtered = useMemo(() => candidates.filter((state) => blockReason(state) === null), [candidates]);
+  const hidden = useMemo(() => candidates.filter((state) => blockReason(state) !== null), [candidates]);
 
   function handleSelect(state: EmployeeDailyState) {
     const available = employeeIsAvailableForAssignment(state);
@@ -84,19 +105,17 @@ export function WorkerPickerDialog({ open, onOpenChange, title, description, wor
 
           <div className="flex max-h-96 flex-col gap-1 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No workers found.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">No available workers found.</p>
             ) : (
               filtered.map((state) => {
-                const available = employeeIsAvailableForAssignment(state);
-                const assignedElsewhere = available && state.assignedTeam !== null;
-                const canDirectlySelect = available && !assignedElsewhere;
+                const assignedElsewhere = state.assignedTeam !== null;
                 return (
                   <div key={state.employee.id} className="flex items-center justify-between gap-3 rounded-md p-2 text-sm">
                     <button
                       type="button"
-                      disabled={!canDirectlySelect}
+                      disabled={assignedElsewhere}
                       onClick={() => handleSelect(state)}
-                      title={!available ? `Cannot assign — marked ${DAILY_ATTENDANCE_STATUS_LABELS[state.attendanceStatus]} today` : assignedElsewhere ? "Already assigned — use Move to reassign" : undefined}
+                      title={assignedElsewhere ? "Already assigned — use Move to reassign" : undefined}
                       className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left transition-colors enabled:hover:bg-muted/60 disabled:cursor-not-allowed"
                     >
                       <div className="flex min-w-0 flex-col">
@@ -105,15 +124,7 @@ export function WorkerPickerDialog({ open, onOpenChange, title, description, wor
                         </span>
                         {assignedElsewhere && <span className="text-xs text-muted-foreground">Assigned — {state.assignedTeam!.name}</span>}
                       </div>
-                      {available ? (
-                        assignedElsewhere ? (
-                          <Badge variant="secondary">Assigned</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">Available</Badge>
-                        )
-                      ) : (
-                        <Badge variant="destructive">{DAILY_ATTENDANCE_STATUS_LABELS[state.attendanceStatus]}</Badge>
-                      )}
+                      {assignedElsewhere ? <Badge variant="secondary">Assigned</Badge> : <Badge className="bg-emerald-500/15 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">Available</Badge>}
                     </button>
                     {assignedElsewhere && (
                       <Button
@@ -131,6 +142,31 @@ export function WorkerPickerDialog({ open, onOpenChange, title, description, wor
               })
             )}
           </div>
+
+          {hidden.length > 0 && (
+            <div className="flex flex-col gap-1 border-t pt-2">
+              <button type="button" onClick={() => setShowUnavailable((prev) => !prev)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+                {showUnavailable ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                {showUnavailable ? "Hide" : "Show"} unavailable ({hidden.length})
+              </button>
+              {showUnavailable && (
+                <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
+                  {hidden.map((state) => {
+                    const reason = blockReason(state);
+                    const reasonLabel = reason === "management" ? "Management role" : reason === "pendingRequest" ? "Pending request" : DAILY_ATTENDANCE_STATUS_LABELS[state.attendanceStatus];
+                    return (
+                      <div key={state.employee.id} className="flex items-center justify-between gap-3 rounded-md bg-muted/30 p-2 text-sm text-muted-foreground">
+                        <span className="truncate">
+                          {state.employee.first_name} {state.employee.last_name}
+                        </span>
+                        <Badge variant="outline">{reasonLabel}</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

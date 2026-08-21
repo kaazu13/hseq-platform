@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 type AddEditEquipmentItemDialogProps = {
   companyId: string;
@@ -20,30 +21,46 @@ type AddEditEquipmentItemDialogProps = {
   projectName: string;
   /** Present only when editing an existing item. */
   item?: EquipmentItem;
+  /**
+   * Part 25 — present only for "Add serialized item from catalog": a
+   * source item whose catalog-level fields (name/category/description/
+   * manufacturer/model/specification/default validity/price/currency/
+   * requestable/ownership) pre-fill the form, leaving reference number
+   * (serial), purchase date, condition, and notes blank for THIS new
+   * physical unit. Mutually exclusive with `item` — this always creates a
+   * new row, it never edits `duplicateFrom`.
+   */
+  duplicateFrom?: EquipmentItem;
+  trigger?: React.ReactNode;
 };
 
-/** Item 1/4/15 — Add/Edit equipment item. Same dialog for both tracking modes; quantity is fixed to 1 and hidden once "Individually tracked" is chosen. Project allocation is a plain company-wide/this-project toggle (safety_flash's nullable-project_id precedent), never a second full project selector — the ONLY project this dialog ever offers is the caller's own active one, per item 3's "no duplicate project selector" rule. */
-export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, item }: AddEditEquipmentItemDialogProps) {
+/** Item 1/4/15/25 — Add/Edit/Duplicate-as-serialized equipment item. Same dialog for both tracking modes; quantity is fixed to 1 and hidden once "Individually tracked" is chosen. Project allocation is a plain company-wide/this-project toggle (safety_flash's nullable-project_id precedent), never a second full project selector — the ONLY project this dialog ever offers is the caller's own active one, per item 3's "no duplicate project selector" rule. */
+export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, item, duplicateFrom, trigger }: AddEditEquipmentItemDialogProps) {
   const router = useRouter();
   const isEdit = Boolean(item);
+  const template = item ?? duplicateFrom;
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [trackingMode, setTrackingMode] = useState<string>(item?.tracking_mode ?? "quantity");
-  const [ownership, setOwnership] = useState<"company" | "project">(item ? (item.project_id ? "project" : "company") : "project");
-  const [category, setCategory] = useState(item?.category ?? "");
-  const [name, setName] = useState(item?.name ?? "");
-  const [description, setDescription] = useState(item?.description ?? "");
-  const [referenceNumber, setReferenceNumber] = useState(item?.reference_number ?? "");
-  const [manufacturer, setManufacturer] = useState(item?.manufacturer ?? "");
-  const [model, setModel] = useState(item?.model ?? "");
-  const [specification, setSpecification] = useState(item?.specification ?? "");
+  const [trackingMode, setTrackingMode] = useState<string>(duplicateFrom ? "serialized" : (item?.tracking_mode ?? "quantity"));
+  const [ownership, setOwnership] = useState<"company" | "project">(template ? (template.project_id ? "project" : "company") : "project");
+  const [category, setCategory] = useState(template?.category ?? "");
+  const [name, setName] = useState(template?.name ?? "");
+  const [description, setDescription] = useState(template?.description ?? "");
+  const [referenceNumber, setReferenceNumber] = useState(isEdit ? (item?.reference_number ?? "") : "");
+  const [manufacturer, setManufacturer] = useState(template?.manufacturer ?? "");
+  const [model, setModel] = useState(template?.model ?? "");
+  const [specification, setSpecification] = useState(template?.specification ?? "");
   const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
   const [condition, setCondition] = useState(item?.condition ?? "new");
-  const [location, setLocation] = useState(item?.location ?? "");
-  const [notes, setNotes] = useState(item?.notes ?? "");
-  const [defaultValidityDays, setDefaultValidityDays] = useState(item?.default_validity_days ? String(item.default_validity_days) : "");
+  const [location, setLocation] = useState(template?.location ?? "");
+  const [notes, setNotes] = useState(isEdit ? (item?.notes ?? "") : "");
+  const [defaultValidityDays, setDefaultValidityDays] = useState(template?.default_validity_days ? String(template.default_validity_days) : "");
+  const [unitPrice, setUnitPrice] = useState(template?.unit_price != null ? String(template.unit_price) : "");
+  const [currency, setCurrency] = useState(template?.currency ?? "EUR");
+  const [requestable, setRequestable] = useState(template?.requestable ?? true);
+  const [purchaseDate, setPurchaseDate] = useState(isEdit ? (item?.purchase_date ?? "") : "");
 
   function handleSubmit() {
     setError(null);
@@ -62,6 +79,10 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
             location: location || undefined,
             notes: notes || undefined,
             defaultValidityDays: defaultValidityDays ? Number(defaultValidityDays) : undefined,
+            unitPrice: unitPrice ? Number(unitPrice) : undefined,
+            currency: currency || undefined,
+            requestable,
+            purchaseDate: purchaseDate || undefined,
           })
         : await createEquipmentItem(companyId, projectId, {
             projectId: targetProjectId,
@@ -78,13 +99,17 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
             location: location || undefined,
             notes: notes || undefined,
             defaultValidityDays: defaultValidityDays ? Number(defaultValidityDays) : undefined,
+            unitPrice: unitPrice ? Number(unitPrice) : undefined,
+            currency: currency || undefined,
+            requestable,
+            purchaseDate: purchaseDate || undefined,
           });
 
       if (!result.ok) {
         setError(result.error.message);
         return;
       }
-      toast.success(isEdit ? "Equipment item updated." : "Equipment item added.");
+      toast.success(isEdit ? "Equipment item updated." : duplicateFrom ? "Serialized item added." : "Equipment item added.");
       setOpen(false);
       router.refresh();
     });
@@ -92,27 +117,37 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button type="button" variant={isEdit ? "ghost" : "default"} size={isEdit ? "sm" : "default"} onClick={() => setOpen(true)}>
-        {isEdit ? (
-          <>
-            <Pencil />
-            Edit
-          </>
-        ) : (
-          <>
-            <Plus />
-            Add Equipment
-          </>
-        )}
-      </Button>
+      {trigger ? (
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+      ) : (
+        <Button type="button" variant={isEdit ? "ghost" : "default"} size={isEdit ? "sm" : "default"} onClick={() => setOpen(true)}>
+          {isEdit ? (
+            <>
+              <Pencil />
+              Edit
+            </>
+          ) : (
+            <>
+              <Plus />
+              Add Equipment
+            </>
+          )}
+        </Button>
+      )}
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Equipment" : "Add Equipment"}</DialogTitle>
-          <DialogDescription>{isEdit ? "Update this item's details." : "Add a new item to the inventory — an individually tracked asset or a quantity-based item."}</DialogDescription>
+          <DialogTitle>{isEdit ? "Edit Equipment" : duplicateFrom ? `Add serialized item — ${duplicateFrom.name}` : "Add Equipment"}</DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? "Update this item's details."
+              : duplicateFrom
+                ? "Catalog details are pre-filled from the source item — set this unit's own serial/reference number and any per-unit overrides."
+                : "Add a new item to the inventory — an individually tracked asset or a quantity-based item."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {!isEdit && (
+          {!isEdit && !duplicateFrom && (
             <div className="flex flex-col gap-1.5">
               <Label>Tracking</Label>
               <Select value={trackingMode} onValueChange={(value) => setTrackingMode(value ?? "quantity")}>
@@ -238,6 +273,30 @@ export function AddEditEquipmentItemDialog({ companyId, projectId, projectName, 
               onChange={(event) => setDefaultValidityDays(event.target.value)}
               placeholder="Leave blank for no expiry (e.g. 365 for annual PPE)"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="eq-unit-price">Unit price</Label>
+              <Input id="eq-unit-price" type="number" min={0} step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} placeholder="Leave blank for no price" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="eq-currency">Currency</Label>
+              <Input id="eq-currency" value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} maxLength={3} placeholder="EUR" />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="eq-purchase-date">Purchase date</Label>
+            <Input id="eq-purchase-date" type="date" value={purchaseDate} onChange={(event) => setPurchaseDate(event.target.value)} />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="eq-requestable">Requestable</Label>
+              <span className="text-xs text-muted-foreground">Employees can self-service request this item.</span>
+            </div>
+            <Switch id="eq-requestable" checked={requestable} onCheckedChange={setRequestable} />
           </div>
 
           <div className="flex flex-col gap-1.5">

@@ -20,6 +20,14 @@ export const createEquipmentItemSchema = z.object({
   location: optionalText,
   notes: optionalText,
   defaultValidityDays: z.coerce.number().int().min(1).max(36500).optional(),
+  unitPrice: z.coerce.number().min(0).max(10000000).optional(),
+  currency: z.string().trim().length(3).optional(),
+  requestable: z.boolean().optional(),
+  purchaseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
 });
 export type CreateEquipmentItemInput = z.infer<typeof createEquipmentItemSchema>;
 
@@ -35,8 +43,23 @@ export const updateEquipmentItemSchema = z.object({
   location: optionalText,
   notes: optionalText,
   defaultValidityDays: z.coerce.number().int().min(1).max(36500).optional(),
+  unitPrice: z.coerce.number().min(0).max(10000000).optional(),
+  currency: z.string().trim().length(3).optional(),
+  requestable: z.boolean().optional(),
+  purchaseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
 });
 export type UpdateEquipmentItemInput = z.infer<typeof updateEquipmentItemSchema>;
+
+/** Part 26 — stock adjustment. targetDelta may be negative (a signed integer, never a separate "direction" enum) but never zero — zero is not an adjustment. */
+export const adjustEquipmentStockSchema = z.object({
+  delta: z.coerce.number().int().refine((value) => value !== 0, "Enter a non-zero amount"),
+  reason: z.string().trim().min(1, "A reason is required").max(500),
+});
+export type AdjustEquipmentStockInput = z.infer<typeof adjustEquipmentStockSchema>;
 
 export const issueEquipmentSchema = z.object({
   employeeId: z.string().uuid("Select an employee"),

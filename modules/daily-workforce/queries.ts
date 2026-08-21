@@ -1,6 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
 import type { DailyAttendance, DailyTeam, DailyTeamMemberWithEmployee, DailyTeamWithMembers, DailyTeamForemanRosterEntry, DailyTeamShift, EmployeeDailyState, BasicEmployee } from "./types";
 import { resolveAssignedTeam } from "./types";
+import { getEmployeeRoleInfoBulk } from "@/modules/employees/queries";
+
+/**
+ * Part 1/3's batched (2 queries total, never per-employee) "who has a
+ * PENDING leave/absence request covering this date" lookup — the
+ * client-side mirror of is_employee_provisionally_unavailable(), used to
+ * pre-filter pickers/panels. Not a SELECT on behalf of the caller's own
+ * limited RLS visibility: both tables' RLS already lets any manage-tier
+ * caller (the only audience for these panels) read every row in scope, so
+ * no SECURITY DEFINER indirection is needed here.
+ */
+async function listEmployeeIdsWithPendingRequestForDate(companyId: string, employeeIds: string[], workDate: string): Promise<Set<string>> {
+  if (employeeIds.length === 0) return new Set();
+  const supabase = await createClient();
+  const [{ data: leaveRows, error: leaveError }, { data: absenceRows, error: absenceError }] = await Promise.all([
+    supabase.from("leave_requests").select("employee_id").eq("company_id", companyId).eq("status", "pending").lte("start_date", workDate).gte("end_date", workDate).in("employee_id", employeeIds),
+    supabase.from("absence_reports").select("employee_id").eq("company_id", companyId).eq("status", "pending").eq("work_date", workDate).in("employee_id", employeeIds),
+  ]);
+  if (leaveError) throw leaveError;
+  if (absenceError) throw absenceError;
+  return new Set([...(leaveRows ?? []).map((r) => r.employee_id), ...(absenceRows ?? []).map((r) => r.employee_id)]);
+}
 
 /**
  * Server-only data access for the Daily Workforce / Today's Teams domain —
@@ -164,16 +186,19 @@ export async function listWorkforceForDate(companyId: string, projectId: string,
   const employeeIds = [...new Set((roster ?? []).map((row) => row.employee_id))];
   if (employeeIds.length === 0) return [];
 
-  const [{ data: employees, error: employeesError }, { data: attendance, error: attendanceError }, { data: memberships, error: membershipsError }, { data: teams, error: teamsError }, foremanIds] =
+  const { data: employees, error: employeesError } = await supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds });
+  if (employeesError) throw employeesError;
+
+  const [{ data: attendance, error: attendanceError }, { data: memberships, error: membershipsError }, { data: teams, error: teamsError }, foremanIds, roleInfoByEmployeeId, pendingRequestEmployeeIds] =
     await Promise.all([
-      supabase.rpc("get_basic_employee_info", { target_employee_ids: employeeIds }),
       supabase.from("daily_attendance").select("employee_id, status, note").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate).in("employee_id", employeeIds),
       supabase.from("daily_team_members").select("employee_id, daily_team_id, shift").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate).is("removed_at", null).in("employee_id", employeeIds),
       supabase.from("daily_teams").select("id, name, foreman_employee_id, shift").eq("company_id", companyId).eq("project_id", projectId).eq("work_date", workDate),
       listEligibleForemanIds(companyId, projectId),
+      getEmployeeRoleInfoBulk(companyId, employees ?? []),
+      listEmployeeIdsWithPendingRequestForDate(companyId, employeeIds, workDate),
     ]);
 
-  if (employeesError) throw employeesError;
   if (attendanceError) throw attendanceError;
   if (membershipsError) throw membershipsError;
   if (teamsError) throw teamsError;
@@ -212,6 +237,8 @@ export async function listWorkforceForDate(companyId: string, projectId: string,
         attendanceNote: attendanceRow?.note ?? null,
         assignedTeam,
         isEligibleForeman: foremanIds.has(employee.id),
+        roleNames: (roleInfoByEmployeeId.get(employee.id)?.roles ?? []).map((r) => r.name),
+        hasPendingRequest: pendingRequestEmployeeIds.has(employee.id),
       };
     })
     .sort((a, b) => {
@@ -268,6 +295,12 @@ export async function getEmployeeDailyState(companyId: string, projectId: string
     attendanceNote: attendanceRow?.note ?? null,
     assignedTeam,
     isEligibleForeman: foremanIds.has(employee.id),
+    // This is always the CALLER's own state (Employee Dashboard's "Today"
+    // card) — role/pending-request are irrelevant for a personal card and
+    // deliberately left uncomputed here rather than adding two more
+    // queries a single-employee personal view never needs.
+    roleNames: [],
+    hasPendingRequest: false,
   };
 }
 

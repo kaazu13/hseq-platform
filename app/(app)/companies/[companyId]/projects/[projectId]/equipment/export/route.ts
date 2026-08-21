@@ -60,7 +60,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     if (!itemId) {
       return NextResponse.json({ error: "itemId is required for a history export" }, { status: 400 });
     }
-    const item = await getEquipmentItem(companyId, itemId);
+    const item = await getEquipmentItem(companyId, projectId, itemId);
     if (!item) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

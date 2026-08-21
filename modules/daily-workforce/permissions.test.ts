@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canManageDailyWorkforce, canManageOwnDailyTeam, canViewDailyWorkforceBroadly } from "./permissions";
+import { canManageDailyWorkforce, canManageOwnDailyTeam, canViewDailyWorkforceBroadly, canViewAvailableUnassignedPanel } from "./permissions";
 import type { RoleName } from "@/modules/companies/types";
 
 describe("canManageDailyWorkforce", () => {
@@ -68,5 +68,36 @@ describe("canViewDailyWorkforceBroadly", () => {
 
   it("an Inspector who ALSO holds a genuine broad-viewer role still gets broad access, via that OTHER role", () => {
     expect(canViewDailyWorkforceBroadly(["inspector", "foreman"], true)).toBe(true);
+  });
+});
+
+describe("canViewAvailableUnassignedPanel — Part 1's exact authorized-viewer list", () => {
+  it("allows company-wide managers regardless of project access", () => {
+    expect(canViewAvailableUnassignedPanel(["company_admin"], [], false)).toBe(true);
+    expect(canViewAvailableUnassignedPanel(["operations_manager"], [], false)).toBe(true);
+  });
+
+  it("allows the project's own assigned project_manager", () => {
+    expect(canViewAvailableUnassignedPanel(["employee"], ["project_manager"], true)).toBe(true);
+  });
+
+  it("allows planner WITH project access", () => {
+    expect(canViewAvailableUnassignedPanel(["planner"], [], true)).toBe(true);
+    expect(canViewAvailableUnassignedPanel(["planner"], [], false)).toBe(false);
+  });
+
+  it("allows foreman WITH project access", () => {
+    expect(canViewAvailableUnassignedPanel(["foreman"], [], true)).toBe(true);
+    expect(canViewAvailableUnassignedPanel(["foreman"], [], false)).toBe(false);
+  });
+
+  it("denies inspector-only, hse_officer-only, hseq_manager-only, employee-only, recruiter-only even with project access", () => {
+    for (const role of ["inspector", "hse_officer", "hseq_manager", "employee", "recruiter"] as const) {
+      expect(canViewAvailableUnassignedPanel([role], [], true)).toBe(false);
+    }
+  });
+
+  it("denies an empty role set", () => {
+    expect(canViewAvailableUnassignedPanel([], [], true)).toBe(false);
   });
 });

@@ -17,6 +17,10 @@ import { resolveWorkedHoursPeriod, formatWorkedHoursPeriodLabel, countDaysWorked
 import { WORKED_HOURS_CATEGORIES, WORKED_HOURS_CATEGORY_LABELS, toWorkedHoursCategoryBreakdown, sumWorkedHoursCategoryBreakdown } from "@/modules/worked-hours/types";
 import { MyHoursRow } from "@/modules/worked-hours/components/my-hours-row";
 import { MyHoursMonthCalendar, type MonthDayCell } from "@/modules/worked-hours/components/my-hours-month-calendar";
+import { EstimatedEarningsCard } from "@/modules/worked-hours/components/estimated-earnings-card";
+import { listEmployeeRatePeriodsOverlapping, resolveRateForDate } from "@/modules/rates/queries";
+import { getEffectivePayRulesForDateRange, resolveEffectivePayRules } from "@/modules/pay-rules/queries";
+import { calculateEstimatedEarnings, sumEstimatedEarnings, isSundayDate } from "@/modules/pay-rules/earnings";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +133,38 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
     hoursByDate[row.work_date] = (hoursByDate[row.work_date] ?? 0) + Number(row.hours);
   }
   const daysWorked = countDaysWorked(hoursByDate);
+
+  // Parts 13/14/17 — Estimated Earnings, month view only. One bounded
+  // rate-periods query + one bounded pay-rules query for the WHOLE
+  // period (never per-day), then pure in-JS resolution per day so a mid-
+  // month rate/rule change recalculates correctly without a second
+  // fetch. Historical correctness: each day resolves the rate/rules that
+  // were EFFECTIVE ON that work date, never today's.
+  let estimatedEarnings: ReturnType<typeof sumEstimatedEarnings> | null = null;
+  const dayEarningsByDate = new Map<string, { hourlyRate: number; estimate: ReturnType<typeof calculateEstimatedEarnings> }>();
+  if (mode === "month" && rows.length > 0) {
+    const [ratePeriods, payRules] = await Promise.all([
+      listEmployeeRatePeriodsOverlapping(currentCompanyId, myEmployeeId, period.fromDate, period.toDate),
+      getEffectivePayRulesForDateRange(currentCompanyId, period.fromDate, period.toDate),
+    ]);
+    const dailyEstimates: ReturnType<typeof calculateEstimatedEarnings>[] = [];
+    for (const row of rows) {
+      const rateForDay = resolveRateForDate(ratePeriods, row.work_date);
+      if (!rateForDay) continue;
+      const rulesForDay = resolveEffectivePayRules(payRules, row.work_date);
+      const dayEstimate = calculateEstimatedEarnings({
+        hourlyRate: Number(rateForDay.hourly_rate),
+        currency: rateForDay.currency,
+        breakdown: row.breakdown,
+        isSunday: isSundayDate(row.work_date),
+        rulesByCategory: rulesForDay,
+      });
+      dailyEstimates.push(dayEstimate);
+      dayEarningsByDate.set(row.work_date, { hourlyRate: Number(rateForDay.hourly_rate), estimate: dayEstimate });
+    }
+    if (dailyEstimates.length > 0) estimatedEarnings = sumEstimatedEarnings(dailyEstimates);
+  }
+
   const basePath = "/my-hours";
   const prevDate = shiftDate(anchorDate, mode, -1);
   const nextDate = shiftDate(anchorDate, mode, 1);
@@ -173,6 +209,12 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
         hasConfirmedAbsence: attendanceStatus === "absent" || attendanceStatus === "sick",
         discrepancyStatus: row ? (discrepancyByWorkedHoursId.get(row.id)?.status ?? null) : null,
         correctionCount: row ? (correctionsByWorkedHoursId.get(row.id)?.length ?? 0) : 0,
+        dayEarnings: (() => {
+          const entry = dayEarningsByDate.get(date);
+          if (!entry) return null;
+          const { hourlyRate, estimate } = entry;
+          return { hourlyRate, currency: estimate.currency, basePayTotal: estimate.basePayTotal, categoryPremiumTotal: estimate.categoryPremiumTotal, sundayPremiumTotal: estimate.sundayPremiumTotal, total: estimate.total };
+        })(),
       });
     }
   }
@@ -220,6 +262,8 @@ export default async function MyHoursPage({ searchParams }: MyHoursPageProps) {
           {t("next")} →
         </Link>
       </div>
+
+      {estimatedEarnings && <EstimatedEarningsCard earnings={estimatedEarnings} />}
 
       {isCalendarView ? (
         <MyHoursMonthCalendar cells={calendarCells} />

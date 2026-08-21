@@ -137,6 +137,8 @@
       "certificates": "Certificate",
       "members": "Membri",
       "companySetup": "Configurare companie",
+      "rateRequests": "Cereri de tarif",
+      "payRules": "Tarife și reguli de plată",
       "companyGreetings": "Felicitări companie",
       "platformOverview": "Prezentare generală",
       "platformCompanies": "Companii",
@@ -285,9 +287,12 @@
     "export": "Exportă",
     "itemsLabel": "articole",
     "tabs": {
+      "overview": "Prezentare generală",
+      "catalog": "Catalog",
       "inventory": "Inventar",
       "issued": "Predat",
       "requests": "Cereri",
+      "expiring": "Expiră curând",
       "history": "Istoric"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Expirat"
     },
     "noAccessToRequests": "Nu ai acces pentru a revizui cererile de echipament pentru acest proiect.",
+    "noAccessToOverview": "Nu ai acces la prezentarea generală a echipamentului pentru acest proiect.",
+    "noAccessToCatalog": "Nu ai acces pentru a gestiona catalogul de echipamente pentru acest proiect.",
+    "noAccessToInventory": "Nu ai acces de gestionare a echipamentului pentru acest proiect. Vizitează Echipamentul Meu pentru articolele tale.",
+    "noAccessToHistory": "Nu ai acces la istoricul echipamentului pentru acest proiect.",
     "noEmployeeRecord": "Nicio evidență de angajat nu este asociată contului tău pentru această companie —",
     "contactAdministrator": "contactează administratorul tău."
   },

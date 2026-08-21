@@ -68,5 +68,6 @@ export async function setEmployeeHourlyRate(
   if (insertError) return { ok: false, error: { code: "server_error", message: "Couldn't save the new rate. Try again." } };
 
   revalidatePath("/account/rates");
+  revalidatePath("/pay-rules");
   return { ok: true, data: null };
 }

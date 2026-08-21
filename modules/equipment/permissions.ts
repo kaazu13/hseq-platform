@@ -31,3 +31,16 @@ const COMPANY_WIDE_EQUIPMENT_MANAGE_ROLES: RoleName[] = ["company_admin", "opera
 export function canManageEquipment(roleNames: RoleName[], targetProjectId: string | null, myProjectAssignmentRoles: string[]): boolean {
   return roleNames.some((role) => COMPANY_WIDE_EQUIPMENT_MANAGE_ROLES.includes(role)) || (targetProjectId !== null && myProjectAssignmentRoles.includes("project_manager"));
 }
+
+/**
+ * Part 24/33 — mirrors is_equipment_catalog_manage_tier() exactly: every
+ * role canManageEquipment() already covers, PLUS `planner`, but this is
+ * used ONLY to gate catalog/pricing/stock actions (Add/Edit item, Adjust
+ * stock, the Catalog tab) — never issuing, returning, or request
+ * decisions, which stay on canManageEquipment() alone. Deliberately does
+ * NOT fold planner into canManageEquipment() itself, so no call site can
+ * accidentally grant planner issuing authority by reusing the wrong check.
+ */
+export function canManageEquipmentCatalog(roleNames: RoleName[], targetProjectId: string | null, myProjectAssignmentRoles: string[]): boolean {
+  return canManageEquipment(roleNames, targetProjectId, myProjectAssignmentRoles) || roleNames.includes("planner");
+}

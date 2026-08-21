@@ -137,6 +137,8 @@
       "certificates": "Certificates",
       "members": "Members",
       "companySetup": "Company Setup",
+      "rateRequests": "Rate Requests",
+      "payRules": "Rates & Pay Rules",
       "companyGreetings": "Company Greetings",
       "platformOverview": "Overview",
       "platformCompanies": "Companies",
@@ -285,9 +287,12 @@
     "export": "Export",
     "itemsLabel": "items",
     "tabs": {
+      "overview": "Overview",
+      "catalog": "Catalog",
       "inventory": "Inventory",
       "issued": "Issued",
       "requests": "Requests",
+      "expiring": "Expiring",
       "history": "History"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Expired"
     },
     "noAccessToRequests": "You don't have access to review equipment requests for this project.",
+    "noAccessToOverview": "You don't have access to the equipment overview for this project.",
+    "noAccessToCatalog": "You don't have access to manage the equipment catalog for this project.",
+    "noAccessToInventory": "You don't have equipment management access for this project. Visit My Equipment for your own items.",
+    "noAccessToHistory": "You don't have access to the equipment history for this project.",
     "noEmployeeRecord": "No employee record is linked to your account for this company —",
     "contactAdministrator": "contact your administrator."
   },

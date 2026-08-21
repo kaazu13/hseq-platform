@@ -137,6 +137,8 @@
       "certificates": "Sertifikater",
       "members": "Medlemmer",
       "companySetup": "Bedriftsoppsett",
+      "rateRequests": "Lønnsforespørsler",
+      "payRules": "Satser og lønnsregler",
       "companyGreetings": "Bedriftshilsener",
       "platformOverview": "Oversikt",
       "platformCompanies": "Bedrifter",
@@ -285,9 +287,12 @@
     "export": "Eksporter",
     "itemsLabel": "elementer",
     "tabs": {
+      "overview": "Oversikt",
+      "catalog": "Katalog",
       "inventory": "Inventar",
       "issued": "Utlevert",
       "requests": "Forespørsler",
+      "expiring": "Utløper snart",
       "history": "Historikk"
     },
     "expiryFilters": {
@@ -296,6 +301,10 @@
       "expired": "Utløpt"
     },
     "noAccessToRequests": "Du har ikke tilgang til å gjennomgå utstyrsforespørsler for dette prosjektet.",
+    "noAccessToOverview": "Du har ikke tilgang til utstyrsoversikten for dette prosjektet.",
+    "noAccessToCatalog": "Du har ikke tilgang til å administrere utstyrskatalogen for dette prosjektet.",
+    "noAccessToInventory": "Du har ikke utstyrsadministrasjonstilgang for dette prosjektet. Besøk Mitt utstyr for dine egne gjenstander.",
+    "noAccessToHistory": "Du har ikke tilgang til utstyrshistorikken for dette prosjektet.",
     "noEmployeeRecord": "Ingen ansattpost er koblet til kontoen din for denne bedriften —",
     "contactAdministrator": "kontakt administratoren din."
   },
