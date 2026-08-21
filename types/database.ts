@@ -6045,119 +6045,64 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_equipment_item:
-        | {
-            Args: {
-              target_category: string
-              target_company_id: string
-              target_condition?: Database["public"]["Enums"]["equipment_condition"]
-              target_default_validity_days?: number
-              target_description?: string
-              target_location?: string
-              target_manufacturer?: string
-              target_model?: string
-              target_name: string
-              target_notes?: string
-              target_project_id: string
-              target_quantity?: number
-              target_reference_number?: string
-              target_specification?: string
-              target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-            }
-            Returns: {
-              archived_at: string | null
-              available_quantity: number
-              category: string
-              company_id: string
-              condition: Database["public"]["Enums"]["equipment_condition"]
-              created_at: string
-              created_by: string | null
-              currency: string
-              default_validity_days: number | null
-              description: string | null
-              id: string
-              location: string | null
-              manufacturer: string | null
-              model: string | null
-              name: string
-              notes: string | null
-              project_id: string | null
-              purchase_date: string | null
-              quantity: number
-              reference_number: string | null
-              requestable: boolean
-              specification: string | null
-              status: Database["public"]["Enums"]["equipment_status"]
-              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-              unit_price: number | null
-              updated_at: string
-              updated_by: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "equipment_items"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              target_category: string
-              target_company_id: string
-              target_condition?: Database["public"]["Enums"]["equipment_condition"]
-              target_currency?: string
-              target_default_validity_days?: number
-              target_description?: string
-              target_location?: string
-              target_manufacturer?: string
-              target_model?: string
-              target_name: string
-              target_notes?: string
-              target_project_id: string
-              target_purchase_date?: string
-              target_quantity?: number
-              target_reference_number?: string
-              target_requestable?: boolean
-              target_specification?: string
-              target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-              target_unit_price?: number
-            }
-            Returns: {
-              archived_at: string | null
-              available_quantity: number
-              category: string
-              company_id: string
-              condition: Database["public"]["Enums"]["equipment_condition"]
-              created_at: string
-              created_by: string | null
-              currency: string
-              default_validity_days: number | null
-              description: string | null
-              id: string
-              location: string | null
-              manufacturer: string | null
-              model: string | null
-              name: string
-              notes: string | null
-              project_id: string | null
-              purchase_date: string | null
-              quantity: number
-              reference_number: string | null
-              requestable: boolean
-              specification: string | null
-              status: Database["public"]["Enums"]["equipment_status"]
-              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-              unit_price: number | null
-              updated_at: string
-              updated_by: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "equipment_items"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      create_equipment_item: {
+        Args: {
+          target_category: string
+          target_company_id: string
+          target_condition?: Database["public"]["Enums"]["equipment_condition"]
+          target_currency?: string
+          target_default_validity_days?: number
+          target_description?: string
+          target_location?: string
+          target_manufacturer?: string
+          target_model?: string
+          target_name: string
+          target_notes?: string
+          target_project_id: string
+          target_purchase_date?: string
+          target_quantity?: number
+          target_reference_number?: string
+          target_requestable?: boolean
+          target_specification?: string
+          target_tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          target_unit_price?: number
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          currency: string
+          default_validity_days: number | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          purchase_date: string | null
+          quantity: number
+          reference_number: string | null
+          requestable: boolean
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_invitation: {
         Args: {
           target_company_id: string
@@ -8335,113 +8280,61 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      update_equipment_item:
-        | {
-            Args: {
-              target_category: string
-              target_default_validity_days?: number
-              target_description?: string
-              target_item_id: string
-              target_location?: string
-              target_manufacturer?: string
-              target_model?: string
-              target_name: string
-              target_notes?: string
-              target_project_id: string
-              target_reference_number?: string
-              target_specification?: string
-            }
-            Returns: {
-              archived_at: string | null
-              available_quantity: number
-              category: string
-              company_id: string
-              condition: Database["public"]["Enums"]["equipment_condition"]
-              created_at: string
-              created_by: string | null
-              currency: string
-              default_validity_days: number | null
-              description: string | null
-              id: string
-              location: string | null
-              manufacturer: string | null
-              model: string | null
-              name: string
-              notes: string | null
-              project_id: string | null
-              purchase_date: string | null
-              quantity: number
-              reference_number: string | null
-              requestable: boolean
-              specification: string | null
-              status: Database["public"]["Enums"]["equipment_status"]
-              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-              unit_price: number | null
-              updated_at: string
-              updated_by: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "equipment_items"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              target_category: string
-              target_currency?: string
-              target_default_validity_days?: number
-              target_description?: string
-              target_item_id: string
-              target_location?: string
-              target_manufacturer?: string
-              target_model?: string
-              target_name: string
-              target_notes?: string
-              target_project_id: string
-              target_purchase_date?: string
-              target_reference_number?: string
-              target_requestable?: boolean
-              target_specification?: string
-              target_unit_price?: number
-            }
-            Returns: {
-              archived_at: string | null
-              available_quantity: number
-              category: string
-              company_id: string
-              condition: Database["public"]["Enums"]["equipment_condition"]
-              created_at: string
-              created_by: string | null
-              currency: string
-              default_validity_days: number | null
-              description: string | null
-              id: string
-              location: string | null
-              manufacturer: string | null
-              model: string | null
-              name: string
-              notes: string | null
-              project_id: string | null
-              purchase_date: string | null
-              quantity: number
-              reference_number: string | null
-              requestable: boolean
-              specification: string | null
-              status: Database["public"]["Enums"]["equipment_status"]
-              tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
-              unit_price: number | null
-              updated_at: string
-              updated_by: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "equipment_items"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      update_equipment_item: {
+        Args: {
+          target_category: string
+          target_currency?: string
+          target_default_validity_days?: number
+          target_description?: string
+          target_item_id: string
+          target_location?: string
+          target_manufacturer?: string
+          target_model?: string
+          target_name: string
+          target_notes?: string
+          target_project_id: string
+          target_purchase_date?: string
+          target_reference_number?: string
+          target_requestable?: boolean
+          target_specification?: string
+          target_unit_price?: number
+        }
+        Returns: {
+          archived_at: string | null
+          available_quantity: number
+          category: string
+          company_id: string
+          condition: Database["public"]["Enums"]["equipment_condition"]
+          created_at: string
+          created_by: string | null
+          currency: string
+          default_validity_days: number | null
+          description: string | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          project_id: string | null
+          purchase_date: string | null
+          quantity: number
+          reference_number: string | null
+          requestable: boolean
+          specification: string | null
+          status: Database["public"]["Enums"]["equipment_status"]
+          tracking_mode: Database["public"]["Enums"]["equipment_tracking_mode"]
+          unit_price: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "equipment_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_lmra_assessment: {
         Args: {
           target_daily_team_id?: string

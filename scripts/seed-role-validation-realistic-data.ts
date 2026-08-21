@@ -146,6 +146,16 @@ const SUPPORTING_ACCOUNTS: { email: string; password: string; fullName: string; 
   { email: "test.foreman2@example.test", password: "TestForemanTwo2026!", fullName: "Bravo Foreman (TEST)", firstName: "Bravo", lastName: "Foreman (TEST)", positionTitle: "Foreman", roleName: "foreman" },
   { email: "test.foreman3@example.test", password: "TestForemanThree2026!", fullName: "Charlie Foreman (TEST)", firstName: "Charlie", lastName: "Foreman (TEST)", positionTitle: "Foreman", roleName: "foreman" },
   { email: "test.suspendedworker@example.test", password: "TestSuspended2026!", fullName: "Suspended Worker (TEST)", firstName: "Suspended", lastName: "Worker (TEST)", positionTitle: "Laborer", roleName: "employee" },
+  // Operational-realism pass (Fri 21/Sat 22/Sun 23 Aug 2026 fixture) —
+  // a 4th Foreman for a Delta team (Friday needs "approximately 4-5"
+  // active teams; the existing 3 core Foremen already staff Alpha/Bravo/
+  // Charlie), and a second ordinary Employee-role login specifically for
+  // the "worker on approved holiday today, back on a team tomorrow"
+  // availability-panel scenario (plain workers have no auth account, so
+  // they structurally cannot self-submit a leave_requests row — RLS
+  // requires employee.profile_id = auth.uid()).
+  { email: "test.foreman4@example.test", password: "TestForemanFour2026!", fullName: "Delta Foreman (TEST)", firstName: "Delta", lastName: "Foreman (TEST)", positionTitle: "Foreman", roleName: "foreman" },
+  { email: "test.employee2@example.test", password: "TestEmployeeTwo2026!", fullName: "Second Employee (TEST)", firstName: "Second", lastName: "Employee (TEST)", positionTitle: "Scaffolder", roleName: "employee" },
 ];
 
 async function ensureSupportingAuthUser(email: string, password: string, fullName: string): Promise<string> {
@@ -307,6 +317,17 @@ const PLAIN_WORKERS: PlainEmployeeSpec[] = [
   { key: "newhire", firstName: "TEST", lastName: "New Hire (TEST)", positionTitle: "Laborer", employmentStatus: "active", accountStatus: "pending_activation", startDaysAgo: 0 },
   { key: "invitedworker", firstName: "TEST", lastName: "Invited Worker (TEST)", positionTitle: "Electrician", employmentStatus: "active", accountStatus: "invited", startDaysAgo: 3 },
   { key: "offboardedworker", firstName: "TEST", lastName: "Offboarded Worker (TEST)", positionTitle: "Laborer", employmentStatus: "terminated", accountStatus: "archived", startDaysAgo: 120, endDaysAgo: 20, archived: true },
+  // Operational-realism pass — Team Delta's crew (worker13-16), plus two
+  // more active, project-assigned workers deliberately left OFF every
+  // Friday team so the Available/Unassigned panel has real "confirmed
+  // absent" (worker17) and "available but still unassigned" (worker18)
+  // examples beyond the ones already fully staffed on Alpha/Bravo/Charlie/Delta.
+  { key: "worker13", firstName: "TEST", lastName: "Worker 13 (Scaffolder)", positionTitle: "Scaffolder", employmentStatus: "active", accountStatus: "active", startDaysAgo: 38 },
+  { key: "worker14", firstName: "TEST", lastName: "Worker 14 (Rigger)", positionTitle: "Rigger", employmentStatus: "active", accountStatus: "active", startDaysAgo: 36 },
+  { key: "worker15", firstName: "TEST", lastName: "Worker 15 (Laborer)", positionTitle: "Laborer", employmentStatus: "active", accountStatus: "active", startDaysAgo: 34 },
+  { key: "worker16", firstName: "TEST", lastName: "Worker 16 (Welder)", positionTitle: "Welder", employmentStatus: "active", accountStatus: "active", startDaysAgo: 32 },
+  { key: "worker17", firstName: "TEST", lastName: "Worker 17 (Pipefitter)", positionTitle: "Pipefitter", employmentStatus: "active", accountStatus: "active", startDaysAgo: 30 },
+  { key: "worker18", firstName: "TEST", lastName: "Worker 18 (Laborer)", positionTitle: "Laborer", employmentStatus: "active", accountStatus: "active", startDaysAgo: 28 },
 ];
 
 async function ensurePlainEmployee(companyId: string, spec: PlainEmployeeSpec): Promise<string> {
@@ -1179,7 +1200,14 @@ type EquipmentItemSpec = {
 };
 
 async function ensureEquipmentItem(spec: EquipmentItemSpec): Promise<string> {
-  const { data: existingRows } = await spec.session.from("equipment_items").select("id").eq("company_id", spec.companyId).eq("name", spec.name).limit(1);
+  // reference_number must be filtered to the base/template row (null) —
+  // ensureSerializedUnit() creates additional catalog rows sharing this
+  // SAME name (different reference_number) for realism, and a bare
+  // name-only lookup with no ORDER BY has no guaranteed row order, so it
+  // could nondeterministically resolve to a serialized replica instead of
+  // the base item, corrupting every caller that keys off this id.
+  const { data: existingRows, error: existingErr } = await spec.session.from("equipment_items").select("id").eq("company_id", spec.companyId).eq("name", spec.name).is("reference_number", null).limit(1);
+  if (existingErr) throw new Error(`equipment_items existence check (${spec.name}): ${existingErr.message}`);
   if (existingRows && existingRows.length > 0) {
     log("equipment-item", spec.name, "reused");
     return existingRows[0].id;
@@ -1202,6 +1230,54 @@ async function ensureEquipmentItem(spec: EquipmentItemSpec): Promise<string> {
   return id;
 }
 
+type SerializedUnitSpec = {
+  session: Awaited<ReturnType<typeof signInAs>>;
+  companyId: string;
+  projectId: string;
+  category: string;
+  name: string;
+  referenceNumber: string;
+  condition?: Database["public"]["Enums"]["equipment_condition"];
+  defaultValidityDays?: number;
+  unitPrice?: number;
+};
+
+/**
+ * Operational-realism pass — Part 25's "serialized item creation from a
+ * catalog template" needs more than ONE physical unit per name to
+ * actually demonstrate (ensureEquipmentItem's own existence check is
+ * name-only, so a second call for the same name is always "reused" —
+ * this is a genuinely different helper, keyed by (name, reference_number)
+ * instead, exactly mirroring how the real "Add serialized item" dialog
+ * duplicates a catalog template with its own serial number).
+ */
+async function ensureSerializedUnit(spec: SerializedUnitSpec): Promise<string> {
+  const { data: existingRows } = await spec.session.from("equipment_items").select("id").eq("company_id", spec.companyId).eq("name", spec.name).eq("reference_number", spec.referenceNumber).limit(1);
+  if (existingRows && existingRows.length > 0) {
+    log("equipment-item-unit", `${spec.name} (${spec.referenceNumber})`, "reused");
+    return existingRows[0].id;
+  }
+  const { data, error } = await spec.session
+    .rpc("create_equipment_item", {
+      target_company_id: spec.companyId,
+      target_project_id: spec.projectId,
+      target_tracking_mode: "serialized",
+      target_category: spec.category,
+      target_name: spec.name,
+      target_reference_number: spec.referenceNumber,
+      target_quantity: 1,
+      target_condition: spec.condition ?? "new",
+      target_default_validity_days: spec.defaultValidityDays,
+      target_unit_price: spec.unitPrice,
+      target_currency: spec.unitPrice !== undefined ? "EUR" : undefined,
+    })
+    .single();
+  if (error || !data) throw new Error(`create_equipment_item (${spec.name} ${spec.referenceNumber}): ${error?.message}`);
+  const id = (data as { id: string }).id;
+  log("equipment-item-unit", `${spec.name} (${spec.referenceNumber})`, "created", id);
+  return id;
+}
+
 async function main() {
   assertSeedAllowed();
   console.log(`=== Role-Validation REALISTIC DATA Seed — ${new Date().toISOString()} ===\n`);
@@ -1219,7 +1295,7 @@ async function main() {
   if (!staticTeam) throw new Error('"TEST Static Team" not found — run seed-role-validation-fixtures.ts first.');
   const staticTeamId = staticTeam.id;
 
-  // --- Phase B: supporting accounts (2 extra foremen, 1 suspended member) ---
+  // --- Phase B: supporting accounts (3 extra foremen, 1 extra employee, 1 suspended member) ---
   const supportingEmployeeIdByRole: Record<string, string> = {};
   for (const account of SUPPORTING_ACCOUNTS) {
     const userId = await ensureSupportingAuthUser(account.email, account.password, account.fullName);
@@ -1232,6 +1308,12 @@ async function main() {
     if (account.roleName === "foreman") {
       await ensureProjectAssignment(companyId, projectId, employeeId, "member", account.fullName);
       await ensureTeamAssignmentForeman(companyId, projectId, staticTeamId, employeeId, account.fullName);
+    } else if (account.roleName === "employee" && !isSuspendedFixture) {
+      // test.employee2 — an ordinary worker, project-assigned like any
+      // other active employee (the suspended fixture deliberately gets
+      // NO project assignment — a suspended membership shouldn't be
+      // rostered at all).
+      await ensureProjectAssignment(companyId, projectId, employeeId, "member", account.fullName);
     }
   }
 
@@ -1287,11 +1369,29 @@ async function main() {
   // ==========================================================================
   const companyAdminSession = await signInAs("test.companyadmin@example.test", STABLE_PASSWORDS.company_admin);
 
+  // Operational-realism pass (Part 11 — Planner's "project physical
+  // location") — a real site address + coordinates, matching the
+  // scaffold coordinate cluster already used near Stockholm. projects_update
+  // RLS permits company_admin directly (unlike country_code/timezone,
+  // which needed the dedicated location-settings RPC).
+  {
+    const { data: existingProject } = await companyAdminSession.from("projects").select("site_address, site_latitude, site_longitude").eq("id", projectId).maybeSingle();
+    if (existingProject?.site_address) {
+      log("project-location", "TEST — Role Validation Project", "reused", existingProject.site_address);
+    } else {
+      const { error: locationErr } = await companyAdminSession.from("projects").update({ site_address: "Frihamnen Industrial Quay 12, 115 56 Stockholm, Sweden", site_latitude: 59.3346, site_longitude: 18.0975 }).eq("id", projectId);
+      if (locationErr) throw new Error(`projects site location update: ${locationErr.message}`);
+      log("project-location", "TEST — Role Validation Project", "created", "Frihamnen Industrial Quay 12, Stockholm");
+    }
+  }
+
   const employeeIdByKey: Record<string, string> = {
     employee: employeeIdByEmail.get("test.employee@example.test")!,
+    employee2: supportingEmployeeIdByRole["test.employee2@example.test"],
     foreman: employeeIdByEmail.get("test.foreman@example.test")!,
     foreman2: supportingEmployeeIdByRole["test.foreman2@example.test"],
     foreman3: supportingEmployeeIdByRole["test.foreman3@example.test"],
+    foreman4: supportingEmployeeIdByRole["test.foreman4@example.test"],
     ...Object.fromEntries(Object.entries(plainEmployeeIdByKey)),
   };
 
@@ -1299,16 +1399,74 @@ async function main() {
     { key: "alpha", foremanEmail: "test.foreman@example.test", foremanEmployeeId: employeeIdByKey.foreman, name: "TEST Team Alpha", shift: "day", workArea: "North Platform", activity: "Scaffold erection", workerKeys: ["employee", "worker01", "worker02", "worker03", "worker04"] },
     { key: "bravo", foremanEmail: "test.foreman2@example.test", foremanEmployeeId: employeeIdByKey.foreman2, name: "TEST Team Bravo", shift: "day", workArea: "South Platform", activity: "Pipe insulation", workerKeys: ["worker05", "worker06", "worker07", "worker08"] },
     { key: "charlie", foremanEmail: "test.foreman3@example.test", foremanEmployeeId: employeeIdByKey.foreman3, name: "TEST Team Charlie", shift: "night", workArea: "Tank Farm", activity: "Electrical maintenance", workerKeys: ["worker09", "worker10", "worker11", "worker12"] },
+    // Operational-realism pass — a 4th Friday team so the site "feels
+    // busy" (task's "approximately 4-5 active teams" target), a 4th
+    // Foreman, and a distinct work area/activity from the existing 3.
+    { key: "delta", foremanEmail: "test.foreman4@example.test", foremanEmployeeId: employeeIdByKey.foreman4, name: "TEST Team Delta", shift: "day", workArea: "Pipe Rack A", activity: "Scaffold dismantling", workerKeys: ["worker13", "worker14", "worker15", "worker16"] },
   ];
 
   const todayTeamIds = await ensureDailyTeamsForDate(companyAdminSession, companyId, projectId, TODAY, TEAM_SPECS, employeeIdByKey);
 
-  // Task 3 Part 3 fixture: Team Alpha assignment for TOMORROW — gives the
-  // Employee "Today's Team" date-navigation control (Prev/Next/date-picker)
-  // a real future-dated assignment to actually verify against, not only
-  // past/today.
+  // ==========================================================================
+  // Saturday 22 Aug 2026 (TOMORROW) — planned-in-advance teams, a smaller
+  // workforce than Friday, proving future-roster changes: worker03 moves
+  // from Alpha (Friday) to Bravo (Saturday), worker04 is left
+  // deliberately unassigned. Alpha/Bravo/Charlie already existed from
+  // earlier runs with Friday-sized rosters (ensureDailyTeamsForDate's
+  // "reused" branch never re-runs its worker-assignment loop — see that
+  // function's own comment) — this block explicitly reconciles Saturday's
+  // ACTUAL composition afterward via the same idempotent move/remove
+  // calls a real Foreman/PM would use, rather than relying on first-
+  // creation-only rosters.
+  // ==========================================================================
   const TOMORROW = isoDate(-1);
-  await ensureDailyTeamsForDate(companyAdminSession, companyId, projectId, TOMORROW, [TEAM_SPECS[0]], employeeIdByKey);
+  const SATURDAY_TEAM_SPECS: TeamSpec[] = [
+    { key: "alpha", foremanEmail: "test.foreman@example.test", foremanEmployeeId: employeeIdByKey.foreman, name: "TEST Team Alpha", shift: "day", workArea: "North Platform", activity: "Scaffold erection", workerKeys: ["employee", "worker01", "worker02"] },
+    { key: "bravo", foremanEmail: "test.foreman2@example.test", foremanEmployeeId: employeeIdByKey.foreman2, name: "TEST Team Bravo", shift: "day", workArea: "South Platform", activity: "Pipe insulation", workerKeys: ["worker05", "worker06", "worker03"] },
+    { key: "charlie", foremanEmail: "test.foreman3@example.test", foremanEmployeeId: employeeIdByKey.foreman3, name: "TEST Team Charlie", shift: "day", workArea: "Tank Farm", activity: "Electrical maintenance", workerKeys: ["worker09", "worker10", "employee2"] },
+  ];
+  const tomorrowTeamIds = await ensureDailyTeamsForDate(companyAdminSession, companyId, projectId, TOMORROW, SATURDAY_TEAM_SPECS, employeeIdByKey);
+
+  // Reconcile Alpha-Saturday down to its intended 3-person crew (employee
+  // + worker01 + worker02) even when the team row already existed from a
+  // prior run with Friday's full 5-person roster.
+  for (const key of ["employee", "worker01", "worker02"]) {
+    const { error: moveErr } = await companyAdminSession.rpc("move_daily_team_member", { target_project_id: projectId, target_work_date: TOMORROW, target_daily_team_id: tomorrowTeamIds.alpha, target_employee_id: employeeIdByKey[key], target_role: "member" });
+    if (moveErr && !moveErr.message.includes("pending leave/absence request")) throw new Error(`move_daily_team_member (Saturday Alpha reconcile, ${key}): ${moveErr.message}`);
+  }
+  // worker03 moves TO Bravo-Saturday (move_daily_team_member closes
+  // whatever OTHER team row they held for this date first — this is the
+  // literal "moved from one Foreman's team to another" fixture).
+  const { error: moveWorker03Err } = await companyAdminSession.rpc("move_daily_team_member", { target_project_id: projectId, target_work_date: TOMORROW, target_daily_team_id: tomorrowTeamIds.bravo, target_employee_id: plainEmployeeIdByKey.worker03, target_role: "member" });
+  if (moveWorker03Err && !moveWorker03Err.message.includes("pending leave/absence request")) throw new Error(`move_daily_team_member (worker03 -> Saturday Bravo): ${moveWorker03Err.message}`);
+  log("daily-team-members", "worker03 moved Alpha(Fri) -> Bravo(Sat)", "updated");
+  // worker04 is explicitly REMOVED from Alpha-Saturday (if a prior run
+  // ever put them there) and never re-added anywhere — "intentionally
+  // left available/unassigned" for Saturday. validate_daily_team_member_
+  // update() requires removed_at/removed_by to be set together (the only
+  // update it permits at all).
+  const companyAdminUserId = (await companyAdminSession.auth.getUser()).data.user!.id;
+  const { error: removeWorker04Err, count: removeWorker04Count } = await companyAdminSession
+    .from("daily_team_members")
+    .update({ removed_at: new Date().toISOString(), removed_by: companyAdminUserId }, { count: "exact" })
+    .eq("company_id", companyId)
+    .eq("project_id", projectId)
+    .eq("work_date", TOMORROW)
+    .eq("employee_id", plainEmployeeIdByKey.worker04)
+    .is("removed_at", null);
+  if (removeWorker04Err) throw new Error(`daily_team_members remove (worker04, Saturday): ${removeWorker04Err.message}`);
+  log("daily-team-members", "worker04 left unassigned (Sat)", removeWorker04Count && removeWorker04Count > 0 ? "updated" : "reused", removeWorker04Count ? `${removeWorker04Count} removed` : "already unassigned");
+
+  // ==========================================================================
+  // Sunday 23 Aug 2026 — a genuinely reduced day: ONE small team (not a
+  // full Friday-sized roster), only the workers actually scheduled.
+  // ==========================================================================
+  const SUNDAY = isoDate(-2);
+  const SUNDAY_TEAM_SPECS: TeamSpec[] = [
+    { key: "alpha", foremanEmail: "test.foreman@example.test", foremanEmployeeId: employeeIdByKey.foreman, name: "TEST Team Alpha", shift: "day", workArea: "North Platform", activity: "Weekend scaffold check", workerKeys: ["employee", "worker01"] },
+  ];
+  const sundayTeamIds = await ensureDailyTeamsForDate(companyAdminSession, companyId, projectId, SUNDAY, SUNDAY_TEAM_SPECS, employeeIdByKey);
+  void sundayTeamIds;
 
   const HISTORICAL_DATES = [isoDate(1), isoDate(2), isoDate(9)]; // yesterday, 2 days ago, previous week
   for (const workDate of HISTORICAL_DATES) {
@@ -1414,6 +1572,96 @@ async function main() {
   }
 
   // ==========================================================================
+  // Available/Unassigned workforce fixtures (Fri 21 / Sat 22 Aug 2026) —
+  // plain workers have NO auth account and so structurally cannot self-
+  // submit a leave_requests/absence_reports row (RLS requires
+  // employee.profile_id = auth.uid()); these scenarios therefore use the
+  // account-holding, non-management-only fixtures (recruiter/hse_officer/
+  // hseq_manager/employee2) instead, exactly the same real self-service
+  // paths every other request in this file already uses. "Confirmed
+  // absent" and "available but unassigned" don't need a request at all —
+  // set_daily_attendance_status is a manager action, callable directly
+  // for any employee (worker17/worker18 included).
+  // ==========================================================================
+  const employee2EmployeeId = employeeIdByKey.employee2;
+  const employee2Session = await signInAs("test.employee2@example.test", "TestEmployeeTwo2026!");
+  const employee2User = await employee2Session.auth.getUser();
+
+  // Approved holiday TODAY (Friday) for Test Employee Two — approved, and
+  // attendance explicitly marked "leave" for the day so the Today's Teams
+  // panel actually reflects it as Unavailable (attendanceStatus is its
+  // own independent signal from the leave_requests table — approving a
+  // request never auto-writes daily_attendance).
+  const employee2LeaveId = await ensureLeaveRequest(employee2Session, companyId, projectId, employee2EmployeeId, employee2User.data.user!.id, "annual", TODAY, TODAY, "TEST fixture: approved single-day holiday", "employee2-approved-holiday-today");
+  if (employee2LeaveId) {
+    const { data: current } = await companyAdminSession.from("leave_requests").select("status").eq("id", employee2LeaveId).single();
+    if (current?.status === "pending") {
+      const { error } = await companyAdminSession.rpc("approve_leave_request", { target_request_id: employee2LeaveId, target_comment: "Approved — TEST fixture" });
+      if (error) throw new Error(`approve_leave_request (employee2): ${error.message}`);
+      log("leave-request", "employee2-approved-holiday-today", "updated", "approved");
+    }
+  }
+  const { data: existingEmployee2Attendance } = await companyAdminSession.from("daily_attendance").select("id, status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", employee2EmployeeId).eq("work_date", TODAY).maybeSingle();
+  if (existingEmployee2Attendance) {
+    log("attendance", `Test Employee Two (${TODAY})`, "reused", existingEmployee2Attendance.status);
+  } else {
+    const { error } = await companyAdminSession.rpc("set_daily_attendance_status", { target_project_id: projectId, target_employee_id: employee2EmployeeId, target_work_date: TODAY, target_status: "leave", target_note: undefined, target_reason: undefined });
+    if (error) throw new Error(`set_daily_attendance_status (employee2 leave today): ${error.message}`);
+    log("attendance", `Test Employee Two (${TODAY})`, "created", "leave");
+  }
+
+  // Pending holiday request covering BOTH Friday and Saturday — Test
+  // Recruiter (a real, non-management-only account never assigned to a
+  // team, so this exercises the panel without disturbing any roster).
+  const recruiterSession = await signInAs("test.recruiter@example.test", STABLE_PASSWORDS.recruiter);
+  const recruiterUser = await recruiterSession.auth.getUser();
+  await ensureLeaveRequest(recruiterSession, companyId, projectId, recruiterEmployeeId, recruiterUser.data.user!.id, "annual", TODAY, TOMORROW, "TEST fixture: pending holiday covering the weekend", "recruiter-pending-holiday-weekend");
+
+  // Pending absence request TODAY (Friday) — Test HSE Officer.
+  const hseOfficerEmployeeIdForAvailability = employeeIdByEmail.get("test.hseofficer@example.test")!;
+  const hseOfficerSessionForAvailability = await signInAs("test.hseofficer@example.test", STABLE_PASSWORDS.hse_officer);
+  const { data: existingHseOfficerReport } = await companyAdminSession.from("absence_reports").select("id, status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", hseOfficerEmployeeIdForAvailability).eq("work_date", TODAY).maybeSingle();
+  if (existingHseOfficerReport) {
+    log("absence-report", `Test HSE Officer (${TODAY})`, "reused", existingHseOfficerReport.status);
+  } else {
+    const { error: reportErr } = await hseOfficerSessionForAvailability.rpc("report_absence", { target_project_id: projectId, target_employee_id: hseOfficerEmployeeIdForAvailability, target_work_date: TODAY, target_reason: "other", target_comment: "TEST fixture: pending absence, awaiting review" });
+    if (reportErr) throw new Error(`report_absence (hse officer, pending): ${reportErr.message}`);
+    log("absence-report", `Test HSE Officer (${TODAY})`, "created", "pending");
+  }
+
+  // Pending absence request SATURDAY — Test HSE Manager (a different HSE
+  // role, so both this weekend AND section 10's "HSE has real records"
+  // requirement get distinct coverage).
+  const hseqManagerEmployeeIdForAvailability = employeeIdByEmail.get("test.hseqmanager@example.test")!;
+  const hseqManagerSessionForAvailability = await signInAs("test.hseqmanager@example.test", STABLE_PASSWORDS.hseq_manager);
+  const { data: existingHseqManagerReport } = await companyAdminSession.from("absence_reports").select("id, status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", hseqManagerEmployeeIdForAvailability).eq("work_date", TOMORROW).maybeSingle();
+  if (existingHseqManagerReport) {
+    log("absence-report", `Test HSE Manager (${TOMORROW})`, "reused", existingHseqManagerReport.status);
+  } else {
+    const { error: reportErr } = await hseqManagerSessionForAvailability.rpc("report_absence", { target_project_id: projectId, target_employee_id: hseqManagerEmployeeIdForAvailability, target_work_date: TOMORROW, target_reason: "other", target_comment: "TEST fixture: pending absence, awaiting review" });
+    if (reportErr) throw new Error(`report_absence (hseq manager, pending): ${reportErr.message}`);
+    log("absence-report", `Test HSE Manager (${TOMORROW})`, "created", "pending");
+  }
+
+  // Confirmed absent — worker17, Friday AND Saturday (a manager action,
+  // set_daily_attendance_status never requires the target employee to
+  // have a login).
+  for (const workDate of [TODAY, TOMORROW]) {
+    const { data: existingWorker17Attendance } = await companyAdminSession.from("daily_attendance").select("id, status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", plainEmployeeIdByKey.worker17).eq("work_date", workDate).maybeSingle();
+    if (existingWorker17Attendance) {
+      log("attendance", `worker17 (${workDate})`, "reused", existingWorker17Attendance.status);
+    } else {
+      const { error } = await companyAdminSession.rpc("set_daily_attendance_status", { target_project_id: projectId, target_employee_id: plainEmployeeIdByKey.worker17, target_work_date: workDate, target_status: "absent", target_note: undefined, target_reason: undefined });
+      if (error) throw new Error(`set_daily_attendance_status (worker17 absent, ${workDate}): ${error.message}`);
+      log("attendance", `worker17 (${workDate})`, "created", "absent");
+    }
+  }
+  // worker18 is deliberately left completely untouched here — active,
+  // project-assigned, attendance not_set, on no team either day — the
+  // "available but still unassigned" / "active worker with no team yet"
+  // example for both Friday and Saturday.
+
+  // ==========================================================================
   // Phase G — Worked Hours: rich history for test.employee (Today/This
   // Week/This Month all show something meaningful), lighter coverage for
   // teammates (populated manager dashboards), one correction, one resolved
@@ -1432,9 +1680,39 @@ async function main() {
     await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey[key], TODAY, { regular: 8 }, key);
     await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey[key], isoDate(1), { regular: 8 }, key);
   }
-  for (const key of ["worker05", "worker06", "worker07", "worker08", "worker09", "worker10", "worker11", "worker12"]) {
+  // Team Delta (Friday) — regular hours, and a small overtime example.
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker13, TODAY, { regular: 8, overtime: 1 }, "worker13");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker14, TODAY, { regular: 8 }, "worker14");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker15, TODAY, { regular: 8 }, "worker15");
+  // worker16 deliberately left WITHOUT Friday hours — Part 8's "some
+  // workers missing hours" for the PM Daily Overview to show meaningfully.
+  for (const key of ["worker05", "worker06", "worker07", "worker08", "worker10", "worker11", "worker12"]) {
     await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey[key], TODAY, { regular: 8 }, key);
   }
+  // worker09 — Team Charlie is the night-shift team; a real Regular/Night
+  // split (per the current Worked Hours categories) rather than a plain
+  // 8h regular day, so the night-shift example is genuinely demonstrable.
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker09, TODAY, { regular: 4, night: 4 }, "worker09 (night shift)");
+
+  // Saturday 22 Aug — planned/current worked hours for the Saturday
+  // roster (Part 3/13): Alpha (employee/worker01/worker02), Bravo
+  // (worker05/worker06/worker03 — worker03 moved teams, matching hours
+  // follow), Charlie (worker09/worker10/employee2).
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, employeeEmployeeId, TOMORROW, { regular: 8 }, "Test Employee");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker01, TOMORROW, { regular: 8 }, "worker01");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker02, TOMORROW, { regular: 8, overtime: 2 }, "worker02");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker05, TOMORROW, { regular: 8 }, "worker05");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker03, TOMORROW, { regular: 8 }, "worker03");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker09, TOMORROW, { regular: 6, overtime: 2 }, "worker09");
+  // worker06/worker10/employee2 deliberately left WITHOUT Saturday hours
+  // yet — a genuinely "planned but not yet worked" future day, not every
+  // roster slot pre-filled.
+
+  // Sunday 23 Aug — a reduced day; only the two workers actually
+  // scheduled (Sunday Team Alpha) get hours, demonstrating the Sunday
+  // premium on a short, realistic weekend shift.
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, employeeEmployeeId, SUNDAY, { regular: 6 }, "Test Employee (Sunday)");
+  await ensureWorkedHours(companyAdminSession, companyId, projectId, plainEmployeeIdByKey.worker01, SUNDAY, { regular: 6 }, "worker01 (Sunday)");
 
   // One worked-hours correction — amend Test Employee's already-submitted
   // yesterday entry (upsert_worked_hours_categories requires a reason once
@@ -1807,6 +2085,19 @@ async function main() {
   await ensureInspection({ session: hseqManagerSession, companyId, projectId, scaffoldId: scaffold12, scaffoldTag: "TEST-SC-012", inspectorId: hseqManagerEmployeeIdForScaffolds, inspectedAtDaysAgo: 1, reason: "other", outcome: "closed_dismantled" });
   // Dismantled/archived — excluded from operational inspection health by default (Part I/J).
 
+  // Operational-realism pass — the one inspection-health state the
+  // existing 12 scaffolds never demonstrated: genuinely EXPIRED (a
+  // 7-day interval, last inspected well past both the interval AND
+  // "due today", never re-inspected since).
+  const scaffold13 = await ensureScaffold({
+    session: companyAdminSession, manageSession: hseqManagerSession, companyId, projectId, tagNumber: "TEST-SC-013", workArea: "Pipe Rack A", scaffoldType: "independent",
+    responsibleForemanId: employeeIdByKey.foreman4, erectedAtDaysAgo: 9, erectionTeamId: alphaDay9,
+    intervalType: "seven_days", intervalDays: 7, latitude: 59.3312, longitude: 18.0685,
+    clientName: "Nordic Steelworks AB",
+  });
+  await ensureInspection({ session: inspectorSession, companyId, projectId, scaffoldId: scaffold13, scaffoldTag: "TEST-SC-013", inspectorId: inspectorEmployeeIdForScaffolds, inspectedAtDaysAgo: 9, reason: "initial_handover", outcome: "safe_for_use" });
+  // Inspected 9 days ago on a 7-day interval = 2 days overdue = Expired.
+
   // ==========================================================================
   // Phase J — Safety Observations + Corrective Actions.
   // ==========================================================================
@@ -1898,9 +2189,24 @@ async function main() {
   await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "serialized", category: "Radio / Communication", name: "Radio" });
   const toolBagId = await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "serialized", category: "Hand Tool", name: "Tool Bag" });
   await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "serialized", category: "Power Tool", name: "Cordless Drill" });
+  const doubleHooksId = await ensureEquipmentItem({ session: companyAdminSession, companyId, projectId, trackingMode: "serialized", category: "Fall Protection", name: "Double Hooks", defaultValidityDays: 1825 });
+  { const { error: priceErr } = await companyAdminSession.from("equipment_items").update({ unit_price: 45.0, currency: "EUR" }).eq("id", doubleHooksId); if (priceErr) throw new Error(`equipment_items unit_price set (Double Hooks): ${priceErr.message}`); }
+
+  // Operational-realism pass — additional physical units of the same
+  // serialized catalog items (Part 25's "multiple harnesses/SRL/radios
+  // with serial numbers"), a mixed condition/status spread, and issuance
+  // to Foreman/Inspector so their own "My Equipment" isn't empty (Parts
+  // 6/7).
+  const harness2Id = await ensureSerializedUnit({ session: companyAdminSession, companyId, projectId, category: "Fall Protection", name: "Safety Harness", referenceNumber: "HARN-002", unitPrice: 180.0 });
+  const harness3Id = await ensureSerializedUnit({ session: companyAdminSession, companyId, projectId, category: "Fall Protection", name: "Safety Harness", referenceNumber: "HARN-003", unitPrice: 180.0 });
+  const srl2Id = await ensureSerializedUnit({ session: companyAdminSession, companyId, projectId, category: "Fall Protection", name: "SRL (Self-Retracting Lifeline)", referenceNumber: "SRL-002", defaultValidityDays: 1825, unitPrice: 220.0 });
+  const radio2Id = await ensureSerializedUnit({ session: companyAdminSession, companyId, projectId, category: "Radio / Communication", name: "Radio", referenceNumber: "RADIO-002", unitPrice: 90.0 });
+  const radio3Id = await ensureSerializedUnit({ session: companyAdminSession, companyId, projectId, category: "Radio / Communication", name: "Radio", referenceNumber: "RADIO-003", unitPrice: 90.0 });
+  const doubleHooks2Id = await ensureSerializedUnit({ session: companyAdminSession, companyId, projectId, category: "Fall Protection", name: "Double Hooks", referenceNumber: "HOOKS-002", defaultValidityDays: 1825, unitPrice: 45.0 });
 
   async function ensureIssuance(itemId: string, employeeId: string, issuedAtDaysAgo: number, expiresAt: string | undefined, useDefault: boolean, label: string) {
-    const { data: existingRows } = await companyAdminSession.from("equipment_assignments").select("id").eq("company_id", companyId).eq("equipment_item_id", itemId).eq("employee_id", employeeId).eq("status", "active").limit(1);
+    const { data: existingRows, error: existingErr } = await companyAdminSession.from("equipment_assignments").select("id").eq("company_id", companyId).eq("equipment_item_id", itemId).eq("employee_id", employeeId).eq("status", "active").limit(1);
+    if (existingErr) throw new Error(`equipment_assignments existence check (${label}): ${existingErr.message}`);
     if (existingRows && existingRows.length > 0) {
       log("equipment-assignment", label, "reused");
       return;
@@ -1928,6 +2234,49 @@ async function main() {
   await ensureIssuance(hiVisId, employeeEmployeeId, 0, undefined, false, "Test Employee <- Hi-Vis Vest (no expiry)");
   // A helmet too, for realism (long validity)
   await ensureIssuance(helmetId, employeeEmployeeId, 0, undefined, true, "Test Employee <- Safety Helmet (long validity)");
+
+  // Foreman and Inspector each get their own issued equipment (Parts
+  // 6/7 — their "My Equipment" must not look empty).
+  await ensureIssuance(harness2Id, foremanEmployeeId2, 5, undefined, true, "Test Foreman <- Safety Harness HARN-002");
+  await ensureIssuance(radio2Id, foremanEmployeeId2, 5, undefined, false, "Test Foreman <- Radio RADIO-002");
+  await ensureIssuance(harness3Id, inspectorEmployeeIdForScaffolds, 5, undefined, true, "Test Inspector <- Safety Harness HARN-003");
+  await ensureIssuance(radio3Id, inspectorEmployeeIdForScaffolds, 5, undefined, false, "Test Inspector <- Radio RADIO-003");
+
+  // A damaged-then-recovered SRL — genuine equipment_history beyond
+  // added/issued/returned (Part 18's "damaged/returned history").
+  //
+  // Gating on the item's CURRENT status is not idempotent: recover_equipment
+  // always leaves status = 'available', which is the same status a
+  // never-damaged item starts in — so a status-only check would re-run
+  // (and append two more equipment_history rows) on every single re-run.
+  // Checking equipment_history directly for a prior 'damaged' event is the
+  // only reliable "has this already happened" signal.
+  const { data: srl2DamageHistory, error: srl2HistoryErr } = await companyAdminSession.from("equipment_history").select("id").eq("equipment_item_id", srl2Id).eq("event", "damaged").limit(1);
+  if (srl2HistoryErr) throw new Error(`equipment_history existence check (SRL-002): ${srl2HistoryErr.message}`);
+  if (!srl2DamageHistory || srl2DamageHistory.length === 0) {
+    const { error: damagedErr } = await companyAdminSession.rpc("mark_equipment_damaged", { target_item_id: srl2Id, target_quantity: 1, target_note: "TEST fixture: webbing frayed during Tank Farm inspection" });
+    if (damagedErr) throw new Error(`mark_equipment_damaged (SRL-002): ${damagedErr.message}`);
+    log("equipment-lifecycle", "SRL-002 marked damaged", "created");
+    const { error: recoveredErr } = await companyAdminSession.rpc("recover_equipment", { target_item_id: srl2Id, target_quantity: 1, target_note: "TEST fixture: repaired and re-certified" });
+    if (recoveredErr) throw new Error(`recover_equipment (SRL-002): ${recoveredErr.message}`);
+    log("equipment-lifecycle", "SRL-002 recovered", "updated");
+  } else {
+    log("equipment-lifecycle", "SRL-002 damaged/recovered history", "reused");
+  }
+
+  // Double Hooks unit #2 — issue then return, for real returned-item
+  // history (distinct from the damaged/recovered SRL above).
+  const { data: existingHooksAssignment } = await companyAdminSession.from("equipment_assignments").select("id, status").eq("company_id", companyId).eq("equipment_item_id", doubleHooks2Id).eq("employee_id", plainEmployeeIdByKey.worker13).limit(1).maybeSingle();
+  if (existingHooksAssignment) {
+    log("equipment-lifecycle", "Double Hooks HOOKS-002 issue/return", "reused", existingHooksAssignment.status);
+  } else {
+    const { data: hooksAssignment, error: issueErr } = await companyAdminSession.rpc("issue_equipment", { target_item_id: doubleHooks2Id, target_employee_id: plainEmployeeIdByKey.worker13, target_quantity: 1, target_condition_at_issue: "new", target_issued_at: isoDate(6) }).single();
+    if (issueErr || !hooksAssignment) throw new Error(`issue_equipment (Double Hooks HOOKS-002): ${issueErr?.message}`);
+    log("equipment-lifecycle", "Double Hooks HOOKS-002 issued", "created");
+    const { error: returnErr } = await companyAdminSession.rpc("return_equipment", { target_assignment_id: (hooksAssignment as { id: string }).id, target_returned_quantity: 1, target_condition_at_return: "good", target_returned_at: isoDate(1), target_note: "TEST fixture: task complete, returned in good condition" });
+    if (returnErr) throw new Error(`return_equipment (Double Hooks HOOKS-002): ${returnErr.message}`);
+    log("equipment-lifecycle", "Double Hooks HOOKS-002 returned", "updated");
+  }
 
   async function ensureEquipmentRequest(itemId: string | null, description: string, quantity: number, reason: string, finalStatus: "pending" | "approved" | "fulfilled" | "denied"): Promise<string> {
     const { data: existingRows } = await employeeSession.from("equipment_requests").select("id, status").eq("company_id", companyId).eq("project_id", projectId).eq("employee_id", employeeEmployeeId).eq("item_description", description).limit(1);
@@ -2134,6 +2483,34 @@ async function main() {
       log("equipment-stock-adjustment", "quantity item", "created", "+10 — new delivery");
     } else {
       log("equipment-stock-adjustment", "quantity item", "skipped", "no quantity-tracked catalog item found");
+    }
+  }
+
+  // ==========================================================================
+  // Phase Q — Active company/project context (Part 27's live smoke test
+  // requirement). `profiles.active_company_id`/`active_project_id` are UX
+  // preferences only, set by a real user's FIRST use of the company/
+  // project switcher — a freshly-created fixture account has them null,
+  // so any page scoped to "the active project" correctly renders empty
+  // until that happens. A real, weeks-old-looking employee would already
+  // have used the switcher at least once. Set every fixture employee's
+  // context to the primary Role Validation company/project directly
+  // (service-role — safe here since this table is documented as a UX
+  // preference, not a security boundary, and this update is scoped to
+  // companyId, which contains only TEST fixture employees).
+  // ==========================================================================
+  {
+    const { data: fixtureProfileIds, error: profileIdsErr } = await admin.from("employees").select("profile_id").eq("company_id", companyId).not("profile_id", "is", null);
+    if (profileIdsErr) throw new Error(`employees profile_id lookup: ${profileIdsErr.message}`);
+    const ids = (fixtureProfileIds ?? []).map((r) => r.profile_id).filter((id): id is string => !!id);
+    if (ids.length > 0) {
+      const { error: activeContextErr, count: activeContextCount } = await admin
+        .from("profiles")
+        .update({ active_company_id: companyId, active_project_id: projectId }, { count: "exact" })
+        .in("id", ids)
+        .or(`active_company_id.is.null,active_company_id.neq.${companyId},active_project_id.is.null,active_project_id.neq.${projectId}`);
+      if (activeContextErr) throw new Error(`profiles active-context update: ${activeContextErr.message}`);
+      log("active-context", "fixture profiles -> TEST Role Validation Company/Project", activeContextCount ? "updated" : "reused", `${activeContextCount ?? 0}/${ids.length} changed`);
     }
   }
 
