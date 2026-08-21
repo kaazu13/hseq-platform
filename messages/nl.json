@@ -216,7 +216,15 @@
     "discrepancy": "Afwijking",
     "correctionCount": "{count} correctie(s) geregistreerd.",
     "calendarView": "Kalender",
-    "listView": "Lijst"
+    "listView": "Lijst",
+    "estimatedEarnings": "Geschat verdiende bedrag",
+    "basePay": "Basisloon",
+    "premiums": "Toeslagen",
+    "sundayPremium": "Zondagstoeslag",
+    "estimatedTotal": "Geschat totaal",
+    "earningsEstimateNote": "Schatting op basis van geregistreerde uren en de ingestelde loonregels van het bedrijf. Exclusief belastingen en sociale premies.",
+    "estimatedDayTotal": "Geschat totaal voor deze dag",
+    "rate": "Tarief"
   },
   "WorkedHours": {
     "title": "Gewerkte uren",
@@ -598,7 +606,12 @@
     "currentRate": "Huidig tarief",
     "perHour": "/ uur",
     "effectiveFrom": "Geldig vanaf {date}",
-    "previousRates": "Eerdere tarieven"
+    "previousRates": "Eerdere tarieven",
+    "myRateRequests": "Mijn tariefverzoeken",
+    "requestedRate": "Aangevraagd: {rate}/uur",
+    "reviewOnlyRequest": "Alleen beoordeling — geen bedrag aangevraagd",
+    "approvedAt": "Goedgekeurd: {rate}/uur, geldig vanaf {date}",
+    "rejectionReason": "Reden: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Geen Teams van Vandaag gevonden voor deze datum",
     "noTeamsDescription": "Er bestaan nog geen Teams van Vandaag voor dit project op deze datum.",
     "noTeamsDescriptionForeman": "Je hebt geen Team van Vandaag op deze datum voor dit project — maak er eerst een en kom dan terug om de steiger te registreren.",
+    "noTeamsCompact": "Geen Teams van Vandaag gevonden voor {date}.",
+    "noTeamsCompactForeman": "Je hebt geen Team van Vandaag op {date} — maak er eerst een en kom dan hier terug.",
     "foremanLabel": "Voorman: {name}",
     "workerCount": "{count, plural, one {# werknemer} other {# werknemers}}",
     "importTeam": "Team toevoegen",

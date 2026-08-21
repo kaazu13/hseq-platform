@@ -216,7 +216,15 @@
     "discrepancy": "Neatitikimas",
     "correctionCount": "Užregistruota pataisymų: {count}.",
     "calendarView": "Kalendorius",
-    "listView": "Sąrašas"
+    "listView": "Sąrašas",
+    "estimatedEarnings": "Numatomas uždarbis",
+    "basePay": "Bazinis atlyginimas",
+    "premiums": "Priedai",
+    "sundayPremium": "Sekmadienio priedas",
+    "estimatedTotal": "Numatoma suma",
+    "earningsEstimateNote": "Įvertis pagal registruotas valandas ir įmonės nustatytas apmokėjimo taisykles. Neįskaičiuoti mokesčiai ir socialinės įmokos.",
+    "estimatedDayTotal": "Numatoma dienos suma",
+    "rate": "Tarifas"
   },
   "WorkedHours": {
     "title": "Dirbtos valandos",
@@ -598,7 +606,12 @@
     "currentRate": "Dabartinis įkainis",
     "perHour": "/ val.",
     "effectiveFrom": "Galioja nuo {date}",
-    "previousRates": "Ankstesni įkainiai"
+    "previousRates": "Ankstesni įkainiai",
+    "myRateRequests": "Mano tarifo prašymai",
+    "requestedRate": "Prašoma: {rate}/val.",
+    "reviewOnlyRequest": "Tik peržiūra — suma neprašoma",
+    "approvedAt": "Patvirtinta: {rate}/val., galioja nuo {date}",
+    "rejectionReason": "Priežastis: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Šiai datai šiandienos komandų nerasta",
     "noTeamsDescription": "Šiam projektui šia data šiandienos komandų dar nėra.",
     "noTeamsDescriptionForeman": "Šia data šiam projektui neturite šiandienos komandos — pirmiausia sukurkite ją, tada grįžkite registruoti pastolius.",
+    "noTeamsCompact": "Nerasta šiandienos komandų {date} datai.",
+    "noTeamsCompactForeman": "{date} neturite šiandienos komandos — pirmiausia sukurkite ją, tada grįžkite čia.",
     "foremanLabel": "Brigadininkas: {name}",
     "workerCount": "{count, plural, one {# darbuotojas} few {# darbuotojai} other {# darbuotojų}}",
     "importTeam": "Pridėti komandą",

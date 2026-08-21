@@ -216,7 +216,15 @@
     "discrepancy": "Расхождение",
     "correctionCount": "Зафиксировано исправлений: {count}.",
     "calendarView": "Календарь",
-    "listView": "Список"
+    "listView": "Список",
+    "estimatedEarnings": "Предполагаемый заработок",
+    "basePay": "Базовая оплата",
+    "premiums": "Надбавки",
+    "sundayPremium": "Надбавка за воскресенье",
+    "estimatedTotal": "Предполагаемая сумма",
+    "earningsEstimateNote": "Оценка на основе учтённых часов и настроенных правил оплаты компании. Без учёта налогов и социальных отчислений.",
+    "estimatedDayTotal": "Предполагаемая сумма за день",
+    "rate": "Ставка"
   },
   "WorkedHours": {
     "title": "Отработанные часы",
@@ -598,7 +606,12 @@
     "currentRate": "Текущая ставка",
     "perHour": "/ час",
     "effectiveFrom": "Действует с {date}",
-    "previousRates": "Предыдущие ставки"
+    "previousRates": "Предыдущие ставки",
+    "myRateRequests": "Мои запросы на изменение ставки",
+    "requestedRate": "Запрошено: {rate}/час",
+    "reviewOnlyRequest": "Только рассмотрение — сумма не указана",
+    "approvedAt": "Утверждено: {rate}/час, действует с {date}",
+    "rejectionReason": "Причина: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Команды дня на эту дату не найдены",
     "noTeamsDescription": "Для этого проекта на эту дату команд дня ещё нет.",
     "noTeamsDescriptionForeman": "У вас нет команды дня на эту дату для этого проекта — сначала создайте её, затем вернитесь для регистрации лесов.",
+    "noTeamsCompact": "Команды дня на {date} не найдены.",
+    "noTeamsCompactForeman": "У вас нет команды дня на {date} — сначала создайте её, затем вернитесь сюда.",
     "foremanLabel": "Бригадир: {name}",
     "workerCount": "{count, plural, one {# рабочий} few {# рабочих} many {# рабочих} other {# рабочих}}",
     "importTeam": "Добавить команду",

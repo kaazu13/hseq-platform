@@ -216,7 +216,15 @@
     "discrepancy": "Avvikelse",
     "correctionCount": "{count} rättelse(r) registrerad(e).",
     "calendarView": "Kalender",
-    "listView": "Lista"
+    "listView": "Lista",
+    "estimatedEarnings": "Beräknad inkomst",
+    "basePay": "Grundlön",
+    "premiums": "Tillägg",
+    "sundayPremium": "Söndagstillägg",
+    "estimatedTotal": "Beräknat totalt",
+    "earningsEstimateNote": "Uppskattning baserad på registrerade timmar och företagets konfigurerade lönesregler. Exklusive skatt och sociala avgifter.",
+    "estimatedDayTotal": "Beräknat totalt för dagen",
+    "rate": "Lön"
   },
   "WorkedHours": {
     "title": "Arbetade timmar",
@@ -598,7 +606,12 @@
     "currentRate": "Aktuell lön",
     "perHour": "/ timme",
     "effectiveFrom": "Gäller från {date}",
-    "previousRates": "Tidigare löner"
+    "previousRates": "Tidigare löner",
+    "myRateRequests": "Mina löneförfrågningar",
+    "requestedRate": "Begärt: {rate}/timme",
+    "reviewOnlyRequest": "Endast granskning — inget belopp begärt",
+    "approvedAt": "Godkänt: {rate}/timme, gäller från {date}",
+    "rejectionReason": "Anledning: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Inga dagens team hittades för detta datum",
     "noTeamsDescription": "Det finns ännu inga dagens team för detta projekt på detta datum.",
     "noTeamsDescriptionForeman": "Du har inget dagens team på detta datum för detta projekt — skapa ett först och kom sedan tillbaka för att registrera ställningen.",
+    "noTeamsCompact": "Inga dagens team hittades för {date}.",
+    "noTeamsCompactForeman": "Du har inget dagens team {date} — skapa ett först och kom sedan tillbaka hit.",
     "foremanLabel": "Förman: {name}",
     "workerCount": "{count, plural, one {# arbetare} other {# arbetare}}",
     "importTeam": "Lägg till team",

@@ -216,7 +216,15 @@
     "discrepancy": "Discrepanță",
     "correctionCount": "{count} corecție(i) înregistrată(e).",
     "calendarView": "Calendar",
-    "listView": "Listă"
+    "listView": "Listă",
+    "estimatedEarnings": "Venit estimat",
+    "basePay": "Salariu de bază",
+    "premiums": "Sporuri",
+    "sundayPremium": "Spor de duminică",
+    "estimatedTotal": "Total estimat",
+    "earningsEstimateNote": "Estimare bazată pe orele înregistrate și regulile de plată configurate de companie. Exclude taxele și contribuțiile sociale.",
+    "estimatedDayTotal": "Total estimat al zilei",
+    "rate": "Tarif"
   },
   "WorkedHours": {
     "title": "Ore lucrate",
@@ -598,7 +606,12 @@
     "currentRate": "Tarif curent",
     "perHour": "/ oră",
     "effectiveFrom": "Valabil de la {date}",
-    "previousRates": "Tarife anterioare"
+    "previousRates": "Tarife anterioare",
+    "myRateRequests": "Cererile mele de tarif",
+    "requestedRate": "Solicitat: {rate}/oră",
+    "reviewOnlyRequest": "Doar revizuire — nicio sumă solicitată",
+    "approvedAt": "Aprobat: {rate}/oră, valabil de la {date}",
+    "rejectionReason": "Motiv: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Nu s-au găsit Echipe de Azi pentru această dată",
     "noTeamsDescription": "Nu există încă Echipe de Azi pentru acest proiect la această dată.",
     "noTeamsDescriptionForeman": "Nu ai nicio Echipă de Azi la această dată pentru acest proiect — creează una mai întâi, apoi revino pentru a înregistra schela.",
+    "noTeamsCompact": "Nu s-au găsit Echipe de Azi pentru {date}.",
+    "noTeamsCompactForeman": "Nu ai nicio Echipă de Azi pe {date} — creează una mai întâi, apoi revino aici.",
     "foremanLabel": "Șef de echipă: {name}",
     "workerCount": "{count, plural, one {# lucrător} other {# lucrători}}",
     "importTeam": "Adaugă echipă",

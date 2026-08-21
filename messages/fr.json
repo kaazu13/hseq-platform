@@ -216,7 +216,15 @@
     "discrepancy": "Écart",
     "correctionCount": "{count} correction(s) enregistrée(s).",
     "calendarView": "Calendrier",
-    "listView": "Liste"
+    "listView": "Liste",
+    "estimatedEarnings": "Revenus estimés",
+    "basePay": "Salaire de base",
+    "premiums": "Primes",
+    "sundayPremium": "Prime du dimanche",
+    "estimatedTotal": "Total estimé",
+    "earningsEstimateNote": "Estimation basée sur les heures enregistrées et les règles de paie configurées par l'entreprise. Hors impôts et cotisations sociales.",
+    "estimatedDayTotal": "Total estimé du jour",
+    "rate": "Taux"
   },
   "WorkedHours": {
     "title": "Heures travaillées",
@@ -598,7 +606,12 @@
     "currentRate": "Taux actuel",
     "perHour": "/ heure",
     "effectiveFrom": "En vigueur à partir du {date}",
-    "previousRates": "Taux antérieurs"
+    "previousRates": "Taux antérieurs",
+    "myRateRequests": "Mes demandes de taux",
+    "requestedRate": "Demandé : {rate}/heure",
+    "reviewOnlyRequest": "Révision uniquement — aucun montant demandé",
+    "approvedAt": "Approuvé : {rate}/heure, effectif à partir du {date}",
+    "rejectionReason": "Motif : {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Aucune équipe du jour trouvée pour cette date",
     "noTeamsDescription": "Aucune équipe du jour n'existe encore pour ce projet à cette date.",
     "noTeamsDescriptionForeman": "Vous n'avez aucune équipe du jour à cette date pour ce projet — créez-en une d'abord, puis revenez enregistrer l'échafaudage.",
+    "noTeamsCompact": "Aucune équipe du jour trouvée pour le {date}.",
+    "noTeamsCompactForeman": "Vous n'avez aucune équipe du jour le {date} — créez-en une d'abord, puis revenez ici.",
     "foremanLabel": "Chef d'équipe : {name}",
     "workerCount": "{count, plural, one {# ouvrier} other {# ouvriers}}",
     "importTeam": "Ajouter l'équipe",

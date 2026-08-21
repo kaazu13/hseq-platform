@@ -216,7 +216,15 @@
     "discrepancy": "Abweichung",
     "correctionCount": "{count} Korrektur(en) erfasst.",
     "calendarView": "Kalender",
-    "listView": "Liste"
+    "listView": "Liste",
+    "estimatedEarnings": "Geschätzter Verdienst",
+    "basePay": "Grundlohn",
+    "premiums": "Zuschläge",
+    "sundayPremium": "Sonntagszuschlag",
+    "estimatedTotal": "Geschätzte Summe",
+    "earningsEstimateNote": "Schätzung basierend auf erfassten Stunden und den festgelegten Lohnregeln des Unternehmens. Ohne Steuern und Sozialabgaben.",
+    "estimatedDayTotal": "Geschätzte Tagessumme",
+    "rate": "Satz"
   },
   "WorkedHours": {
     "title": "Gearbeitete Stunden",
@@ -598,7 +606,12 @@
     "currentRate": "Aktueller Satz",
     "perHour": "/ Stunde",
     "effectiveFrom": "Gültig ab {date}",
-    "previousRates": "Frühere Sätze"
+    "previousRates": "Frühere Sätze",
+    "myRateRequests": "Meine Tarifanfragen",
+    "requestedRate": "Angefragt: {rate}/Std.",
+    "reviewOnlyRequest": "Nur Überprüfung — kein Betrag angefragt",
+    "approvedAt": "Genehmigt: {rate}/Std., gültig ab {date}",
+    "rejectionReason": "Grund: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Keine heutigen Teams für dieses Datum gefunden",
     "noTeamsDescription": "Für dieses Projekt existieren an diesem Datum noch keine heutigen Teams.",
     "noTeamsDescriptionForeman": "Du hast an diesem Datum kein heutiges Team für dieses Projekt — erstelle zuerst eines und kehre dann zurück, um das Gerüst zu registrieren.",
+    "noTeamsCompact": "Für {date} wurden keine heutigen Teams gefunden.",
+    "noTeamsCompactForeman": "Du hast am {date} kein heutiges Team — erstelle zuerst eines und kehre dann hierher zurück.",
     "foremanLabel": "Vorarbeiter: {name}",
     "workerCount": "{count, plural, one {# Arbeiter} other {# Arbeiter}}",
     "importTeam": "Team hinzufügen",

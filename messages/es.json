@@ -216,7 +216,15 @@
     "discrepancy": "Discrepancia",
     "correctionCount": "{count} corrección(es) registradas.",
     "calendarView": "Calendario",
-    "listView": "Lista"
+    "listView": "Lista",
+    "estimatedEarnings": "Ingresos estimados",
+    "basePay": "Salario base",
+    "premiums": "Complementos",
+    "sundayPremium": "Plus dominical",
+    "estimatedTotal": "Total estimado",
+    "earningsEstimateNote": "Estimación basada en las horas registradas y las reglas de pago configuradas por la empresa. Excluye impuestos y cotizaciones sociales.",
+    "estimatedDayTotal": "Total estimado del día",
+    "rate": "Tarifa"
   },
   "WorkedHours": {
     "title": "Horas trabajadas",
@@ -598,7 +606,12 @@
     "currentRate": "Tarifa actual",
     "perHour": "/ hora",
     "effectiveFrom": "Vigente desde {date}",
-    "previousRates": "Tarifas anteriores"
+    "previousRates": "Tarifas anteriores",
+    "myRateRequests": "Mis solicitudes de tarifa",
+    "requestedRate": "Solicitado: {rate}/hora",
+    "reviewOnlyRequest": "Solo revisión — sin importe solicitado",
+    "approvedAt": "Aprobado: {rate}/hora, vigente desde {date}",
+    "rejectionReason": "Motivo: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "No se encontraron Equipos de Hoy para esta fecha",
     "noTeamsDescription": "Aún no existen Equipos de Hoy para este proyecto en esta fecha.",
     "noTeamsDescriptionForeman": "No tienes ningún Equipo de Hoy en esta fecha para este proyecto — crea uno primero y luego vuelve a registrar el andamio.",
+    "noTeamsCompact": "No se encontraron Equipos de Hoy para {date}.",
+    "noTeamsCompactForeman": "No tienes ningún Equipo de Hoy el {date} — crea uno primero y luego vuelve aquí.",
     "foremanLabel": "Encargado: {name}",
     "workerCount": "{count, plural, one {# trabajador} other {# trabajadores}}",
     "importTeam": "Añadir equipo",

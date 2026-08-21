@@ -216,7 +216,15 @@
     "discrepancy": "Discrepanza",
     "correctionCount": "{count} correzione/i registrata/e.",
     "calendarView": "Calendario",
-    "listView": "Elenco"
+    "listView": "Elenco",
+    "estimatedEarnings": "Guadagno stimato",
+    "basePay": "Paga base",
+    "premiums": "Maggiorazioni",
+    "sundayPremium": "Maggiorazione domenicale",
+    "estimatedTotal": "Totale stimato",
+    "earningsEstimateNote": "Stima basata sulle ore registrate e sulle regole di paga configurate dall'azienda. Esclude tasse e contributi sociali.",
+    "estimatedDayTotal": "Totale stimato del giorno",
+    "rate": "Tariffa"
   },
   "WorkedHours": {
     "title": "Ore lavorate",
@@ -598,7 +606,12 @@
     "currentRate": "Tariffa attuale",
     "perHour": "/ ora",
     "effectiveFrom": "In vigore dal {date}",
-    "previousRates": "Tariffe precedenti"
+    "previousRates": "Tariffe precedenti",
+    "myRateRequests": "Le mie richieste di tariffa",
+    "requestedRate": "Richiesto: {rate}/ora",
+    "reviewOnlyRequest": "Solo revisione — nessun importo richiesto",
+    "approvedAt": "Approvato: {rate}/ora, valido dal {date}",
+    "rejectionReason": "Motivo: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "Nessuna squadra di oggi trovata per questa data",
     "noTeamsDescription": "Non esistono ancora squadre di oggi per questo progetto in questa data.",
     "noTeamsDescriptionForeman": "Non hai nessuna squadra di oggi in questa data per questo progetto — creane una prima, poi torna a registrare il ponteggio.",
+    "noTeamsCompact": "Nessuna squadra di oggi trovata per il {date}.",
+    "noTeamsCompactForeman": "Non hai nessuna squadra di oggi il {date} — creane una prima, poi torna qui.",
     "foremanLabel": "Caposquadra: {name}",
     "workerCount": "{count, plural, one {# lavoratore} other {# lavoratori}}",
     "importTeam": "Aggiungi squadra",

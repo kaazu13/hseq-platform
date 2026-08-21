@@ -216,7 +216,15 @@
     "discrepancy": "Discrepancy",
     "correctionCount": "{count} correction(s) recorded.",
     "calendarView": "Calendar",
-    "listView": "List"
+    "listView": "List",
+    "estimatedEarnings": "Estimated earnings",
+    "basePay": "Base pay",
+    "premiums": "Premiums",
+    "sundayPremium": "Sunday premium",
+    "estimatedTotal": "Estimated total",
+    "earningsEstimateNote": "Estimate based on recorded hours and configured company pay rules. Excludes taxes and social contributions.",
+    "estimatedDayTotal": "Estimated day total",
+    "rate": "Rate"
   },
   "WorkedHours": {
     "title": "Worked Hours",
@@ -598,7 +606,12 @@
     "currentRate": "Current rate",
     "perHour": "/ hour",
     "effectiveFrom": "Effective from {date}",
-    "previousRates": "Previous rates"
+    "previousRates": "Previous rates",
+    "myRateRequests": "My rate requests",
+    "requestedRate": "Requested {rate}/hour",
+    "reviewOnlyRequest": "Review only — no amount requested",
+    "approvedAt": "Approved {rate}/hour, effective {date}",
+    "rejectionReason": "Reason: {reason}"
   },
   "AccountLabels": {
     "roles": {
@@ -749,6 +762,8 @@
     "noTeamsTitle": "No Today's Teams found for this date",
     "noTeamsDescription": "No Today's Teams exist for this project on this date yet.",
     "noTeamsDescriptionForeman": "You have no Today's Team on this date for this project — create one first, then come back to register the scaffold.",
+    "noTeamsCompact": "No Today's Teams found for {date}.",
+    "noTeamsCompactForeman": "You have no Today's Team on {date} — create one first, then come back here.",
     "foremanLabel": "Foreman: {name}",
     "workerCount": "{count, plural, one {# worker} other {# workers}}",
     "importTeam": "Add team",
